@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Healtho — Get Fit &amp; Healthy</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e94560">
+<style>
+/* ===== RESET & BASE ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1a2e;--surface:#16213e;--card:#0f3460;--accent:#e94560;
+  --accent2:#f5a623;--text:#eee;--text2:#aab;--radius:16px;--shadow:0 4px 24px rgba(0,0,0,.35);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+button,.btn{cursor:pointer;border:none;background:var(--accent);color:#fff;padding:12px 28px;border-radius:var(--radius);font-size:1rem;font-weight:600;transition:.2s}
+button:hover,.btn:hover{filter:brightness(1.15);transform:translateY(-1px)}
+input,select{background:var(--surface);color:var(--text);border:2px solid #334;padding:12px 16px;border-radius:var(--radius);font-size:1rem;width:100%;transition:.2s}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+h1,h2,h3{font-weight:700}
+.container{max-width:900px;margin:0 auto;padding:0 20px}
+
+/* ===== SCREENS ===== */
+.screen{display:none;min-height:100vh;padding:40px 0;animation:fadeIn .4s}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ===== HERO ===== */
+#hero{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden}
+#hero h1{font-size:clamp(2rem,6vw,3.5rem);margin-bottom:8px}
+#hero .tagline{font-size:1.2rem;color:var(--text2);margin-bottom:32px}
+#hero-sprites{position:absolute;width:100%;height:100%;pointer-events:none;z-index:0}
+#hero>*:not(#hero-sprites){position:relative;z-index:1}
+
+/* ===== SETUP FORM ===== */
+.setup-card{background:var(--surface);padding:32px;border-radius:var(--radius);box-shadow:var(--shadow);max-width:500px;width:100%;margin:0 auto}
+.setup-card h2{margin-bottom:20px;text-align:center}
+.field{margin-bottom:20px}
+.field label{display:block;margin-bottom:6px;font-weight:600;font-size:.9rem;color:var(--text2)}
+.field-row{display:flex;gap:12px}
+.field-row>*{flex:1}
+
+/* ===== THEME PICKER ===== */
+.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.theme-opt{background:var(--card);border:3px solid transparent;border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:.2s}
+.theme-opt:hover{border-color:var(--accent)}
+.theme-opt.selected{border-color:var(--accent);background:rgba(233,69,96,.12)}
+.theme-opt svg{width:48px;height:48px;margin-bottom:8px}
+.theme-opt span{display:block;font-weight:600;font-size:.85rem}
+
+/* ===== DASHBOARD ===== */
+.dash-header{display:flex;align-items:center;justify-content:space-between;padding:20px 0;flex-wrap:wrap;gap:12px}
+.dash-header h1{font-size:1.6rem}
+.streak-badge{background:var(--accent2);color:#1a1a2e;padding:8px 20px;border-radius:99px;font-weight:700;font-size:.95rem;display:flex;align-items:center;gap:8px}
+.streak-badge svg{width:22px;height:22px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border-radius:var(--radius);padding:20px;text-align:center;box-shadow:var(--shadow)}
+.stat-card .value{font-size:2rem;font-weight:700;color:var(--accent)}
+.stat-card .label{color:var(--text2);font-size:.85rem;margin-top:4px}
+
+/* ===== ROUTINE TIMELINE ===== */
+.routine-section{margin-bottom:32px}
+.routine-section h2{margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.routine-section h2 svg{width:28px;height:28px}
+.timeline{position:relative;padding-left:40px}
+.timeline::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:3px;background:var(--card);border-radius:2px}
+.timeline-item{position:relative;margin-bottom:20px;background:var(--surface);padding:20px;border-radius:var(--radius);box-shadow:var(--shadow);transition:.2s}
+.timeline-item:hover{transform:translateX(4px)}
+.timeline-item::before{content:'';position:absolute;left:-30px;top:24px;width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid var(--bg)}
+.timeline-item.done::before{background:var(--accent2)}
+.timeline-item.done{opacity:.7}
+.tl-time{font-size:.8rem;color:var(--accent);font-weight:700;margin-bottom:4px}
+.tl-title{font-weight:700;font-size:1.05rem;margin-bottom:4px}
+.tl-desc{color:var(--text2);font-size:.9rem}
+.tl-check{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;border:2px solid var(--accent);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.tl-check:hover{background:var(--accent)}
+.tl-check.checked{background:var(--accent2);border-color:var(--accent2)}
+
+/* ===== WEIGHT CHART ===== */
+.weight-section{background:var(--surface);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:24px}
+.weight-section h2{margin-bottom:16px}
+.chart-area{width:100%;height:200px;position:relative}
+.chart-area canvas{width:100%!important;height:100%!important}
+.weight-input-row{display:flex;gap:12px;margin-top:16px}
+.weight-input-row input{max-width:160px}
+.weight-input-row button{white-space:nowrap}
+
+/* ===== THEME SPRITE AREA ===== */
+.theme-sprite-banner{height:120px;position:relative;overflow:hidden;margin-bottom:24px;border-radius:var(--radius)}
+
+/* ===== NAV ===== */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);display:flex;justify-content:center;gap:8px;padding:8px 16px;z-index:100;border-top:1px solid #223}
+.bottom-nav button{background:transparent;color:var(--text2);display:flex;flex-direction:column;align-items:center;font-size:.7rem;padding:6px 16px;border-radius:12px}
+.bottom-nav button.active{color:var(--accent);background:rgba(233,69,96,.1)}
+.bottom-nav button svg{width:22px;height:22px;margin-bottom:2px}
+body{padding-bottom:72px}
+
+/* ===== SETTINGS ===== */
+.settings-list{list-style:none}
+.settings-list li{background:var(--surface);padding:16px 20px;border-radius:var(--radius);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.settings-list li span{color:var(--text2);font-size:.9rem}
+.toggle{width:48px;height:26px;border-radius:13px;background:#334;position:relative;cursor:pointer;transition:.2s}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
+.toggle.on::after{left:25px}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:600px){
+  .theme-grid{grid-template-columns:1fr 1fr}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .field-row{flex-direction:column}
+}
+
+/* ===== THEME OVERRIDES ===== */
+body.theme-pirates{--accent:#d4a017;--accent2:#c0392b;--bg:#1a0f0a;--surface:#2c1810;--card:#3d2114}
+body.theme-tech{--accent:#00d4ff;--accent2:#7c3aed;--bg:#0a0e1a;--surface:#111827;--card:#1e293b}
+body.theme-library{--accent:#8b5e3c;--accent2:#2d6a4f;--bg:#f5f0e8;--surface:#ede5d8;--card:#d4c5a9;--text:#2c2416;--text2:#665}
+body.theme-park{--accent:#2d6a4f;--accent2:#f4a261;--bg:#e8f5e9;--surface:#c8e6c9;--card:#a5d6a7;--text:#1b4332;--text2:#556}
+</style>
+</head>
+<body>
+
+<!-- ===== SVG SPRITE SHEET (hidden, referenced by <use>) ===== -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <!-- FLAME / STREAK -->
+  <symbol id="ico-flame" viewBox="0 0 64 64">
+    <path d="M32 4c0 0-18 20-18 36a18 18 0 0036 0c0-6-3-12-6-16 0 0-2 8-6 12-2-10-6-22-6-32z" fill="#f5a623"/>
+    <path d="M32 20c0 0-8 12-8 22a8 8 0 0016 0c0-4-2-8-4-10 0 0-1 4-2 6-1-6-2-12-2-18z" fill="#e94560"/>
+  </symbol>
+  <!-- DUMBBELL -->
+  <symbol id="ico-dumbbell" viewBox="0 0 64 64">
+    <rect x="8" y="22" width="12" height="20" rx="3" fill="#e94560"/>
+    <rect x="44" y="22" width="12" height="20" rx="3" fill="#e94560"/>
+    <rect x="4" y="26" width="8" height="12" rx="2" fill="#c0354e"/>
+    <rect x="52" y="26" width="8" height="12" rx="2" fill="#c0354e"/>
+    <rect x="20" y="29" width="24" height="6" rx="3" fill="#aab"/>
+  </symbol>
+  <!-- APPLE / FOOD -->
+  <symbol id="ico-apple" viewBox="0 0 64 64">
+    <path d="M32 14c-12 0-20 10-20 24s8 20 20 20 20-6 20-20-8-24-20-24z" fill="#e94560"/>
+    <path d="M32 14c-4-6-2-12 2-14 2 4 1 10-2 14z" fill="#2d6a4f"/>
+    <ellipse cx="26" cy="30" rx="5" ry="8" fill="#f06080" opacity=".4"/>
+  </symbol>
+  <!-- MOON / SLEEP -->
+  <symbol id="ico-moon" viewBox="0 0 64 64">
+    <path d="M42 8a24 24 0 100 48 20 20 0 010-48z" fill="#f5a623"/>
+    <circle cx="18" cy="18" r="2" fill="#fff" opacity=".6"/>
+    <circle cx="12" cy="40" r="1.5" fill="#fff" opacity=".5"/>
+    <circle cx="38" cy="12" r="1" fill="#fff" opacity=".4"/>
+  </symbol>
+  <!-- WATER DROP -->
+  <symbol id="ico-water" viewBox="0 0 64 64">
+    <path d="M32 4L18 34a14 14 0 1028 0z" fill="#00b4d8"/>
+    <path d="M32 12L22 34a10 10 0 0014-6z" fill="#48cae4" opacity=".5"/>
+  </symbol>
+  <!-- HEART -->
+  <symbol id="ico-heart" viewBox="0 0 64 64">
+    <path d="M32 56L8 32a14 14 0 0124-14 14 14 0 0124 14z" fill="#e94560"/>
+    <path d="M32 56L14 36a10 10 0 0118-8z" fill="#f06080" opacity=".4"/>
+  </symbol>
+  <!-- SCALE -->
+  <symbol id="ico-scale" viewBox="0 0 64 64">
+    <rect x="10" y="36" width="44" height="24" rx="12" fill="#aab"/>
+    <rect x="14" y="40" width="36" height="16" rx="8" fill="#889"/>
+    <circle cx="32" cy="48" r="6" fill="#eee"/>
+    <line x1="32" y1="48" x2="38" y2="44" stroke="#e94560" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <!-- GEAR -->
+  <symbol id="ico-gear" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="10" fill="none" stroke="currentColor" stroke-width="4"/>
+    <path d="M32 4v8m0 40v8M4 32h8m40 0h8M12 12l6 6m28 28l6 6M52 12l-6 6M18 46l-6 6" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+  <!-- HOME -->
+  <symbol id="ico-home" viewBox="0 0 64 64">
+    <path d="M32 8L4 32h10v24h14V42h8v14h14V32h10z" fill="currentColor"/>
+  </symbol>
+  <!-- CALENDAR -->
+  <symbol id="ico-calendar" viewBox="0 0 64 64">
+    <rect x="8" y="12" width="48" height="44" rx="6" fill="currentColor" opacity=".2"/>
+    <rect x="8" y="12" width="48" height="14" rx="6" fill="currentColor"/>
+    <rect x="16" y="34" width="8" height="8" rx="2" fill="currentColor" opacity=".5"/>
+    <rect x="28" y="34" width="8" height="8" rx="2" fill="currentColor" opacity=".5"/>
+    <rect x="40" y="34" width="8" height="8" rx="2" fill="currentColor" opacity=".5"/>
+    <rect x="16" y="46" width="8" height="6" rx="2" fill="currentColor" opacity=".3"/>
+    <rect x="20" y="6" width="4" height="12" rx="2" fill="currentColor"/>
+    <rect x="40" y="6" width="4" height="12" rx="2" fill="currentColor"/>
+  </symbol>
+
+  <!-- ===== PIRATE THEME SPRITES ===== -->
+  <symbol id="spr-treasure" viewBox="0 0 120 100">
+    <rect x="10" y="40" width="100" height="55" rx="8" fill="#8B6914"/>
+    <rect x="10" y="40" width="100" height="18" rx="8" fill="#a37b1e"/>
+    <rect x="6" y="38" width="108" height="8" rx="4" fill="#6b4f10"/>
+    <rect x="46" y="34" width="28" height="16" rx="4" fill="#d4a017"/>
+    <circle cx="60" cy="42" r="6" fill="#f5a623"/>
+    <circle cx="60" cy="42" r="3" fill="#8B6914"/>
+    <circle cx="30" cy="62" r="7" fill="#f5c542"/>
+    <circle cx="50" cy="68" r="5" fill="#f5a623"/>
+    <circle cx="72" cy="60" r="8" fill="#f5c542"/>
+    <circle cx="88" cy="66" r="6" fill="#f5a623"/>
+    <path d="M25 72l4-6 5 3-3 6z" fill="#e94560" opacity=".8"/>
+    <path d="M75 74l6-4 3 5-6 3z" fill="#00b4d8" opacity=".7"/>
+  </symbol>
+  <symbol id="spr-ship" viewBox="0 0 140 120">
+    <path d="M20 80c0 0 10 30 50 30s50-30 50-30z" fill="#8B4513"/>
+    <path d="M20 80c0 0 10 20 50 20s50-20 50-20z" fill="#a0522d"/>
+    <rect x="66" y="20" width="6" height="62" rx="2" fill="#6b4f10"/>
+    <path d="M72 22l40 28-40 10z" fill="#f5f5dc"/>
+    <path d="M66 30l-30 20 30 8z" fill="#f0e8d0"/>
+    <path d="M62 14l12-6 4 12-12 4z" fill="#1a1a2e"/>
+    <rect x="30" y="72" width="8" height="8" rx="4" fill="#2c1810"/>
+    <rect x="50" y="72" width="8" height="8" rx="4" fill="#2c1810"/>
+    <rect x="70" y="72" width="8" height="8" rx="4" fill="#2c1810"/>
+    <rect x="90" y="72" width="8" height="8" rx="4" fill="#2c1810"/>
+  </symbol>
+  <symbol id="spr-compass" viewBox="0 0 80 80">
+    <circle cx="40" cy="40" r="36" fill="#d4a017" opacity=".2"/>
+    <circle cx="40" cy="40" r="30" fill="none" stroke="#d4a017" stroke-width="3"/>
+    <circle cx="40" cy="40" r="4" fill="#d4a017"/>
+    <polygon points="40,12 44,36 40,40 36,36" fill="#e94560"/>
+    <polygon points="40,68 36,44 40,40 44,44" fill="#eee"/>
+    <polygon points="12,40 36,36 40,40 36,44" fill="#aab"/>
+    <polygon points="68,40 44,44 40,40 44,36" fill="#aab"/>
+    <text x="40" y="10" text-anchor="middle" font-size="8" fill="#d4a017" font-weight="bold">N</text>
+  </symbol>
+
+  <!-- ===== TECH THEME SPRITES ===== -->
+  <symbol id="spr-circuit" viewBox="0 0 120 80">
+    <rect x="40" y="20" width="40" height="40" rx="4" fill="#1e293b" stroke="#00d4ff" stroke-width="2"/>
+    <circle cx="60" cy="40" r="10" fill="none" stroke="#00d4ff" stroke-width="2"/>
+    <circle cx="60" cy="40" r="4" fill="#00d4ff"/>
+    <line x1="10" y1="30" x2="40" y2="30" stroke="#00d4ff" stroke-width="2"/>
+    <line x1="10" y1="50" x2="40" y2="50" stroke="#00d4ff" stroke-width="2"/>
+    <line x1="80" y1="30" x2="110" y2="30" stroke="#00d4ff" stroke-width="2"/>
+    <line x1="80" y1="50" x2="110" y2="50" stroke="#00d4ff" stroke-width="2"/>
+    <circle cx="10" cy="30" r="3" fill="#7c3aed"/>
+    <circle cx="10" cy="50" r="3" fill="#7c3aed"/>
+    <circle cx="110" cy="30" r="3" fill="#7c3aed"/>
+    <circle cx="110" cy="50" r="3" fill="#7c3aed"/>
+    <line x1="60" y1="0" x2="60" y2="20" stroke="#00d4ff" stroke-width="2"/>
+    <line x1="60" y1="60" x2="60" y2="80" stroke="#00d4ff" stroke-width="2"/>
+  </symbol>
+  <symbol id="spr-robot" viewBox="0 0 100 120">
+    <rect x="25" y="30" width="50" height="40" rx="8" fill="#1e293b" stroke="#00d4ff" stroke-width="2"/>
+    <circle cx="40" cy="48" r="6" fill="#00d4ff"/>
+    <circle cx="60" cy="48" r="6" fill="#00d4ff"/>
+    <circle cx="40" cy="48" r="3" fill="#0a0e1a"/>
+    <circle cx="60" cy="48" r="3" fill="#0a0e1a"/>
+    <rect x="38" y="58" width="24" height="4" rx="2" fill="#7c3aed"/>
+    <rect x="46" y="8" width="8" height="22" rx="4" fill="#555"/>
+    <circle cx="50" cy="8" r="5" fill="#00d4ff"/>
+    <rect x="30" y="74" width="16" height="30" rx="6" fill="#1e293b" stroke="#00d4ff" stroke-width="2"/>
+    <rect x="54" y="74" width="16" height="30" rx="6" fill="#1e293b" stroke="#00d4ff" stroke-width="2"/>
+    <rect x="8" y="38" width="14" height="8" rx="4" fill="#555"/>
+    <rect x="78" y="38" width="14" height="8" rx="4" fill="#555"/>
+  </symbol>
+  <symbol id="spr-rocket" viewBox="0 0 80 120">
+    <path d="M40 8c-10 16-16 40-16 60h32c0-20-6-44-16-60z" fill="#e2e8f0"/>
+    <path d="M40 8c-6 10-10 24-12 40h24c-2-16-6-30-12-40z" fill="#cbd5e1"/>
+    <circle cx="40" cy="52" r="8" fill="#00d4ff"/>
+    <circle cx="40" cy="52" r="4" fill="#0a0e1a"/>
+    <path d="M24 68c-10 4-14 16-14 26h14z" fill="#7c3aed"/>
+    <path d="M56 68c10 4 14 16 14 26H56z" fill="#7c3aed"/>
+    <path d="M32 94h16l-2 18h-12z" fill="#e94560"/>
+    <path d="M36 94h8l-1 12h-6z" fill="#f5a623"/>
+  </symbol>
+
+  <!-- ===== LIBRARY THEME SPRITES ===== -->
+  <symbol id="spr-book" viewBox="0 0 100 120">
+    <rect x="15" y="10" width="70" height="95" rx="4" fill="#8b5e3c"/>
+    <rect x="20" y="10" width="65" height="95" rx="2" fill="#f5f0e8"/>
+    <rect x="15" y="10" width="8" height="95" rx="2" fill="#6b4226"/>
+    <rect x="28" y="24" width="44" height="4" rx="2" fill="#8b5e3c" opacity=".6"/>
+    <rect x="28" y="34" width="38" height="3" rx="1" fill="#aaa" opacity=".4"/>
+    <rect x="28" y="42" width="42" height="3" rx="1" fill="#aaa" opacity=".4"/>
+    <rect x="28" y="50" width="30" height="3" rx="1" fill="#aaa" opacity=".4"/>
+    <circle cx="50" cy="76" r="14" fill="none" stroke="#2d6a4f" stroke-width="2"/>
+    <path d="M50 66v10l6-4z" fill="#2d6a4f"/>
+  </symbol>
+  <symbol id="spr-scroll" viewBox="0 0 120 80">
+    <rect x="20" y="14" width="80" height="52" rx="2" fill="#f0e8d0"/>
+    <circle cx="20" cy="14" r="10" fill="#d4c5a9"/>
+    <circle cx="20" cy="66" r="10" fill="#d4c5a9"/>
+    <circle cx="100" cy="14" r="10" fill="#d4c5a9"/>
+    <circle cx="100" cy="66" r="10" fill="#d4c5a9"/>
+    <rect x="30" y="26" width="60" height="3" rx="1" fill="#8b5e3c" opacity=".5"/>
+    <rect x="30" y="34" width="50" height="3" rx="1" fill="#8b5e3c" opacity=".4"/>
+    <rect x="30" y="42" width="55" height="3" rx="1" fill="#8b5e3c" opacity=".4"/>
+    <rect x="30" y="50" width="35" height="3" rx="1" fill="#8b5e3c" opacity=".3"/>
+  </symbol>
+  <symbol id="spr-lamp" viewBox="0 0 60 100">
+    <ellipse cx="30" cy="88" rx="18" ry="6" fill="#6b4226"/>
+    <rect x="26" y="60" width="8" height="28" rx="2" fill="#8b5e3c"/>
+    <path d="M30 16c-14 0-22 10-22 24 0 10 8 16 16 20h12c8-4 16-10 16-20 0-14-8-24-22-24z" fill="#f5c542"/>
+    <path d="M30 16c-8 0-14 6-16 16 6-6 14-8 22-4-2-8-4-12-6-12z" fill="#f5e066" opacity=".6"/>
+    <path d="M22 60h16l-2-4H24z" fill="#aab"/>
+  </symbol>
+
+  <!-- ===== PARK THEME SPRITES ===== -->
+  <symbol id="spr-tree" viewBox="0 0 100 130">
+    <rect x="42" y="80" width="16" height="45" rx="4" fill="#6b4226"/>
+    <ellipse cx="50" cy="50" rx="36" ry="38" fill="#2d6a4f"/>
+    <ellipse cx="36" cy="56" rx="20" ry="22" fill="#40916c"/>
+    <ellipse cx="64" cy="52" rx="18" ry="20" fill="#52b788"/>
+    <ellipse cx="50" cy="38" rx="16" ry="18" fill="#74c69d"/>
+    <circle cx="34" cy="62" r="3" fill="#e94560"/>
+    <circle cx="58" cy="44" r="2.5" fill="#f5a623"/>
+  </symbol>
+  <symbol id="spr-bench" viewBox="0 0 140 80">
+    <rect x="10" y="30" width="120" height="8" rx="3" fill="#8b5e3c"/>
+    <rect x="10" y="42" width="120" height="8" rx="3" fill="#a0522d"/>
+    <rect x="18" y="50" width="6" height="26" rx="2" fill="#555"/>
+    <rect x="116" y="50" width="6" height="26" rx="2" fill="#555"/>
+    <rect x="14" y="22" width="6" height="30" rx="2" fill="#555"/>
+    <rect x="120" y="22" width="6" height="30" rx="2" fill="#555"/>
+    <rect x="8" y="16" width="124" height="8" rx="3" fill="#6b4226"/>
+  </symbol>
+  <symbol id="spr-sun" viewBox="0 0 80 80">
+    <circle cx="40" cy="40" r="16" fill="#f5a623"/>
+    <circle cx="40" cy="40" r="12" fill="#f5c542"/>
+    <g stroke="#f5a623" stroke-width="3" stroke-linecap="round">
+      <line x1="40" y1="6" x2="40" y2="16"/>
+      <line x1="40" y1="64" x2="40" y2="74"/>
+      <line x1="6" y1="40" x2="16" y2="40"/>
+      <line x1="64" y1="40" x2="74" y2="40"/>
+      <line x1="16" y1="16" x2="23" y2="23"/>
+      <line x1="57" y1="57" x2="64" y2="64"/>
+      <line x1="64" y1="16" x2="57" y2="23"/>
+      <line x1="23" y1="57" x2="16" y2="64"/>
+    </g>
+  </symbol>
+  <symbol id="spr-flower" viewBox="0 0 60 80">
+    <line x1="30" y1="40" x2="30" y2="75" stroke="#2d6a4f" stroke-width="3" stroke-linecap="round"/>
+    <path d="M30 60c-10-4-18 0-16 6s12 2 16-6z" fill="#40916c"/>
+    <circle cx="30" cy="30" r="8" fill="#f5a623"/>
+    <circle cx="30" cy="16" r="8" fill="#e94560"/>
+    <circle cx="18" cy="22" r="8" fill="#e94560"/>
+    <circle cx="42" cy="22" r="8" fill="#e94560"/>
+    <circle cx="18" cy="36" r="8" fill="#e94560"/>
+    <circle cx="42" cy="36" r="8" fill="#e94560"/>
+    <circle cx="30" cy="44" r="8" fill="#e94560"/>
+  </symbol>
+</svg>
+
+<!-- ===== SCREEN 1: HERO ===== -->
+<div id="hero" class="screen active">
+  <div id="hero-sprites"></div>
+  <svg width="80" height="80"><use href="#ico-heart"/></svg>
+  <h1>Healtho</h1>
+  <p class="tagline">Your personal path to a fitter, healthier you.</p>
+  <button onclick="showScreen('setup')">Get Started</button>
+</div>
+
+<!-- ===== SCREEN 2: SETUP ===== -->
+<div id="setup" class="screen">
+  <div class="container">
+    <div class="setup-card">
+      <h2>Let's Personalise Your Journey</h2>
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="inp-name" placeholder="Enter your name" maxlength="40">
+      </div>
+      <div class="field">
+        <label>Your Age</label>
+        <input type="number" id="inp-age" placeholder="e.g. 14" min="5" max="120">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Current Weight (kg)</label>
+          <input type="number" id="inp-weight" placeholder="e.g. 70" min="10" max="300" step="0.1">
+        </div>
+        <div class="field">
+          <label>Target Weight (kg)</label>
+          <input type="number" id="inp-target" placeholder="e.g. 60" min="10" max="300" step="0.1">
+        </div>
+      </div>
+      <div class="field">
+        <label>Daily Exercise Time (minutes)</label>
+        <select id="inp-time">
+          <option value="15">15 minutes</option>
+          <option value="30" selected>30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60">60 minutes</option>
+          <option value="90">90+ minutes</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Pick Your Theme</label>
+        <div class="theme-grid" id="theme-grid">
+          <div class="theme-opt" data-theme="pirates" onclick="selectTheme(this)">
+            <svg viewBox="0 0 120 100"><use href="#spr-treasure"/></svg>
+            <span>Pirates</span>
+          </div>
+          <div class="theme-opt" data-theme="tech" onclick="selectTheme(this)">
+            <svg viewBox="0 0 100 120"><use href="#spr-robot"/></svg>
+            <span>Tech</span>
+          </div>
+          <div class="theme-opt" data-theme="library" onclick="selectTheme(this)">
+            <svg viewBox="0 0 100 120"><use href="#spr-book"/></svg>
+            <span>Library</span>
+          </div>
+          <div class="theme-opt" data-theme="park" onclick="selectTheme(this)">
+            <svg viewBox="0 0 100 130"><use href="#spr-tree"/></svg>
+            <span>Park</span>
+          </div>
+        </div>
+      </div>
+      <button onclick="saveSetup()" style="width:100%;margin-top:8px">Start My Journey</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: DASHBOARD ===== -->
+<div id="dashboard" class="screen">
+  <div class="container">
+    <div class="dash-header">
+      <h1 id="dash-greeting">Welcome!</h1>
+      <div class="streak-badge">
+        <svg><use href="#ico-flame"/></svg>
+        <span id="streak-count">0 day streak</span>
+      </div>
+    </div>
+
+    <div class="theme-sprite-banner" id="theme-banner"></div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="value" id="stat-current">--</div>
+        <div class="label">Current Weight</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-target">--</div>
+        <div class="label">Target Weight</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-progress">--</div>
+        <div class="label">Progress</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-tasks">0/0</div>
+        <div class="label">Today's Tasks</div>
+      </div>
+    </div>
+
+    <div class="routine-section">
+      <h2><svg><use href="#ico-dumbbell"/></svg> Today's Routine</h2>
+      <div class="timeline" id="routine-timeline"></div>
+    </div>
+
+    <div class="weight-section">
+      <h2><svg style="width:28px;height:28px;vertical-align:middle;margin-right:8px"><use href="#ico-scale"/></svg>Weight Tracker</h2>
+      <canvas id="weight-chart"></canvas>
+      <div class="weight-input-row">
+        <input type="number" id="inp-log-weight" placeholder="Today's weight (kg)" step="0.1" min="10" max="300">
+        <button onclick="logWeight()">Log Weight</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 4: SETTINGS ===== -->
+<div id="settings" class="screen">
+  <div class="container">
+    <h2 style="margin-bottom:20px">Settings</h2>
+    <ul class="settings-list">
+      <li>
+        <div><strong>Push Notifications</strong><br><span>Daily reminders for your routine</span></div>
+        <div class="toggle" id="toggle-notif" onclick="toggleNotif()"></div>
+      </li>
+      <li>
+        <div><strong>Reminder Time</strong><br><span>When to send daily reminders</span></div>
+        <input type="time" id="inp-reminder-time" value="07:00" style="max-width:140px" onchange="saveSettings()">
+      </li>
+      <li>
+        <div><strong>Theme</strong><br><span id="current-theme-label">Default</span></div>
+        <button onclick="showScreen('setup')" style="padding:8px 16px;font-size:.85rem">Change</button>
+      </li>
+      <li>
+        <div><strong>Reset All Data</strong><br><span>Clear all your data permanently</span></div>
+        <button onclick="resetData()" style="background:#c0354e;padding:8px 16px;font-size:.85rem">Reset</button>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== BOTTOM NAV ===== -->
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
+  <button onclick="showScreen('dashboard')" data-screen="dashboard" class="active">
+    <svg><use href="#ico-home"/></svg>Home
+  </button>
+  <button onclick="showScreen('dashboard');scrollToRoutine()" data-screen="routine">
+    <svg><use href="#ico-calendar"/></svg>Routine
+  </button>
+  <button onclick="showScreen('settings')" data-screen="settings">
+    <svg><use href="#ico-gear"/></svg>Settings
+  </button>
+</nav>
+
+<script>
+// ===== ENCRYPTION HELPERS =====
+const SALT = 'healtho-salt-2024';
+async function getKey(passphrase) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode(SALT), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+  );
+}
+async function encryptData(data) {
+  const key = await getKey('healtho-user-key');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder();
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(data)));
+  return JSON.stringify({ iv: Array.from(iv), ct: Array.from(new Uint8Array(ct)) });
+}
+async function decryptData(stored) {
+  try {
+    const { iv, ct } = JSON.parse(stored);
+    const key = await getKey('healtho-user-key');
+    const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(iv) }, key, new Uint8Array(ct));
+    return JSON.parse(new TextDecoder().decode(dec));
+  } catch { return null; }
+}
+async function saveEncrypted(key, data) {
+  localStorage.setItem(key, await encryptData(data));
+}
+async function loadEncrypted(key) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  return decryptData(raw);
+}
+
+// ===== STATE =====
+let state = {
+  name: '', age: 25, weight: 70, target: 60, time: 30, theme: 'pirates',
+  streak: 0, lastActive: '', weightLog: [], completedToday: [], notifEnabled: false, reminderTime: '07:00'
+};
+
+// ===== SCREEN NAV =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const nav = document.getElementById('bottom-nav');
+  nav.style.display = (id === 'hero') ? 'none' : 'flex';
+  nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.screen === id));
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'settings') renderSettings();
+}
+
+function scrollToRoutine() {
+  document.getElementById('routine-timeline')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===== THEME =====
+function selectTheme(el) {
+  document.querySelectorAll('.theme-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function applyTheme(theme) {
+  document.body.className = '';
+  if (theme && theme !== 'default') document.body.classList.add('theme-' + theme);
+}
+
+// ===== SETUP =====
+async function saveSetup() {
+  const name = document.getElementById('inp-name').value.trim();
+  const age = parseInt(document.getElementById('inp-age').value);
+  const weight = parseFloat(document.getElementById('inp-weight').value);
+  const target = parseFloat(document.getElementById('inp-target').value);
+  const time = parseInt(document.getElementById('inp-time').value);
+  const themeEl = document.querySelector('.theme-opt.selected');
+
+  if (!name) return alert('Please enter your name.');
+  if (!age || age < 5 || age > 120) return alert('Please enter a valid age (5-120).');
+  if (!weight || weight < 10) return alert('Please enter your current weight.');
+  if (!target || target < 10) return alert('Please enter your target weight.');
+
+  state.name = name;
+  state.age = age;
+  state.weight = weight;
+  state.target = target;
+  state.time = time;
+  state.theme = themeEl ? themeEl.dataset.theme : 'pirates';
+  if (!state.weightLog.length) state.weightLog.push({ date: todayStr(), weight: weight });
+
+  applyTheme(state.theme);
+  await persist();
+  showScreen('dashboard');
+}
+
+// ===== ROUTINE GENERATOR =====
+function generateRoutine(age, time, weight, target) {
+  const items = [];
+  const losing = target < weight;
+  const ageGroup = age < 13 ? 'child' : age < 18 ? 'teen' : age < 50 ? 'adult' : 'senior';
+
+  const exerciseBank = {
+    child: [
+      { title: 'Fun Warm-Up Dance', desc: 'Jump around and dance to your favourite song for 3 minutes.', min: 3 },
+      { title: 'Animal Walks', desc: 'Bear crawl, crab walk, frog jumps — move like animals across the room!', min: 5 },
+      { title: 'Jump Rope', desc: 'Skip rope at your own pace. Try to do 50 jumps without stopping.', min: 5 },
+      { title: 'Playground Circuits', desc: 'Monkey bars, climbing, swinging — use playground equipment creatively.', min: 10 },
+      { title: 'Tag or Chase Games', desc: 'Play tag, freeze tag, or a chase game with friends or family.', min: 10 },
+      { title: 'Stretching Cool-Down', desc: 'Gentle stretches — touch your toes, butterfly stretch, reach for the sky.', min: 3 },
+    ],
+    teen: [
+      { title: 'Dynamic Warm-Up', desc: 'Arm circles, leg swings, high knees, butt kicks — 2 minutes each.', min: 4 },
+      { title: 'Bodyweight Squats', desc: '3 sets of 12 squats. Keep your back straight and knees behind toes.', min: 5 },
+      { title: 'Push-Ups', desc: '3 sets of 8-12 push-ups. Start with knee push-ups if needed.', min: 5 },
+      { title: 'Jogging / Brisk Walk', desc: 'Jog at a comfortable pace or brisk walk. Keep a steady rhythm.', min: 15 },
+      { title: 'Plank Hold', desc: 'Hold a plank for 20-30 seconds, rest, repeat 3 times.', min: 4 },
+      { title: 'Cycling or Swimming', desc: 'Ride a bike or swim laps at moderate intensity.', min: 15 },
+      { title: 'Stretching & Cool-Down', desc: 'Full body stretches focusing on legs, arms, and back.', min: 5 },
+    ],
+    adult: [
+      { title: 'Warm-Up', desc: 'Light cardio: jumping jacks, arm circles, hip rotations for 3 min.', min: 3 },
+      { title: 'Strength: Upper Body', desc: 'Push-ups (3×15), dumbbell rows or resistance band pulls (3×12).', min: 8 },
+      { title: 'Strength: Lower Body', desc: 'Squats (3×15), lunges (3×10 each leg), glute bridges (3×15).', min: 8 },
+      { title: 'Cardio Burst', desc: '20 min jog, cycling, or HIIT (30s intense / 30s rest × 10 rounds).', min: 20 },
+      { title: 'Core Work', desc: 'Plank (3×45s), bicycle crunches (3×20), leg raises (3×12).', min: 7 },
+      { title: 'Flexibility & Mobility', desc: 'Yoga flow or deep stretching. Hold each stretch 20-30 seconds.', min: 7 },
+      { title: 'Cool-Down Walk', desc: '5 minute easy walk to bring heart rate down.', min: 5 },
+    ],
+    senior: [
+      { title: 'Gentle Warm-Up', desc: 'Slow walk in place, gentle arm swings, ankle rolls for 3 minutes.', min: 3 },
+      { title: 'Chair Squats', desc: 'Stand up and sit down from a chair 10 times. Use arms for support.', min: 5 },
+      { title: 'Wall Push-Ups', desc: '2 sets of 10 wall push-ups. Stand arm\'s length from the wall.', min: 4 },
+      { title: 'Balance Practice', desc: 'Stand on one foot for 15 seconds each side. Hold a chair for support.', min: 5 },
+      { title: 'Walking', desc: '15-20 minute walk at a comfortable, steady pace.', min: 15 },
+      { title: 'Gentle Stretching', desc: 'Seated or standing stretches. Focus on shoulders, back, and legs.', min: 5 },
+      { title: 'Deep Breathing', desc: 'Sit comfortably, breathe in for 4 counts, hold 4, out for 6. Repeat 5 times.', min: 3 },
+    ]
+  };
+
+  const nutritionTips = {
+    child: [
+      { title: 'Breakfast: Rainbow Bowl', desc: 'Oatmeal with berries, banana slices, and a drizzle of honey. Glass of milk.' },
+      { title: 'Snack: Veggie Sticks', desc: 'Carrot and cucumber sticks with hummus. A small apple on the side.' },
+      { title: 'Lunch: Balanced Plate', desc: 'Whole grain sandwich with lean protein, lettuce, tomato. Side of fruit.' },
+      { title: 'Dinner: Colourful Plate', desc: 'Grilled chicken or fish, brown rice, steamed broccoli and carrots.' },
+      { title: 'Hydration', desc: 'Drink at least 5-6 glasses of water throughout the day. No sugary drinks!' },
+    ],
+    teen: [
+      { title: 'Breakfast: Power Start', desc: 'Scrambled eggs on wholemeal toast, or Greek yoghurt with granola and berries.' },
+      { title: 'Snack: Energy Boost', desc: 'A handful of nuts and a piece of fruit. Avoid crisps and sweets.' },
+      { title: 'Lunch: Fuel Up', desc: 'Brown rice or quinoa bowl with grilled protein, avocado, and mixed veg.' },
+      { title: 'Dinner: Recovery Meal', desc: 'Baked salmon or lean meat with sweet potato and steamed greens.' },
+      { title: 'Hydration', desc: 'Aim for 6-8 glasses of water. Swap fizzy drinks for water or herbal tea.' },
+    ],
+    adult: [
+      { title: 'Breakfast: Nutrient Dense', desc: 'Overnight oats with chia seeds, nuts and berries. Or eggs with avocado toast.' },
+      { title: 'Snack: Smart Choice', desc: 'Greek yoghurt, a handful of almonds, or apple slices with peanut butter.' },
+      { title: 'Lunch: Balanced Bowl', desc: 'Leafy greens, lean protein (chicken/tofu), whole grains, healthy fats.' },
+      { title: 'Dinner: Light & Lean', desc: 'Grilled fish with roasted vegetables. Keep portion sizes moderate if losing weight.' },
+      { title: 'Hydration', desc: '8+ glasses of water daily. Start every morning with a full glass.' },
+    ],
+    senior: [
+      { title: 'Breakfast: Easy & Nourishing', desc: 'Porridge with banana and a sprinkle of flaxseed. Cup of green tea.' },
+      { title: 'Snack: Bone Health', desc: 'Cheese and crackers, or yoghurt. Focus on calcium-rich foods.' },
+      { title: 'Lunch: Protein Focus', desc: 'Bean soup or lean meat sandwich on whole grain bread with salad.' },
+      { title: 'Dinner: Gentle on Digestion', desc: 'Steamed fish with mashed sweet potato and lightly cooked vegetables.' },
+      { title: 'Hydration', desc: 'Sip water throughout the day — at least 6 glasses. Dehydration risk increases with age.' },
+    ]
+  };
+
+  const sleepTips = {
+    child: { title: 'Bedtime Routine', desc: 'Aim for 9-12 hours of sleep. No screens 30 minutes before bed. Read a book instead!' },
+    teen: { title: 'Sleep Well', desc: 'Get 8-10 hours of sleep. Put your phone away 1 hour before bed. Keep a consistent schedule.' },
+    adult: { title: 'Quality Sleep', desc: 'Aim for 7-9 hours. Keep your bedroom cool and dark. Avoid caffeine after 2pm.' },
+    senior: { title: 'Restful Night', desc: 'Aim for 7-8 hours. Short afternoon nap (20 min) is fine. Avoid heavy meals before bed.' },
+  };
+
+  let totalMin = 0;
+  const hour = 7;
+  let currentMin = 0;
+
+  items.push({ time: formatTime(hour, 0), ...sleepTips[ageGroup].desc ? sleepTips[ageGroup] : {}, title: '🌅 Wake Up & Hydrate', desc: 'Start with a full glass of water. Stretch gently for 2 minutes.', type: 'wellness' });
+
+  const exercises = exerciseBank[ageGroup];
+  let addedMin = 0;
+  for (const ex of exercises) {
+    if (addedMin + ex.min > time) continue;
+    currentMin += 15;
+    items.push({ time: formatTime(hour, currentMin), ...ex, type: 'exercise' });
+    addedMin += ex.min;
+  }
+
+  const meals = nutritionTips[ageGroup];
+  const mealTimes = [
+    { h: 7, m: 30 }, { h: 10, m: 0 }, { h: 12, m: 30 }, { h: 18, m: 30 }, { h: -1 }
+  ];
+  meals.forEach((meal, i) => {
+    if (mealTimes[i].h === -1) {
+      items.push({ time: 'All Day', ...meal, type: 'nutrition' });
+    } else {
+      items.push({ time: formatTime(mealTimes[i].h, mealTimes[i].m), ...meal, type: 'nutrition' });
+    }
+  });
+
+  const sleep = sleepTips[ageGroup];
+  items.push({ time: formatTime(ageGroup === 'child' ? 20 : ageGroup === 'teen' ? 21 : 22, 0), ...sleep, type: 'wellness' });
+
+  if (losing) {
+    items.push({ time: 'Tip', title: 'Calorie Awareness', desc: `To reach ${target} kg, aim for a modest calorie deficit (~300-500 kcal/day). Never go below 1200 kcal. Focus on whole foods.`, type: 'tip' });
+  }
+
+  items.sort((a, b) => {
+    if (a.time === 'All Day' || a.time === 'Tip') return 1;
+    if (b.time === 'All Day' || b.time === 'Tip') return -1;
+    return a.time.localeCompare(b.time);
+  });
+
+  return items;
+}
+
+function formatTime(h, m) {
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+}
+
+// ===== RENDER DASHBOARD =====
+function renderDashboard() {
+  document.getElementById('dash-greeting').textContent = `Hey ${state.name}!`;
+  document.getElementById('stat-current').textContent = latestWeight() + ' kg';
+  document.getElementById('stat-target').textContent = state.target + ' kg';
+
+  const start = state.weightLog[0]?.weight || state.weight;
+  const latest = latestWeight();
+  const total = Math.abs(start - state.target);
+  const done = Math.abs(start - latest);
+  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  document.getElementById('stat-progress').textContent = pct + '%';
+
+  updateStreak();
+  document.getElementById('streak-count').textContent = state.streak + ' day streak';
+
+  renderThemeBanner();
+  renderRoutine();
+  renderWeightChart();
+}
+
+function latestWeight() {
+  return state.weightLog.length ? state.weightLog[state.weightLog.length - 1].weight : state.weight;
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function updateStreak() {
+  const today = todayStr();
+  if (state.lastActive === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (state.lastActive === yesterday) {
+    state.streak++;
+  } else if (state.lastActive !== today) {
+    state.streak = 1;
+  }
+  state.lastActive = today;
+  persist();
+}
+
+// ===== RENDER ROUTINE TIMELINE =====
+function renderRoutine() {
+  const routine = generateRoutine(state.age, state.time, state.weight, state.target);
+  const tl = document.getElementById('routine-timeline');
+  const today = todayStr();
+  tl.innerHTML = '';
+
+  routine.forEach((item, i) => {
+    const done = state.completedToday.includes(i) && state.lastActive === today;
+    const div = document.createElement('div');
+    div.className = 'timeline-item' + (done ? ' done' : '');
+    div.innerHTML = `
+      <div class="tl-time">${item.time}</div>
+      <div class="tl-title">${item.title}</div>
+      <div class="tl-desc">${item.desc}</div>
+      <div class="tl-check ${done ? 'checked' : ''}" onclick="toggleTask(${i}, this)">
+        ${done ? '✓' : ''}
+      </div>
+    `;
+    tl.appendChild(div);
+  });
+
+  const completed = state.completedToday.filter(() => state.lastActive === today).length;
+  document.getElementById('stat-tasks').textContent = `${completed}/${routine.length}`;
+}
+
+async function toggleTask(index, el) {
+  const today = todayStr();
+  if (state.lastActive !== today) state.completedToday = [];
+  state.lastActive = today;
+
+  if (state.completedToday.includes(index)) {
+    state.completedToday = state.completedToday.filter(i => i !== index);
+  } else {
+    state.completedToday.push(index);
+  }
+  await persist();
+  renderRoutine();
+}
+
+// ===== WEIGHT CHART (Canvas) =====
+function renderWeightChart() {
+  const canvas = document.getElementById('weight-chart');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 200 * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = '200px';
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width, H = 200;
+  const data = state.weightLog.slice(-30);
+  const target = state.target;
+
+  if (data.length < 1) {
+    ctx.fillStyle = '#aab';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Log your weight to see your progress chart', W / 2, H / 2);
+    return;
+  }
+
+  const weights = data.map(d => d.weight);
+  const allVals = [...weights, target];
+  const minW = Math.min(...allVals) - 2;
+  const maxW = Math.max(...allVals) + 2;
+  const rangeW = maxW - minW || 1;
+
+  const pad = { top: 20, right: 20, bottom: 30, left: 50 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  const toX = (i) => pad.left + (data.length > 1 ? (i / (data.length - 1)) * cW : cW / 2);
+  const toY = (v) => pad.top + cH - ((v - minW) / rangeW) * cH;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // target line
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent2').trim() || '#f5a623';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, toY(target));
+  ctx.lineTo(W - pad.right, toY(target));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Target: ' + target + ' kg', pad.left + 4, toY(target) - 6);
+
+  // weight line
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#e94560';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  data.forEach((d, i) => {
+    const x = toX(i), y = toY(d.weight);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // dots
+  ctx.fillStyle = ctx.strokeStyle;
+  data.forEach((d, i) => {
+    ctx.beginPath();
+    ctx.arc(toX(i), toY(d.weight), 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // labels
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text2').trim() || '#aab';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  if (data.length <= 10) {
+    data.forEach((d, i) => {
+      ctx.fillText(d.date.slice(5), toX(i), H - 8);
+    });
+  } else {
+    [0, Math.floor(data.length / 2), data.length - 1].forEach(i => {
+      ctx.fillText(data[i].date.slice(5), toX(i), H - 8);
+    });
+  }
+
+  // Y axis labels
+  ctx.textAlign = 'right';
+  for (let v = Math.ceil(minW); v <= Math.floor(maxW); v += Math.max(1, Math.round(rangeW / 5))) {
+    ctx.fillText(v + '', pad.left - 8, toY(v) + 4);
+  }
+}
+
+async function logWeight() {
+  const w = parseFloat(document.getElementById('inp-log-weight').value);
+  if (!w || w < 10 || w > 300) return alert('Enter a valid weight.');
+  const today = todayStr();
+  const existing = state.weightLog.findIndex(e => e.date === today);
+  if (existing >= 0) state.weightLog[existing].weight = w;
+  else state.weightLog.push({ date: today, weight: w });
+  document.getElementById('inp-log-weight').value = '';
+  await persist();
+  renderDashboard();
+}
+
+// ===== THEME BANNER =====
+function renderThemeBanner() {
+  const banner = document.getElementById('theme-banner');
+  const sprites = {
+    pirates: `
+      <svg viewBox="0 0 140 120" style="position:absolute;left:5%;bottom:0;height:100px"><use href="#spr-ship"/></svg>
+      <svg viewBox="0 0 120 100" style="position:absolute;right:10%;bottom:0;height:80px"><use href="#spr-treasure"/></svg>
+      <svg viewBox="0 0 80 80" style="position:absolute;right:40%;top:10px;height:50px;opacity:.6"><use href="#spr-compass"/></svg>
+    `,
+    tech: `
+      <svg viewBox="0 0 100 120" style="position:absolute;left:5%;bottom:0;height:100px"><use href="#spr-robot"/></svg>
+      <svg viewBox="0 0 80 120" style="position:absolute;right:10%;bottom:0;height:95px"><use href="#spr-rocket"/></svg>
+      <svg viewBox="0 0 120 80" style="position:absolute;left:35%;bottom:5px;height:50px;opacity:.5"><use href="#spr-circuit"/></svg>
+    `,
+    library: `
+      <svg viewBox="0 0 100 120" style="position:absolute;left:5%;bottom:0;height:95px"><use href="#spr-book"/></svg>
+      <svg viewBox="0 0 60 100" style="position:absolute;right:10%;bottom:0;height:90px"><use href="#spr-lamp"/></svg>
+      <svg viewBox="0 0 120 80" style="position:absolute;left:30%;bottom:10px;height:50px;opacity:.6"><use href="#spr-scroll"/></svg>
+    `,
+    park: `
+      <svg viewBox="0 0 100 130" style="position:absolute;left:5%;bottom:0;height:110px"><use href="#spr-tree"/></svg>
+      <svg viewBox="0 0 140 80" style="position:absolute;right:5%;bottom:0;height:60px"><use href="#spr-bench"/></svg>
+      <svg viewBox="0 0 80 80" style="position:absolute;right:35%;top:5px;height:45px"><use href="#spr-sun"/></svg>
+      <svg viewBox="0 0 60 80" style="position:absolute;left:35%;bottom:0;height:60px"><use href="#spr-flower"/></svg>
+    `
+  };
+  const bgColors = {
+    pirates: 'linear-gradient(180deg, #1a0f0a 0%, #3d2114 100%)',
+    tech: 'linear-gradient(180deg, #0a0e1a 0%, #1e293b 100%)',
+    library: 'linear-gradient(180deg, #f5f0e8 0%, #d4c5a9 100%)',
+    park: 'linear-gradient(180deg, #a8dadc 0%, #e8f5e9 100%)'
+  };
+  banner.style.background = bgColors[state.theme] || bgColors.pirates;
+  banner.innerHTML = sprites[state.theme] || sprites.pirates;
+}
+
+// ===== SETTINGS =====
+function renderSettings() {
+  document.getElementById('toggle-notif').classList.toggle('on', state.notifEnabled);
+  document.getElementById('inp-reminder-time').value = state.reminderTime || '07:00';
+  const labels = { pirates: 'Pirates', tech: 'Tech', library: 'Library', park: 'Park' };
+  document.getElementById('current-theme-label').textContent = labels[state.theme] || 'Default';
+}
+
+async function toggleNotif() {
+  if (!state.notifEnabled) {
+    if (!('Notification' in window)) return alert('Notifications not supported in this browser.');
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return alert('Notification permission denied.');
+    state.notifEnabled = true;
+    scheduleReminder();
+  } else {
+    state.notifEnabled = false;
+  }
+  await persist();
+  renderSettings();
+}
+
+function scheduleReminder() {
+  if (!state.notifEnabled) return;
+  const [h, m] = (state.reminderTime || '07:00').split(':').map(Number);
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(h, m, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  const delay = next - now;
+  setTimeout(() => {
+    if (state.notifEnabled) {
+      new Notification('Healtho Reminder', { body: `Hey ${state.name}! Time for your daily routine. Keep that streak going!`, icon: '/icon-192.png' });
+      scheduleReminder();
+    }
+  }, delay);
+}
+
+async function saveSettings() {
+  state.reminderTime = document.getElementById('inp-reminder-time').value;
+  await persist();
+  if (state.notifEnabled) scheduleReminder();
+}
+
+async function resetData() {
+  if (!confirm('Are you sure? This will delete all your data.')) return;
+  localStorage.clear();
+  state = { name: '', age: 25, weight: 70, target: 60, time: 30, theme: 'pirates', streak: 0, lastActive: '', weightLog: [], completedToday: [], notifEnabled: false, reminderTime: '07:00' };
+  applyTheme('');
+  showScreen('hero');
+}
+
+// ===== PERSISTENCE =====
+async function persist() {
+  await saveEncrypted('healtho-data', state);
+}
+
+// ===== HERO SPRITES =====
+function renderHeroSprites() {
+  const container = document.getElementById('hero-sprites');
+  container.innerHTML = `
+    <svg viewBox="0 0 64 64" style="position:absolute;top:12%;left:8%;width:48px;opacity:.25;animation:float 4s ease-in-out infinite"><use href="#ico-dumbbell"/></svg>
+    <svg viewBox="0 0 64 64" style="position:absolute;top:20%;right:10%;width:40px;opacity:.2;animation:float 5s ease-in-out infinite .5s"><use href="#ico-apple"/></svg>
+    <svg viewBox="0 0 64 64" style="position:absolute;bottom:25%;left:12%;width:36px;opacity:.2;animation:float 4.5s ease-in-out infinite 1s"><use href="#ico-water"/></svg>
+    <svg viewBox="0 0 64 64" style="position:absolute;bottom:18%;right:14%;width:42px;opacity:.2;animation:float 5.5s ease-in-out infinite 1.5s"><use href="#ico-moon"/></svg>
+    <svg viewBox="0 0 64 64" style="position:absolute;top:60%;left:50%;width:32px;opacity:.15;animation:float 6s ease-in-out infinite 2s"><use href="#ico-scale"/></svg>
+  `;
+  const style = document.createElement('style');
+  style.textContent = `@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}`;
+  document.head.appendChild(style);
+}
+
+// ===== SERVICE WORKER =====
+async function registerSW() {
+  if ('serviceWorker' in navigator) {
+    try { await navigator.serviceWorker.register('/sw.js'); } catch(e) { console.log('SW registration failed', e); }
+  }
+}
+
+// ===== INIT =====
+async function init() {
+  renderHeroSprites();
+  registerSW();
+  const saved = await loadEncrypted('healtho-data');
+  if (saved && saved.name) {
+    Object.assign(state, saved);
+    applyTheme(state.theme);
+    showScreen('dashboard');
+    if (state.notifEnabled) scheduleReminder();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
