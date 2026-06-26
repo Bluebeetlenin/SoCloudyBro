@@ -29,7 +29,8 @@ h1,h2,h3{font-weight:700}
 @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 
 /* ===== HERO ===== */
-#hero{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden}
+#hero{text-align:center;display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden}
+#hero.active{display:flex}
 #hero h1{font-size:clamp(2rem,6vw,3.5rem);margin-bottom:8px}
 #hero .tagline{font-size:1.2rem;color:var(--text2);margin-bottom:32px}
 #hero-sprites{position:absolute;width:100%;height:100%;pointer-events:none;z-index:0}
@@ -89,7 +90,7 @@ h1,h2,h3{font-weight:700}
 .weight-input-row button{white-space:nowrap}
 
 /* ===== THEME SPRITE AREA ===== */
-.theme-sprite-banner{height:120px;position:relative;overflow:hidden;margin-bottom:24px;border-radius:var(--radius)}
+.theme-sprite-banner{height:140px;position:relative;overflow:hidden;margin-bottom:24px;border-radius:var(--radius)}
 
 /* ===== NAV ===== */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);display:flex;justify-content:center;gap:8px;padding:8px 16px;z-index:100;border-top:1px solid #223}
@@ -190,158 +191,562 @@ body.theme-park{--accent:#2d6a4f;--accent2:#f4a261;--bg:#e8f5e9;--surface:#c8e6c
   </symbol>
 
   <!-- ===== PIRATE THEME SPRITES ===== -->
-  <symbol id="spr-treasure" viewBox="0 0 120 100">
-    <rect x="10" y="40" width="100" height="55" rx="8" fill="#8B6914"/>
-    <rect x="10" y="40" width="100" height="18" rx="8" fill="#a37b1e"/>
-    <rect x="6" y="38" width="108" height="8" rx="4" fill="#6b4f10"/>
-    <rect x="46" y="34" width="28" height="16" rx="4" fill="#d4a017"/>
-    <circle cx="60" cy="42" r="6" fill="#f5a623"/>
-    <circle cx="60" cy="42" r="3" fill="#8B6914"/>
-    <circle cx="30" cy="62" r="7" fill="#f5c542"/>
-    <circle cx="50" cy="68" r="5" fill="#f5a623"/>
-    <circle cx="72" cy="60" r="8" fill="#f5c542"/>
-    <circle cx="88" cy="66" r="6" fill="#f5a623"/>
-    <path d="M25 72l4-6 5 3-3 6z" fill="#e94560" opacity=".8"/>
-    <path d="M75 74l6-4 3 5-6 3z" fill="#00b4d8" opacity=".7"/>
+  <symbol id="spr-treasure" viewBox="0 0 200 180">
+    <!-- Chest body with wood grain -->
+    <path d="M20 80 Q20 70 30 70 L170 70 Q180 70 180 80 L180 160 Q180 170 170 170 L30 170 Q20 170 20 160Z" fill="#8B5A2B"/>
+    <path d="M24 80 L24 160 Q24 166 30 166 L170 166 Q176 166 176 160 L176 80" fill="#A0692E"/>
+    <!-- Wood planks -->
+    <rect x="24" y="100" width="152" height="3" rx="1" fill="#7A4A1E" opacity=".4"/>
+    <rect x="24" y="130" width="152" height="3" rx="1" fill="#7A4A1E" opacity=".4"/>
+    <!-- Lid (open, tilted back) -->
+    <path d="M18 70 Q18 35 30 30 L170 30 Q182 35 182 70Z" fill="#9B6B30"/>
+    <path d="M22 68 Q22 40 32 36 L168 36 Q178 40 178 68Z" fill="#B8862D"/>
+    <!-- Lid highlight -->
+    <path d="M30 40 Q30 46 40 46 L100 46 Q100 40 90 38 L40 38 Q30 38 30 40Z" fill="#D4A84B" opacity=".3"/>
+    <!-- Metal bands -->
+    <rect x="14" y="66" width="172" height="8" rx="3" fill="#C19A3E"/>
+    <rect x="14" y="66" width="172" height="3" rx="1" fill="#E8C84B"/>
+    <!-- Lock plate -->
+    <path d="M85 66 L85 56 Q85 48 100 48 Q115 48 115 56 L115 66" fill="none" stroke="#C19A3E" stroke-width="5"/>
+    <rect x="88" y="66" width="24" height="18" rx="4" fill="#D4A73E"/>
+    <rect x="88" y="66" width="24" height="6" rx="3" fill="#E8C84B"/>
+    <circle cx="100" cy="80" r="3" fill="#7A4A1E"/>
+    <!-- Gold coins spilling out -->
+    <ellipse cx="55" cy="55" rx="12" ry="10" fill="#FFD700"/>
+    <ellipse cx="55" cy="55" rx="12" ry="10" fill="none" stroke="#DAA520" stroke-width="1.5"/>
+    <ellipse cx="55" cy="53" rx="8" ry="6" fill="#FFEC80" opacity=".5"/>
+    <text x="55" y="59" text-anchor="middle" font-size="10" fill="#B8860B" font-weight="bold">$</text>
+    <ellipse cx="75" cy="48" rx="11" ry="9" fill="#FFD700"/>
+    <ellipse cx="75" cy="48" rx="11" ry="9" fill="none" stroke="#DAA520" stroke-width="1.5"/>
+    <text x="75" y="52" text-anchor="middle" font-size="9" fill="#B8860B" font-weight="bold">$</text>
+    <ellipse cx="40" cy="50" rx="10" ry="8" fill="#FFC107"/>
+    <ellipse cx="40" cy="50" rx="10" ry="8" fill="none" stroke="#DAA520" stroke-width="1.5"/>
+    <!-- Gems -->
+    <polygon points="130,42 138,50 130,58 122,50" fill="#E94560"/>
+    <polygon points="130,44 136,50 130,56 124,50" fill="#FF6B81" opacity=".6"/>
+    <polygon points="155,50 161,56 155,62 149,56" fill="#00D4FF"/>
+    <polygon points="155,52 159,56 155,60 151,56" fill="#80E8FF" opacity=".6"/>
+    <circle cx="145" cy="42" r="6" fill="#7C3AED"/>
+    <circle cx="145" cy="40" r="3" fill="#A78BFA" opacity=".5"/>
+    <!-- Sparkles -->
+    <g fill="#FFD700">
+      <path d="M45 32l2-6 2 6 6 2-6 2-2 6-2-6-6-2z" opacity=".8"/>
+      <path d="M160 35l1.5-4.5 1.5 4.5 4.5 1.5-4.5 1.5-1.5 4.5-1.5-4.5-4.5-1.5z" opacity=".6"/>
+      <path d="M100 22l1-3 1 3 3 1-3 1-1 3-1-3-3-1z" opacity=".7"/>
+    </g>
+    <!-- Corner rivets -->
+    <circle cx="30" cy="74" r="4" fill="#C19A3E"/><circle cx="30" cy="74" r="2" fill="#E8C84B"/>
+    <circle cx="170" cy="74" r="4" fill="#C19A3E"/><circle cx="170" cy="74" r="2" fill="#E8C84B"/>
+    <circle cx="30" cy="160" r="4" fill="#C19A3E"/><circle cx="30" cy="160" r="2" fill="#E8C84B"/>
+    <circle cx="170" cy="160" r="4" fill="#C19A3E"/><circle cx="170" cy="160" r="2" fill="#E8C84B"/>
   </symbol>
-  <symbol id="spr-ship" viewBox="0 0 140 120">
-    <path d="M20 80c0 0 10 30 50 30s50-30 50-30z" fill="#8B4513"/>
-    <path d="M20 80c0 0 10 20 50 20s50-20 50-20z" fill="#a0522d"/>
-    <rect x="66" y="20" width="6" height="62" rx="2" fill="#6b4f10"/>
-    <path d="M72 22l40 28-40 10z" fill="#f5f5dc"/>
-    <path d="M66 30l-30 20 30 8z" fill="#f0e8d0"/>
-    <path d="M62 14l12-6 4 12-12 4z" fill="#1a1a2e"/>
-    <rect x="30" y="72" width="8" height="8" rx="4" fill="#2c1810"/>
-    <rect x="50" y="72" width="8" height="8" rx="4" fill="#2c1810"/>
-    <rect x="70" y="72" width="8" height="8" rx="4" fill="#2c1810"/>
-    <rect x="90" y="72" width="8" height="8" rx="4" fill="#2c1810"/>
+
+  <symbol id="spr-ship" viewBox="0 0 260 220">
+    <!-- Ocean waves -->
+    <path d="M0 185 Q30 175 60 185 T120 185 T180 185 T240 185 L260 185 L260 220 L0 220Z" fill="#1565C0" opacity=".4"/>
+    <path d="M0 195 Q25 188 50 195 T100 195 T150 195 T200 195 T250 195 L260 195 L260 220 L0 220Z" fill="#0D47A1" opacity=".3"/>
+    <!-- Hull -->
+    <path d="M30 160 Q30 200 130 200 Q230 200 230 160Z" fill="#5D3A1A"/>
+    <path d="M35 160 Q35 192 130 192 Q225 192 225 160Z" fill="#7B4F2A"/>
+    <!-- Hull stripe -->
+    <path d="M40 170 Q40 186 130 186 Q220 186 220 170" fill="none" stroke="#D4A73E" stroke-width="3"/>
+    <!-- Hull planks -->
+    <path d="M50 160 L50 185" stroke="#5D3A1A" stroke-width="1" opacity=".3"/>
+    <path d="M90 160 L88 190" stroke="#5D3A1A" stroke-width="1" opacity=".3"/>
+    <path d="M130 160 L130 192" stroke="#5D3A1A" stroke-width="1" opacity=".3"/>
+    <path d="M170 160 L172 190" stroke="#5D3A1A" stroke-width="1" opacity=".3"/>
+    <path d="M210 160 L210 185" stroke="#5D3A1A" stroke-width="1" opacity=".3"/>
+    <!-- Port holes -->
+    <circle cx="70" cy="172" r="8" fill="#1A0F0A"/><circle cx="70" cy="172" r="6" fill="#2C1810"/>
+    <circle cx="70" cy="172" r="8" fill="none" stroke="#C19A3E" stroke-width="2"/>
+    <circle cx="130" cy="175" r="8" fill="#1A0F0A"/><circle cx="130" cy="175" r="6" fill="#2C1810"/>
+    <circle cx="130" cy="175" r="8" fill="none" stroke="#C19A3E" stroke-width="2"/>
+    <circle cx="190" cy="172" r="8" fill="#1A0F0A"/><circle cx="190" cy="172" r="6" fill="#2C1810"/>
+    <circle cx="190" cy="172" r="8" fill="none" stroke="#C19A3E" stroke-width="2"/>
+    <!-- Main mast -->
+    <rect x="126" y="30" width="8" height="132" rx="3" fill="#8B6914"/>
+    <rect x="128" y="30" width="3" height="132" fill="#A07D1A" opacity=".4"/>
+    <!-- Crow's nest -->
+    <rect x="116" y="28" width="28" height="8" rx="3" fill="#5D3A1A"/>
+    <rect x="120" y="22" width="20" height="8" rx="2" fill="#7B4F2A"/>
+    <!-- Main sail -->
+    <path d="M134 40 Q200 70 190 130 L134 120Z" fill="#FFF5E1"/>
+    <path d="M134 40 Q195 68 186 125 L134 116Z" fill="#F5ECD5" opacity=".6"/>
+    <path d="M134 42 L186 125" stroke="#D4C5A9" stroke-width="1" opacity=".4"/>
+    <!-- Sail cross -->
+    <rect x="134" y="60" width="52" height="3" rx="1" fill="#D4A73E" opacity=".5"/>
+    <rect x="134" y="90" width="48" height="3" rx="1" fill="#D4A73E" opacity=".5"/>
+    <!-- Secondary sail -->
+    <path d="M126 45 Q65 72 72 125 L126 118Z" fill="#FFF8EE"/>
+    <path d="M126 48 Q70 73 76 120 L126 114Z" fill="#F5ECD5" opacity=".5"/>
+    <!-- Skull on sail -->
+    <circle cx="100" cy="85" r="10" fill="none" stroke="#5D3A1A" stroke-width="1.5" opacity=".3"/>
+    <circle cx="96" cy="83" r="2" fill="#5D3A1A" opacity=".3"/>
+    <circle cx="104" cy="83" r="2" fill="#5D3A1A" opacity=".3"/>
+    <path d="M96 90 L104 90" stroke="#5D3A1A" stroke-width="1.5" opacity=".3"/>
+    <!-- Flag -->
+    <path d="M130 18 L130 30" stroke="#5D3A1A" stroke-width="3"/>
+    <path d="M130 18 L165 26 L130 34Z" fill="#1A1A2E"/>
+    <path d="M140 24 L144 22 L144 28 L140 30Z" fill="#FFD700" opacity=".7"/>
+    <path d="M148 23 L152 21.5 L152 27 L148 28.5Z" fill="#FFD700" opacity=".7"/>
+    <!-- Bowsprit -->
+    <path d="M230 155 L255 140" stroke="#8B6914" stroke-width="4" stroke-linecap="round"/>
+    <!-- Rigging lines -->
+    <path d="M134 35 L225 155" stroke="#8B6914" stroke-width="1" opacity=".3"/>
+    <path d="M126 35 L40 155" stroke="#8B6914" stroke-width="1" opacity=".3"/>
   </symbol>
-  <symbol id="spr-compass" viewBox="0 0 80 80">
-    <circle cx="40" cy="40" r="36" fill="#d4a017" opacity=".2"/>
-    <circle cx="40" cy="40" r="30" fill="none" stroke="#d4a017" stroke-width="3"/>
-    <circle cx="40" cy="40" r="4" fill="#d4a017"/>
-    <polygon points="40,12 44,36 40,40 36,36" fill="#e94560"/>
-    <polygon points="40,68 36,44 40,40 44,44" fill="#eee"/>
-    <polygon points="12,40 36,36 40,40 36,44" fill="#aab"/>
-    <polygon points="68,40 44,44 40,40 44,36" fill="#aab"/>
-    <text x="40" y="10" text-anchor="middle" font-size="8" fill="#d4a017" font-weight="bold">N</text>
+
+  <symbol id="spr-compass" viewBox="0 0 140 140">
+    <!-- Outer ring -->
+    <circle cx="70" cy="70" r="65" fill="#2C1810"/>
+    <circle cx="70" cy="70" r="60" fill="#D4A73E"/>
+    <circle cx="70" cy="70" r="57" fill="#B8942E"/>
+    <circle cx="70" cy="70" r="54" fill="#F5E6C8"/>
+    <!-- Degree marks -->
+    <g stroke="#8B6914" stroke-width="1.5">
+      <line x1="70" y1="18" x2="70" y2="28"/>
+      <line x1="70" y1="112" x2="70" y2="122"/>
+      <line x1="18" y1="70" x2="28" y2="70"/>
+      <line x1="112" y1="70" x2="122" y2="70"/>
+    </g>
+    <g stroke="#B8942E" stroke-width="1">
+      <line x1="33" y1="33" x2="39" y2="39"/>
+      <line x1="107" y1="33" x2="101" y2="39"/>
+      <line x1="33" y1="107" x2="39" y2="101"/>
+      <line x1="107" y1="107" x2="101" y2="101"/>
+    </g>
+    <!-- Cardinal labels -->
+    <text x="70" y="26" text-anchor="middle" font-size="14" fill="#C0354E" font-weight="bold" font-family="serif">N</text>
+    <text x="70" y="126" text-anchor="middle" font-size="11" fill="#5D3A1A" font-weight="bold" font-family="serif">S</text>
+    <text x="22" y="74" text-anchor="middle" font-size="11" fill="#5D3A1A" font-weight="bold" font-family="serif">W</text>
+    <text x="118" y="74" text-anchor="middle" font-size="11" fill="#5D3A1A" font-weight="bold" font-family="serif">E</text>
+    <!-- Compass rose -->
+    <polygon points="70,24 76,62 70,70 64,62" fill="#E94560"/>
+    <polygon points="70,24 73,62 70,70" fill="#C0354E"/>
+    <polygon points="70,116 64,78 70,70 76,78" fill="#EEEEEE"/>
+    <polygon points="70,116 67,78 70,70" fill="#CCCCCC"/>
+    <polygon points="24,70 62,64 70,70 62,76" fill="#D4D4D4"/>
+    <polygon points="24,70 62,67 70,70" fill="#BBBBBB"/>
+    <polygon points="116,70 78,76 70,70 78,64" fill="#D4D4D4"/>
+    <polygon points="116,70 78,67 70,70" fill="#BBBBBB"/>
+    <!-- Diagonal spokes -->
+    <polygon points="36,36 64,64 70,70 62,62" fill="#DAA520" opacity=".4"/>
+    <polygon points="104,36 76,64 70,70 78,62" fill="#DAA520" opacity=".4"/>
+    <polygon points="36,104 64,76 70,70 62,78" fill="#DAA520" opacity=".4"/>
+    <polygon points="104,104 76,76 70,70 78,78" fill="#DAA520" opacity=".4"/>
+    <!-- Center jewel -->
+    <circle cx="70" cy="70" r="7" fill="#D4A73E"/>
+    <circle cx="70" cy="70" r="5" fill="#FFD700"/>
+    <circle cx="68" cy="68" r="2" fill="#FFF" opacity=".4"/>
   </symbol>
 
   <!-- ===== TECH THEME SPRITES ===== -->
-  <symbol id="spr-circuit" viewBox="0 0 120 80">
-    <rect x="40" y="20" width="40" height="40" rx="4" fill="#1e293b" stroke="#00d4ff" stroke-width="2"/>
-    <circle cx="60" cy="40" r="10" fill="none" stroke="#00d4ff" stroke-width="2"/>
-    <circle cx="60" cy="40" r="4" fill="#00d4ff"/>
-    <line x1="10" y1="30" x2="40" y2="30" stroke="#00d4ff" stroke-width="2"/>
-    <line x1="10" y1="50" x2="40" y2="50" stroke="#00d4ff" stroke-width="2"/>
-    <line x1="80" y1="30" x2="110" y2="30" stroke="#00d4ff" stroke-width="2"/>
-    <line x1="80" y1="50" x2="110" y2="50" stroke="#00d4ff" stroke-width="2"/>
-    <circle cx="10" cy="30" r="3" fill="#7c3aed"/>
-    <circle cx="10" cy="50" r="3" fill="#7c3aed"/>
-    <circle cx="110" cy="30" r="3" fill="#7c3aed"/>
-    <circle cx="110" cy="50" r="3" fill="#7c3aed"/>
-    <line x1="60" y1="0" x2="60" y2="20" stroke="#00d4ff" stroke-width="2"/>
-    <line x1="60" y1="60" x2="60" y2="80" stroke="#00d4ff" stroke-width="2"/>
+  <symbol id="spr-circuit" viewBox="0 0 200 140">
+    <!-- Main chip -->
+    <rect x="60" y="30" width="80" height="80" rx="8" fill="#0F172A"/>
+    <rect x="60" y="30" width="80" height="80" rx="8" fill="none" stroke="#00D4FF" stroke-width="2"/>
+    <!-- Inner chip detail -->
+    <rect x="72" y="42" width="56" height="56" rx="4" fill="#1E293B"/>
+    <rect x="72" y="42" width="56" height="56" rx="4" fill="none" stroke="#00D4FF" stroke-width="1" opacity=".5"/>
+    <!-- Chip core -->
+    <circle cx="100" cy="70" r="18" fill="none" stroke="#7C3AED" stroke-width="2"/>
+    <circle cx="100" cy="70" r="12" fill="none" stroke="#00D4FF" stroke-width="1.5"/>
+    <circle cx="100" cy="70" r="6" fill="#00D4FF"/>
+    <circle cx="100" cy="70" r="3" fill="#80E8FF"/>
+    <!-- Glowing pulse rings -->
+    <circle cx="100" cy="70" r="22" fill="none" stroke="#00D4FF" stroke-width=".5" opacity=".3"/>
+    <circle cx="100" cy="70" r="26" fill="none" stroke="#7C3AED" stroke-width=".5" opacity=".2"/>
+    <!-- Top pins -->
+    <g fill="#00D4FF">
+      <rect x="76" y="20" width="3" height="12" rx="1"/><rect x="86" y="20" width="3" height="12" rx="1"/>
+      <rect x="96" y="20" width="3" height="12" rx="1"/><rect x="106" y="20" width="3" height="12" rx="1"/>
+      <rect x="116" y="20" width="3" height="12" rx="1"/>
+    </g>
+    <!-- Bottom pins -->
+    <g fill="#00D4FF">
+      <rect x="76" y="108" width="3" height="12" rx="1"/><rect x="86" y="108" width="3" height="12" rx="1"/>
+      <rect x="96" y="108" width="3" height="12" rx="1"/><rect x="106" y="108" width="3" height="12" rx="1"/>
+      <rect x="116" y="108" width="3" height="12" rx="1"/>
+    </g>
+    <!-- Left pins -->
+    <g fill="#7C3AED">
+      <rect x="48" y="44" width="12" height="3" rx="1"/><rect x="48" y="56" width="12" height="3" rx="1"/>
+      <rect x="48" y="68" width="12" height="3" rx="1"/><rect x="48" y="80" width="12" height="3" rx="1"/>
+      <rect x="48" y="92" width="12" height="3" rx="1"/>
+    </g>
+    <!-- Right pins -->
+    <g fill="#7C3AED">
+      <rect x="140" y="44" width="12" height="3" rx="1"/><rect x="140" y="56" width="12" height="3" rx="1"/>
+      <rect x="140" y="68" width="12" height="3" rx="1"/><rect x="140" y="80" width="12" height="3" rx="1"/>
+      <rect x="140" y="92" width="12" height="3" rx="1"/>
+    </g>
+    <!-- Trace lines -->
+    <path d="M48 46 L20 46 L20 20 L40 20" stroke="#00D4FF" stroke-width="1.5" fill="none" opacity=".6"/>
+    <path d="M152 46 L180 46 L180 20 L160 20" stroke="#00D4FF" stroke-width="1.5" fill="none" opacity=".6"/>
+    <path d="M48 92 L20 92 L20 120 L40 120" stroke="#7C3AED" stroke-width="1.5" fill="none" opacity=".6"/>
+    <path d="M152 92 L180 92 L180 120 L160 120" stroke="#7C3AED" stroke-width="1.5" fill="none" opacity=".6"/>
+    <!-- Nodes -->
+    <circle cx="40" cy="20" r="4" fill="#00D4FF" opacity=".8"/>
+    <circle cx="160" cy="20" r="4" fill="#00D4FF" opacity=".8"/>
+    <circle cx="40" cy="120" r="4" fill="#7C3AED" opacity=".8"/>
+    <circle cx="160" cy="120" r="4" fill="#7C3AED" opacity=".8"/>
+    <!-- Data dots -->
+    <circle cx="20" cy="46" r="2" fill="#00D4FF" opacity=".5"/>
+    <circle cx="180" cy="46" r="2" fill="#00D4FF" opacity=".5"/>
   </symbol>
-  <symbol id="spr-robot" viewBox="0 0 100 120">
-    <rect x="25" y="30" width="50" height="40" rx="8" fill="#1e293b" stroke="#00d4ff" stroke-width="2"/>
-    <circle cx="40" cy="48" r="6" fill="#00d4ff"/>
-    <circle cx="60" cy="48" r="6" fill="#00d4ff"/>
-    <circle cx="40" cy="48" r="3" fill="#0a0e1a"/>
-    <circle cx="60" cy="48" r="3" fill="#0a0e1a"/>
-    <rect x="38" y="58" width="24" height="4" rx="2" fill="#7c3aed"/>
-    <rect x="46" y="8" width="8" height="22" rx="4" fill="#555"/>
-    <circle cx="50" cy="8" r="5" fill="#00d4ff"/>
-    <rect x="30" y="74" width="16" height="30" rx="6" fill="#1e293b" stroke="#00d4ff" stroke-width="2"/>
-    <rect x="54" y="74" width="16" height="30" rx="6" fill="#1e293b" stroke="#00d4ff" stroke-width="2"/>
-    <rect x="8" y="38" width="14" height="8" rx="4" fill="#555"/>
-    <rect x="78" y="38" width="14" height="8" rx="4" fill="#555"/>
+
+  <symbol id="spr-robot" viewBox="0 0 180 220">
+    <!-- Antenna -->
+    <rect x="85" y="8" width="10" height="30" rx="4" fill="#475569"/>
+    <circle cx="90" cy="8" r="10" fill="#00D4FF"/>
+    <circle cx="90" cy="8" r="6" fill="#80E8FF"/>
+    <circle cx="88" cy="6" r="2" fill="#FFF" opacity=".5"/>
+    <!-- Signal arcs -->
+    <path d="M70 12 Q70 -4 90 -4" stroke="#00D4FF" stroke-width="1.5" fill="none" opacity=".4"/>
+    <path d="M110 12 Q110 -4 90 -4" stroke="#00D4FF" stroke-width="1.5" fill="none" opacity=".4"/>
+    <!-- Head -->
+    <rect x="35" y="38" width="110" height="72" rx="18" fill="#1E293B"/>
+    <rect x="35" y="38" width="110" height="72" rx="18" fill="none" stroke="#00D4FF" stroke-width="2.5"/>
+    <!-- Face plate -->
+    <rect x="45" y="48" width="90" height="52" rx="12" fill="#0F172A"/>
+    <!-- Eyes -->
+    <ellipse cx="68" cy="72" rx="14" ry="16" fill="#00D4FF"/>
+    <ellipse cx="68" cy="72" rx="10" ry="12" fill="#0A0E1A"/>
+    <ellipse cx="68" cy="70" rx="5" ry="6" fill="#00D4FF" opacity=".7"/>
+    <circle cx="65" cy="67" r="3" fill="#FFF" opacity=".5"/>
+    <ellipse cx="112" cy="72" rx="14" ry="16" fill="#00D4FF"/>
+    <ellipse cx="112" cy="72" rx="10" ry="12" fill="#0A0E1A"/>
+    <ellipse cx="112" cy="70" rx="5" ry="6" fill="#00D4FF" opacity=".7"/>
+    <circle cx="109" cy="67" r="3" fill="#FFF" opacity=".5"/>
+    <!-- Mouth -->
+    <rect x="62" y="92" width="56" height="6" rx="3" fill="#7C3AED"/>
+    <rect x="68" y="92" width="6" height="6" rx="1" fill="#A78BFA" opacity=".5"/>
+    <rect x="80" y="92" width="6" height="6" rx="1" fill="#A78BFA" opacity=".5"/>
+    <rect x="92" y="92" width="6" height="6" rx="1" fill="#A78BFA" opacity=".5"/>
+    <rect x="104" y="92" width="6" height="6" rx="1" fill="#A78BFA" opacity=".5"/>
+    <!-- Ear panels -->
+    <rect x="16" y="55" width="20" height="36" rx="6" fill="#334155"/>
+    <rect x="16" y="55" width="20" height="36" rx="6" fill="none" stroke="#00D4FF" stroke-width="1.5"/>
+    <circle cx="26" cy="65" r="3" fill="#E94560"/>
+    <circle cx="26" cy="78" r="3" fill="#2DD4BF"/>
+    <rect x="144" y="55" width="20" height="36" rx="6" fill="#334155"/>
+    <rect x="144" y="55" width="20" height="36" rx="6" fill="none" stroke="#00D4FF" stroke-width="1.5"/>
+    <circle cx="154" cy="65" r="3" fill="#E94560"/>
+    <circle cx="154" cy="78" r="3" fill="#2DD4BF"/>
+    <!-- Neck -->
+    <rect x="75" y="110" width="30" height="16" rx="4" fill="#475569"/>
+    <!-- Body -->
+    <path d="M40 126 L40 186 Q40 198 52 198 L128 198 Q140 198 140 186 L140 126Z" fill="#1E293B"/>
+    <path d="M40 126 L40 186 Q40 198 52 198 L128 198 Q140 198 140 186 L140 126Z" fill="none" stroke="#00D4FF" stroke-width="2"/>
+    <!-- Chest panel -->
+    <rect x="55" y="135" width="70" height="45" rx="8" fill="#0F172A"/>
+    <circle cx="90" cy="157" r="14" fill="none" stroke="#7C3AED" stroke-width="2"/>
+    <circle cx="90" cy="157" r="8" fill="#7C3AED" opacity=".3"/>
+    <circle cx="90" cy="157" r="4" fill="#7C3AED"/>
+    <!-- Chest lights -->
+    <circle cx="64" cy="142" r="3" fill="#2DD4BF"/>
+    <circle cx="74" cy="142" r="3" fill="#F5A623"/>
+    <circle cx="84" cy="142" r="3" fill="#E94560"/>
+    <!-- Arms -->
+    <path d="M40 130 L18 145 Q10 150 14 160 L22 175 Q26 180 32 178 L40 170" fill="#334155" stroke="#00D4FF" stroke-width="1.5"/>
+    <circle cx="14" cy="175" r="8" fill="#475569" stroke="#00D4FF" stroke-width="1.5"/>
+    <path d="M140 130 L162 145 Q170 150 166 160 L158 175 Q154 180 148 178 L140 170" fill="#334155" stroke="#00D4FF" stroke-width="1.5"/>
+    <circle cx="166" cy="175" r="8" fill="#475569" stroke="#00D4FF" stroke-width="1.5"/>
+    <!-- Legs -->
+    <rect x="52" y="198" width="24" height="14" rx="6" fill="#334155" stroke="#00D4FF" stroke-width="1.5"/>
+    <rect x="104" y="198" width="24" height="14" rx="6" fill="#334155" stroke="#00D4FF" stroke-width="1.5"/>
   </symbol>
-  <symbol id="spr-rocket" viewBox="0 0 80 120">
-    <path d="M40 8c-10 16-16 40-16 60h32c0-20-6-44-16-60z" fill="#e2e8f0"/>
-    <path d="M40 8c-6 10-10 24-12 40h24c-2-16-6-30-12-40z" fill="#cbd5e1"/>
-    <circle cx="40" cy="52" r="8" fill="#00d4ff"/>
-    <circle cx="40" cy="52" r="4" fill="#0a0e1a"/>
-    <path d="M24 68c-10 4-14 16-14 26h14z" fill="#7c3aed"/>
-    <path d="M56 68c10 4 14 16 14 26H56z" fill="#7c3aed"/>
-    <path d="M32 94h16l-2 18h-12z" fill="#e94560"/>
-    <path d="M36 94h8l-1 12h-6z" fill="#f5a623"/>
+
+  <symbol id="spr-rocket" viewBox="0 0 140 240">
+    <!-- Exhaust flame -->
+    <path d="M55 210 Q70 260 70 250 Q70 260 85 210" fill="#F5A623" opacity=".7"/>
+    <path d="M60 210 Q70 245 70 238 Q70 245 80 210" fill="#E94560" opacity=".8"/>
+    <path d="M63 210 Q70 235 70 230 Q70 235 77 210" fill="#FFD700"/>
+    <!-- Fins -->
+    <path d="M42 170 L10 215 Q8 220 14 218 L42 200Z" fill="#7C3AED"/>
+    <path d="M42 170 L14 212 L42 196Z" fill="#9B6DFF" opacity=".5"/>
+    <path d="M98 170 L130 215 Q132 220 126 218 L98 200Z" fill="#7C3AED"/>
+    <path d="M98 170 L126 212 L98 196Z" fill="#9B6DFF" opacity=".5"/>
+    <!-- Body -->
+    <path d="M70 10 Q30 60 30 130 L30 200 Q30 212 42 212 L98 212 Q110 212 110 200 L110 130 Q110 60 70 10Z" fill="#E2E8F0"/>
+    <path d="M70 10 Q38 55 34 130 L34 200 Q34 208 42 208 L70 208 L70 10Z" fill="#CBD5E1"/>
+    <!-- Window -->
+    <circle cx="70" cy="90" r="22" fill="#0A0E1A"/>
+    <circle cx="70" cy="90" r="22" fill="none" stroke="#94A3B8" stroke-width="3"/>
+    <circle cx="70" cy="90" r="18" fill="#1E293B"/>
+    <circle cx="70" cy="90" r="14" fill="#0EA5E9"/>
+    <circle cx="70" cy="90" r="10" fill="#38BDF8" opacity=".5"/>
+    <circle cx="64" cy="84" r="4" fill="#FFF" opacity=".4"/>
+    <!-- Body stripes -->
+    <rect x="30" y="140" width="80" height="5" rx="2" fill="#E94560"/>
+    <rect x="30" y="150" width="80" height="3" rx="1" fill="#E94560" opacity=".5"/>
+    <rect x="30" y="180" width="80" height="5" rx="2" fill="#00D4FF"/>
+    <!-- Rivets -->
+    <circle cx="40" cy="160" r="3" fill="#94A3B8"/><circle cx="40" cy="160" r="1.5" fill="#CBD5E1"/>
+    <circle cx="100" cy="160" r="3" fill="#94A3B8"/><circle cx="100" cy="160" r="1.5" fill="#CBD5E1"/>
+    <!-- Nose cone highlight -->
+    <path d="M70 14 Q58 40 52 80 L70 70Z" fill="#FFF" opacity=".15"/>
+    <!-- Stars around -->
+    <g fill="#FFF" opacity=".6">
+      <path d="M15 40l2-5 2 5 5 2-5 2-2 5-2-5-5-2z"/>
+      <path d="M125 60l1.5-4 1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5z"/>
+      <path d="M20 150l1-3 1 3 3 1-3 1-1 3-1-3-3-1z"/>
+    </g>
   </symbol>
 
   <!-- ===== LIBRARY THEME SPRITES ===== -->
-  <symbol id="spr-book" viewBox="0 0 100 120">
-    <rect x="15" y="10" width="70" height="95" rx="4" fill="#8b5e3c"/>
-    <rect x="20" y="10" width="65" height="95" rx="2" fill="#f5f0e8"/>
-    <rect x="15" y="10" width="8" height="95" rx="2" fill="#6b4226"/>
-    <rect x="28" y="24" width="44" height="4" rx="2" fill="#8b5e3c" opacity=".6"/>
-    <rect x="28" y="34" width="38" height="3" rx="1" fill="#aaa" opacity=".4"/>
-    <rect x="28" y="42" width="42" height="3" rx="1" fill="#aaa" opacity=".4"/>
-    <rect x="28" y="50" width="30" height="3" rx="1" fill="#aaa" opacity=".4"/>
-    <circle cx="50" cy="76" r="14" fill="none" stroke="#2d6a4f" stroke-width="2"/>
-    <path d="M50 66v10l6-4z" fill="#2d6a4f"/>
+  <symbol id="spr-book" viewBox="0 0 180 220">
+    <!-- Book shadow -->
+    <ellipse cx="95" cy="210" rx="60" ry="8" fill="#8B5E3C" opacity=".15"/>
+    <!-- Back cover -->
+    <path d="M25 15 L155 15 Q165 15 165 25 L165 195 Q165 205 155 205 L25 205 Q15 205 15 195 L15 25 Q15 15 25 15Z" fill="#C0354E"/>
+    <!-- Pages (side view) -->
+    <rect x="22" y="20" width="140" height="178" rx="3" fill="#FFF5E6"/>
+    <rect x="24" y="22" width="136" height="174" rx="2" fill="#FAF0DB"/>
+    <!-- Page lines -->
+    <g opacity=".2" fill="#8B5E3C">
+      <rect x="40" y="45" width="90" height="2.5" rx="1"/>
+      <rect x="40" y="55" width="80" height="2.5" rx="1"/>
+      <rect x="40" y="65" width="85" height="2.5" rx="1"/>
+      <rect x="40" y="75" width="70" height="2.5" rx="1"/>
+      <rect x="40" y="95" width="90" height="2.5" rx="1"/>
+      <rect x="40" y="105" width="75" height="2.5" rx="1"/>
+      <rect x="40" y="115" width="88" height="2.5" rx="1"/>
+      <rect x="40" y="125" width="60" height="2.5" rx="1"/>
+    </g>
+    <!-- Front cover -->
+    <path d="M28 12 L155 12 Q168 12 168 25 L168 192 Q168 205 155 205 L28 205 Q18 205 18 192 L18 25 Q18 12 28 12Z" fill="#E94560"/>
+    <path d="M28 12 L155 12 Q168 12 168 25 L168 192 Q168 205 155 205 L28 205 Q18 205 18 192 L18 25 Q18 12 28 12Z" fill="none" stroke="#C0354E" stroke-width="2"/>
+    <!-- Spine -->
+    <rect x="18" y="12" width="18" height="193" rx="4" fill="#C0354E"/>
+    <rect x="18" y="12" width="18" height="193" rx="4" fill="none" stroke="#A02040" stroke-width="1"/>
+    <rect x="22" y="40" width="10" height="3" rx="1" fill="#D4A73E" opacity=".6"/>
+    <rect x="22" y="100" width="10" height="3" rx="1" fill="#D4A73E" opacity=".6"/>
+    <rect x="22" y="160" width="10" height="3" rx="1" fill="#D4A73E" opacity=".6"/>
+    <!-- Cover design: ornate border -->
+    <rect x="46" y="32" width="112" height="155" rx="6" fill="none" stroke="#D4A73E" stroke-width="2"/>
+    <rect x="52" y="38" width="100" height="143" rx="4" fill="none" stroke="#D4A73E" stroke-width="1" opacity=".5"/>
+    <!-- Cover emblem -->
+    <circle cx="102" cy="100" r="28" fill="#D4A73E" opacity=".15"/>
+    <circle cx="102" cy="100" r="22" fill="none" stroke="#D4A73E" stroke-width="2"/>
+    <!-- Open book emblem inside -->
+    <path d="M88 95 Q88 85 102 82 Q116 85 116 95 L116 112 Q102 108 88 112Z" fill="none" stroke="#D4A73E" stroke-width="2"/>
+    <line x1="102" y1="82" x2="102" y2="112" stroke="#D4A73E" stroke-width="1.5"/>
+    <!-- Title lines -->
+    <rect x="62" y="140" width="80" height="4" rx="2" fill="#D4A73E" opacity=".7"/>
+    <rect x="72" y="150" width="60" height="3" rx="1" fill="#D4A73E" opacity=".5"/>
+    <!-- Corner flourishes -->
+    <path d="M50 36 Q46 36 46 40" stroke="#D4A73E" stroke-width="2" fill="none"/>
+    <path d="M154 36 Q158 36 158 40" stroke="#D4A73E" stroke-width="2" fill="none"/>
+    <path d="M50 183 Q46 183 46 179" stroke="#D4A73E" stroke-width="2" fill="none"/>
+    <path d="M154 183 Q158 183 158 179" stroke="#D4A73E" stroke-width="2" fill="none"/>
+    <!-- Bookmark ribbon -->
+    <path d="M130 12 L130 55 L136 45 L142 55 L142 12" fill="#2D6A4F"/>
   </symbol>
-  <symbol id="spr-scroll" viewBox="0 0 120 80">
-    <rect x="20" y="14" width="80" height="52" rx="2" fill="#f0e8d0"/>
-    <circle cx="20" cy="14" r="10" fill="#d4c5a9"/>
-    <circle cx="20" cy="66" r="10" fill="#d4c5a9"/>
-    <circle cx="100" cy="14" r="10" fill="#d4c5a9"/>
-    <circle cx="100" cy="66" r="10" fill="#d4c5a9"/>
-    <rect x="30" y="26" width="60" height="3" rx="1" fill="#8b5e3c" opacity=".5"/>
-    <rect x="30" y="34" width="50" height="3" rx="1" fill="#8b5e3c" opacity=".4"/>
-    <rect x="30" y="42" width="55" height="3" rx="1" fill="#8b5e3c" opacity=".4"/>
-    <rect x="30" y="50" width="35" height="3" rx="1" fill="#8b5e3c" opacity=".3"/>
+
+  <symbol id="spr-scroll" viewBox="0 0 220 150">
+    <!-- Scroll body -->
+    <rect x="30" y="25" width="160" height="100" fill="#F5E6C8"/>
+    <rect x="30" y="25" width="160" height="100" fill="none" stroke="#D4C5A9" stroke-width="1"/>
+    <!-- Aged texture -->
+    <circle cx="60" cy="50" r="15" fill="#E8D5B0" opacity=".3"/>
+    <circle cx="150" cy="90" r="20" fill="#E8D5B0" opacity=".2"/>
+    <!-- Top roll -->
+    <ellipse cx="30" cy="25" rx="16" ry="12" fill="#D4B896"/>
+    <ellipse cx="30" cy="25" rx="16" ry="12" fill="none" stroke="#B8A07A" stroke-width="1.5"/>
+    <ellipse cx="30" cy="25" rx="8" ry="6" fill="#C4A882" opacity=".6"/>
+    <ellipse cx="190" cy="25" rx="16" ry="12" fill="#D4B896"/>
+    <ellipse cx="190" cy="25" rx="16" ry="12" fill="none" stroke="#B8A07A" stroke-width="1.5"/>
+    <ellipse cx="190" cy="25" rx="8" ry="6" fill="#C4A882" opacity=".6"/>
+    <!-- Bottom roll -->
+    <ellipse cx="30" cy="125" rx="16" ry="12" fill="#D4B896"/>
+    <ellipse cx="30" cy="125" rx="16" ry="12" fill="none" stroke="#B8A07A" stroke-width="1.5"/>
+    <ellipse cx="30" cy="125" rx="8" ry="6" fill="#C4A882" opacity=".6"/>
+    <ellipse cx="190" cy="125" rx="16" ry="12" fill="#D4B896"/>
+    <ellipse cx="190" cy="125" rx="16" ry="12" fill="none" stroke="#B8A07A" stroke-width="1.5"/>
+    <ellipse cx="190" cy="125" rx="8" ry="6" fill="#C4A882" opacity=".6"/>
+    <!-- Text lines with calligraphy feel -->
+    <rect x="50" y="42" width="120" height="3" rx="1" fill="#8B5E3C" opacity=".45"/>
+    <rect x="50" y="52" width="100" height="3" rx="1" fill="#8B5E3C" opacity=".35"/>
+    <rect x="50" y="62" width="110" height="3" rx="1" fill="#8B5E3C" opacity=".35"/>
+    <rect x="50" y="72" width="80" height="3" rx="1" fill="#8B5E3C" opacity=".3"/>
+    <rect x="50" y="82" width="115" height="3" rx="1" fill="#8B5E3C" opacity=".35"/>
+    <rect x="50" y="92" width="70" height="3" rx="1" fill="#8B5E3C" opacity=".3"/>
+    <!-- Wax seal -->
+    <circle cx="170" cy="108" r="12" fill="#C0354E"/>
+    <circle cx="170" cy="108" r="10" fill="#E94560"/>
+    <circle cx="170" cy="108" r="8" fill="none" stroke="#C0354E" stroke-width="1.5"/>
+    <text x="170" y="112" text-anchor="middle" font-size="10" fill="#FFF" font-weight="bold" font-family="serif">H</text>
   </symbol>
-  <symbol id="spr-lamp" viewBox="0 0 60 100">
-    <ellipse cx="30" cy="88" rx="18" ry="6" fill="#6b4226"/>
-    <rect x="26" y="60" width="8" height="28" rx="2" fill="#8b5e3c"/>
-    <path d="M30 16c-14 0-22 10-22 24 0 10 8 16 16 20h12c8-4 16-10 16-20 0-14-8-24-22-24z" fill="#f5c542"/>
-    <path d="M30 16c-8 0-14 6-16 16 6-6 14-8 22-4-2-8-4-12-6-12z" fill="#f5e066" opacity=".6"/>
-    <path d="M22 60h16l-2-4H24z" fill="#aab"/>
+
+  <symbol id="spr-lamp" viewBox="0 0 120 200">
+    <!-- Base -->
+    <ellipse cx="60" cy="185" rx="40" ry="10" fill="#6B4226"/>
+    <ellipse cx="60" cy="183" rx="38" ry="8" fill="#8B5E3C"/>
+    <ellipse cx="60" cy="181" rx="32" ry="6" fill="#A0692E"/>
+    <!-- Stem -->
+    <path d="M52 180 L54 130 Q54 125 60 125 Q66 125 66 130 L68 180" fill="#8B5E3C"/>
+    <path d="M55 175 L56 135 Q56 130 60 130 Q64 130 64 135 L65 175" fill="#A0692E" opacity=".5"/>
+    <!-- Stem knob -->
+    <ellipse cx="60" cy="125" rx="10" ry="5" fill="#A0692E"/>
+    <ellipse cx="60" cy="124" rx="8" ry="3.5" fill="#B8862D"/>
+    <!-- Shade -->
+    <path d="M20 55 Q20 20 60 12 Q100 20 100 55" fill="#F5C542"/>
+    <path d="M15 55 L20 55 Q20 25 60 16 Q100 25 100 55 L105 55 Q108 60 100 65 L20 65 Q12 60 15 55Z" fill="#FFD54F"/>
+    <path d="M20 55 Q20 28 60 20 Q80 24 90 35 L36 35 Q24 40 22 55Z" fill="#FFE082" opacity=".5"/>
+    <!-- Shade trim -->
+    <path d="M15 55 L105 55" stroke="#DAA520" stroke-width="2"/>
+    <path d="M20 65 L100 65" stroke="#DAA520" stroke-width="2"/>
+    <!-- Shade scallops -->
+    <path d="M20 65 Q30 72 40 65 Q50 72 60 65 Q70 72 80 65 Q90 72 100 65" fill="none" stroke="#DAA520" stroke-width="1.5"/>
+    <!-- Light glow -->
+    <ellipse cx="60" cy="90" rx="45" ry="35" fill="#FFD700" opacity=".08"/>
+    <ellipse cx="60" cy="80" rx="30" ry="25" fill="#FFF" opacity=".05"/>
+    <!-- Bulb hint -->
+    <ellipse cx="60" cy="62" rx="6" ry="8" fill="#FFF" opacity=".3"/>
+    <!-- Pull chain -->
+    <path d="M75 65 L78 85 L76 88 L80 92" stroke="#B8862D" stroke-width="1.5" fill="none"/>
+    <circle cx="80" cy="95" r="3" fill="#DAA520"/>
   </symbol>
 
   <!-- ===== PARK THEME SPRITES ===== -->
-  <symbol id="spr-tree" viewBox="0 0 100 130">
-    <rect x="42" y="80" width="16" height="45" rx="4" fill="#6b4226"/>
-    <ellipse cx="50" cy="50" rx="36" ry="38" fill="#2d6a4f"/>
-    <ellipse cx="36" cy="56" rx="20" ry="22" fill="#40916c"/>
-    <ellipse cx="64" cy="52" rx="18" ry="20" fill="#52b788"/>
-    <ellipse cx="50" cy="38" rx="16" ry="18" fill="#74c69d"/>
-    <circle cx="34" cy="62" r="3" fill="#e94560"/>
-    <circle cx="58" cy="44" r="2.5" fill="#f5a623"/>
+  <symbol id="spr-tree" viewBox="0 0 180 240">
+    <!-- Shadow -->
+    <ellipse cx="90" cy="232" rx="55" ry="8" fill="#1B4332" opacity=".15"/>
+    <!-- Trunk -->
+    <path d="M76 160 L72 230 Q72 235 80 235 L100 235 Q108 235 108 230 L104 160" fill="#6B4226"/>
+    <path d="M80 165 L78 230 Q78 233 84 233 L90 233 L90 165" fill="#7B4F2A" opacity=".5"/>
+    <!-- Roots -->
+    <path d="M72 228 Q60 232 55 228" stroke="#6B4226" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M108 228 Q120 232 125 228" stroke="#6B4226" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <!-- Foliage layers (bottom up, larger to smaller) -->
+    <ellipse cx="90" cy="120" rx="65" ry="50" fill="#1B4332"/>
+    <ellipse cx="65" cy="115" rx="42" ry="38" fill="#2D6A4F"/>
+    <ellipse cx="115" cy="112" rx="38" ry="35" fill="#40916C"/>
+    <ellipse cx="90" cy="95" rx="50" ry="40" fill="#2D6A4F"/>
+    <ellipse cx="70" cy="85" rx="35" ry="30" fill="#40916C"/>
+    <ellipse cx="110" cy="82" rx="30" ry="28" fill="#52B788"/>
+    <ellipse cx="90" cy="65" rx="38" ry="32" fill="#52B788"/>
+    <ellipse cx="80" cy="55" rx="25" ry="22" fill="#74C69D"/>
+    <ellipse cx="100" cy="50" rx="20" ry="18" fill="#95D5B2"/>
+    <ellipse cx="90" cy="40" rx="18" ry="16" fill="#B7E4C7"/>
+    <!-- Fruits/berries -->
+    <circle cx="55" cy="130" r="5" fill="#E94560"/>
+    <circle cx="55" cy="130" r="2.5" fill="#F06080" opacity=".5"/>
+    <circle cx="125" cy="120" r="4.5" fill="#E94560"/>
+    <circle cx="72" cy="100" r="4" fill="#F5A623"/>
+    <circle cx="72" cy="100" r="2" fill="#FFD54F" opacity=".5"/>
+    <circle cx="108" cy="90" r="3.5" fill="#F5A623"/>
+    <!-- Highlight leaves -->
+    <path d="M100 45 Q110 35 115 42 Q112 48 100 45Z" fill="#B7E4C7" opacity=".6"/>
+    <path d="M65 75 Q55 68 58 62 Q65 65 65 75Z" fill="#95D5B2" opacity=".5"/>
+    <!-- Bird -->
+    <path d="M130 65 Q136 58 142 62 Q140 66 134 66Z" fill="#E94560"/>
+    <circle cx="139" cy="60" r="1.5" fill="#1B4332"/>
   </symbol>
-  <symbol id="spr-bench" viewBox="0 0 140 80">
-    <rect x="10" y="30" width="120" height="8" rx="3" fill="#8b5e3c"/>
-    <rect x="10" y="42" width="120" height="8" rx="3" fill="#a0522d"/>
-    <rect x="18" y="50" width="6" height="26" rx="2" fill="#555"/>
-    <rect x="116" y="50" width="6" height="26" rx="2" fill="#555"/>
-    <rect x="14" y="22" width="6" height="30" rx="2" fill="#555"/>
-    <rect x="120" y="22" width="6" height="30" rx="2" fill="#555"/>
-    <rect x="8" y="16" width="124" height="8" rx="3" fill="#6b4226"/>
+
+  <symbol id="spr-bench" viewBox="0 0 240 140">
+    <!-- Ground shadow -->
+    <ellipse cx="120" cy="130" rx="100" ry="8" fill="#1B4332" opacity=".1"/>
+    <!-- Back legs -->
+    <rect x="30" y="40" width="8" height="85" rx="3" fill="#5D3A1A"/>
+    <rect x="202" y="40" width="8" height="85" rx="3" fill="#5D3A1A"/>
+    <!-- Back rest -->
+    <rect x="24" y="35" width="192" height="12" rx="4" fill="#8B5E3C"/>
+    <rect x="24" y="35" width="192" height="5" rx="3" fill="#A0692E" opacity=".6"/>
+    <rect x="24" y="52" width="192" height="10" rx="4" fill="#8B5E3C"/>
+    <rect x="24" y="52" width="192" height="4" rx="2" fill="#A0692E" opacity=".5"/>
+    <!-- Seat -->
+    <rect x="18" y="68" width="204" height="14" rx="5" fill="#A0692E"/>
+    <rect x="18" y="68" width="204" height="6" rx="3" fill="#B8862D" opacity=".5"/>
+    <rect x="18" y="86" width="204" height="12" rx="5" fill="#8B5E3C"/>
+    <rect x="18" y="86" width="204" height="5" rx="3" fill="#A0692E" opacity=".5"/>
+    <!-- Front legs -->
+    <path d="M38 98 L32 125 Q30 130 36 130 L44 130 Q46 128 44 125 L42 98" fill="#5D3A1A"/>
+    <path d="M198 98 L192 125 Q190 130 196 130 L204 130 Q206 128 204 125 L202 98" fill="#5D3A1A"/>
+    <!-- Armrests -->
+    <path d="M22 62 Q16 58 18 50 L24 40" stroke="#6B4226" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M218 62 Q224 58 222 50 L216 40" stroke="#6B4226" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <!-- Decorative bolt details -->
+    <circle cx="34" cy="44" r="3" fill="#DAA520"/><circle cx="34" cy="44" r="1.5" fill="#FFD700"/>
+    <circle cx="206" cy="44" r="3" fill="#DAA520"/><circle cx="206" cy="44" r="1.5" fill="#FFD700"/>
+    <circle cx="34" cy="58" r="2.5" fill="#DAA520"/>
+    <circle cx="206" cy="58" r="2.5" fill="#DAA520"/>
   </symbol>
-  <symbol id="spr-sun" viewBox="0 0 80 80">
-    <circle cx="40" cy="40" r="16" fill="#f5a623"/>
-    <circle cx="40" cy="40" r="12" fill="#f5c542"/>
-    <g stroke="#f5a623" stroke-width="3" stroke-linecap="round">
-      <line x1="40" y1="6" x2="40" y2="16"/>
-      <line x1="40" y1="64" x2="40" y2="74"/>
-      <line x1="6" y1="40" x2="16" y2="40"/>
-      <line x1="64" y1="40" x2="74" y2="40"/>
-      <line x1="16" y1="16" x2="23" y2="23"/>
-      <line x1="57" y1="57" x2="64" y2="64"/>
-      <line x1="64" y1="16" x2="57" y2="23"/>
-      <line x1="23" y1="57" x2="16" y2="64"/>
+
+  <symbol id="spr-sun" viewBox="0 0 140 140">
+    <!-- Outer glow -->
+    <circle cx="70" cy="70" r="65" fill="#F5A623" opacity=".08"/>
+    <circle cx="70" cy="70" r="50" fill="#F5A623" opacity=".1"/>
+    <!-- Rays -->
+    <g fill="#F5A623">
+      <path d="M70 4l5 20h-10z" opacity=".7"/>
+      <path d="M70 136l-5-20h10z" opacity=".7"/>
+      <path d="M4 70l20-5v10z" opacity=".7"/>
+      <path d="M136 70l-20 5v-10z" opacity=".7"/>
+      <path d="M22 22l18 10-8 8z" opacity=".5"/>
+      <path d="M118 22l-10 18-8-8z" opacity=".5"/>
+      <path d="M22 118l10-18 8 8z" opacity=".5"/>
+      <path d="M118 118l-18-10 8-8z" opacity=".5"/>
     </g>
+    <!-- Wavy rays -->
+    <g stroke="#FFD54F" stroke-width="2.5" fill="none" opacity=".4" stroke-linecap="round">
+      <path d="M70 8 Q72 16 70 24"/>
+      <path d="M70 116 Q68 124 70 132"/>
+      <path d="M8 70 Q16 68 24 70"/>
+      <path d="M116 70 Q124 72 132 70"/>
+    </g>
+    <!-- Sun body -->
+    <circle cx="70" cy="70" r="30" fill="#F5A623"/>
+    <circle cx="70" cy="70" r="26" fill="#FFB740"/>
+    <circle cx="70" cy="70" r="22" fill="#FFC94D"/>
+    <!-- Face -->
+    <ellipse cx="60" cy="65" rx="3.5" ry="4" fill="#E8960A"/>
+    <ellipse cx="80" cy="65" rx="3.5" ry="4" fill="#E8960A"/>
+    <circle cx="59" cy="63" r="1.5" fill="#FFF" opacity=".5"/>
+    <circle cx="79" cy="63" r="1.5" fill="#FFF" opacity=".5"/>
+    <path d="M58 78 Q70 88 82 78" stroke="#E8960A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- Rosy cheeks -->
+    <circle cx="52" cy="76" r="5" fill="#F5A623" opacity=".5"/>
+    <circle cx="88" cy="76" r="5" fill="#F5A623" opacity=".5"/>
+    <!-- Highlight -->
+    <ellipse cx="60" cy="52" rx="12" ry="6" fill="#FFF" opacity=".2" transform="rotate(-15 60 52)"/>
   </symbol>
-  <symbol id="spr-flower" viewBox="0 0 60 80">
-    <line x1="30" y1="40" x2="30" y2="75" stroke="#2d6a4f" stroke-width="3" stroke-linecap="round"/>
-    <path d="M30 60c-10-4-18 0-16 6s12 2 16-6z" fill="#40916c"/>
-    <circle cx="30" cy="30" r="8" fill="#f5a623"/>
-    <circle cx="30" cy="16" r="8" fill="#e94560"/>
-    <circle cx="18" cy="22" r="8" fill="#e94560"/>
-    <circle cx="42" cy="22" r="8" fill="#e94560"/>
-    <circle cx="18" cy="36" r="8" fill="#e94560"/>
-    <circle cx="42" cy="36" r="8" fill="#e94560"/>
-    <circle cx="30" cy="44" r="8" fill="#e94560"/>
+
+  <symbol id="spr-flower" viewBox="0 0 100 160">
+    <!-- Stem -->
+    <path d="M50 75 Q48 110 50 150" stroke="#2D6A4F" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <!-- Leaves -->
+    <path d="M50 105 Q30 90 22 100 Q25 112 50 108" fill="#40916C"/>
+    <path d="M50 105 Q32 94 26 102 Q28 110 50 108" fill="#52B788" opacity=".5"/>
+    <path d="M50 125 Q70 112 78 120 Q75 132 50 128" fill="#40916C"/>
+    <path d="M50 125 Q68 115 74 122 Q72 130 50 128" fill="#52B788" opacity=".5"/>
+    <!-- Petals (layered for depth) -->
+    <ellipse cx="50" cy="28" rx="14" ry="20" fill="#FF6B81"/>
+    <ellipse cx="30" cy="42" rx="14" ry="20" fill="#FF6B81" transform="rotate(-50 30 42)"/>
+    <ellipse cx="70" cy="42" rx="14" ry="20" fill="#FF6B81" transform="rotate(50 70 42)"/>
+    <ellipse cx="34" cy="62" rx="14" ry="20" fill="#FF6B81" transform="rotate(-100 34 62)"/>
+    <ellipse cx="66" cy="62" rx="14" ry="20" fill="#FF6B81" transform="rotate(100 66 62)"/>
+    <!-- Inner petals (lighter) -->
+    <ellipse cx="50" cy="32" rx="10" ry="14" fill="#FF8FA3" opacity=".6"/>
+    <ellipse cx="35" cy="44" rx="10" ry="14" fill="#FF8FA3" opacity=".5" transform="rotate(-50 35 44)"/>
+    <ellipse cx="65" cy="44" rx="10" ry="14" fill="#FF8FA3" opacity=".5" transform="rotate(50 65 44)"/>
+    <!-- Center -->
+    <circle cx="50" cy="50" r="14" fill="#F5A623"/>
+    <circle cx="50" cy="50" r="10" fill="#FFD54F"/>
+    <circle cx="50" cy="50" r="6" fill="#F5A623" opacity=".4"/>
+    <!-- Center dots -->
+    <circle cx="46" cy="47" r="2" fill="#E8960A" opacity=".5"/>
+    <circle cx="54" cy="47" r="2" fill="#E8960A" opacity=".5"/>
+    <circle cx="50" cy="54" r="2" fill="#E8960A" opacity=".5"/>
+    <circle cx="44" cy="53" r="1.5" fill="#E8960A" opacity=".4"/>
+    <circle cx="56" cy="53" r="1.5" fill="#E8960A" opacity=".4"/>
+    <!-- Petal highlights -->
+    <ellipse cx="48" cy="26" rx="4" ry="8" fill="#FFF" opacity=".15" transform="rotate(-5 48 26)"/>
+    <!-- Butterfly near flower -->
+    <path d="M82 30 Q92 20 88 30 Q92 40 82 30Z" fill="#7C3AED" opacity=".6"/>
+    <path d="M82 30 Q72 22 76 30 Q72 38 82 30Z" fill="#A78BFA" opacity=".5"/>
+    <circle cx="82" cy="30" r="1.5" fill="#4A2080"/>
   </symbol>
 </svg>
 
@@ -391,19 +796,19 @@ body.theme-park{--accent:#2d6a4f;--accent2:#f4a261;--bg:#e8f5e9;--surface:#c8e6c
         <label>Pick Your Theme</label>
         <div class="theme-grid" id="theme-grid">
           <div class="theme-opt" data-theme="pirates" onclick="selectTheme(this)">
-            <svg viewBox="0 0 120 100"><use href="#spr-treasure"/></svg>
+            <svg viewBox="0 0 200 180"><use href="#spr-treasure"/></svg>
             <span>Pirates</span>
           </div>
           <div class="theme-opt" data-theme="tech" onclick="selectTheme(this)">
-            <svg viewBox="0 0 100 120"><use href="#spr-robot"/></svg>
+            <svg viewBox="0 0 180 220"><use href="#spr-robot"/></svg>
             <span>Tech</span>
           </div>
           <div class="theme-opt" data-theme="library" onclick="selectTheme(this)">
-            <svg viewBox="0 0 100 120"><use href="#spr-book"/></svg>
+            <svg viewBox="0 0 180 220"><use href="#spr-book"/></svg>
             <span>Library</span>
           </div>
           <div class="theme-opt" data-theme="park" onclick="selectTheme(this)">
-            <svg viewBox="0 0 100 130"><use href="#spr-tree"/></svg>
+            <svg viewBox="0 0 180 240"><use href="#spr-tree"/></svg>
             <span>Park</span>
           </div>
         </div>
@@ -914,25 +1319,25 @@ function renderThemeBanner() {
   const banner = document.getElementById('theme-banner');
   const sprites = {
     pirates: `
-      <svg viewBox="0 0 140 120" style="position:absolute;left:5%;bottom:0;height:100px"><use href="#spr-ship"/></svg>
-      <svg viewBox="0 0 120 100" style="position:absolute;right:10%;bottom:0;height:80px"><use href="#spr-treasure"/></svg>
-      <svg viewBox="0 0 80 80" style="position:absolute;right:40%;top:10px;height:50px;opacity:.6"><use href="#spr-compass"/></svg>
+      <svg viewBox="0 0 260 220" style="position:absolute;left:2%;bottom:-5px;height:115px"><use href="#spr-ship"/></svg>
+      <svg viewBox="0 0 200 180" style="position:absolute;right:5%;bottom:-5px;height:100px"><use href="#spr-treasure"/></svg>
+      <svg viewBox="0 0 140 140" style="position:absolute;right:38%;top:5px;height:55px;opacity:.7"><use href="#spr-compass"/></svg>
     `,
     tech: `
-      <svg viewBox="0 0 100 120" style="position:absolute;left:5%;bottom:0;height:100px"><use href="#spr-robot"/></svg>
-      <svg viewBox="0 0 80 120" style="position:absolute;right:10%;bottom:0;height:95px"><use href="#spr-rocket"/></svg>
-      <svg viewBox="0 0 120 80" style="position:absolute;left:35%;bottom:5px;height:50px;opacity:.5"><use href="#spr-circuit"/></svg>
+      <svg viewBox="0 0 180 220" style="position:absolute;left:3%;bottom:-5px;height:115px"><use href="#spr-robot"/></svg>
+      <svg viewBox="0 0 140 240" style="position:absolute;right:8%;bottom:-5px;height:115px"><use href="#spr-rocket"/></svg>
+      <svg viewBox="0 0 200 140" style="position:absolute;left:32%;bottom:0;height:55px;opacity:.5"><use href="#spr-circuit"/></svg>
     `,
     library: `
-      <svg viewBox="0 0 100 120" style="position:absolute;left:5%;bottom:0;height:95px"><use href="#spr-book"/></svg>
-      <svg viewBox="0 0 60 100" style="position:absolute;right:10%;bottom:0;height:90px"><use href="#spr-lamp"/></svg>
-      <svg viewBox="0 0 120 80" style="position:absolute;left:30%;bottom:10px;height:50px;opacity:.6"><use href="#spr-scroll"/></svg>
+      <svg viewBox="0 0 180 220" style="position:absolute;left:3%;bottom:-5px;height:110px"><use href="#spr-book"/></svg>
+      <svg viewBox="0 0 120 200" style="position:absolute;right:5%;bottom:-5px;height:110px"><use href="#spr-lamp"/></svg>
+      <svg viewBox="0 0 220 150" style="position:absolute;left:28%;bottom:5px;height:55px;opacity:.7"><use href="#spr-scroll"/></svg>
     `,
     park: `
-      <svg viewBox="0 0 100 130" style="position:absolute;left:5%;bottom:0;height:110px"><use href="#spr-tree"/></svg>
-      <svg viewBox="0 0 140 80" style="position:absolute;right:5%;bottom:0;height:60px"><use href="#spr-bench"/></svg>
-      <svg viewBox="0 0 80 80" style="position:absolute;right:35%;top:5px;height:45px"><use href="#spr-sun"/></svg>
-      <svg viewBox="0 0 60 80" style="position:absolute;left:35%;bottom:0;height:60px"><use href="#spr-flower"/></svg>
+      <svg viewBox="0 0 180 240" style="position:absolute;left:2%;bottom:-5px;height:120px"><use href="#spr-tree"/></svg>
+      <svg viewBox="0 0 240 140" style="position:absolute;right:2%;bottom:0;height:70px"><use href="#spr-bench"/></svg>
+      <svg viewBox="0 0 140 140" style="position:absolute;right:32%;top:0;height:50px"><use href="#spr-sun"/></svg>
+      <svg viewBox="0 0 100 160" style="position:absolute;left:32%;bottom:-5px;height:90px"><use href="#spr-flower"/></svg>
     `
   };
   const bgColors = {
