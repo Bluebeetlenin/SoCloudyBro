@@ -103,10 +103,19 @@ body{padding-bottom:72px}
 .settings-list{list-style:none}
 .settings-list li{background:var(--surface);padding:16px 20px;border-radius:var(--radius);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
 .settings-list li span{color:var(--text2);font-size:.9rem}
-.toggle{width:48px;height:26px;border-radius:13px;background:#334;position:relative;cursor:pointer;transition:.2s}
+.settings-section-title{font-size:.75rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin:24px 0 10px;font-weight:700}
+.settings-profile{background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:24px;display:flex;align-items:center;gap:16px}
+.settings-avatar{width:56px;height:56px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:#fff;flex-shrink:0}
+.settings-profile-info{flex:1}
+.settings-profile-info strong{font-size:1.1rem}
+.settings-profile-info span{display:block;color:var(--text2);font-size:.85rem;margin-top:2px}
+.toggle{width:48px;height:26px;border-radius:13px;background:var(--toggle-off,#334);position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
 .toggle.on{background:var(--accent)}
 .toggle::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
 .toggle.on::after{left:25px}
+.settings-list select{max-width:160px;padding:8px 12px;font-size:.85rem}
+.about-card{background:var(--surface);border-radius:var(--radius);padding:20px;text-align:center;margin-top:12px}
+.about-card p{color:var(--text2);font-size:.85rem;margin-top:6px}
 
 /* ===== RESPONSIVE ===== */
 @media(max-width:600px){
@@ -118,8 +127,8 @@ body{padding-bottom:72px}
 /* ===== THEME OVERRIDES ===== */
 body.theme-pirates{--accent:#d4a017;--accent2:#c0392b;--bg:#1a0f0a;--surface:#2c1810;--card:#3d2114}
 body.theme-tech{--accent:#00d4ff;--accent2:#7c3aed;--bg:#0a0e1a;--surface:#111827;--card:#1e293b}
-body.theme-library{--accent:#8b5e3c;--accent2:#2d6a4f;--bg:#f5f0e8;--surface:#ede5d8;--card:#d4c5a9;--text:#2c2416;--text2:#665}
-body.theme-park{--accent:#2d6a4f;--accent2:#f4a261;--bg:#e8f5e9;--surface:#c8e6c9;--card:#a5d6a7;--text:#1b4332;--text2:#556}
+body.theme-library{--accent:#8b5e3c;--accent2:#2d6a4f;--bg:#f5f0e8;--surface:#ede5d8;--card:#d4c5a9;--text:#2c2416;--text2:#665;--toggle-off:#c4b99a}
+body.theme-park{--accent:#2d6a4f;--accent2:#f4a261;--bg:#e8f5e9;--surface:#c8e6c9;--card:#a5d6a7;--text:#1b4332;--text2:#556;--toggle-off:#9bc49e}
 </style>
 </head>
 <body>
@@ -870,6 +879,17 @@ body.theme-park{--accent:#2d6a4f;--accent2:#f4a261;--bg:#e8f5e9;--surface:#c8e6c
 <div id="settings" class="screen">
   <div class="container">
     <h2 style="margin-bottom:20px">Settings</h2>
+
+    <div class="settings-profile" id="settings-profile">
+      <div class="settings-avatar" id="settings-avatar">A</div>
+      <div class="settings-profile-info">
+        <strong id="settings-name">Alex</strong>
+        <span id="settings-summary">16 years old · 68 kg · Pirates theme</span>
+      </div>
+      <button onclick="showScreen('setup')" style="padding:8px 16px;font-size:.85rem;white-space:nowrap">Edit Profile</button>
+    </div>
+
+    <div class="settings-section-title">Notifications</div>
     <ul class="settings-list">
       <li>
         <div><strong>Push Notifications</strong><br><span>Daily reminders for your routine</span></div>
@@ -880,14 +900,114 @@ body.theme-park{--accent:#2d6a4f;--accent2:#f4a261;--bg:#e8f5e9;--surface:#c8e6c
         <input type="time" id="inp-reminder-time" value="07:00" style="max-width:140px" onchange="saveSettings()">
       </li>
       <li>
-        <div><strong>Theme</strong><br><span id="current-theme-label">Default</span></div>
-        <button onclick="showScreen('setup')" style="padding:8px 16px;font-size:.85rem">Change</button>
+        <div><strong>Meal Reminders</strong><br><span>Get reminded before each meal</span></div>
+        <div class="toggle" id="toggle-meal" onclick="toggleSetting('mealReminders')"></div>
+      </li>
+      <li>
+        <div><strong>Water Reminders</strong><br><span>Hourly hydration nudges</span></div>
+        <div class="toggle" id="toggle-water" onclick="toggleSetting('waterReminders')"></div>
+      </li>
+    </ul>
+
+    <div class="settings-section-title">Routine Preferences</div>
+    <ul class="settings-list">
+      <li>
+        <div><strong>Difficulty Level</strong><br><span>Adjust exercise intensity</span></div>
+        <select id="sel-difficulty" onchange="saveSetting('difficulty', this.value)">
+          <option value="easy">Easy</option>
+          <option value="moderate" selected>Moderate</option>
+          <option value="hard">Hard</option>
+        </select>
+      </li>
+      <li>
+        <div><strong>Rest Day</strong><br><span>Pick your weekly rest day</span></div>
+        <select id="sel-restday" onchange="saveSetting('restDay', this.value)">
+          <option value="none">None</option>
+          <option value="0">Sunday</option>
+          <option value="1">Monday</option>
+          <option value="2">Tuesday</option>
+          <option value="3">Wednesday</option>
+          <option value="4">Thursday</option>
+          <option value="5">Friday</option>
+          <option value="6" selected>Saturday</option>
+        </select>
+      </li>
+      <li>
+        <div><strong>Include Warm-Up</strong><br><span>Add warm-up to every routine</span></div>
+        <div class="toggle on" id="toggle-warmup" onclick="toggleSetting('warmUp')"></div>
+      </li>
+      <li>
+        <div><strong>Include Cool-Down</strong><br><span>Add cool-down stretches</span></div>
+        <div class="toggle on" id="toggle-cooldown" onclick="toggleSetting('coolDown')"></div>
+      </li>
+    </ul>
+
+    <div class="settings-section-title">Wellness</div>
+    <ul class="settings-list">
+      <li>
+        <div><strong>Daily Water Goal</strong><br><span>Glasses of water per day</span></div>
+        <select id="sel-watergoal" onchange="saveSetting('waterGoal', this.value)">
+          <option value="4">4 glasses</option>
+          <option value="6">6 glasses</option>
+          <option value="8" selected>8 glasses</option>
+          <option value="10">10 glasses</option>
+          <option value="12">12 glasses</option>
+        </select>
+      </li>
+      <li>
+        <div><strong>Sleep Goal</strong><br><span>Target hours of sleep</span></div>
+        <select id="sel-sleepgoal" onchange="saveSetting('sleepGoal', this.value)">
+          <option value="6">6 hours</option>
+          <option value="7">7 hours</option>
+          <option value="8" selected>8 hours</option>
+          <option value="9">9 hours</option>
+          <option value="10">10 hours</option>
+        </select>
+      </li>
+      <li>
+        <div><strong>Step Goal</strong><br><span>Daily step target</span></div>
+        <select id="sel-stepgoal" onchange="saveSetting('stepGoal', this.value)">
+          <option value="3000">3,000</option>
+          <option value="5000">5,000</option>
+          <option value="8000" selected>8,000</option>
+          <option value="10000">10,000</option>
+          <option value="15000">15,000</option>
+        </select>
+      </li>
+    </ul>
+
+    <div class="settings-section-title">Display</div>
+    <ul class="settings-list">
+      <li>
+        <div><strong>Weight Unit</strong><br><span>Choose your preferred unit</span></div>
+        <select id="sel-unit" onchange="saveSetting('weightUnit', this.value)">
+          <option value="kg" selected>Kilograms</option>
+          <option value="lbs">Pounds</option>
+        </select>
+      </li>
+      <li>
+        <div><strong>Show Motivational Quotes</strong><br><span>Daily inspiration on your dashboard</span></div>
+        <div class="toggle on" id="toggle-quotes" onclick="toggleSetting('showQuotes')"></div>
+      </li>
+    </ul>
+
+    <div class="settings-section-title">Data</div>
+    <ul class="settings-list">
+      <li>
+        <div><strong>Export Data</strong><br><span>Download your data as JSON</span></div>
+        <button onclick="exportData()" style="padding:8px 16px;font-size:.85rem">Export</button>
       </li>
       <li>
         <div><strong>Reset All Data</strong><br><span>Clear all your data permanently</span></div>
         <button onclick="resetData()" style="background:#c0354e;padding:8px 16px;font-size:.85rem">Reset</button>
       </li>
     </ul>
+
+    <div class="about-card">
+      <svg width="32" height="32"><use href="#ico-heart"/></svg>
+      <strong style="display:block;margin-top:4px">Healtho</strong>
+      <p>Your personal path to a fitter, healthier you.<br>All data is encrypted and stored locally.</p>
+    </div>
   </div>
 </div>
 
@@ -1354,8 +1474,42 @@ function renderThemeBanner() {
 function renderSettings() {
   document.getElementById('toggle-notif').classList.toggle('on', state.notifEnabled);
   document.getElementById('inp-reminder-time').value = state.reminderTime || '07:00';
+
   const labels = { pirates: 'Pirates', tech: 'Tech', library: 'Library', park: 'Park' };
-  document.getElementById('current-theme-label').textContent = labels[state.theme] || 'Default';
+  const avatar = document.getElementById('settings-avatar');
+  avatar.textContent = (state.name || 'U')[0].toUpperCase();
+  document.getElementById('settings-name').textContent = state.name || 'User';
+  document.getElementById('settings-summary').textContent =
+    `${state.age} years old · ${latestWeight()} ${state.settings?.weightUnit || 'kg'} · ${labels[state.theme] || 'Default'} theme`;
+
+  const s = state.settings || {};
+  document.getElementById('toggle-meal').classList.toggle('on', !!s.mealReminders);
+  document.getElementById('toggle-water').classList.toggle('on', !!s.waterReminders);
+  document.getElementById('toggle-warmup').classList.toggle('on', s.warmUp !== false);
+  document.getElementById('toggle-cooldown').classList.toggle('on', s.coolDown !== false);
+  document.getElementById('toggle-quotes').classList.toggle('on', s.showQuotes !== false);
+
+  if (s.difficulty) document.getElementById('sel-difficulty').value = s.difficulty;
+  if (s.restDay !== undefined) document.getElementById('sel-restday').value = s.restDay;
+  if (s.waterGoal) document.getElementById('sel-watergoal').value = s.waterGoal;
+  if (s.sleepGoal) document.getElementById('sel-sleepgoal').value = s.sleepGoal;
+  if (s.stepGoal) document.getElementById('sel-stepgoal').value = s.stepGoal;
+  if (s.weightUnit) document.getElementById('sel-unit').value = s.weightUnit;
+}
+
+function toggleSetting(key) {
+  if (!state.settings) state.settings = {};
+  const defaults = { warmUp: true, coolDown: true, showQuotes: true };
+  const current = state.settings[key] !== undefined ? state.settings[key] : (defaults[key] ?? false);
+  state.settings[key] = !current;
+  persist();
+  renderSettings();
+}
+
+function saveSetting(key, value) {
+  if (!state.settings) state.settings = {};
+  state.settings[key] = value;
+  persist();
 }
 
 async function toggleNotif() {
@@ -1394,10 +1548,18 @@ async function saveSettings() {
   if (state.notifEnabled) scheduleReminder();
 }
 
+async function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'healtho-data.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
 async function resetData() {
   if (!confirm('Are you sure? This will delete all your data.')) return;
   localStorage.clear();
-  state = { name: '', age: 25, weight: 70, target: 60, time: 30, theme: 'pirates', streak: 0, lastActive: '', weightLog: [], completedToday: [], notifEnabled: false, reminderTime: '07:00' };
+  state = { name: '', age: 25, weight: 70, target: 60, time: 30, theme: 'pirates', streak: 0, lastActive: '', weightLog: [], completedToday: [], notifEnabled: false, reminderTime: '07:00', settings: {} };
   applyTheme('');
   showScreen('hero');
 }
