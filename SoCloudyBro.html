@@ -3241,6 +3241,32 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 .bg-opt-textures{background:repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 14px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 14px), linear-gradient(135deg,#23272f,#3a4150);}
 .bg-opt-abstract{background:linear-gradient(135deg,#ff6b6b 0%,#f7b733 28%,#6b5de8 58%,#1abc9c 100%);}
 .bg-opt-pastel{background:linear-gradient(135deg,#ffd6e7 0%,#cfe8ff 38%,#d6f5e1 70%,#fff3d6 100%);color:#3d3d3d;text-shadow:0 1px 2px rgba(255,255,255,0.6);}
+.bg-opt-rain{background:linear-gradient(180deg,#1a2a3a 0%,#2c3e50 100%);overflow:hidden;}
+.bg-opt-stars{background:linear-gradient(180deg,#0a0a1a 0%,#1a1a3a 100%);overflow:hidden;}
+.bg-opt-snow{background:linear-gradient(180deg,#1a2535 0%,#2d3e50 100%);overflow:hidden;}
+.bg-opt-leaves{background:linear-gradient(180deg,#1a3320 0%,#2d5235 100%);overflow:hidden;}
+.bg-opt-custom{background:var(--surface2);color:var(--text2);border:2px dashed var(--border2);}
+/* Animated chat background overlay */
+#chat-anim-overlay{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+#chat-anim-overlay .anim-particle{position:absolute;border-radius:50%;}
+@keyframes rainFall{from{transform:translateY(-10px) rotate(15deg);}to{transform:translateY(110vh) rotate(15deg);}}
+@keyframes snowFall{0%{transform:translateX(0) translateY(-10px);}25%{transform:translateX(12px) translateY(25vh);}50%{transform:translateX(-8px) translateY(50vh);}75%{transform:translateX(10px) translateY(75vh);}100%{transform:translateX(0) translateY(110vh);}}
+@keyframes starTwinkle{0%,100%{opacity:0.2;transform:scale(0.8);}50%{opacity:1;transform:scale(1.2);}}
+@keyframes leafSway{0%{transform:translateX(0) translateY(-10px) rotate(0deg);}25%{transform:translateX(40px) translateY(25vh) rotate(90deg);}50%{transform:translateX(-20px) translateY(50vh) rotate(180deg);}75%{transform:translateX(30px) translateY(75vh) rotate(270deg);}100%{transform:translateX(0) translateY(110vh) rotate(360deg);}}
+/* Voice recording bar */
+#voice-record-bar{display:none;align-items:center;gap:10px;padding:8px 12px;background:rgba(231,76,60,0.12);border-top:1px solid rgba(231,76,60,0.3);animation:fadeIn 0.2s ease;}
+#voice-record-bar .rec-pulse{width:10px;height:10px;border-radius:50%;background:#e74c3c;flex-shrink:0;animation:recPulse 1s ease infinite;}
+@keyframes recPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}
+@keyframes waveBar{from{height:4px;opacity:0.5;}to{height:20px;opacity:1;}}
+#voice-record-timer{font-size:13px;font-weight:600;color:#e74c3c;font-variant-numeric:tabular-nums;min-width:36px;}
+#voice-waveform{flex:1;height:24px;display:flex;align-items:center;gap:2px;}
+#voice-waveform span{display:inline-block;width:3px;border-radius:2px;background:rgba(231,76,60,0.7);animation:waveBar 0.5s ease infinite alternate;}
+#voice-record-cancel{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 2px;line-height:1;}
+#voice-record-send{background:var(--accent-grad);border:none;border-radius:var(--r-xs);color:#fff;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;white-space:nowrap;}
+/* Camera capture modal */
+#camera-modal-inner{background:var(--surface);border-radius:var(--r-card);overflow:hidden;width:min(400px,94vw);display:flex;flex-direction:column;}
+#camera-preview{width:100%;max-height:300px;object-fit:cover;background:#000;}
+#camera-canvas{display:none;}
 #gif-picker{display:none;padding:8px 12px 0;border-top:1px solid var(--border)}
 #gif-picker.visible{display:block}
 #gif-search{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 14px;outline:none;margin-bottom:8px}
@@ -3294,6 +3320,8 @@ select{cursor:pointer}
 
 /* ── PROFILE AVATAR EDITOR ── */
 #avatar-modal { z-index: 250; }
+#privacy-modal { z-index: 600; }
+#camera-modal { z-index: 600; }
 #avatar-presets{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
 .preset-av{width:52px;height:52px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid transparent;transition:all 0.15s;overflow:hidden}
 .preset-av:hover,.preset-av.selected{border-color:var(--accent);transform:scale(1.08)}
@@ -4056,6 +4084,7 @@ body.device-tablet .msg-body{max-width:74%}
         <div id="gif-grid"></div>
       </div>
       <div id="chat-bg-wrapper">
+        <div id="chat-anim-overlay"></div>
         <div id="group-desc-banner" style="display:none"></div>
         <div id="pinned-banner" onclick="scrollToPinned()" style="display:none"></div>
         <div id="messages-wrap"></div>
@@ -4065,11 +4094,20 @@ body.device-tablet .msg-body{max-width:74%}
           <div id="reply-preview-text"></div>
           <span id="reply-preview-cancel" onclick="cancelReply()" title="Cancel reply">✕</span>
         </div>
+        <div id="voice-record-bar">
+          <div class="rec-pulse"></div>
+          <span id="voice-record-timer">0:00</span>
+          <div id="voice-waveform"></div>
+          <button id="voice-record-cancel" onclick="cancelVoiceRecording()" title="Cancel">✕</button>
+          <button id="voice-record-send" onclick="stopAndSendVoice()">Send ➤</button>
+        </div>
         <div id="compose-row">
           <div id="mention-suggest" class="mention-suggest"></div>
           <button class="compose-btn" onclick="openAttachPicker()" title="Attach file (max 500MB)">📎</button>
           <input type="file" id="file-attach-input" style="display:none" onchange="handleFileAttach(this)"/>
+          <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleCameraCapture(this)"/>
           <button class="compose-btn gif-btn" onclick="toggleGif()" title="GIF">GIF</button>
+          <button class="compose-btn" onclick="openCameraCapture()" title="Take photo">📷</button>
           <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none">📊</button>
           <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game">🎮</button>
           <textarea id="msg-input" placeholder="Type a message…" rows="1" maxlength="2000" oninput="onMsgInput(this)" onkeydown="msgKeydown(event)"></textarea>
@@ -4113,6 +4151,11 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="bg-option bg-opt-textures" onclick="setChatBg('textures',this)">◈ Creative Textures</div>
             <div class="bg-option bg-opt-abstract" onclick="setChatBg('abstract',this)">◆ Abstract</div>
             <div class="bg-option bg-opt-pastel" onclick="setChatBg('pastel',this)">❀ Pastel Gradients</div>
+            <div class="bg-option bg-opt-rain" onclick="setChatBg('rain',this)">🌧 Rain</div>
+            <div class="bg-option bg-opt-snow" onclick="setChatBg('snow',this)">❄️ Snow</div>
+            <div class="bg-option bg-opt-stars" onclick="setChatBg('stars',this)">✨ Starfield</div>
+            <div class="bg-option bg-opt-leaves" onclick="setChatBg('leaves',this)">🍂 Falling Leaves</div>
+            <div class="bg-option bg-opt-custom" onclick="pickCustomBgPhoto(this)" id="bg-opt-custom-btn">📷 My Photo</div>
           </div>
         </div>
         <div class="settings-section">
@@ -4409,6 +4452,25 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
   </div>
 </div>
+
+<!-- CAMERA CAPTURE MODAL -->
+<div class="overlay" id="camera-modal" style="display:none">
+  <div id="camera-modal-inner">
+    <div class="modal-header" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:600">Take a Photo</span>
+      <button class="modal-close" onclick="closeCameraModal()">✕</button>
+    </div>
+    <video id="camera-preview" autoplay playsinline muted></video>
+    <canvas id="camera-canvas"></canvas>
+    <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost btn-sm" onclick="closeCameraModal()">Cancel</button>
+      <button class="btn btn-sm" style="flex:1" onclick="snapAndSendPhoto()">📷 Capture &amp; Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM BG PHOTO INPUT (hidden) -->
+<input type="file" id="custom-bg-input" accept="image/*" style="display:none" onchange="applyCustomBgPhoto(this)"/>
 
 <div class="overlay" id="setup-modal">
   <div class="modal">
@@ -8791,8 +8853,33 @@ async function sendFileMsg(fileMeta){
 
 // -- VOICE MESSAGES --------------------------------------------------------------
 let voiceMsgRecorder=null, voiceMsgChunks=[], voiceMsgStream=null;
+let voiceRecordInterval=null, voiceRecordSeconds=0, voiceRecordCancelled=false;
+
+function _voiceRecordTick(){
+  voiceRecordSeconds++;
+  const m=Math.floor(voiceRecordSeconds/60), s=voiceRecordSeconds%60;
+  const el=document.getElementById('voice-record-timer');
+  if(el) el.textContent=m+':'+(s<10?'0':'')+s;
+}
+function _showVoiceBar(show){
+  const bar=document.getElementById('voice-record-bar');
+  const row=document.getElementById('compose-row');
+  if(!bar||!row) return;
+  bar.style.display=show?'flex':'none';
+  row.style.display=show?'none':'flex';
+  if(show){
+    const wf=document.getElementById('voice-waveform');
+    if(wf){ wf.innerHTML=''; for(let i=0;i<18;i++){ const s=document.createElement('span'); s.style.animationDelay=(i*0.04)+'s'; wf.appendChild(s); } }
+    voiceRecordSeconds=0;
+    const t=document.getElementById('voice-record-timer');
+    if(t) t.textContent='0:00';
+    voiceRecordInterval=setInterval(_voiceRecordTick,1000);
+  } else {
+    if(voiceRecordInterval){ clearInterval(voiceRecordInterval); voiceRecordInterval=null; }
+  }
+}
+
 async function toggleVoiceMsgRecording(){
-  const btn=document.getElementById('voice-msg-btn');
   if(voiceMsgRecorder&&voiceMsgRecorder.state==='recording'){ voiceMsgRecorder.stop(); return; }
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
     showToast('Not supported',scbErr('SCB-MSG-05','Voice messages need microphone access, which this browser/context does not allow (try https).'));
@@ -8805,18 +8892,82 @@ async function toggleVoiceMsgRecording(){
     return;
   }
   voiceMsgChunks=[];
-  const mimeType=MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'';
+  voiceRecordCancelled=false;
+  const mimeType=MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':MediaRecorder.isTypeSupported('audio/ogg')?'audio/ogg':'';
   voiceMsgRecorder=mimeType?new MediaRecorder(voiceMsgStream,{mimeType}):new MediaRecorder(voiceMsgStream);
   voiceMsgRecorder.ondataavailable=e=>{ if(e.data&&e.data.size) voiceMsgChunks.push(e.data); };
   voiceMsgRecorder.onstop=()=>{
     voiceMsgStream.getTracks().forEach(t=>t.stop());
-    btn.classList.remove('recording');
-    const blob=new Blob(voiceMsgChunks,{type:voiceMsgRecorder.mimeType||'audio/webm'});
-    if(blob.size) uploadAndSendFile(new File([blob],'voice-message.webm',{type:blob.type}));
+    _showVoiceBar(false);
+    if(!voiceRecordCancelled){
+      const blob=new Blob(voiceMsgChunks,{type:voiceMsgRecorder.mimeType||'audio/webm'});
+      if(blob.size) uploadAndSendFile(new File([blob],'voice-message.webm',{type:blob.type}));
+    }
+    voiceMsgRecorder=null; voiceMsgChunks=[];
   };
   voiceMsgRecorder.start();
-  btn.classList.add('recording');
-  btn.title='Recording… click to stop';
+  _showVoiceBar(true);
+}
+function stopAndSendVoice(){
+  voiceRecordCancelled=false;
+  if(voiceMsgRecorder&&voiceMsgRecorder.state==='recording') voiceMsgRecorder.stop();
+}
+function cancelVoiceRecording(){
+  voiceRecordCancelled=true;
+  if(voiceMsgRecorder&&voiceMsgRecorder.state==='recording') voiceMsgRecorder.stop();
+  else _showVoiceBar(false);
+}
+
+// -- CAMERA CAPTURE --------------------------------------------------------------
+let cameraStream=null;
+function openCameraCapture(){
+  const inp=document.getElementById('camera-input');
+  if(!inp) return;
+  // On mobile, use native camera picker via file input
+  // On desktop, try getUserMedia for live preview
+  if(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)){
+    inp.click(); return;
+  }
+  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+    const modal=document.getElementById('camera-modal');
+    if(modal){ modal.style.display='flex'; _startCameraPreview(); }
+  } else {
+    inp.click();
+  }
+}
+async function _startCameraPreview(){
+  const vid=document.getElementById('camera-preview');
+  if(!vid) return;
+  try{
+    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    vid.srcObject=cameraStream;
+  }catch{
+    closeCameraModal();
+    document.getElementById('camera-input').click();
+  }
+}
+function closeCameraModal(){
+  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  const modal=document.getElementById('camera-modal');
+  const vid=document.getElementById('camera-preview');
+  if(vid) vid.srcObject=null;
+  if(modal) modal.style.display='none';
+}
+function snapAndSendPhoto(){
+  const vid=document.getElementById('camera-preview');
+  const canvas=document.getElementById('camera-canvas');
+  if(!vid||!canvas) return;
+  canvas.width=vid.videoWidth||640; canvas.height=vid.videoHeight||480;
+  canvas.getContext('2d').drawImage(vid,0,0);
+  closeCameraModal();
+  canvas.toBlob(blob=>{
+    if(blob) uploadAndSendFile(new File([blob],'photo.jpg',{type:'image/jpeg'}));
+  },'image/jpeg',0.92);
+}
+function handleCameraCapture(input){
+  const file=input.files&&input.files[0];
+  input.value='';
+  if(file) uploadAndSendFile(file);
 }
 
 // -- CHANNELS (text + voice, per group) -----------------------------------------
@@ -9909,7 +10060,7 @@ function archiveToggle(){
   activeConvo=null;renderSidebar();
 }
 
-// -- CHAT BACKGROUND (STATIC GRADIENTS) ----------------------------------------
+// -- CHAT BACKGROUND (STATIC GRADIENTS + ANIMATED) ----------------------------------------
 const BG_PRESETS={
   bubbles:'radial-gradient(circle at 22% 28%, rgba(0,150,255,0.30), transparent 45%), radial-gradient(circle at 78% 68%, rgba(139,92,246,0.28), transparent 50%), linear-gradient(160deg,#0f0c29,#302b63,#24243e)',
   aurora:'linear-gradient(160deg, rgba(0,255,150,0.16), transparent 45%), linear-gradient(210deg, rgba(0,200,255,0.14), transparent 55%), linear-gradient(135deg,#070b14,#0d1f2d,#091a1a)',
@@ -9918,6 +10069,46 @@ const BG_PRESETS={
   abstract:'linear-gradient(135deg,#ff6b6b 0%,#f7b733 28%,#6b5de8 58%,#1abc9c 100%)',
   pastel:'linear-gradient(135deg,#ffd6e7 0%,#cfe8ff 38%,#d6f5e1 70%,#fff3d6 100%)'
 };
+const ANIM_BG_TYPES=new Set(['rain','snow','stars','leaves']);
+
+function clearAnimBg(){
+  const ov=document.getElementById('chat-anim-overlay');
+  if(ov){ ov.innerHTML=''; ov.style.display='none'; }
+}
+function initAnimBg(type){
+  const ov=document.getElementById('chat-anim-overlay');
+  if(!ov) return;
+  ov.innerHTML=''; ov.style.display='block';
+  const cfg={
+    rain:{n:60,color:'rgba(130,180,255,0.55)',w:'2px',h:'18px',br:'1px',anim:'rainFall',dur:[0.6,1.2],delay:[0,2]},
+    snow:{n:50,color:'rgba(220,240,255,0.8)',w:'6px',h:'6px',br:'50%',anim:'snowFall',dur:[3,6],delay:[0,5]},
+    stars:{n:80,color:'rgba(255,255,255,0.9)',w:'3px',h:'3px',br:'50%',anim:'starTwinkle',dur:[1,3],delay:[0,3]},
+    leaves:{n:30,color:null,w:'10px',h:'10px',br:'2px',anim:'leafSway',dur:[4,8],delay:[0,6]}
+  }[type];
+  if(!cfg) return;
+  const leafColors=['#c0392b','#e67e22','#f39c12','#27ae60','#d35400'];
+  for(let i=0;i<cfg.n;i++){
+    const p=document.createElement('div');
+    p.className='anim-particle';
+    p.style.cssText=`width:${cfg.w};height:${cfg.h};border-radius:${cfg.br};`+
+      `background:${cfg.color||(leafColors[i%leafColors.length])};`+
+      `left:${Math.random()*100}%;`+
+      (type==='stars'?`top:${Math.random()*100}%;`:'top:-20px;')+
+      `animation:${cfg.anim} ${(cfg.dur[0]+Math.random()*(cfg.dur[1]-cfg.dur[0])).toFixed(2)}s ${(-Math.random()*cfg.delay[1]).toFixed(2)}s linear infinite;`;
+    if(type==='snow'){ const sz=3+Math.random()*7; p.style.width=sz+'px'; p.style.height=sz+'px'; }
+    ov.appendChild(p);
+  }
+}
+
+function _applyBgToEl(el, name){
+  const customUrl = localStorage.getItem('cc_bg_custom_url');
+  if(!el) return;
+  if(name==='none'){ el.classList.remove('bg-active'); el.style.background=''; el.style.backgroundImage=''; }
+  else if(name==='custom'&&customUrl){ el.classList.add('bg-active'); el.style.backgroundImage=`url('${customUrl}')`; el.style.backgroundSize='cover'; el.style.backgroundPosition='center'; }
+  else if(BG_PRESETS[name]){ el.classList.add('bg-active'); el.style.backgroundImage=''; el.style.background=BG_PRESETS[name]; }
+  else if(ANIM_BG_TYPES.has(name)){ el.classList.add('bg-active'); el.style.backgroundImage=''; el.style.background=''; }
+  else { el.classList.remove('bg-active'); el.style.background=''; el.style.backgroundImage=''; }
+}
 
 function setChatBg(name,el){
   const wrap=document.getElementById('chat-bg-wrapper');
@@ -9926,37 +10117,60 @@ function setChatBg(name,el){
   localStorage.setItem('cc_bg',name);
   document.querySelectorAll('.bg-option').forEach(o=>o.classList.remove('selected'));
   if(el) el.classList.add('selected');
-  if(name==='none'||!BG_PRESETS[name]){
-    wrap.classList.remove('bg-active'); wrap.style.background='';
-    if(dash){ dash.classList.remove('bg-active'); dash.style.background=''; }
-  } else {
-    wrap.classList.add('bg-active'); wrap.style.background=BG_PRESETS[name];
-    if(dash){ dash.classList.add('bg-active'); dash.style.background=BG_PRESETS[name]; }
-  }
+  clearAnimBg();
+  _applyBgToEl(wrap, name);
+  _applyBgToEl(dash, name);
+  if(ANIM_BG_TYPES.has(name)) initAnimBg(name);
 }
 function loadChatBg(){
   const saved=localStorage.getItem('cc_bg')||'none';
   const wrap=document.getElementById('chat-bg-wrapper');
   const dash=document.getElementById('main-empty');
   if(!wrap) return;
-  if(saved==='none'||!BG_PRESETS[saved]){
-    wrap.classList.remove('bg-active'); wrap.style.background='';
-    if(dash){ dash.classList.remove('bg-active'); dash.style.background=''; }
-  } else {
-    wrap.classList.add('bg-active'); wrap.style.background=BG_PRESETS[saved];
-    if(dash){ dash.classList.add('bg-active'); dash.style.background=BG_PRESETS[saved]; }
-  }
+  clearAnimBg();
+  _applyBgToEl(wrap, saved);
+  _applyBgToEl(dash, saved);
+  if(ANIM_BG_TYPES.has(saved)) initAnimBg(saved);
   document.querySelectorAll('.bg-option').forEach(o=>{
-    const m=o.getAttribute('onclick').match(/'([^']+)'/);
-    if(m) o.classList.toggle('selected',m[1]===saved);
+    const m=o.getAttribute('onclick')||'';
+    const match=m.match(/'([^']+)'/);
+    if(match) o.classList.toggle('selected',match[1]===saved);
+    else if(o.id==='bg-opt-custom-btn') o.classList.toggle('selected',saved==='custom');
   });
 }
 function updateSettingsBgSelection(){
   const saved=localStorage.getItem('cc_bg')||'none';
   document.querySelectorAll('.bg-option').forEach(o=>{
-    const m=o.getAttribute('onclick').match(/'([^']+)'/);
-    if(m) o.classList.toggle('selected',m[1]===saved);
+    const m=o.getAttribute('onclick')||'';
+    const match=m.match(/'([^']+)'/);
+    if(match) o.classList.toggle('selected',match[1]===saved);
+    else if(o.id==='bg-opt-custom-btn') o.classList.toggle('selected',saved==='custom');
   });
+}
+
+// Custom photo background
+function pickCustomBgPhoto(el){
+  document.getElementById('custom-bg-input').click();
+}
+async function applyCustomBgPhoto(input){
+  const file=input.files&&input.files[0];
+  input.value='';
+  if(!file) return;
+  try{
+    let url='';
+    if(typeof firebase!=='undefined'&&me&&me.number){
+      const ref=firebase.storage().ref('bg_photos/'+me.number+'/custom_bg');
+      await ref.put(file);
+      url=await ref.getDownloadURL();
+    } else {
+      url=await new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(file); });
+    }
+    localStorage.setItem('cc_bg_custom_url',url);
+    setChatBg('custom', document.getElementById('bg-opt-custom-btn'));
+    showToast('Background set','Your photo is now your chat background');
+  }catch(e){
+    showToast('Failed','Could not apply photo background');
+  }
 }
 
 // -- ACCOUNT DELETE ------------------------------------------------------------
