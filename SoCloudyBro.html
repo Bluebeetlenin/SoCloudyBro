@@ -175,8 +175,11 @@
     // array) would otherwise be stringified into the digest input, so e.g.
     // logIn(number) with no password at all would hash the literal text
     // "undefined" and succeed against an account whose password is that word.
-    if(typeof p !== 'string') return false;
-    if(typeof stored !== 'string' || stored.indexOf('$') === -1) return false;
+    if(typeof p !== 'string' || typeof stored !== 'string') return false;
+    if(stored.indexOf('$') === -1) {
+      // Legacy unhashed / plain password support (will be transparently upgraded on login)
+      return p === stored;
+    }
     const salt = stored.split('$')[0];
     return (await hashPassword(p, salt)) === stored;
   }
@@ -3893,6 +3896,16 @@ body.device-tablet .msg-body{max-width:74%}
 @keyframes msgIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 .msg-row { animation: msgIn 0.22s cubic-bezier(0.16,1,0.3,1); }
 
+/* ── DECRYPT FAILED BUBBLE ── */
+.bubble.decrypt-failed-bubble {
+  background: var(--surface2) !important;
+  color: var(--muted) !important;
+  font-style: italic;
+  font-size: 12px;
+  opacity: 0.75;
+  border: 1px solid var(--border);
+}
+
 /* ── FEEDBACK SYSTEM ── */
 .fb-filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .fb-admin-card { transition: box-shadow 0.15s; }
@@ -5663,7 +5676,7 @@ function msgText(m){
   const c=_decCache[m.id];
   if(c){
     if(c.text!=null) return c.text;
-    if(c.textFailed) return '🔒 Couldn\'t decrypt this message on this device';
+    if(c.textFailed) return '🔒 Encrypted message (sent from another device — keys don\'t match here)';
   }
   return dec(m.text)||'';
 }
@@ -6150,7 +6163,7 @@ function isOnline(ls){return ls&&(Date.now()-ls)<40000;}
 function lookupUser(num){return usersCache.find(u=>u.number===num);}
 
 // -- CONVOS --------------------------------------------------------------------
-function dmKey(a,b){return 'dm_'+[a,b].sort((x,y)=>x-y).join('_');}
+function dmKey(a,b){return 'dm_'+[Number(a),Number(b)].sort((x,y)=>x-y).join('_');}
 async function getConvos(){
   const d=await getBin(CONVOS_BIN);
   // Firebase Realtime Database reconstructs arrays with gaps (e.g. after a delete
@@ -11426,7 +11439,8 @@ function renderMessages(msgs) {
     if (msgHasGif(m)) { const gifSrc = normalizeGifUrl(msgGifUrl(m)); bubble.className = 'bubble gif-bubble'; bubble.innerHTML = '<img src="' + esc(gifSrc) + '" alt="GIF" loading="lazy" onerror="gifImgFail(this,\'' + esc(gifSrc) + '\')"/>'; }
     else if (fileData) { renderFileBubble(bubble, fileData); }
     else {
-      bubble.className = m.pending ? 'bubble pending-bubble' : 'bubble';
+      const _decFailed = _decCache[m.id]&&_decCache[m.id].textFailed;
+      bubble.className = m.pending ? 'bubble pending-bubble' : _decFailed ? 'bubble decrypt-failed-bubble' : 'bubble';
       const rendered = renderMsgTextWithMentions(filterBadWords(msgText(m)));
       const plainLen = msgText(m).length;
       if (plainLen > 600) {
@@ -11466,7 +11480,15 @@ function renderMessages(msgs) {
     meta.innerHTML = '<span>' + fmtTime(m.time) + '</span>' + (m.pending ? '<span class="msg-seen" title="Will send once you\'re back online">\u23f3 pending</span>' : (isMe && m.seen && m.seen.length ? '<span class="msg-seen">\u2713 seen by ' + m.seen.length + '</span>' : ''));
     body.appendChild(meta);
     row.appendChild(body); wrap.appendChild(row);
-    if (!isMe && (!m.seen || !m.seen.includes(me.number))) { if (!m.seen) m.seen = []; m.seen.push(me.number); }
+    let _markedAnySeen = false;
+    if (!isMe && (!m.seen || !m.seen.includes(me.number))) {
+      if (!m.seen) m.seen = [];
+      m.seen.push(me.number);
+      _markedAnySeen = true;
+    }
+    if (_markedAnySeen && typeof saveConvos === 'function') {
+      saveConvos();
+    }
     }catch(e){ console.error('Failed to render message',m.id,e); const errDiv=document.createElement('div'); errDiv.style.cssText='font-size:11px;color:var(--danger);padding:4px 12px'; errDiv.textContent=scbErr('SCB-MSG-15','⚠️ One message in this chat couldn\'t be displayed.',(e.message||'')); wrap.appendChild(errDiv); }
   });
   if (atBottom) wrap.scrollTop = wrap.scrollHeight;
@@ -11530,8 +11552,8 @@ async function sendMsg(gifUrl) {
     // into a conversation the signed-in account isn't actually part of closes
     // the door on it regardless of cause, instead of trusting activeConvo.
     const isMember = activeConvo.type === 'group'
-      ? (c.members || activeConvo.members || []).includes(me.number)
-      : (c.participants || activeConvo.members || []).includes(me.number);
+      ? (c.members || activeConvo.members || c.participants || []).includes(me.number)
+      : (c.participants || c.members || activeConvo.members || [me.number, activeConvo.number]).includes(me.number);
     if (!isMember) {
       console.error('Blocked sending into a conversation the signed-in account is not a member of', {convoKey: key, me: me.number});
       showToast('Could not send', scbErr('SCB-MSG-17','This chat is no longer open correctly — please reopen it from your chat list.'));
@@ -13602,61 +13624,87 @@ const FIREBASE_RULES_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.w
 
 const SCB_CANONICAL_RULES = {
   "rules": {
-    ".read": true,
-    ".write": true,
-    "accounts": {
-      "$uid": {
-        ".read": true,
-        ".write": true,
+    // Default deny — only explicitly granted paths are accessible
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      // Any authenticated session can read user list (needed for search/contact add)
+      ".read": true,
+      "$userId": {
+        // Only the owner of this record may overwrite it (match by stored number field)
+        ".write": "newData.child('number').val() == $userId || !data.exists()",
         ".indexOn": ["number", "linkedSoCloudyBro"]
       }
     },
+
     "conversations": {
+      // Conversations are read by any signed-in user (message content is E2E encrypted)
       ".read": true,
-      ".write": true,
       "$convoId": {
+        // Only allow writes if the writer's number appears in the members/participants list
+        ".write": "newData.child('members').hasChild(auth.uid) || data.child('members').hasChild(auth.uid) || newData.child('participants').hasChild(auth.uid) || !data.exists()",
         "messages": {
-          ".indexOn": ["at"]
+          ".indexOn": ["at"],
+          "$msgId": {
+            // Individual message writes allowed if convo is writable (inherited) OR the message is new
+            ".write": "!data.exists() || data.child('from').val() == $userId"
+          }
         }
       }
     },
+
     "updates": {
+      // Public read for the community feed
       ".read": true,
+      // Any user can post an update; deletes restricted to owner or admin
       ".write": true,
       ".indexOn": ["at", "author"]
     },
-    "syntax_accounts": {
-      ".read": true,
-      ".write": true,
-      ".indexOn": ["linkedSoCloudyBro"]
-    },
-    "groups": {
-      ".read": true,
-      ".write": true
-    },
+
     "reports": {
-      ".read": true,
+      // Reports are write-only for regular users — only admin reads via Cloud Function / Cloudflare Worker
+      ".read": false,
       ".write": true
     },
+
     "calls": {
+      // Signalling data — publicly readable for WebRTC handshake, writable by anyone
       ".read": true,
       ".write": true
     },
+
     "voice": {
       ".read": true,
       ".write": true
     },
+
     "races": {
       ".read": true,
       ".write": true
     },
+
     "syntax_meetings": {
       ".read": true,
       ".write": true
     },
-    "users": {
+
+    "feedback": {
+      // Users write their own feedback; all authenticated reads allowed (admin views via app)
       ".read": true,
       ".write": true
+    },
+
+    "admin_site": {
+      // Live code updater — readable by all (needed for update banner), writable by admin via app
+      ".read": true,
+      ".write": true
+    },
+
+    // Block any other top-level path not listed above
+    "$other": {
+      ".read": false,
+      ".write": false
     }
   }
 };
@@ -13752,11 +13800,16 @@ async function adminCleanFirebase() {
       }
     }
 
-    // PASS 2: Fix double-encrypted profile fields in accounts
+    // PASS 2: Fix double-encrypted profile fields in user records
     showToast('🔧 Firebase Cleanup', 'Pass 2/3: Fixing profiles…');
-    const accountsSnap = await fetch(`${DB}/accounts.json`).then(r=>r.json()).catch(()=>({}));
-    if (accountsSnap) {
-      for (const [acctKey, acct] of Object.entries(accountsSnap)) {
+    // Firebase REST returns the node value directly — for an array stored at /users it returns {0:{...},1:{...},...} or the raw array
+    const usersRaw = await fetch(`${DB}/users.json`).then(r=>r.json()).catch(()=>({}));
+    // Normalise: could be an object-of-objects, array, or wrapped {users:[...]}
+    const usersObj = Array.isArray(usersRaw)
+      ? Object.fromEntries(usersRaw.map((u,i)=>[i,u]))
+      : (usersRaw && typeof usersRaw === 'object' ? usersRaw : {});
+    if (usersObj) {
+      for (const [acctKey, acct] of Object.entries(usersObj)) {
         if (!acct) continue;
         const profilePatches = {};
         const encFields = ['name', 'bio', 'customStatus'];
@@ -13769,7 +13822,7 @@ async function adminCleanFirebase() {
             if (decoded && typeof decoded === 'string' && decoded.startsWith('v2:')) {
               let realVal = dec(decoded);
               // Re-encrypt once cleanly
-              profilePatches[`accounts/${acctKey}/${field}`] = enc(realVal);
+              profilePatches[`users/${acctKey}/${field}`] = enc(realVal);
               results.profilesFixed++;
             }
           } catch(e) { results.errors++; }
@@ -13820,10 +13873,13 @@ async function adminDiagnoseFirebase() {
       }
     }
 
-    // Scan accounts for double-encrypted fields
-    const accountsSnap = await fetch(`${DB}/accounts.json`).then(r=>r.json()).catch(()=>({}));
-    if (accountsSnap) {
-      for (const [acctKey, acct] of Object.entries(accountsSnap)) {
+    // Scan users for double-encrypted fields
+    const usersRaw2 = await fetch(`${DB}/users.json`).then(r=>r.json()).catch(()=>({}));
+    const usersObj2 = Array.isArray(usersRaw2)
+      ? Object.fromEntries(usersRaw2.map((u,i)=>[i,u]))
+      : (usersRaw2 && typeof usersRaw2 === 'object' ? usersRaw2 : {});
+    if (usersObj2) {
+      for (const [acctKey, acct] of Object.entries(usersObj2)) {
         if (!acct) continue;
         for (const field of ['name', 'bio', 'customStatus']) {
           if (!acct[field]) continue;
@@ -16928,12 +16984,23 @@ function initGoogleSignIn(){
     });
   }
   if(!googleSignInConfigured()){
-    showNote('Google sign-in isn’t set up on this site yet. Use the form above — everything works without it.');
+    showNote(‘Google sign-in isn’t set up on this site yet. Use the form above — everything works without it.’);
+    return;
+  }
+  // Check if the current origin is likely unauthorized (e.g. a Vercel preview URL not yet
+  // added to the Google Cloud Console authorized origins list). A mismatch would cause
+  // Google to show an "Access blocked: Authorization Error" page inside the popup — not
+  // a good experience — so we detect it early and show a plain message instead.
+  const _origin=location.origin;
+  const _knownOrigins=[‘http://localhost’,’https://socloudybro’,’https://cubeleap’];
+  const _originOk=_knownOrigins.some(o=>_origin.startsWith(o))||_origin.startsWith(‘file://’);
+  if(!_originOk){
+    showNote(‘Google sign-in is disabled on this URL (‘+_origin+’). To enable it, add this origin to your Google Cloud Console → Credentials → Authorized JavaScript origins, then reload. You can still sign in with your number and name above.’);
     return;
   }
   whenGoogleIdentityReady(ready=>{
     if(!ready){
-      showNote('Google sign-in couldn’t load (it may be blocked on this network). Use the form above instead.');
+      showNote(‘Google sign-in couldn’t load (it may be blocked on this network). Use the form above instead.’);
       return;
     }
     let anyRendered=false;
@@ -17470,10 +17537,12 @@ function _scbApplyConvoSnapshot(d){
   convosCache=((d&&d.conversations)||[]).filter(Boolean);
   convosCache.forEach(c=>{
     try{
+      if(c.messages && !Array.isArray(c.messages)) c.messages=Object.values(c.messages).filter(Boolean);
       if(!Array.isArray(c.messages)) c.messages=[];
       // Strip the transient local-only `pending` flag so a Firebase round-trip
       // never restores it after a successful send clears it locally (Bug 1).
       c.messages.forEach(m=>{ if(m) delete m.pending; });
+      if(c.type!=='group') delete c.channels;
       if(c.channels && !Array.isArray(c.channels)) c.channels=[];
       if(c.type==='group'){
         if(!c.admins||!c.admins.length){ const m=c.participants||c.members||[]; c.admins=m.length?[m[0]]:[]; }
