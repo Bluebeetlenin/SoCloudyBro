@@ -10448,53 +10448,46 @@ function saveBizBot(){
   showToast(rules.length ? 'Bot enabled' : 'No rules — bot is off', '');
 }
 
-// Called after renderMessages to check for new incoming DMs and auto-reply
+// Auto-reply bot — called ONLY from the poll loop, never from renderMessages
 let _botRepliedIds = new Set();
+let _botBusy = false;
 async function maybeRunBizBot(conv){
+  if(_botBusy) return;
   if(!me || !me.bizProfile || !me.bizProfile.enabled || !me.bizProfile.botEnabled) return;
   if(!conv || conv.type==='group') return;
   const rules = me.bizProfile.botRules || [];
-  if(!rules.length) return;
   const msgs = conv.messages || [];
-  const lastFrom = msgs.length && msgs[msgs.length-1].from;
-  if(!lastFrom || lastFrom === me.number) return;
-  // Look at unseen incoming messages since last render
-  for(let i=msgs.length-1; i>=0; i--){
-    const m = msgs[i];
-    if(m.from === me.number) break;
-    if(_botRepliedIds.has(m.id)) break;
-    const text = (m.text ? (typeof dec==='function'?dec(m.text):m.text) : '').toLowerCase();
-    if(!text) continue;
-    const rule = rules.find(r => text.includes(r.keyword.toLowerCase()));
-    if(rule){
-      _botRepliedIds.add(m.id);
-      setTimeout(async ()=>{
-        const botMsg = { id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), from: me.number, time: Date.now(), seen: [], text: enc(rule.reply) };
-        conv.messages.push(botMsg);
-        if(conv.messages.length>100) conv.messages.splice(0, conv.messages.length-100);
-        await saveConvos().catch(()=>{});
-        if(activeConvo && activeConvo.key===conv.key){ lastMsgHash=''; renderMessages(conv.messages); }
-        renderSidebar();
-      }, 800 + Math.random()*600);
-      return;
+  // Only fire when the last message is from the other person
+  const last = msgs[msgs.length-1];
+  if(!last || last.from === me.number) return;
+  if(_botRepliedIds.has(last.id)) return;
+  // Try keyword match
+  const rawText = last.text ? (typeof dec==='function' ? dec(last.text) : last.text) : '';
+  const text = rawText.toLowerCase();
+  let reply = null;
+  for(const r of rules){
+    if(text.includes(r.keyword.toLowerCase())){ reply=r.reply; break; }
+  }
+  // Welcome message: no prior message from me in this convo
+  if(!reply){
+    const welcome = me.bizProfile.botWelcome;
+    if(welcome && !_botRepliedIds.has('welcome_'+conv.key)){
+      const hasMine = msgs.some(m=>m.from===me.number);
+      if(!hasMine) reply = welcome, _botRepliedIds.add('welcome_'+conv.key);
     }
   }
-  // Welcome message on very first DM
-  const welcome = me.bizProfile.botWelcome;
-  if(welcome && msgs.filter(m=>m.from===me.number).length===0){
-    const firstIn = msgs.find(m=>m.from!==me.number);
-    if(firstIn && !_botRepliedIds.has('welcome_'+conv.key)){
-      _botRepliedIds.add('welcome_'+conv.key);
-      setTimeout(async ()=>{
-        const botMsg = { id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), from: me.number, time: Date.now(), seen: [], text: enc(welcome) };
-        conv.messages.push(botMsg);
-        if(conv.messages.length>100) conv.messages.splice(0, conv.messages.length-100);
-        await saveConvos().catch(()=>{});
-        if(activeConvo && activeConvo.key===conv.key){ lastMsgHash=''; renderMessages(conv.messages); }
-        renderSidebar();
-      }, 600);
-    }
-  }
+  if(!reply) return;
+  _botRepliedIds.add(last.id);
+  _botBusy = true;
+  setTimeout(async ()=>{
+    try{
+      const botMsg = { id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), from: me.number, time: Date.now(), seen: [], text: enc(reply) };
+      conv.messages.push(botMsg);
+      if(conv.messages.length>100) conv.messages.splice(0, conv.messages.length-100);
+      await saveConvos().catch(()=>{});
+      renderSidebar();
+    }finally{ _botBusy = false; }
+  }, 900 + Math.random()*500);
 }
 
 // View another user's business profile
@@ -10525,7 +10518,9 @@ function openBizViewModal(user){
 let _bizViewUser = null;
 function startDmFromBizView(){
   closeModal('biz-view-modal');
-  if(_bizViewUser) openConvo(_bizViewUser);
+  if(!_bizViewUser) return;
+  const c={number:_bizViewUser.number, name:dec(_bizViewUser.name)||('#'+_bizViewUser.number), key:'dm_'+[me.number,_bizViewUser.number].sort().join('_')};
+  openChat(c);
 }
 
 // -- ACCOUNT DELETE ------------------------------------------------------------
@@ -11431,6 +11426,7 @@ function startPoll(){
             // it's a genuine bug in its own right, fixed here.
           }
           renderMessages(c.messages);
+          maybeRunBizBot(c);
           if(!showTypingIndicator(c)&&activeConvo.type!=='group') updateOnlineStatus(activeConvo.number);
           renderCrossChannelTyping(c);
           // Save seen
@@ -12024,8 +12020,6 @@ function renderMessages(msgs) {
   }
   const hash = JSON.stringify(msgs);
   if (hash === lastMsgHash) return;
-  // Run biz bot on the active convo (async, non-blocking)
-  if(activeConvo && convosCache){ const _bc=convosCache.find(x=>x&&x.key===activeConvo.key); if(_bc) maybeRunBizBot(_bc); }
   lastMsgHash = hash;
   // Decrypt any pending E2E-encrypted messages, then re-render once ready
   if (msgs && msgs.some(m => (m.ctext || m.cgif || m.cpoll) && !_decCache[m.id])) {
