@@ -6578,8 +6578,8 @@ async function init(){
   // (email SDK removed — reports now go through Web3Forms, 2FA uses TOTP)
   loadStorage();
   // Always ensure setup modal is closed if we have a user
-  if(me){ closeModal('setup-modal'); document.getElementById('landing-page').style.display='none'; }
-  if(!me){ document.getElementById('landing-page').style.display='block'; return; }
+  if(me && me.number){ closeModal('setup-modal'); document.getElementById('landing-page').style.display='none'; }
+  if(!me || !me.number){ document.getElementById('landing-page').style.display='block'; return; }
   const pin=localStorage.getItem('cc_pin');
   if(pin){showLockScreen();}else{await launch();}
 }
