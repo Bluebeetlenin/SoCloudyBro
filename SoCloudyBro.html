@@ -2887,7 +2887,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --r-card:20px;--r:14px;--r-sm:10px;--r-xs:8px;--r-pill:999px;
-  --accent:#5A52D5;--accent2:#4C46C4;--accent-hover:#6B62E0;
+  --accent:#5A52D5;--accent2:#4C46C4;--accent-hover:#6B62E0;--accent-bright:#7B74F0;
   --accent-grad:linear-gradient(135deg,#4C46C4 0%,#7C5FD4 55%,#FF6F5E 100%);
   --success:#13a10e;--danger:#d13438;--warn:#ca5010;
   /* Soft tints of the status colours, so banners/cards that need a wash of
@@ -5121,6 +5121,7 @@ const SCB_ERROR_CODES = {
   'SCB-ADMIN-23': {area:'Admin tools', meaning:'Failed to load Firebase Realtime Database rules from the rules proxy Worker'},
   'SCB-ADMIN-24': {area:'Admin tools', meaning:'Failed to push Firebase Realtime Database rules via the rules proxy Worker'},
   'SCB-ADMIN-25': {area:'Admin tools', meaning:'Firebase data cleanup operation failed'},
+  'SCB-ADMIN-26': {area:'Admin tools', meaning:'Firebase diagnosis scan failed'},
 };
 // Format a user-facing error string. `code` is an SCB-* key above, `message` is
 // the plain-English sentence, `detail` is optional raw technical context (an
@@ -5173,9 +5174,9 @@ async function selfHeal(code, err, opts = {}) {
     else if (/permission_denied|unauthorized|401|403/i.test(msg)) {
       try {
         // First try auth refresh
-        const meNow = me || window._currentAccount;
+        const meNow = me;
         if (meNow && meNow.number && meNow.pwd) {
-          try { await logIn(meNow.number, meNow.pwd); } catch(e3) {}
+          try { await sdk.logIn(meNow.number, meNow.pwd); } catch(e3) {}
         }
         // Then auto-push canonical Firebase rules to unblock
         const r = await fetch(`${FIREBASE_RULES_ENDPOINT}/set`, {
@@ -7872,7 +7873,7 @@ function renderSidebar(){
     const isActive=activeConvo&&activeConvo.key===key;
     const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
     const lastMsg=conv&&conv.messages.length?conv.messages[conv.messages.length-1]:null;
-    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':dec(lastMsg.text)||'').substring(0,32):'';
+    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':msgText(lastMsg)||'').substring(0,32):'';
     const timeStr=lastMsg?fmtTime(lastMsg.time):'';
     const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
     const inCall=c.type!=='group'&&_numbersInActiveCall.has(Number(c.number));
@@ -13662,9 +13663,9 @@ const SCB_CANONICAL_RULES = {
     "users": {
       // Any authenticated session can read user list (needed for search/contact add)
       ".read": true,
+      // Root-level write needed for saveUsers() which writes the full array
+      ".write": true,
       "$userId": {
-        // Only the owner of this record may overwrite it (match by stored number field)
-        ".write": "newData.child('number').val() == $userId || !data.exists()",
         ".indexOn": ["number", "linkedSoCloudyBro"]
       }
     },
@@ -13694,8 +13695,8 @@ const SCB_CANONICAL_RULES = {
     },
 
     "reports": {
-      // Reports are write-only for regular users — only admin reads via Cloud Function / Cloudflare Worker
-      ".read": false,
+      // Readable by all (admin views via app); writable by any user to file a report
+      ".read": true,
       ".write": true
     },
 
@@ -13741,7 +13742,7 @@ const SCB_CANONICAL_RULES = {
 };
 
 async function adminLoadRules() {
-  requireAdmin();
+  if(!requireAdmin()) return;
   const acct = me;
   if (!acct || !acct.number) { showToast('Not logged in', 2000); return; }
   showToast('Loading rules...', 2000);
@@ -13760,7 +13761,7 @@ async function adminLoadRules() {
 }
 
 async function adminPushRules() {
-  requireAdmin();
+  if(!requireAdmin()) return;
   const acct = me;
   if (!acct || !acct.number) { showToast('Not logged in', 2000); return; }
   const ta = document.getElementById('admin-rules-input');
@@ -13785,11 +13786,21 @@ async function adminPushRules() {
 // -- END FIREBASE RULES MANAGER -----------------------------------------------
 
 // -- FIREBASE DATA CLEANUP ----------------------------------------------------
+async function _fbRestAuthParam(){
+  // Firebase REST API needs ?auth= token for secured paths.
+  // We use the app's own access token from the Firebase SDK if available.
+  try{
+    const user=firebase.auth&&firebase.auth().currentUser;
+    if(user){const t=await user.getIdToken();return '?auth='+encodeURIComponent(t);}
+  }catch(e){}
+  return '';
+}
 async function adminCleanFirebase() {
-  requireAdmin();
+  if(!requireAdmin()) return;
   if (!confirm('This will scan ALL Firebase data and remove corrupted/bad records. This may take a while. Continue?')) return;
 
   const DB = firebaseConfig.databaseURL;
+  const _auth=await _fbRestAuthParam();
   const results = { pendingStripped: 0, orphanMsgs: 0, profilesFixed: 0, errors: 0 };
 
   showToast('🔧 Firebase Cleanup', 'Starting scan… this may take a minute');
@@ -13797,7 +13808,7 @@ async function adminCleanFirebase() {
   try {
     // PASS 1: Strip pending:true from all stored messages
     showToast('🔧 Firebase Cleanup', 'Pass 1/3: Scanning messages…');
-    const convoSnap = await fetch(`${DB}/conversations.json`).then(r=>r.json()).catch(()=>({}));
+    const convoSnap = await fetch(`${DB}/conversations.json${_auth}`).then(r=>r.json()).catch(()=>({}));
     if (convoSnap) {
       for (const [convoId, convo] of Object.entries(convoSnap)) {
         if (!convo || !convo.messages) continue;
@@ -13822,7 +13833,7 @@ async function adminCleanFirebase() {
 
         // Apply patches for this conversation using PATCH (multi-location update)
         if (Object.keys(patches).length > 0) {
-          await fetch(`${DB}/.json`, {
+          await fetch(`${DB}/.json${_auth}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(patches)
@@ -13834,7 +13845,7 @@ async function adminCleanFirebase() {
     // PASS 2: Fix double-encrypted profile fields in user records
     showToast('🔧 Firebase Cleanup', 'Pass 2/3: Fixing profiles…');
     // Firebase REST returns the node value directly — for an array stored at /users it returns {0:{...},1:{...},...} or the raw array
-    const usersRaw = await fetch(`${DB}/users.json`).then(r=>r.json()).catch(()=>({}));
+    const usersRaw = await fetch(`${DB}/users.json${_auth}`).then(r=>r.json()).catch(()=>({}));
     // Normalise: could be an object-of-objects, array, or wrapped {users:[...]}
     const usersObj = Array.isArray(usersRaw)
       ? Object.fromEntries(usersRaw.map((u,i)=>[i,u]))
@@ -13859,7 +13870,7 @@ async function adminCleanFirebase() {
           } catch(e) { results.errors++; }
         }
         if (Object.keys(profilePatches).length > 0) {
-          await fetch(`${DB}/.json`, {
+          await fetch(`${DB}/.json${_auth}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(profilePatches)
@@ -13882,14 +13893,15 @@ async function adminCleanFirebase() {
 }
 
 async function adminDiagnoseFirebase() {
-  requireAdmin();
+  if(!requireAdmin()) return;
   showToast('🔍 Diagnosing…', 'Scanning Firebase for issues…');
   const DB = firebaseConfig.databaseURL;
   const results = { pendingFlags: 0, orphanMsgs: 0, doubleEncrypted: 0, errors: 0 };
+  const _auth = await _fbRestAuthParam();
 
   try {
     // Scan messages
-    const convoSnap = await fetch(`${DB}/conversations.json`).then(r=>r.json()).catch(()=>({}));
+    const convoSnap = await fetch(`${DB}/conversations.json${_auth}`).then(r=>r.json()).catch(()=>({}));
     if (convoSnap) {
       for (const [convoId, convo] of Object.entries(convoSnap)) {
         if (!convo || !convo.messages) continue;
@@ -13905,7 +13917,7 @@ async function adminDiagnoseFirebase() {
     }
 
     // Scan users for double-encrypted fields
-    const usersRaw2 = await fetch(`${DB}/users.json`).then(r=>r.json()).catch(()=>({}));
+    const usersRaw2 = await fetch(`${DB}/users.json${_auth}`).then(r=>r.json()).catch(()=>({}));
     const usersObj2 = Array.isArray(usersRaw2)
       ? Object.fromEntries(usersRaw2.map((u,i)=>[i,u]))
       : (usersRaw2 && typeof usersRaw2 === 'object' ? usersRaw2 : {});
@@ -13925,8 +13937,8 @@ async function adminDiagnoseFirebase() {
     showToast('🔍 Diagnosis Complete',
       `Found: ${results.pendingFlags} pending flags, ${results.orphanMsgs} orphan messages, ${results.doubleEncrypted} double-encrypted profile fields. Errors: ${results.errors}`);
   } catch(e) {
-    selfHeal('SCB-ADMIN-25', e, { context: 'adminDiagnoseFirebase' });
-    showToast('❌ Diagnosis Failed', scbErr('SCB-ADMIN-25', 'Firebase diagnosis failed', e.message));
+    selfHeal('SCB-ADMIN-26', e, { context: 'adminDiagnoseFirebase' });
+    showToast('❌ Diagnosis Failed', scbErr('SCB-ADMIN-26', 'Firebase diagnosis failed', e.message));
   }
 }
 // -- END FIREBASE DATA CLEANUP ------------------------------------------------
