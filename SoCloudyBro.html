@@ -12959,6 +12959,32 @@ function switchAdminTab(tab){
   else if(tab==='code') renderAdminCodeTab();
 }
 
+// ── NUCLEAR RESET ────────────────────────────────────────────────────────────
+async function adminNuclearReset(){
+  if(!requireAdmin()) return;
+  // First confirmation
+  if(!confirm('⚠️ This will permanently delete ALL users, messages, conversations, groups, feedback, and reports from Firebase.\n\nThis CANNOT be undone. Are you absolutely sure?')) return;
+  // Second confirmation — type to confirm
+  const typed=prompt('Type DELETE EVERYTHING to confirm the wipe:');
+  if(typed!=='DELETE EVERYTHING'){
+    showToast('Cancelled','Nuclear reset cancelled — nothing was deleted.');
+    return;
+  }
+  showToast('Wiping…','Deleting all Firebase data…');
+  try{
+    // Delete each top-level path individually so partial failures are visible
+    const paths=['users','conversations','reports','calls','voice','races','syntax_meetings','feedback','admin_site','updates'];
+    await Promise.all(paths.map(p=>fbdb.ref(p).remove().catch(e=>console.warn('Could not remove '+p,e))));
+    // Clear local caches
+    convosCache=null;
+    try{ localStorage.clear(); }catch(e){}
+    showToast('✓ Done','Everything wiped. The app is now blank. Refresh to re-register.');
+    renderAdminOverviewTab();
+  }catch(e){
+    showToast('Error',scbErr('SCB-ADMIN-99','Nuclear reset failed — some data may remain.',(e&&e.message)||''));
+  }
+}
+
 // ── FEEDBACK SYSTEM ──────────────────────────────────────────────────────────
 const FEEDBACK_PATH='feedback';
 let _feedbackType='feedback'; // 'rate' | 'feedback' | 'bug'
@@ -13516,6 +13542,11 @@ async function renderAdminOverviewTab(){
         <p style="margin:0 0 10px;font-size:12px;color:#888;">Remove corrupted/orphaned data left by old bugs: pending message flags, cross-account messages, double-encrypted profiles.</p>
         <button onclick="adminCleanFirebase()" style="width:100%;padding:10px;background:#e67e22;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-size:14px;">🧹 Clean Firebase Data</button>
         <button onclick="adminDiagnoseFirebase()" style="width:100%;margin-top:8px;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">🔍 Diagnose Only (no changes)</button>
+      </div>
+      <div style="margin-top:16px;padding:14px;border:2px solid var(--danger);border-radius:var(--r-sm);background:rgba(220,50,50,0.07)">
+        <h4 style="margin:0 0 6px;color:var(--danger);font-size:13px">☢️ Nuclear Reset — Danger Zone</h4>
+        <p style="margin:0 0 10px;font-size:12px;color:var(--muted)">Permanently wipes <b>everything</b> from Firebase: all users, messages, conversations, groups, feedback, reports. The app returns to a blank state. <b>This cannot be undone.</b></p>
+        <button class="btn btn-danger btn-sm" onclick="adminNuclearReset()">☢️ Wipe Everything &amp; Start Fresh</button>
       </div>
     `;
   }catch(e){
