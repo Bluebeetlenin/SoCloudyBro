@@ -3267,6 +3267,21 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 #camera-modal-inner{background:var(--surface);border-radius:var(--r-card);overflow:hidden;width:min(400px,94vw);display:flex;flex-direction:column;}
 #camera-preview{width:100%;max-height:300px;object-fit:cover;background:#000;}
 #camera-canvas{display:none;}
+/* Business accounts */
+.biz-badge{display:inline-flex;align-items:center;gap:4px;background:var(--accent-grad);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:0.03em;vertical-align:middle;margin-left:4px}
+.biz-profile-section{padding:14px 0 2px}
+.biz-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:10px}
+.biz-product-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;cursor:pointer;transition:transform 0.15s}
+.biz-product-card:hover{transform:translateY(-2px)}
+.biz-product-img{width:100%;height:90px;object-fit:cover;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)}
+.biz-product-info{padding:7px 9px}
+.biz-product-name{font-size:12px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.biz-product-desc{font-size:11px;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.biz-bot-rule{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+.biz-bot-rule:last-child{border-bottom:none}
+.biz-bot-kw{font-size:12px;font-weight:600;color:var(--accent);flex-shrink:0;min-width:80px;overflow:hidden;text-overflow:ellipsis}
+.biz-bot-reply{font-size:12px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bot-auto-msg{font-size:11px;color:var(--muted);font-style:italic;text-align:center;margin:4px 0}
 #gif-picker{display:none;padding:8px 12px 0;border-top:1px solid var(--border)}
 #gif-picker.visible{display:block}
 #gif-search{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 14px;outline:none;margin-bottom:8px}
@@ -4290,6 +4305,31 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
           </div>
         </div>
+        <!-- BUSINESS ACCOUNT SETTINGS -->
+        <div class="settings-section" id="biz-settings-section">
+          <h3>Business Account</h3>
+          <div class="settings-row" style="cursor:pointer" onclick="toggleBizMode()">
+            <div class="settings-row-main">
+              <div class="settings-row-label">Business Mode <span id="biz-mode-badge" style="display:none" class="biz-badge">BIZ</span></div>
+              <div class="settings-row-sub" id="biz-mode-sub">Turn your profile into a business page with product/website showcase</div>
+            </div>
+            <div class="settings-row-actions"><button class="btn btn-sm" id="biz-mode-btn">Enable</button></div>
+          </div>
+          <div id="biz-settings-expanded" style="display:none">
+            <div class="settings-row" style="cursor:pointer" onclick="openBizProfileEditor()">
+              <div class="settings-row-main"><div class="settings-row-label">Business Profile</div><div class="settings-row-sub">Edit your business name, description and logo</div></div>
+              <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Edit</button></div>
+            </div>
+            <div class="settings-row" style="cursor:pointer" onclick="openBizProductsEditor()">
+              <div class="settings-row-main"><div class="settings-row-label">Products &amp; Links</div><div class="settings-row-sub" id="biz-products-sub">No products added yet</div></div>
+              <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Manage</button></div>
+            </div>
+            <div class="settings-row" style="cursor:pointer" onclick="openBizBotEditor()">
+              <div class="settings-row-main"><div class="settings-row-label">Auto-reply Bot</div><div class="settings-row-sub" id="biz-bot-sub">Automatically reply to DMs with keyword-based answers</div></div>
+              <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="biz-bot-toggle-btn">Off</button></div>
+            </div>
+          </div>
+        </div>
         <div class="settings-section">
           <h3>Account</h3>
           <div class="settings-row" style="cursor:pointer" onclick="logOut()">
@@ -4471,6 +4511,92 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- CUSTOM BG PHOTO INPUT (hidden) -->
 <input type="file" id="custom-bg-input" accept="image/*" style="display:none" onchange="applyCustomBgPhoto(this)"/>
+
+<!-- BIZ PROFILE EDITOR -->
+<div class="overlay" id="biz-profile-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><h2>Business Profile</h2><p>This info appears on your profile for everyone to see</p></div>
+    <div class="modal-body" style="padding-top:14px;padding-bottom:14px">
+      <div class="field"><label>Business Name</label><input type="text" id="biz-name-input" maxlength="60" placeholder="e.g. Acme Co."/></div>
+      <div class="field"><label>Category</label><input type="text" id="biz-category-input" maxlength="40" placeholder="e.g. Clothing, Tech, Services…"/></div>
+      <div class="field"><label>Description</label><textarea id="biz-desc-input" maxlength="300" rows="3" placeholder="What does your business do?"></textarea></div>
+      <div class="field"><label>Website</label><input type="text" id="biz-website-input" maxlength="200" placeholder="https://…"/></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="saveBizProfile()">Save</button><button class="btn btn-ghost" onclick="closeModal('biz-profile-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- BIZ PRODUCTS EDITOR -->
+<div class="overlay" id="biz-products-modal" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header"><h2>Products &amp; Links</h2><p>Showcase products, services or websites on your profile</p></div>
+    <div class="modal-body" style="padding-top:10px;padding-bottom:10px">
+      <div id="biz-products-list" style="margin-bottom:12px"></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px">Add Item</div>
+        <div class="field"><label>Name</label><input type="text" id="biz-new-prod-name" maxlength="60" placeholder="Product or website name"/></div>
+        <div class="field"><label>Description</label><input type="text" id="biz-new-prod-desc" maxlength="120" placeholder="Short description"/></div>
+        <div class="field"><label>Link (optional)</label><input type="text" id="biz-new-prod-url" maxlength="300" placeholder="https://…"/></div>
+        <div class="field"><label>Image (optional)</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="file" id="biz-new-prod-img-input" accept="image/*" style="display:none" onchange="bizProductImgSelected(this)"/>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('biz-new-prod-img-input').click()">📷 Choose Image</button>
+            <span id="biz-new-prod-img-name" style="font-size:11px;color:var(--muted)">None</span>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-full" onclick="addBizProduct()">+ Add</button>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="saveBizProducts()">Done</button></div>
+  </div>
+</div>
+
+<!-- BIZ BOT EDITOR -->
+<div class="overlay" id="biz-bot-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><h2>Auto-reply Bot</h2><p>When someone DMs you with a matching keyword, the bot replies automatically</p></div>
+    <div class="modal-body" style="padding-top:10px;padding-bottom:10px">
+      <div id="biz-bot-rules-list" style="margin-bottom:12px"></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px">Add Rule</div>
+        <div class="field"><label>Keyword (or phrase)</label><input type="text" id="biz-bot-kw-input" maxlength="80" placeholder="e.g. price, hours, order…"/></div>
+        <div class="field"><label>Auto-reply</label><textarea id="biz-bot-reply-input" maxlength="500" rows="2" placeholder="The message the bot sends back…"></textarea></div>
+        <button class="btn btn-sm btn-full" onclick="addBizBotRule()">+ Add Rule</button>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Welcome message (sent on first DM)</label>
+        <textarea id="biz-bot-welcome-input" maxlength="400" rows="2" placeholder="Hi! Thanks for reaching out. How can I help?"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="saveBizBot()">Save &amp; Enable</button><button class="btn btn-ghost" onclick="closeModal('biz-bot-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- BIZ PUBLIC PROFILE VIEW -->
+<div class="overlay" id="biz-view-modal" style="display:none">
+  <div class="modal" style="max-width:460px;max-height:88vh">
+    <div class="modal-header" style="padding-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="biz-view-avatar" class="avatar" style="width:52px;height:52px;font-size:20px;flex-shrink:0"></div>
+        <div>
+          <div style="font-size:16px;font-weight:700" id="biz-view-name">Business</div>
+          <div style="font-size:12px;color:var(--muted)" id="biz-view-category"></div>
+          <span class="biz-badge">BIZ</span>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('biz-view-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="biz-view-desc" style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:8px"></p>
+      <a id="biz-view-website" href="#" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent);word-break:break-all;display:none"></a>
+      <div id="biz-view-products-section" style="display:none">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:14px 0 8px">Products &amp; Services</div>
+        <div class="biz-product-grid" id="biz-view-product-grid"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-full" onclick="startDmFromBizView()">💬 Message</button></div>
+  </div>
+</div>
 
 <div class="overlay" id="setup-modal">
   <div class="modal">
@@ -6272,6 +6398,7 @@ async function registerOrUpdate(){
   payload.googleEmail   = me.googleEmail || (u&&u.googleEmail) || '';
   payload.linkedSyntaxAccount     = (me.linkedSyntaxAccount!==undefined&&me.linkedSyntaxAccount!==null) ? me.linkedSyntaxAccount : ((u&&u.linkedSyntaxAccount)||null);
   payload.linkedSyntaxAccountName = me.linkedSyntaxAccountName || (u&&u.linkedSyntaxAccountName) || '';
+  payload.bizProfile    = me.bizProfile || (u&&u.bizProfile) || null;
   if(!u){u=payload;users.push(u);}else{Object.assign(u,payload);}
   // If this device id was force-logged-out from another device/admin action,
   // clear that tombstone on a fresh explicit login (re-authenticating is what
@@ -7982,6 +8109,7 @@ function updateSettingsPanel(){
   const loc=getWeatherLocation();
   const locInput=document.getElementById('weather-location-input');
   if(locInput&&loc) locInput.value=loc.name;
+  _renderBizSettings();
 }
 function openEditProfile(){
   document.getElementById('edit-name').value=me.name;
@@ -8108,7 +8236,9 @@ async function _origOpenChat(c){
   document.getElementById('chat-panel').classList.add('visible');
   if (document.body.classList.contains('device-phone')) document.body.classList.add('chat-open');
   // Header
-  document.getElementById('chat-header-name').innerHTML=esc(c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number):'');
+  const _bizUser = c.type!=='group'&&c.number ? lookupUser(c.number) : null;
+  const _bizActive = _bizUser && _bizUser.bizProfile && _bizUser.bizProfile.enabled;
+  document.getElementById('chat-header-name').innerHTML=esc(c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser(\''+c.number+'\'))">BIZ</span>' : '');
   const pollBtn=document.getElementById('poll-compose-btn');if(pollBtn) pollBtn.style.display=c.type==='group'?'flex':'none';
   const gameBtn=document.getElementById('game-compose-btn');if(gameBtn) gameBtn.style.display='flex';
   const addMemberBtn=document.getElementById('add-member-btn');if(addMemberBtn) addMemberBtn.style.display=c.type==='group'?'flex':'none';
@@ -10173,6 +10303,231 @@ async function applyCustomBgPhoto(input){
   }
 }
 
+// -- BUSINESS ACCOUNTS ---------------------------------------------------------
+function _bizData(){ return me.bizProfile || {}; }
+function _saveBiz(patch){
+  me.bizProfile = Object.assign(_bizData(), patch);
+  saveStorage();
+  registerOrUpdate().catch(()=>{});
+}
+
+function toggleBizMode(){
+  const on = !!(me.bizProfile && me.bizProfile.enabled);
+  _saveBiz({enabled: !on});
+  _renderBizSettings();
+  showToast(on ? 'Business mode off' : 'Business mode on', on ? 'Your profile is now personal' : 'Your profile now shows as a business');
+}
+
+function _renderBizSettings(){
+  const biz = _bizData();
+  const on = !!biz.enabled;
+  const btn = document.getElementById('biz-mode-btn');
+  const badge = document.getElementById('biz-mode-badge');
+  const sub = document.getElementById('biz-mode-sub');
+  const exp = document.getElementById('biz-settings-expanded');
+  const botBtn = document.getElementById('biz-bot-toggle-btn');
+  if(btn) btn.textContent = on ? 'Disable' : 'Enable';
+  if(btn) btn.className = on ? 'btn btn-danger btn-sm' : 'btn btn-sm';
+  if(badge) badge.style.display = on ? '' : 'none';
+  if(sub) sub.textContent = on ? ('Business profile active — '+( biz.name || 'name not set')) : 'Turn your profile into a business page with product/website showcase';
+  if(exp) exp.style.display = on ? '' : 'none';
+  const pc = (biz.products || []).length;
+  const prodSub = document.getElementById('biz-products-sub');
+  if(prodSub) prodSub.textContent = pc ? pc+' item'+(pc===1?'':'s')+' on your profile' : 'No products added yet';
+  const botSub = document.getElementById('biz-bot-sub');
+  const botOn = !!(biz.botEnabled && (biz.botRules||[]).length);
+  if(botSub) botSub.textContent = botOn ? ((biz.botRules||[]).length+' rule'+(biz.botRules.length===1?'':'s')+' active') : 'Automatically reply to DMs with keyword-based answers';
+  if(botBtn) botBtn.textContent = botOn ? 'On' : 'Off';
+}
+
+function openBizProfileEditor(){
+  const biz = _bizData();
+  document.getElementById('biz-name-input').value = biz.name || '';
+  document.getElementById('biz-category-input').value = biz.category || '';
+  document.getElementById('biz-desc-input').value = biz.desc || '';
+  document.getElementById('biz-website-input').value = biz.website || '';
+  openModal('biz-profile-modal');
+}
+function saveBizProfile(){
+  _saveBiz({
+    name: document.getElementById('biz-name-input').value.trim(),
+    category: document.getElementById('biz-category-input').value.trim(),
+    desc: document.getElementById('biz-desc-input').value.trim(),
+    website: document.getElementById('biz-website-input').value.trim()
+  });
+  closeModal('biz-profile-modal');
+  _renderBizSettings();
+  showToast('Business profile saved','');
+}
+
+let _bizNewProdImgData = null;
+function bizProductImgSelected(input){
+  const file = input.files && input.files[0];
+  input.value = '';
+  if(!file) return;
+  const label = document.getElementById('biz-new-prod-img-name');
+  if(label) label.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { _bizNewProdImgData = e.target.result; };
+  reader.readAsDataURL(file);
+}
+function openBizProductsEditor(){
+  _bizNewProdImgData = null;
+  _renderBizProductsList();
+  openModal('biz-products-modal');
+}
+function _renderBizProductsList(){
+  const products = _bizData().products || [];
+  const list = document.getElementById('biz-products-list');
+  if(!list) return;
+  if(!products.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No items yet</div>'; return; }
+  list.innerHTML = products.map((p,i)=>`<div class="biz-bot-rule"><div style="flex:1;min-width:0"><div class="biz-product-name">${p.name||'Untitled'}</div><div class="biz-product-desc">${p.desc||''}</div></div><button class="btn btn-ghost btn-sm" onclick="removeBizProduct(${i})">Remove</button></div>`).join('');
+}
+function addBizProduct(){
+  const name = document.getElementById('biz-new-prod-name').value.trim();
+  if(!name){ showToast('Name required',''); return; }
+  const prod = { id: Date.now().toString(36), name, desc: document.getElementById('biz-new-prod-desc').value.trim(), url: document.getElementById('biz-new-prod-url').value.trim(), img: _bizNewProdImgData||'' };
+  const prods = (_bizData().products || []).slice();
+  prods.push(prod);
+  _saveBiz({products: prods});
+  document.getElementById('biz-new-prod-name').value='';
+  document.getElementById('biz-new-prod-desc').value='';
+  document.getElementById('biz-new-prod-url').value='';
+  document.getElementById('biz-new-prod-img-name').textContent='None';
+  _bizNewProdImgData = null;
+  _renderBizProductsList();
+}
+function removeBizProduct(idx){
+  const prods = (_bizData().products || []).slice();
+  prods.splice(idx,1);
+  _saveBiz({products: prods});
+  _renderBizProductsList();
+}
+function saveBizProducts(){
+  closeModal('biz-products-modal');
+  _renderBizSettings();
+  showToast('Products saved','');
+}
+
+function openBizBotEditor(){
+  _renderBizBotRules();
+  const biz = _bizData();
+  document.getElementById('biz-bot-welcome-input').value = biz.botWelcome || '';
+  openModal('biz-bot-modal');
+}
+function _renderBizBotRules(){
+  const rules = _bizData().botRules || [];
+  const list = document.getElementById('biz-bot-rules-list');
+  if(!list) return;
+  if(!rules.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No rules yet — add one below</div>'; return; }
+  list.innerHTML = rules.map((r,i)=>`<div class="biz-bot-rule"><span class="biz-bot-kw">${r.keyword}</span><span class="biz-bot-reply">${r.reply}</span><button class="btn btn-ghost btn-sm" onclick="removeBizBotRule(${i})">×</button></div>`).join('');
+}
+function addBizBotRule(){
+  const kw = document.getElementById('biz-bot-kw-input').value.trim();
+  const reply = document.getElementById('biz-bot-reply-input').value.trim();
+  if(!kw || !reply){ showToast('Fill in keyword and reply',''); return; }
+  const rules = (_bizData().botRules || []).slice();
+  rules.push({keyword: kw.toLowerCase(), reply});
+  _saveBiz({botRules: rules});
+  document.getElementById('biz-bot-kw-input').value='';
+  document.getElementById('biz-bot-reply-input').value='';
+  _renderBizBotRules();
+}
+function removeBizBotRule(idx){
+  const rules = (_bizData().botRules || []).slice();
+  rules.splice(idx,1);
+  _saveBiz({botRules: rules});
+  _renderBizBotRules();
+}
+function saveBizBot(){
+  const welcome = document.getElementById('biz-bot-welcome-input').value.trim();
+  const rules = _bizData().botRules || [];
+  _saveBiz({botEnabled: rules.length > 0, botWelcome: welcome});
+  closeModal('biz-bot-modal');
+  _renderBizSettings();
+  showToast(rules.length ? 'Bot enabled' : 'No rules — bot is off', '');
+}
+
+// Called after renderMessages to check for new incoming DMs and auto-reply
+let _botRepliedIds = new Set();
+async function maybeRunBizBot(conv){
+  if(!me || !me.bizProfile || !me.bizProfile.enabled || !me.bizProfile.botEnabled) return;
+  if(!conv || conv.type==='group') return;
+  const rules = me.bizProfile.botRules || [];
+  if(!rules.length) return;
+  const msgs = conv.messages || [];
+  const lastFrom = msgs.length && msgs[msgs.length-1].from;
+  if(!lastFrom || lastFrom === me.number) return;
+  // Look at unseen incoming messages since last render
+  for(let i=msgs.length-1; i>=0; i--){
+    const m = msgs[i];
+    if(m.from === me.number) break;
+    if(_botRepliedIds.has(m.id)) break;
+    const text = (m.text ? (typeof dec==='function'?dec(m.text):m.text) : '').toLowerCase();
+    if(!text) continue;
+    const rule = rules.find(r => text.includes(r.keyword.toLowerCase()));
+    if(rule){
+      _botRepliedIds.add(m.id);
+      setTimeout(async ()=>{
+        const botMsg = { id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), from: me.number, time: Date.now(), seen: [], text: enc(rule.reply) };
+        conv.messages.push(botMsg);
+        if(conv.messages.length>100) conv.messages.splice(0, conv.messages.length-100);
+        await saveConvos().catch(()=>{});
+        if(activeConvo && activeConvo.key===conv.key){ lastMsgHash=''; renderMessages(conv.messages); }
+        renderSidebar();
+      }, 800 + Math.random()*600);
+      return;
+    }
+  }
+  // Welcome message on very first DM
+  const welcome = me.bizProfile.botWelcome;
+  if(welcome && msgs.filter(m=>m.from===me.number).length===0){
+    const firstIn = msgs.find(m=>m.from!==me.number);
+    if(firstIn && !_botRepliedIds.has('welcome_'+conv.key)){
+      _botRepliedIds.add('welcome_'+conv.key);
+      setTimeout(async ()=>{
+        const botMsg = { id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), from: me.number, time: Date.now(), seen: [], text: enc(welcome) };
+        conv.messages.push(botMsg);
+        if(conv.messages.length>100) conv.messages.splice(0, conv.messages.length-100);
+        await saveConvos().catch(()=>{});
+        if(activeConvo && activeConvo.key===conv.key){ lastMsgHash=''; renderMessages(conv.messages); }
+        renderSidebar();
+      }, 600);
+    }
+  }
+}
+
+// View another user's business profile
+function openBizViewModal(user){
+  if(!user) return;
+  const biz = user.bizProfile || {};
+  const av = document.getElementById('biz-view-avatar');
+  if(av) renderAvatar(av, {name: dec(user.name)||'?', avatar: user.avatar||''}, 52);
+  const nameEl = document.getElementById('biz-view-name');
+  if(nameEl) nameEl.textContent = biz.name || dec(user.name) || '';
+  const catEl = document.getElementById('biz-view-category');
+  if(catEl) catEl.textContent = biz.category || '';
+  const descEl = document.getElementById('biz-view-desc');
+  if(descEl) descEl.textContent = biz.desc || '';
+  const webEl = document.getElementById('biz-view-website');
+  if(webEl){ webEl.style.display = biz.website ? '' : 'none'; webEl.href = biz.website||'#'; webEl.textContent = biz.website||''; }
+  const products = biz.products || [];
+  const sec = document.getElementById('biz-view-products-section');
+  const grid = document.getElementById('biz-view-product-grid');
+  if(sec) sec.style.display = products.length ? '' : 'none';
+  if(grid) grid.innerHTML = products.map(p=>`<div class="biz-product-card" onclick="${p.url ? 'window.open(\''+p.url+'\',\'_blank\')' : ''}">
+    <div class="biz-product-img">${p.img ? `<img src="${p.img}" style="width:100%;height:100%;object-fit:cover" alt="">` : '📦'}</div>
+    <div class="biz-product-info"><div class="biz-product-name">${p.name||''}</div><div class="biz-product-desc">${p.desc||''}</div></div>
+  </div>`).join('');
+  _bizViewUser = user;
+  openModal('biz-view-modal');
+}
+let _bizViewUser = null;
+function startDmFromBizView(){
+  closeModal('biz-view-modal');
+  if(_bizViewUser) openConvo(_bizViewUser);
+}
+
 // -- ACCOUNT DELETE ------------------------------------------------------------
 async function confirmDeleteAccount(){
   if(!confirm('Are you sure you want to delete your account? This cannot be undone.')) return;
@@ -11669,6 +12024,8 @@ function renderMessages(msgs) {
   }
   const hash = JSON.stringify(msgs);
   if (hash === lastMsgHash) return;
+  // Run biz bot on the active convo (async, non-blocking)
+  if(activeConvo && convosCache){ const _bc=convosCache.find(x=>x&&x.key===activeConvo.key); if(_bc) maybeRunBizBot(_bc); }
   lastMsgHash = hash;
   // Decrypt any pending E2E-encrypted messages, then re-render once ready
   if (msgs && msgs.some(m => (m.ctext || m.cgif || m.cpoll) && !_decCache[m.id])) {
