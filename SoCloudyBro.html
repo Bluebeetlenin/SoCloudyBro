@@ -5262,7 +5262,7 @@ async function selfHeal(code, err, opts = {}) {
         // First try auth refresh
         const meNow = me;
         if (meNow && meNow.number && meNow.pwd) {
-          try { await sdk.logIn(meNow.number, meNow.pwd); } catch(e3) {}
+          try { if(window.SyntaxAccount) await window.SyntaxAccount.logIn(meNow.number, meNow.pwd); } catch(e3) {}
         }
         // Then auto-push canonical Firebase rules to unblock
         const r = await fetch(`${FIREBASE_RULES_ENDPOINT}/set`, {
@@ -5285,7 +5285,7 @@ async function selfHeal(code, err, opts = {}) {
 
     // 3. Corrupted/encrypted profile data → run healMeFields
     else if (/v2:|ciphertext|invalid|decrypt/i.test(msg) || (code && String(code).startsWith('SCB-PROF'))) {
-      if (typeof healMeFields === 'function') { healMeFields(); healed = true; healNote = 'Profile cache repaired'; }
+      if (typeof healMeFields === 'function') { const _hf = healMeFields(me); if(_hf){ healed = true; healNote = 'Profile cache repaired'; } }
     }
 
     // 4. Firebase rules / index missing → log for admin
@@ -7967,7 +7967,8 @@ function renderSidebar(){
     div.className='sb-item'+(isActive?' active':'');
     div.onclick=()=>openChat(c);
     div.oncontextmenu=(e)=>{e.preventDefault();showContactCtxMenu(e,c);};
-    const avDiv=c.type==='group'?`<div class="group-avatar" style="background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;font-size:16px;">${c.avatar?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;">`:'👥'}</div>`:`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?'background:none;':''}">${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(c.name||'?').charAt(0).toUpperCase()}</div><div class="${online?'online-ring':'offline-ring'}"></div></div>`;
+    const _safeGrpAv=(c.avatar&&typeof c.avatar==='string'&&(c.avatar.startsWith('data:image/')||c.avatar.startsWith('https://')))?`<img src="${esc(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">`:'👥';
+    const avDiv=c.type==='group'?`<div class="group-avatar" style="background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;font-size:16px;">${_safeGrpAv}</div>`:`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?'background:none;':''}">${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(c.name||'?').charAt(0).toUpperCase()}</div><div class="${online?'online-ring':'offline-ring'}"></div></div>`;
     div.innerHTML=`${avDiv}<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">${esc(c.name)}${c.type!=='group'?verifiedBadge(c.number):''}${inCall?' <span title="In a call now" style="color:var(--success)">\u260E</span>':''}</span><span class="sb-item-time">${timeStr}</span></div><div class="sb-item-preview">${esc(preview)}</div></div>`;
     list.appendChild(div);
   });
@@ -8069,7 +8070,7 @@ async function _origOpenChat(c){
   }
   // Avatar
   const haEl=document.getElementById('chat-header-av');
-  if(c.type==='group'){haEl.style.borderRadius='10px';haEl.style.background='linear-gradient(135deg,#ca5010,#6264a0)';haEl.style.color='#fff';haEl.innerHTML=c.avatar?`<img src="${c.avatar}" onerror="this.parentElement.innerHTML='👥'" style="width:100%;height:100%;object-fit:cover;">`:'👥';}
+  if(c.type==='group'){haEl.style.borderRadius='10px';haEl.style.background='linear-gradient(135deg,#ca5010,#6264a0)';haEl.style.color='#fff';if(c.avatar&&typeof c.avatar==='string'&&(c.avatar.startsWith('data:image/')||c.avatar.startsWith('https://'))){const _img=document.createElement('img');_img.src=c.avatar;_img.style.cssText='width:100%;height:100%;object-fit:cover;';_img.onerror=()=>{haEl.textContent='👥';};haEl.textContent='';haEl.appendChild(_img);}else{haEl.textContent='👥';}}
   else{haEl.style.borderRadius='50%';renderAvatar(haEl,lookupUser(c.number)||{name:enc(c.name),avatar:c.avatar||''});}
   renderContacts();
   renderSidebar();
@@ -11421,7 +11422,7 @@ async function jumpToMessage(idx) {
 
 // ── PATCH renderMessages TO SUPPORT REACTIONS + POLLS ────────────────────────
 // We monkey-patch the existing renderMessages
-const _origRenderMessages = renderMessages;
+// renderMessages fully replaced below
 function renderFileBubble(bubble,fileData){
   const url=esc(fileData.url||'');
   const name=esc(fileData.name||'file');
@@ -11584,7 +11585,7 @@ function renderMessages(msgs) {
 }
 
 // ── PATCH sendMsg TO FILTER BAD WORDS ────────────────────────────────────────
-const _origSendMsg = sendMsg;
+// sendMsg fully replaced below
 // Same trust question the sendMsg() membership guard answers, factored out so
 // the OTHER paths that push a message into a conversation ask it too. sendMsg()
 // was hardened after a real cross-account leak, but sendFileMsg() and
@@ -12745,7 +12746,7 @@ function renderSearchResults(results,q){
   const label=document.createElement('div');label.style.cssText='padding:6px 12px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;border-bottom:1px solid var(--border)';label.textContent=results.length+' message'+(results.length!==1?'s':'');wrap.appendChild(label);
   results.slice(0,20).forEach(r=>{
     const item=document.createElement('div');item.className='search-result-item';
-    const highlighted=esc(r.txt).replace(new RegExp(esc(q),'gi'),m=>`<mark>${m}</mark>`);
+    const _rq=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const highlighted=esc(r.txt).replace(new RegExp(_rq,'gi'),m=>`<mark>${m}</mark>`);
     item.innerHTML=`<div class="search-result-chat">${esc(r.convName)} <span class="search-result-time">${fmtTime(r.msg.time)}</span></div><div class="search-result-text">${highlighted}</div>`;
     item.onclick=()=>{
       wrap.style.display='none';
@@ -13831,8 +13832,8 @@ const SCB_CANONICAL_RULES = {
 async function adminLoadRules() {
   if(!requireAdmin()) return;
   const acct = me;
-  if (!acct || !acct.number) { showToast('Not logged in', 2000); return; }
-  showToast('Loading rules...', 2000);
+  if (!acct || !acct.number) { showToast('Not logged in', 'You must be logged in to use admin tools.'); return; }
+  showToast('Loading rules...', 'Fetching current Firebase rules…');
   try {
     const r = await fetch(`${FIREBASE_RULES_ENDPOINT}/get`, {
       headers: { 'X-Admin-Number': String(acct.number) }
@@ -13850,13 +13851,13 @@ async function adminLoadRules() {
 async function adminPushRules() {
   if(!requireAdmin()) return;
   const acct = me;
-  if (!acct || !acct.number) { showToast('Not logged in', 2000); return; }
+  if (!acct || !acct.number) { showToast('Not logged in', 'You must be logged in to use admin tools.'); return; }
   const ta = document.getElementById('admin-rules-input');
-  if (!ta || !ta.value.trim()) { showToast('Paste rules JSON first', 2000); return; }
+  if (!ta || !ta.value.trim()) { showToast('Paste rules JSON first', 'Paste the rules JSON into the text area above.'); return; }
   let rules;
-  try { rules = JSON.parse(ta.value); } catch(e) { showToast('Invalid JSON: ' + e.message, 3000); return; }
+  try { rules = JSON.parse(ta.value); } catch(e) { showToast('Invalid JSON', e.message); return; }
   if (!confirm('Push these Firebase rules? This affects ALL users immediately.')) return;
-  showToast('🔧 Pushing rules...', 3000);
+  showToast('🔧 Pushing rules...', 'Sending rules to Firebase…');
   try {
     const r = await fetch(`${FIREBASE_RULES_ENDPOINT}/set`, {
       method: 'POST',
@@ -13864,7 +13865,7 @@ async function adminPushRules() {
       body: JSON.stringify({ rules })
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
-    showToast('✅ Firebase rules updated successfully', 4000);
+    showToast('✅ Rules Updated', 'Firebase security rules applied successfully.');
   } catch(e) {
     selfHeal('SCB-ADMIN-24', e, { context: 'adminPushRules' });
     showToast(scbErr('SCB-ADMIN-24', 'Failed to push rules', e.message));
@@ -13886,83 +13887,56 @@ async function adminCleanFirebase() {
   if(!requireAdmin()) return;
   if (!confirm('This will scan ALL Firebase data and remove corrupted/bad records. This may take a while. Continue?')) return;
 
-  const DB = firebaseConfig.databaseURL;
-  const _auth=await _fbRestAuthParam();
   const results = { pendingStripped: 0, orphanMsgs: 0, profilesFixed: 0, errors: 0 };
-
   showToast('🔧 Firebase Cleanup', 'Starting scan… this may take a minute');
 
   try {
-    // PASS 1: Strip pending:true from all stored messages
+    // PASS 1: Strip pending:true from all stored messages (SDK, no REST needed)
     showToast('🔧 Firebase Cleanup', 'Pass 1/3: Scanning messages…');
-    const convoSnap = await fetch(`${DB}/conversations.json${_auth}`).then(r=>r.json()).catch(()=>({}));
-    if (convoSnap) {
-      for (const [convoId, convo] of Object.entries(convoSnap)) {
-        if (!convo || !convo.messages) continue;
-        const members = new Set(convo.members || []);
-        const patches = {};
-
-        for (const [msgId, msg] of Object.entries(convo.messages)) {
-          if (!msg) continue;
-
-          // Strip pending flag
-          if (msg.pending === true) {
-            patches[`conversations/${convoId}/messages/${msgId}/pending`] = null;
-            results.pendingStripped++;
-          }
-
-          // Remove message if sender is not a member of the conversation
-          if (msg.from && members.size > 0 && !members.has(Number(msg.from)) && !members.has(String(msg.from))) {
-            patches[`conversations/${convoId}/messages/${msgId}`] = null;
-            results.orphanMsgs++;
-          }
+    const convoSnap = await fbdb.ref('conversations').once('value');
+    const convoData = convoSnap.val() || {};
+    for (const [convoId, convo] of Object.entries(convoData)) {
+      if (!convo || !convo.messages) continue;
+      const members = new Set(convo.members || []);
+      const patches = {};
+      for (const [msgId, msg] of Object.entries(convo.messages)) {
+        if (!msg) continue;
+        if (msg.pending === true) {
+          patches[`conversations/${convoId}/messages/${msgId}/pending`] = null;
+          results.pendingStripped++;
         }
-
-        // Apply patches for this conversation using PATCH (multi-location update)
-        if (Object.keys(patches).length > 0) {
-          await fetch(`${DB}/.json${_auth}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(patches)
-          });
+        if (msg.from && members.size > 0 && !members.has(Number(msg.from)) && !members.has(String(msg.from))) {
+          patches[`conversations/${convoId}/messages/${msgId}`] = null;
+          results.orphanMsgs++;
         }
+      }
+      if (Object.keys(patches).length > 0) {
+        await fbdb.ref('/').update(patches);
       }
     }
 
     // PASS 2: Fix double-encrypted profile fields in user records
     showToast('🔧 Firebase Cleanup', 'Pass 2/3: Fixing profiles…');
-    // Firebase REST returns the node value directly — for an array stored at /users it returns {0:{...},1:{...},...} or the raw array
-    const usersRaw = await fetch(`${DB}/users.json${_auth}`).then(r=>r.json()).catch(()=>({}));
-    // Normalise: could be an object-of-objects, array, or wrapped {users:[...]}
-    const usersObj = Array.isArray(usersRaw)
-      ? Object.fromEntries(usersRaw.map((u,i)=>[i,u]))
-      : (usersRaw && typeof usersRaw === 'object' ? usersRaw : {});
-    if (usersObj) {
-      for (const [acctKey, acct] of Object.entries(usersObj)) {
-        if (!acct) continue;
-        const profilePatches = {};
-        const encFields = ['name', 'bio', 'customStatus'];
-        for (const field of encFields) {
-          if (!acct[field]) continue;
-          let val = acct[field];
-          try {
-            let decoded = dec(val);
-            // If decoded value itself starts with v2:, it was double-encrypted
-            if (decoded && typeof decoded === 'string' && decoded.startsWith('v2:')) {
-              let realVal = dec(decoded);
-              // Re-encrypt once cleanly
-              profilePatches[`users/${acctKey}/${field}`] = enc(realVal);
-              results.profilesFixed++;
-            }
-          } catch(e) { results.errors++; }
-        }
-        if (Object.keys(profilePatches).length > 0) {
-          await fetch(`${DB}/.json${_auth}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(profilePatches)
-          });
-        }
+    const usersSnap = await fbdb.ref('users').once('value');
+    const usersData = usersSnap.val() || {};
+    const usersObj = Array.isArray(usersData)
+      ? Object.fromEntries(usersData.map((u,i)=>[i,u]))
+      : usersData;
+    for (const [acctKey, acct] of Object.entries(usersObj)) {
+      if (!acct) continue;
+      const profilePatches = {};
+      for (const field of ['name', 'bio', 'customStatus']) {
+        if (!acct[field]) continue;
+        try {
+          let decoded = dec(acct[field]);
+          if (decoded && typeof decoded === 'string' && decoded.startsWith('v2:')) {
+            profilePatches[`users/${acctKey}/${field}`] = enc(dec(decoded));
+            results.profilesFixed++;
+          }
+        } catch(e) { results.errors++; }
+      }
+      if (Object.keys(profilePatches).length > 0) {
+        await fbdb.ref('/').update(profilePatches);
       }
     }
 
@@ -13982,42 +13956,34 @@ async function adminCleanFirebase() {
 async function adminDiagnoseFirebase() {
   if(!requireAdmin()) return;
   showToast('🔍 Diagnosing…', 'Scanning Firebase for issues…');
-  const DB = firebaseConfig.databaseURL;
   const results = { pendingFlags: 0, orphanMsgs: 0, doubleEncrypted: 0, errors: 0 };
-  const _auth = await _fbRestAuthParam();
 
   try {
-    // Scan messages
-    const convoSnap = await fetch(`${DB}/conversations.json${_auth}`).then(r=>r.json()).catch(()=>({}));
-    if (convoSnap) {
-      for (const [convoId, convo] of Object.entries(convoSnap)) {
-        if (!convo || !convo.messages) continue;
-        const members = new Set(convo.members || []);
-        for (const [msgId, msg] of Object.entries(convo.messages)) {
-          if (!msg) continue;
-          if (msg.pending === true) results.pendingFlags++;
-          if (msg.from && members.size > 0 && !members.has(Number(msg.from)) && !members.has(String(msg.from))) {
-            results.orphanMsgs++;
-          }
-        }
+    // Scan messages via SDK
+    const convoSnap = await fbdb.ref('conversations').once('value');
+    const convoData = convoSnap.val() || {};
+    for (const [convoId, convo] of Object.entries(convoData)) {
+      if (!convo || !convo.messages) continue;
+      const members = new Set(convo.members || []);
+      for (const [msgId, msg] of Object.entries(convo.messages)) {
+        if (!msg) continue;
+        if (msg.pending === true) results.pendingFlags++;
+        if (msg.from && members.size > 0 && !members.has(Number(msg.from)) && !members.has(String(msg.from))) results.orphanMsgs++;
       }
     }
 
-    // Scan users for double-encrypted fields
-    const usersRaw2 = await fetch(`${DB}/users.json${_auth}`).then(r=>r.json()).catch(()=>({}));
-    const usersObj2 = Array.isArray(usersRaw2)
-      ? Object.fromEntries(usersRaw2.map((u,i)=>[i,u]))
-      : (usersRaw2 && typeof usersRaw2 === 'object' ? usersRaw2 : {});
-    if (usersObj2) {
-      for (const [acctKey, acct] of Object.entries(usersObj2)) {
-        if (!acct) continue;
-        for (const field of ['name', 'bio', 'customStatus']) {
-          if (!acct[field]) continue;
-          try {
-            let decoded = dec(acct[field]);
-            if (decoded && typeof decoded === 'string' && decoded.startsWith('v2:')) results.doubleEncrypted++;
-          } catch(e) { results.errors++; }
-        }
+    // Scan users for double-encrypted fields via SDK
+    const usersSnap = await fbdb.ref('users').once('value');
+    const usersRaw2 = usersSnap.val() || {};
+    const usersObj2 = Array.isArray(usersRaw2) ? Object.fromEntries(usersRaw2.map((u,i)=>[i,u])) : usersRaw2;
+    for (const [, acct] of Object.entries(usersObj2)) {
+      if (!acct) continue;
+      for (const field of ['name', 'bio', 'customStatus']) {
+        if (!acct[field]) continue;
+        try {
+          let decoded = dec(acct[field]);
+          if (decoded && typeof decoded === 'string' && decoded.startsWith('v2:')) results.doubleEncrypted++;
+        } catch(e) { results.errors++; }
       }
     }
 
