@@ -12918,7 +12918,7 @@ function adminResetAccount(num){
   const who=document.getElementById('admin-reset-who');
   if(who) who.textContent=nm+' (#'+num+')';
   const line=document.getElementById('admin-reset-summary');
-  if(line) line.textContent='This clears '+nm+'’s profile — name, bio, status, avatar and theme colours — and gives them a completely fresh start. Their message history, chats and groups stay exactly as they are, and so do their password, email, account age, blocked list and any connected Google or Syntax account.';
+  if(line) line.textContent='This clears '+nm+'\'s profile — name, bio, status, avatar and theme colours — and gives them a completely fresh start. Their message history, chats and groups stay exactly as they are, and so do their password, email, account age, blocked list and any connected Google or Syntax account.';
   const k=document.getElementById('admin-reset-keys'); if(k) k.checked=false;
   const p=document.getElementById('admin-reset-pwd'); if(p) p.checked=false;
   const err=document.getElementById('admin-reset-error'); if(err) err.textContent='';
@@ -12976,7 +12976,7 @@ async function submitAdminResetAccount(){
     await saveUsers(users);
     closeModal('admin-reset-modal');
     _adminResetTarget=null;
-    showToast('Account reset','#'+num+'’s profile was cleared. It applies on their device the next time they open the app.');
+    showToast('Account reset','#'+num+'\'s profile was cleared. It applies on their device the next time they open the app.');
     // Resetting your own account is the one case where "next time their client
     // checks in" is this very tab: adopt it immediately so a later
     // registerOrUpdate() from this session (any settings change) can't write
@@ -15043,7 +15043,7 @@ function buildSuggestionCorpus(convoKey){
         // Whole short messages this user repeats are the best suggestions.
         if(txt.split(/\s+/).length<=5){ const k=txt; freq[k]=(freq[k]||0)+2; }
         txt.split(/\s+/).forEach(w=>{
-          const clean=w.replace(/[^A-Za-z'’-]/g,'');
+          const clean=w.replace(/[^A-Za-z''-]/g,'');
           if(clean.length>3 && !SUGGEST_STOPWORDS.has(clean.toLowerCase())) freq[clean]=(freq[clean]||0)+1;
         });
       });
@@ -17080,7 +17080,7 @@ function initGoogleSignIn(){
     });
   }
   if(!googleSignInConfigured()){
-    showNote(‘Google sign-in isn’t set up on this site yet. Use the form above — everything works without it.’);
+    showNote('Google sign-in isn\'t set up on this site yet. Use the form above — everything works without it.');
     return;
   }
   // Check if the current origin is likely unauthorized (e.g. a Vercel preview URL not yet
@@ -17088,15 +17088,15 @@ function initGoogleSignIn(){
   // Google to show an "Access blocked: Authorization Error" page inside the popup — not
   // a good experience — so we detect it early and show a plain message instead.
   const _origin=location.origin;
-  const _knownOrigins=[‘http://localhost’,’https://socloudybro’,’https://cubeleap’];
-  const _originOk=_knownOrigins.some(o=>_origin.startsWith(o))||_origin.startsWith(‘file://’);
+  const _knownOrigins=['http://localhost','https://socloudybro','https://cubeleap'];
+  const _originOk=_knownOrigins.some(o=>_origin.startsWith(o))||_origin.startsWith('file://');
   if(!_originOk){
-    showNote(‘Google sign-in is disabled on this URL (‘+_origin+’). To enable it, add this origin to your Google Cloud Console → Credentials → Authorized JavaScript origins, then reload. You can still sign in with your number and name above.’);
+    showNote('Google sign-in is disabled on this URL ('+_origin+'). To enable it, add this origin to your Google Cloud Console → Credentials → Authorized JavaScript origins, then reload. You can still sign in with your number and name above.');
     return;
   }
   whenGoogleIdentityReady(ready=>{
     if(!ready){
-      showNote(‘Google sign-in couldn’t load (it may be blocked on this network). Use the form above instead.’);
+      showNote('Google sign-in couldn\'t load (it may be blocked on this network). Use the form above instead.');
       return;
     }
     let anyRendered=false;
@@ -17107,7 +17107,7 @@ function initGoogleSignIn(){
     // caveat would be stale, so it isn't shown at all.
     const unverifiedNote=googleVerifyConfigured()
       ? ''
-      : 'Note: this site can’t yet confirm a Google sign-in with Google itself, so treat it as a convenience rather than proof of identity. (Site owner: fill in GOOGLE_VERIFY_ENDPOINT.)';
+      : 'Note: this site can\'t yet confirm a Google sign-in with Google itself, so treat it as a convenience rather than proof of identity. (Site owner: fill in GOOGLE_VERIFY_ENDPOINT.)';
     views.forEach(v=>{
       const n=document.getElementById(v.note), f=document.getElementById(v.fallback), h=document.getElementById(v.holder);
       if(h) h.style.display='flex';
@@ -17118,7 +17118,7 @@ function initGoogleSignIn(){
       if(f) f.style.display='none';
       if(renderGoogleButton(v.holder)) anyRendered=true;
     });
-    if(!anyRendered) showNote('Google sign-in couldn’t start on this device. Use the form above instead.');
+    if(!anyRendered) showNote('Google sign-in couldn\'t start on this device. Use the form above instead.');
   });
 }
 
@@ -17142,7 +17142,7 @@ function initGoogleSignIn(){
  */
 async function verifyGoogleCredential(credential){
   if(typeof credential!=='string' || !credential){
-    return {ok:false, code:'unreadable', message:'That Google response couldn’t be read. Please try again.'};
+    return {ok:false, code:'unreadable', message:'That Google response couldn\'t be read. Please try again.'};
   }
 
   // --- Fallback: no Worker deployed yet (see state 2 in the note above) ------
@@ -17151,7 +17151,7 @@ async function verifyGoogleCredential(credential){
   // the UI keeps showing the "not server-verified" note.
   if(!googleVerifyConfigured()){
     const claims=decodeGoogleIdToken(credential);
-    if(!claims) return {ok:false, code:'unreadable', message:'That Google response couldn’t be read. Please try again.'};
+    if(!claims) return {ok:false, code:'unreadable', message:'That Google response couldn\'t be read. Please try again.'};
     return {ok:true, verified:false, identity:{
       sub:claims.sub,
       email:(claims.email||'').toLowerCase(),
@@ -17174,16 +17174,16 @@ async function verifyGoogleCredential(credential){
     // Couldn't reach the Worker, or it didn't answer JSON. This is an outage,
     // not a verdict — but it is still NOT a pass: without an answer we have no
     // verification, so the sign-in is refused rather than downgraded.
-    return {ok:false, code:'unreachable', message:'Google sign-in couldn’t be checked right now — the verification service didn’t answer. Please try again in a moment.', detail:(e&&e.message)||''};
+    return {ok:false, code:'unreachable', message:'Google sign-in couldn\'t be checked right now — the verification service didn\'t answer. Please try again in a moment.', detail:(e&&e.message)||''};
   }
   if(!data || typeof data!=='object'){
-    return {ok:false, code:'unreachable', message:'Google sign-in couldn’t be checked right now — the verification service gave an unexpected answer.'};
+    return {ok:false, code:'unreachable', message:'Google sign-in couldn\'t be checked right now — the verification service gave an unexpected answer.'};
   }
   if(data.status!=='ok'){
-    return {ok:false, code:'rejected', message:'Google couldn’t confirm that sign-in, so it wasn’t accepted.', detail:String(data.message||'verification failed')};
+    return {ok:false, code:'rejected', message:'Google couldn\'t confirm that sign-in, so it wasn\'t accepted.', detail:String(data.message||'verification failed')};
   }
   if(typeof data.sub!=='string' || !data.sub){
-    return {ok:false, code:'rejected', message:'Google couldn’t confirm that sign-in, so it wasn’t accepted.', detail:'verified response carried no subject id'};
+    return {ok:false, code:'rejected', message:'Google couldn\'t confirm that sign-in, so it wasn\'t accepted.', detail:'verified response carried no subject id'};
   }
   // Verified claims — these, and only these, are what the rest of the flow uses.
   return {ok:true, verified:true, identity:{
@@ -17324,7 +17324,7 @@ function renderConnectedAccounts(){
   // genuinely checked with Google and saying otherwise would be inaccurate, so
   // this note appears only while that endpoint is unset.
   if(googleSignInConfigured() && !googleVerifyConfigured()){
-    notes.push('Heads up: Google sign-ins on this site aren’t confirmed with Google server-side yet, so a connected Google account is a convenience rather than proof of identity. (Site owner: fill in GOOGLE_VERIFY_ENDPOINT.)');
+    notes.push('Heads up: Google sign-ins on this site aren\'t confirmed with Google server-side yet, so a connected Google account is a convenience rather than proof of identity. (Site owner: fill in GOOGLE_VERIFY_ENDPOINT.)');
   }
   if(me && me.googleSub){
     gSub.textContent='Connected'+(me.googleEmail?(' — '+me.googleEmail):'')+'. You can sign in with this Google account.'
@@ -17338,13 +17338,13 @@ function renderConnectedAccounts(){
     if(!googleSignInConfigured()){
       if(gGsi){ gGsi.innerHTML=''; gGsi.style.display='none'; }
       if(gFallback){ gFallback.style.display='inline-flex'; gFallback.disabled=true; }
-      notes.push('Google sign-in isn’t set up on this site yet, so there’s nothing to connect to. (Site owner: fill in GOOGLE_CLIENT_ID.)');
+      notes.push('Google sign-in isn\'t set up on this site yet, so there\'s nothing to connect to. (Site owner: fill in GOOGLE_CLIENT_ID.)');
     }else if(!googleGsiLoaded()){
       if(gGsi){ gGsi.innerHTML=''; gGsi.style.display='none'; }
       if(gFallback){ gFallback.style.display='inline-flex'; gFallback.disabled=true; }
       notes.push(_googleGsiTimedOut
-        ? 'Google’s sign-in script couldn’t load (it may be blocked on this network), so connecting a Google account isn’t possible right now.'
-        : 'Google’s sign-in script is still loading — reopen Settings in a moment.');
+        ? 'Google\'s sign-in script couldn\'t load (it may be blocked on this network), so connecting a Google account isn\'t possible right now.'
+        : 'Google\'s sign-in script is still loading — reopen Settings in a moment.');
       // If it is merely still loading, repaint once it arrives.
       if(!_googleGsiTimedOut) whenGoogleIdentityReady(()=>{ try{ renderConnectedAccounts(); }catch(e){} });
     }else{
@@ -17355,7 +17355,7 @@ function renderConnectedAccounts(){
         if(!renderGoogleButton('scb-google-gsi-btn',{size:'medium', text:'signin_with', shape:'rectangular'})){
           gGsi.style.display='none';
           if(gFallback){ gFallback.style.display='inline-flex'; gFallback.disabled=true; }
-          notes.push('Google’s button couldn’t be shown on this device.');
+          notes.push('Google\'s button couldn\'t be shown on this device.');
         }
       }
     }
@@ -17366,7 +17366,7 @@ function renderConnectedAccounts(){
   if(me && me.linkedSyntaxAccount){
     sSub.textContent='Connected — Syntax Account #'+me.linkedSyntaxAccount
       +(me.linkedSyntaxAccountName?(' ('+me.linkedSyntaxAccountName+')'):'')
-      +'. Contacts can see what you’re playing in Cube Leap, Jumpa! and Ultimo Chess.';
+      +'. Contacts can see what you\'re playing in Cube Leap, Jumpa! and Ultimo Chess.';
     if(sConn) sConn.style.display='none';
     if(sDisc) sDisc.style.display='inline-flex';
   }else{
@@ -17376,7 +17376,7 @@ function renderConnectedAccounts(){
       sConn.style.display='inline-flex';
       sConn.disabled=!syntaxSdk;
     }
-    if(!syntaxSdk) notes.push('The Syntax Account SDK (syntax-account.js) didn’t load, so linking isn’t possible right now.');
+    if(!syntaxSdk) notes.push('The Syntax Account SDK (syntax-account.js) didn\'t load, so linking isn\'t possible right now.');
   }
 
   if(note && noteRow){
@@ -17419,13 +17419,13 @@ async function linkGoogleToCurrentAccount(identity){
     me.googleSub=null; me.googleEmail='';
     try{ saveStorage(); }catch(err){}
     renderConnectedAccounts();
-    showToast('Couldn’t connect',scbErr('SCB-LINK-08','Your Google account couldn\'t be connected — saving the link failed.',(e.message||'the link could not be saved.')));
+    showToast('Couldn\'t connect',scbErr('SCB-LINK-08','Your Google account couldn\'t be connected — saving the link failed.',(e.message||'the link could not be saved.')));
   }
 }
 
 async function disconnectGoogleAccount(){
   if(!me||!me.googleSub) return;
-  if(!confirm('Disconnect '+(me.googleEmail||'your Google account')+'? You’ll need your SoCloudyBro email/number and password to sign in after this.')) return;
+  if(!confirm('Disconnect '+(me.googleEmail||'your Google account')+'? You\'ll need your SoCloudyBro email/number and password to sign in after this.')) return;
   try{
     // Cleared by writing the record directly. registerOrUpdate() deliberately
     // falls back to the stored value for these fields (so a stale device can't
@@ -17433,7 +17433,7 @@ async function disconnectGoogleAccount(){
     // reason submitUnlinkParent() writes linkedParent:null this way.
     const users=await getUsers();
     const mine=users.find(u=>u&&u.number===me.number);
-    if(!mine){ showToast('Error',scbErr('SCB-LINK-09','Your account record wasn’t found.')); return; }
+    if(!mine){ showToast('Error',scbErr('SCB-LINK-09','Your account record wasn\'t found.')); return; }
     mine.googleSub=null; mine.googleEmail='';
     await saveUsers(users);
     me.googleSub=null; me.googleEmail='';
@@ -17442,14 +17442,14 @@ async function disconnectGoogleAccount(){
     try{ if(googleGsiLoaded()) window.google.accounts.id.disableAutoSelect(); }catch(e){}
     renderConnectedAccounts();
     showToast('Google account disconnected','Sign in with your email or number and password from now on.');
-  }catch(e){ showToast('Couldn’t disconnect',scbErr('SCB-LINK-10','Your Google account couldn\'t be disconnected — saving the change failed.',(e.message||'failed'))); }
+  }catch(e){ showToast('Couldn\'t disconnect',scbErr('SCB-LINK-10','Your Google account couldn\'t be disconnected — saving the change failed.',(e.message||'failed'))); }
 }
 
 // --- Syntax Account: link / unlink -----------------------------------------
 function openSyntaxLinkModal(){
   if(!me) return;
   if(typeof window.SyntaxAccount==='undefined'){
-    showToast('Unavailable',scbErr('SCB-LINK-11','The Syntax Account SDK (syntax-account.js) didn’t load, so linking isn’t possible right now.'));
+    showToast('Unavailable',scbErr('SCB-LINK-11','The Syntax Account SDK (syntax-account.js) didn\'t load, so linking isn\'t possible right now.'));
     return;
   }
   const n=document.getElementById('scb-syntax-number');
@@ -17464,7 +17464,7 @@ async function submitSyntaxLink(){
   if(err) err.textContent='';
   if(!me) return;
   const sdk=window.SyntaxAccount;
-  if(!sdk){ if(err) err.textContent=scbErr('SCB-LINK-12','The Syntax Account SDK isn’t loaded.'); return; }
+  if(!sdk){ if(err) err.textContent=scbErr('SCB-LINK-12','The Syntax Account SDK isn\'t loaded.'); return; }
   const numRaw=(document.getElementById('scb-syntax-number')||{}).value;
   const pwd=(document.getElementById('scb-syntax-password')||{}).value||'';
   const num=parseInt(numRaw,10);
@@ -17501,7 +17501,7 @@ async function submitSyntaxLink(){
     // A link changes what a "Now Playing" lookup for this number would return,
     // so drop any cached answer for it.
     try{ delete _nowPlayingCache[Number(me.number)]; }catch(e){}
-    showToast('Syntax Account connected','Linked to Syntax Account #'+num+'. Your contacts will see what you’re playing.');
+    showToast('Syntax Account connected','Linked to Syntax Account #'+num+'. Your contacts will see what you\'re playing.');
   }catch(e){
     if(err) err.textContent=scbErr('SCB-LINK-16','That Syntax Account couldn\'t be linked.',(e.message||'could not link that account.'));
   }finally{
@@ -17512,7 +17512,7 @@ async function submitSyntaxLink(){
 async function disconnectSyntaxAccount(){
   if(!me||!me.linkedSyntaxAccount) return;
   const num=me.linkedSyntaxAccount;
-  if(!confirm('Disconnect Syntax Account #'+num+'? Your contacts will stop seeing what you’re playing.')) return;
+  if(!confirm('Disconnect Syntax Account #'+num+'? Your contacts will stop seeing what you\'re playing.')) return;
   try{
     const sdk=window.SyntaxAccount;
     const session=(sdk&&typeof sdk.current==='function')?sdk.current():null;
@@ -17534,7 +17534,7 @@ async function disconnectSyntaxAccount(){
     // disconnect above (registerOrUpdate() can't clear a field it falls back on).
     const users=await getUsers();
     const mine=users.find(u=>u&&u.number===me.number);
-    if(!mine){ showToast('Error',scbErr('SCB-LINK-17','Your account record wasn’t found.')); return; }
+    if(!mine){ showToast('Error',scbErr('SCB-LINK-17','Your account record wasn\'t found.')); return; }
     mine.linkedSyntaxAccount=null; mine.linkedSyntaxAccountName='';
     await saveUsers(users);
     me.linkedSyntaxAccount=null; me.linkedSyntaxAccountName='';
@@ -17544,7 +17544,7 @@ async function disconnectSyntaxAccount(){
     showToast('Syntax Account disconnected', syntaxSideCleared
       ? 'Both sides of the link have been cleared.'
       : 'Cleared here. Sign in to Syntax Account #'+num+' in one of the games to finish removing the link on that side.');
-  }catch(e){ showToast('Couldn’t disconnect',scbErr('SCB-LINK-18','Your Syntax Account couldn\'t be disconnected — saving the change failed.',(e.message||'failed'))); }
+  }catch(e){ showToast('Couldn\'t disconnect',scbErr('SCB-LINK-18','Your Syntax Account couldn\'t be disconnected — saving the change failed.',(e.message||'failed'))); }
 }
 
 /* =============================================================================
@@ -17954,7 +17954,7 @@ function _cwOpenInvite(mode){
     h.textContent = 'Share this voice channel';
     note.textContent = 'Anyone in this group joins by tapping ' +
       ((voiceChannelActive && voiceChannelActive.label) || 'the voice channel') +
-      ' in the channel bar. People outside the group can’t be added to it.';
+      ' in the channel bar. People outside the group can\'t be added to it.';
     const btn = document.createElement('button');
     btn.className = 'btn btn-full';
     btn.textContent = '📣 Post “join me” in this group';
@@ -17962,7 +17962,7 @@ function _cwOpenInvite(mode){
     extra.appendChild(btn);
   }else{
     h.textContent = 'Add someone to this call';
-    note.textContent = 'A 1:1 call can’t take a third person — it is signalled over a ' +
+    note.textContent = 'A 1:1 call can\'t take a third person — it is signalled over a ' +
       'path derived from just the two numbers, so nobody else can join it. ' +
       'Pick someone below to move everyone into a Meetings room instead: they and ' +
       (_cwOtherName() || 'the other person') + ' both get the code, then this call hangs up and the room opens.';
@@ -18040,12 +18040,12 @@ async function _cwAnnounceVoiceChannel(){
   // joinVoiceChannel() records that as voiceChannelActive.convoKey.
   const key = voiceChannelActive && voiceChannelActive.convoKey;
   const conv = (key && convosCache) ? convosCache.find(x=>x && x.key===key) : null;
-  if(!conv || !voiceChannelActive){ showToast('Nothing to share',scbErr('SCB-GRP-31','Couldn’t find the group this channel belongs to.')); return; }
+  if(!conv || !voiceChannelActive){ showToast('Nothing to share',scbErr('SCB-GRP-31','Couldn\'t find the group this channel belongs to.')); return; }
   try{
     await _cwPostMessage({key:conv.key, type:'group', members:(conv.members||conv.participants||[]), name:conv.name},
-      '📣 I’m in ' + (voiceChannelActive.label||'the voice channel') + ' — tap it in the channel bar to join me.');
+      '📣 I\'m in ' + (voiceChannelActive.label||'the voice channel') + ' — tap it in the channel bar to join me.');
     showToast('Posted','Everyone in the group can see it.');
-  }catch(e){ showToast('Couldn’t post', scbErr('SCB-GRP-32','That couldn\'t be posted to the group — the server rejected the write.',(e.message||''))); }
+  }catch(e){ showToast('Couldn\'t post', scbErr('SCB-GRP-32','That couldn\'t be posted to the group — the server rejected the write.',(e.message||''))); }
 }
 async function _cwUpgradeDmToMeeting(c){
   closeModal('cw-invite-modal');
@@ -18064,7 +18064,7 @@ async function _cwUpgradeDmToMeeting(c){
   // Only hang up once the invites are out, so nobody is dropped with no code.
   try{ leaveVoiceChannel(); }catch(e){}
   try{ await joinMeeting(code); }
-  catch(e){ showToast('Couldn’t open the room', scbErr('SCB-MEET-09','That meeting room couldn\'t be opened.',(e.message||''))); }
+  catch(e){ showToast('Couldn\'t open the room', scbErr('SCB-MEET-09','That meeting room couldn\'t be opened.',(e.message||''))); }
 }
 
 /* ---- drag + position ----------------------------------------------------- */
