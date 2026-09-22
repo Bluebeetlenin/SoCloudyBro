@@ -13677,11 +13677,7 @@ const SCB_CANONICAL_RULES = {
         // Only allow writes if the writer's number appears in the members/participants list
         ".write": "newData.child('members').hasChild(auth.uid) || data.child('members').hasChild(auth.uid) || newData.child('participants').hasChild(auth.uid) || !data.exists()",
         "messages": {
-          ".indexOn": ["at"],
-          "$msgId": {
-            // Individual message writes allowed if convo is writable (inherited) OR the message is new
-            ".write": "!data.exists() || data.child('from').val() == $userId"
-          }
+          ".indexOn": ["at"]
         }
       }
     },
