@@ -11720,6 +11720,10 @@ async function openChat(c) {
 }
 
 // ── PATCH chat header name to be clickable ────────────────────────────────────
+// Handle #privacy hash so https://socloudybro.vercel.app/#privacy opens the policy directly
+window.addEventListener('hashchange', () => { if(location.hash==='#privacy') showPrivacyPolicy(); });
+if(location.hash==='#privacy') document.addEventListener('DOMContentLoaded', () => setTimeout(showPrivacyPolicy, 600));
+
 document.addEventListener('DOMContentLoaded', () => {
   const nameEl = document.getElementById('chat-header-name');
   if (nameEl) { nameEl.style.cursor = 'pointer'; nameEl.title = 'Click for info'; nameEl.addEventListener('click', () => { if (activeConvo) { if (activeConvo.type === 'group') openGroupPanel(); else openContactPanel(); } }); }
