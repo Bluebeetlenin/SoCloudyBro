@@ -4327,6 +4327,89 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="ctx-item danger" onclick="removeContact()">🗑 Remove Contact</div>
 </div>
 
+<!-- PUBLIC LANDING PAGE — visible before login, satisfies Google OAuth verification -->
+<div id="landing-page" style="display:none;min-height:100vh;background:var(--bg);color:var(--text);font-family:inherit">
+  <nav style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10">
+    <div style="font-size:20px;font-weight:700;color:var(--accent)">☁️ SoCloudyBro</div>
+    <button onclick="document.getElementById('landing-page').style.display='none';openModal('setup-modal')" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer">Sign In / Sign Up</button>
+  </nav>
+
+  <main style="max-width:680px;margin:0 auto;padding:48px 24px">
+    <div style="text-align:center;margin-bottom:48px">
+      <div style="font-size:56px;margin-bottom:16px">☁️</div>
+      <h1 style="font-size:clamp(28px,6vw,42px);font-weight:800;margin:0 0 16px;line-height:1.2">Private messaging,<br>for your crew.</h1>
+      <p style="font-size:17px;color:var(--muted);margin:0 0 28px;line-height:1.6">SoCloudyBro is a secure, end-to-end encrypted messaging app. Chat privately, make voice and video calls, share updates, and stay connected — all in one place.</p>
+      <button onclick="document.getElementById('landing-page').style.display='none';openModal('setup-modal')" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:14px 32px;font-size:16px;font-weight:700;cursor:pointer;display:inline-block">Get Started ↗</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:48px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">🔒</div>
+        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700">End-to-End Encrypted</h3>
+        <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.5">Messages are encrypted on your device. No one — not even us — can read them.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">📞</div>
+        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700">Voice & Video Calls</h3>
+        <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.5">Crystal-clear calls with the people you care about, directly in your browser.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">🌤</div>
+        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700">Community Updates</h3>
+        <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.5">Share updates, announcements and moments with everyone in your community.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">👥</div>
+        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700">Group Chats</h3>
+        <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.5">Create groups for your friends, team, or community and chat together.</p>
+      </div>
+    </div>
+
+    <div style="text-align:center;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)">
+      <p style="margin:0 0 8px">SoCloudyBro is built for private communities. Accounts are invite-based.</p>
+      <a href="#" onclick="showPrivacyPolicy();return false;" style="color:var(--accent);text-decoration:none">Privacy Policy</a>
+      <span style="margin:0 8px">·</span>
+      <a href="mailto:support@socloudybro.vercel.app" style="color:var(--accent);text-decoration:none">Contact</a>
+    </div>
+  </main>
+</div>
+
+<!-- PRIVACY POLICY MODAL -->
+<div class="overlay" id="privacy-modal" style="display:none">
+  <div class="modal" style="max-height:85vh;overflow-y:auto">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:1">
+      <h2>Privacy Policy</h2>
+      <button class="modal-close" onclick="closeModal('privacy-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="font-size:14px;line-height:1.7;color:var(--text)">
+      <p style="color:var(--muted);font-size:12px">Last updated: September 2026</p>
+
+      <h3 style="font-size:15px;margin:20px 0 8px">What SoCloudyBro is</h3>
+      <p>SoCloudyBro is a private, invite-based messaging platform. It lets registered users send end-to-end encrypted messages, make voice and video calls, and share updates within a trusted community.</p>
+
+      <h3 style="font-size:15px;margin:20px 0 8px">What data we collect</h3>
+      <ul style="padding-left:20px;margin:0">
+        <li><strong>Account data:</strong> Your name, a user number, and optionally an email address and profile photo.</li>
+        <li><strong>Messages:</strong> Stored encrypted in Firebase. Content is only readable on your device with your encryption key.</li>
+        <li><strong>Usage data:</strong> Basic connection metadata (timestamps, online status) to deliver messages.</li>
+        <li><strong>Google sign-in:</strong> If you sign in with Google, we receive your Google account name and email. We do not store your Google password.</li>
+      </ul>
+
+      <h3 style="font-size:15px;margin:20px 0 8px">How we use your data</h3>
+      <p>Your data is used solely to operate SoCloudyBro. We do not sell, share, or use your data for advertising. Messages are end-to-end encrypted and we cannot read them.</p>
+
+      <h3 style="font-size:15px;margin:20px 0 8px">Data storage</h3>
+      <p>Data is stored in Google Firebase (Europe West region). We do not operate our own servers. Firebase's data processing terms apply.</p>
+
+      <h3 style="font-size:15px;margin:20px 0 8px">Your rights</h3>
+      <p>You can delete your account at any time from Settings. This removes your profile and messages from our database.</p>
+
+      <h3 style="font-size:15px;margin:20px 0 8px">Contact</h3>
+      <p>Questions? Email <a href="mailto:support@socloudybro.vercel.app" style="color:var(--accent)">support@socloudybro.vercel.app</a></p>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="setup-modal">
   <div class="modal">
     <div class="modal-header">
@@ -4394,6 +4477,9 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="google-btn-holder" id="google-btn-login" style="display:flex;justify-content:center"></div>
         <button type="button" class="btn btn-ghost btn-full google-fallback-btn" id="google-fallback-login" style="display:none" disabled>Sign in with Google</button>
         <div class="google-auth-note" id="google-note-login" style="display:none;font-size:11px;color:var(--muted);margin-top:7px;line-height:1.45;text-align:center"></div>
+      </div>
+      <div style="text-align:center;padding:10px 0 4px;font-size:11px;color:var(--muted)">
+        By signing up you agree to our <a href="#" onclick="showPrivacyPolicy();return false;" style="color:var(--accent)">Privacy Policy</a>
       </div>
     </div>
 
@@ -6492,8 +6578,8 @@ async function init(){
   // (email SDK removed — reports now go through Web3Forms, 2FA uses TOTP)
   loadStorage();
   // Always ensure setup modal is closed if we have a user
-  if(me){ closeModal('setup-modal'); }
-  if(!me){openModal('setup-modal');return;}
+  if(me){ closeModal('setup-modal'); document.getElementById('landing-page').style.display='none'; }
+  if(!me){ document.getElementById('landing-page').style.display='block'; return; }
   const pin=localStorage.getItem('cc_pin');
   if(pin){showLockScreen();}else{await launch();}
 }
@@ -10832,6 +10918,7 @@ function fmtTime(ts){
   return d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
 function openModal(id){document.getElementById(id).classList.add('visible');}
+function showPrivacyPolicy(){openModal('privacy-modal');}
 function closeModal(id){document.getElementById(id).classList.remove('visible');}
 function renderContacts(){renderSidebar();}
 let toastTimer=null;
