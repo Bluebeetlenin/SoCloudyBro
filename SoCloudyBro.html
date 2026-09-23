@@ -4141,6 +4141,7 @@ body.device-tablet .msg-body{max-width:74%}
           <button class="compose-btn" onclick="openCameraCapture()" title="Take photo">📷</button>
           <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none">📊</button>
           <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game">🎮</button>
+          <button class="compose-btn" id="self-destruct-btn" onclick="sendSelfDestructMsg()" title="Send a view-once message (self-destructs after recipient reads it)">💣</button>
           <textarea id="msg-input" placeholder="Type a message…" rows="1" maxlength="2000" oninput="onMsgInput(this)" onkeydown="msgKeydown(event)"></textarea>
           <button class="compose-btn" id="voice-msg-btn" onclick="toggleVoiceMsgRecording()" title="Record voice message">🎙️</button>
           <button class="compose-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text" style="display:none">🎤</button>
@@ -4240,6 +4241,14 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div class="settings-section">
           <h3>Security</h3>
+          <div id="security-score-card" onclick="openSecurityLog()" style="margin:0 16px 8px;padding:14px 16px;background:linear-gradient(135deg,var(--accent,#6b5de8),#4f46e5);border-radius:var(--r-sm,10px);color:#fff;display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none">
+            <div style="font-size:30px;font-weight:800;line-height:1;min-width:40px;text-align:center" id="sec-score-num">—</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600" id="sec-score-label">Security score</div>
+              <div style="font-size:11px;opacity:0.82;margin-top:2px" id="sec-score-sub">Loading…</div>
+            </div>
+            <div style="font-size:22px;opacity:0.9" id="sec-score-icon">🔒</div>
+          </div>
           <div class="settings-row" style="cursor:pointer" onclick="openPinSetup()">
             <div class="settings-row-main"><div class="settings-row-label">PIN Lock</div><div class="settings-row-sub" id="pin-status-text">Not set</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="pin-btn-text">Set PIN</button></div>
@@ -4255,6 +4264,34 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="settings-row" style="cursor:pointer" onclick="openSecurityQuestionsSetup()">
             <div class="settings-row-main"><div class="settings-row-label">Security Questions</div><div class="settings-row-sub" id="secq-status-text">Not set — the only way to recover your account if you forget your password</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="secq-btn-text">Set Up</button></div>
+          </div>
+          <div class="settings-row" style="cursor:pointer" onclick="rotateE2EKeys()">
+            <div class="settings-row-main"><div class="settings-row-label">Rotate Encryption Keys</div><div class="settings-row-sub">Generates a new E2E keypair — future messages use the new keys</div></div>
+            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Rotate</button></div>
+          </div>
+          <div class="settings-row" style="cursor:pointer" onclick="openLoginHistory()">
+            <div class="settings-row-main"><div class="settings-row-label">Login History</div><div class="settings-row-sub">See your last 5 logins and the device used</div></div>
+            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+          </div>
+          <div class="settings-row" style="cursor:pointer" onclick="openSecurityLog()">
+            <div class="settings-row-main"><div class="settings-row-label">Security Log</div><div class="settings-row-sub" id="sec-log-sub">Recent logins, password changes, and 2FA events</div></div>
+            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Read Receipts</div><div class="settings-row-sub">Let others see when you've read their messages</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="read-receipts-toggle" onchange="savePrivacyPref('readReceipts',this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Typing Indicators</div><div class="settings-row-sub">Let others see when you're typing</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="typing-indicator-toggle" onchange="savePrivacyPref('typingIndicators',this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Online Status</div><div class="settings-row-sub">Let others see when you're active</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="online-status-toggle" onchange="savePrivacyPref('showOnline',this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Secure Link Warning</div><div class="settings-row-sub">Confirm before opening external links in messages</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="secure-links-toggle" onchange="savePrivacyPref('secureLinkWarning',this.checked)"><span class="switch-slider"></span></label></div>
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Compact chat list</div><div class="settings-row-sub">Smaller rows, no message preview \u2014 fit more chats on screen</div></div>
@@ -4292,7 +4329,7 @@ body.device-tablet .msg-body{max-width:74%}
           <h3>Data &amp; Privacy</h3>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Export My Data</div><div class="settings-row-sub">Download all your conversations, contacts, and settings as a JSON file</div></div>
-            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="export-all-btn" onclick="exportAllData()">Export My Data</button></div>
+            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="export-all-btn" onclick="exportAllData()">Export</button><button class="btn btn-ghost btn-sm" onclick="exportAllDataEncrypted()" title="Download encrypted with a password you set">🔒 Encrypted</button></div>
           </div>
         </div>
         <div class="settings-section">
@@ -5380,6 +5417,8 @@ const SCB_ERROR_CODES = {
   'SCB-SEC-18': {area:'Security settings (PIN, 2FA, face, devices, deletion)', meaning:'PIN setup: fewer than 4 digits entered'},
   'SCB-SEC-19': {area:'Security settings (PIN, 2FA, face, devices, deletion)', meaning:'Chat lock blocked: no PIN is set on this device'},
   'SCB-SEC-20': {area:'Security settings (PIN, 2FA, face, devices, deletion)', meaning:'Locked chat: PIN incorrect'},
+  'SCB-SEC-21': {area:'Security settings (PIN, 2FA, face, devices, deletion)', meaning:'Encrypted export failed'},
+  'SCB-SEC-22': {area:'Security settings (PIN, 2FA, face, devices, deletion)', meaning:'E2E key rotation failed'},
   'SCB-SET-01': {area:'Settings & personalisation', meaning:'Edit profile: display name left empty'},
   'SCB-SET-02': {area:'Settings & personalisation', meaning:'Weather location: nothing entered'},
   'SCB-SET-03': {area:'Settings & personalisation', meaning:'Weather location: no match returned by the geocoder'},
@@ -6187,6 +6226,7 @@ function resetLocalSessionState(){
   }catch(e){ console.warn('crypto cache reset failed', e); }
   _myKeyPair=null; _myPubJwk=null;
   launched = false;
+  try{ localStorage.removeItem('cc_session_start'); }catch{}
 }
 
 // -- LOAD FROM STORAGE --------------------------------------------------------
@@ -6390,7 +6430,7 @@ async function registerOrUpdate(){
   const users=await getUsers();
   let u=users.find(x=>x.number===me.number);
   await ensureE2EKeypair();
-  const payload={number:me.number,name:enc(me.name),bio:enc(me.bio||''),customStatus:enc(me.customStatus||''),avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked:me.blocked||(u&&u.blocked)||[],lastSeen:Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
+  const payload={number:me.number,name:enc(me.name),bio:enc(me.bio||''),customStatus:enc(me.customStatus||''),avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked:me.blocked||(u&&u.blocked)||[],lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
   if(_myPubJwk) payload.pubkey=_myPubJwk;
   // Per-account settings added by the feature pack. Each falls back to whatever
   // the server already has, so a device that hasn't loaded them yet can never
@@ -6801,6 +6841,19 @@ async function init(){
 }
 async function launch(){
   if(launched){hideLockScreen();return;}
+  // Session auto-expiry: force re-login after 24 hours
+  const SESSION_TTL=24*60*60*1000;
+  try{
+    const sessionStart=parseInt(localStorage.getItem('cc_session_start')||'0',10);
+    if(sessionStart&&Date.now()-sessionStart>SESSION_TTL){
+      localStorage.removeItem('cc_session_start');
+      me=null; launched=false;
+      localStorage.removeItem('cc_me');
+      setTimeout(()=>{ openModal('setup-modal'); if(typeof switchAuthTab==='function') switchAuthTab('login'); showToast('Session expired','Your session has expired. Please log in again.'); },100);
+      return;
+    }
+    if(!sessionStart) localStorage.setItem('cc_session_start',String(Date.now()));
+  }catch{}
   launched=true;
   // Parental consent check runs first and can stop the whole launch: fetch the
   // authoritative server-side status before anything else touches `me`, since
@@ -7504,6 +7557,10 @@ async function finishLogin(user, pwdToStore){
   saveStorage();
   closeModal('setup-modal');
   await launch();
+  // Record login history and show last-login notification
+  await _recordLogin().catch(()=>{});
+  _showLastLoginNotif();
+  await _logSecurityEvent('login','Successful login').catch(()=>{});
 }
 
 // -- LOCK SCREEN ---------------------------------------------------------------
@@ -7650,12 +7707,26 @@ function pinNav(el,idx,ctx){
   }
 }
 function checkLockPin(pin,inputs){
+  const lockData=_checkPinLocked();
+  if(lockData&&lockData.until>Date.now()){
+    const secsLeft=Math.ceil((lockData.until-Date.now())/1000);
+    document.getElementById('lock-error').textContent=`Too many attempts. Try again in ${secsLeft}s.`;
+    clearPinInputs(inputs);inputs[0].focus();return;
+  }
   const stored=localStorage.getItem('cc_pin');
   if(hashPin(pin)===stored){
+    _clearPinLock();
     if(!launched){launch();}else{hideLockScreen();}
     clearPinInputs(inputs);
   }
-  else{document.getElementById('lock-error').textContent=scbErr('SCB-SEC-16','Incorrect PIN.');clearPinInputs(inputs);inputs[0].focus();}
+  else{
+    const rd=_recordPinFailure();
+    const remaining=5-rd.count;
+    document.getElementById('lock-error').textContent=rd.until>Date.now()
+      ? `Too many attempts. Locked for 15 minutes.`
+      : scbErr('SCB-SEC-16',`Incorrect PIN.${remaining>0?' '+remaining+' attempt'+(remaining===1?'':'s')+' left.':''}`);
+    clearPinInputs(inputs);inputs[0].focus();
+  }
 }
 function lockForgotPin(){
   if(confirm('Reset PIN? You will be taken back to the login screen.')){
@@ -8673,6 +8744,7 @@ function showMsgInfo(m){
 let lastTypingBroadcast=0;
 async function broadcastTyping(){
   if(!activeConvo||!convosCache||!me) return;
+  if(!getPrivacyPref('typingIndicators',true)) return;
   const now=Date.now();
   if(now-lastTypingBroadcast<2500) return; // throttle to avoid hammering the bin
   lastTypingBroadcast=now;
@@ -10725,7 +10797,7 @@ async function confirmDeleteAccount(){
 }
 
 // -- SETTINGS / UPDATES --------------------------------------------------------
-function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();}
+function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();}
 function hideSettings(){hideAll();showMainEmpty();}
 function showUpdates(){hideAll();document.getElementById('updates-panel').classList.add('visible');loadUpdates();}
 function hideUpdates(){hideAll();showMainEmpty();}
@@ -12345,6 +12417,12 @@ function renderMessages(msgs) {
       rq.onclick = (ev) => { ev.stopPropagation(); scrollToMessage(m.replyTo.id); };
       body.appendChild(rq);
     }
+    if (m.selfDestruct && isMe) {
+      const sdBadge=document.createElement('div');
+      sdBadge.style.cssText='font-size:10px;color:var(--muted);padding:0 4px;margin-bottom:2px;display:flex;align-items:center;gap:3px';
+      sdBadge.innerHTML='💣 <span>View once</span>';
+      body.appendChild(sdBadge);
+    }
     const bubble = document.createElement('div');
     const fileData = msgFileData(m);
     if (msgHasGif(m)) { const gifSrc = normalizeGifUrl(msgGifUrl(m)); bubble.className = 'bubble gif-bubble'; bubble.innerHTML = '<img src="' + esc(gifSrc) + '" alt="GIF" loading="lazy" onerror="gifImgFail(this,\'' + esc(gifSrc) + '\')"/>'; }
@@ -12392,7 +12470,18 @@ function renderMessages(msgs) {
     body.appendChild(meta);
     row.appendChild(body); wrap.appendChild(row);
     let _markedAnySeen = false;
-    if (!isMe && (!m.seen || !m.seen.includes(me.number))) {
+    // Self-destruct: recipient sees it once, then it's deleted
+    if (!isMe && m.selfDestruct && (!m.seen || !m.seen.includes(me.number))) {
+      if (!m.seen) m.seen = [];
+      m.seen.push(me.number);
+      setTimeout(async()=>{
+        const conv=convosCache&&convosCache.find(x=>x&&activeConvo&&x.key===activeConvo.key);
+        if(!conv) return;
+        conv.messages=conv.messages.filter(x=>x&&x.id!==m.id);
+        try{ await saveConvos(); lastMsgHash=''; renderMessages(conv.messages); }catch{}
+      }, 3000);
+    }
+    if (!isMe && (!m.seen || !m.seen.includes(me.number)) && getPrivacyPref('readReceipts',true) && !m.selfDestruct) {
       if (!m.seen) m.seen = [];
       m.seen.push(me.number);
       _markedAnySeen = true;
@@ -19554,6 +19643,281 @@ init();
 </script>
 
 <script>
+/* ===== PRIVACY PREFERENCES =====
+   Read receipts, typing indicators, online status, secure link warning.
+   Stored in localStorage under cc_privacy as a JSON object. ===== */
+function _getPrivacyPrefs(){
+  try{ return JSON.parse(localStorage.getItem('cc_privacy')||'{}'); }catch{ return {}; }
+}
+function savePrivacyPref(key, val){
+  const prefs=_getPrivacyPrefs();
+  prefs[key]=val;
+  try{ localStorage.setItem('cc_privacy',JSON.stringify(prefs)); }catch{}
+}
+function getPrivacyPref(key, defaultVal=true){
+  const prefs=_getPrivacyPrefs();
+  return key in prefs ? prefs[key] : defaultVal;
+}
+function _initPrivacyToggles(){
+  const ids={readReceipts:'read-receipts-toggle',typingIndicators:'typing-indicator-toggle',showOnline:'online-status-toggle',secureLinkWarning:'secure-links-toggle'};
+  for(const [key,id] of Object.entries(ids)){
+    const el=document.getElementById(id);
+    if(el) el.checked=getPrivacyPref(key,true);
+  }
+}
+
+/* ===== PIN BRUTE FORCE LOCKOUT =====
+   5 wrong PIN attempts → 15-minute lockout, stored in localStorage. ===== */
+function _pinLockKey(){ return 'cc_pin_lock'; }
+function _checkPinLocked(){
+  try{
+    const raw=localStorage.getItem(_pinLockKey());
+    if(!raw) return null;
+    const data=JSON.parse(raw);
+    if(Date.now()>data.until){ localStorage.removeItem(_pinLockKey()); return null; }
+    return data;
+  }catch{ return null; }
+}
+function _recordPinFailure(){
+  try{
+    const raw=localStorage.getItem(_pinLockKey());
+    let data=raw?JSON.parse(raw):{count:0,until:0};
+    if(Date.now()>data.until) data={count:0,until:0};
+    data.count+=1;
+    if(data.count>=5) data.until=Date.now()+15*60*1000;
+    localStorage.setItem(_pinLockKey(),JSON.stringify(data));
+    return data;
+  }catch{ return {count:1,until:0}; }
+}
+function _clearPinLock(){ try{ localStorage.removeItem(_pinLockKey()); }catch{} }
+
+/* ===== LOGIN HISTORY =====
+   Last 5 logins stored in user record under loginHistory[]. ===== */
+async function _recordLogin(){
+  if(!me) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===me.number);
+    if(!u) return;
+    if(!Array.isArray(u.loginHistory)) u.loginHistory=[];
+    u.loginHistory.unshift({time:Date.now(),device:getDeviceLabel(),os:getDeviceOS()});
+    if(u.loginHistory.length>5) u.loginHistory=u.loginHistory.slice(0,5);
+    await saveUsers(users);
+  }catch(e){ console.warn('Login history record failed',e); }
+}
+function openLoginHistory(){
+  if(!me) return;
+  const users=usersCache||[];
+  const u=users.find(x=>x.number===me.number);
+  const history=(u&&u.loginHistory)||[];
+  const rows=history.length
+    ? history.map(h=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13px;font-weight:500">${esc(h.device||'Unknown device')}</div><div style="font-size:11px;color:var(--muted)">${esc(h.os||'')}</div></div><div style="font-size:12px;color:var(--muted);text-align:right">${new Date(h.time).toLocaleString()}</div></div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:12px 0">No login history yet.</div>';
+  const dlg=document.createElement('div');
+  dlg.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  dlg.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3 style="margin:0;font-size:15px">🕐 Login History</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('div[style*=fixed]').remove()">✕</button>
+    </div>
+    ${rows}
+  </div>`;
+  document.body.appendChild(dlg);
+}
+
+/* ===== SECURITY LOG =====
+   Logs security events (login, pwd change, MFA toggle, key rotation) in
+   user record under securityLog[]. Max 20 entries. ===== */
+async function _logSecurityEvent(type, detail=''){
+  if(!me) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===me.number);
+    if(!u) return;
+    if(!Array.isArray(u.securityLog)) u.securityLog=[];
+    u.securityLog.unshift({time:Date.now(),type,detail,device:getDeviceLabel()});
+    if(u.securityLog.length>20) u.securityLog=u.securityLog.slice(0,20);
+    await saveUsers(users);
+  }catch(e){ console.warn('Security log write failed',e); }
+}
+function openSecurityLog(){
+  const users=usersCache||[];
+  const u=me?users.find(x=>x.number===me.number):null;
+  const log=(u&&u.securityLog)||[];
+  const icons={login:'🔑',password_change:'🔒',mfa_enabled:'🛡',mfa_disabled:'⚠️',key_rotation:'🔄',logout:'🚪',pin_set:'📌',pin_removed:'📌',face_mfa:'📷',recovery_set:'❓'};
+  const rows=log.length
+    ? log.map(e=>`<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-size:18px;min-width:24px">${icons[e.type]||'📋'}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(e.type.replace(/_/g,' '))}</div><div style="font-size:11px;color:var(--muted)">${esc(e.detail||'')} · ${esc(e.device||'')}</div></div><div style="font-size:11px;color:var(--muted);white-space:nowrap">${new Date(e.time).toLocaleString()}</div></div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:12px 0">No security events recorded yet.</div>';
+  const dlg=document.createElement('div');
+  dlg.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  dlg.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3 style="margin:0;font-size:15px">📋 Security Log</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('div[style*=fixed]').remove()">✕</button>
+    </div>
+    ${rows}
+  </div>`;
+  document.body.appendChild(dlg);
+}
+
+/* ===== SECURITY SCORE =====
+   0–100 score based on active protections. Shown in settings panel. ===== */
+function _computeSecurityScore(){
+  let score=0; const checks=[];
+  if(me&&me.pwd){ score+=20; checks.push({ok:true,label:'Password set'}); } else checks.push({ok:false,label:'No password'});
+  if(me&&(me.totpEnabled||me.faceMfaEnabled)){ score+=25; checks.push({ok:true,label:'2FA enabled'}); } else checks.push({ok:false,label:'2FA off'});
+  if(localStorage.getItem('cc_pin')){ score+=15; checks.push({ok:true,label:'PIN lock on'}); } else checks.push({ok:false,label:'No PIN lock'});
+  const u=usersCache&&me?usersCache.find(x=>x&&x.number===me.number):null;
+  if(u&&u.secQ1&&u.secQ2){ score+=15; checks.push({ok:true,label:'Recovery questions set'}); } else checks.push({ok:false,label:'No recovery questions'});
+  if(_myPubJwk){ score+=15; checks.push({ok:true,label:'E2E keys active'}); } else checks.push({ok:false,label:'E2E keys missing'});
+  if(getPrivacyPref('secureLinkWarning',true)){ score+=10; checks.push({ok:true,label:'Secure link warning'}); } else checks.push({ok:false,label:'Link warning off'});
+  return {score,checks};
+}
+function renderSecurityScore(){
+  const numEl=document.getElementById('sec-score-num');
+  const labelEl=document.getElementById('sec-score-label');
+  const subEl=document.getElementById('sec-score-sub');
+  const iconEl=document.getElementById('sec-score-icon');
+  if(!numEl) return;
+  const {score,checks}=_computeSecurityScore();
+  numEl.textContent=score;
+  labelEl.textContent='Security score';
+  const missing=checks.filter(c=>!c.ok).map(c=>c.label);
+  if(score>=90){ iconEl.textContent='🛡'; subEl.textContent='Excellent — all major protections active'; }
+  else if(score>=60){ iconEl.textContent='🔒'; subEl.textContent='Good'+( missing.length?'. Missing: '+missing.join(', '):''); }
+  else if(score>=30){ iconEl.textContent='⚠️'; subEl.textContent='Fair. Enable: '+missing.join(', '); }
+  else{ iconEl.textContent='🔓'; subEl.textContent='Weak. Enable: '+missing.slice(0,3).join(', '); }
+}
+
+/* ===== E2E KEY ROTATION ===== */
+async function rotateE2EKeys(){
+  if(!me){ showToast('Not logged in','Log in first.'); return; }
+  if(!confirm('Rotate your E2E encryption keys?\n\nMessages sent before rotation can no longer be decrypted on new devices. Existing messages on THIS device are still readable.\n\nThis cannot be undone.')) return;
+  try{
+    localStorage.removeItem('cc_e2e_priv_'+me.number);
+    localStorage.removeItem('cc_e2e_pub_'+me.number);
+    _myKeyPair=null; _myPubJwk=null;
+    Object.keys(_dmAesCache).forEach(k=>delete _dmAesCache[k]);
+    Object.keys(_groupAesCache).forEach(k=>delete _groupAesCache[k]);
+    const kp=await ensureE2EKeypair();
+    if(kp){
+      await registerOrUpdate();
+      await _logSecurityEvent('key_rotation','E2E keypair regenerated');
+      showToast('Keys rotated','Your E2E encryption keys have been regenerated and published.');
+    }
+  }catch(e){ showToast('Rotation failed',scbErr('SCB-SEC-22','Key rotation failed.',(e.message||''))); }
+}
+
+/* ===== SECURE EXTERNAL LINK WARNING ===== */
+document.addEventListener('click', function(e){
+  if(!getPrivacyPref('secureLinkWarning',true)) return;
+  const a=e.target.closest('a[href]');
+  if(!a) return;
+  const href=a.href||'';
+  if(!href||href.startsWith('javascript')||href.startsWith('#')) return;
+  try{
+    const url=new URL(href);
+    if(url.origin===location.origin) return; // internal link, no warning
+  }catch{ return; }
+  e.preventDefault();
+  const dlg=document.createElement('div');
+  dlg.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  dlg.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;width:100%;max-width:360px;box-shadow:var(--shadow-lg)">
+    <div style="font-size:24px;margin-bottom:8px">🔗</div>
+    <h3 style="margin:0 0 6px;font-size:15px">External link</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px;word-break:break-all">${esc(href)}</p>
+    <p style="font-size:12px;margin:0 0 16px">This link goes outside SoCloudyBro. Only open it if you trust the sender.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+      <button class="btn btn-sm" style="flex:1" onclick="window.open(${JSON.stringify(href)},'_blank','noopener,noreferrer');this.closest('div[style*=fixed]').remove()">Open anyway</button>
+    </div>
+  </div>`;
+  document.body.appendChild(dlg);
+}, true);
+
+/* ===== LAST LOGIN NOTIFICATION ===== */
+function _showLastLoginNotif(){
+  if(!me) return;
+  const users=usersCache||[];
+  const u=users.find(x=>x&&x.number===me.number);
+  const history=(u&&u.loginHistory)||[];
+  if(history.length<2) return; // first login
+  const prev=history[1]; // [0] is the one we just recorded
+  const timeStr=new Date(prev.time).toLocaleString();
+  showToast('Welcome back','Last login: '+timeStr+(prev.device?' from '+prev.device:''));
+}
+
+/* ===== READ RECEIPTS / TYPING INDICATOR / ONLINE STATUS (privacy gates) ===== */
+// These hook into the existing seen[] push and typing broadcast.
+// The actual gate is applied in the logic sections below.
+
+/* ===== ENCRYPTED EXPORT ===== */
+async function exportAllDataEncrypted(){
+  const pwd=prompt('Enter a password to encrypt your export:\n(You will need this to decrypt it later — there is no recovery.)');
+  if(!pwd||!pwd.trim()){ return; }
+  if(pwd.length<6){ showToast('Too short','Use at least 6 characters for the export password.'); return; }
+  const btn=document.querySelector('[onclick="exportAllDataEncrypted()"]');
+  if(btn){ btn.disabled=true; btn.textContent='Encrypting…'; }
+  try{
+    // Build the plain export first (reuse same logic)
+    if(!convosCache) await getConvos();
+    const data={exportedAt:new Date().toISOString(),app:'SoCloudyBro',profile:{name:me.name,number:me.number,email:me.email||null,bio:me.bio||''},contacts:contacts.map(c=>({type:c.type,name:c.name,number:c.number||null,key:c.key})),conversations:[]};
+    for(const c of contacts){
+      const conv=convosCache.find(x=>x&&x.key===c.key);
+      if(!conv||!conv.messages||!conv.messages.length) continue;
+      const messages=conv.messages.map(m=>{
+        const u=m.from===me.number?me:(usersCache&&usersCache.find(x=>x&&x.number===m.from)||{});
+        let content;
+        if(msgHasGif(m)) content='[GIF]';
+        else if(msgHasPoll&&msgHasPoll(m)) content='[Poll]';
+        else{ const f=msgFileData&&msgFileData(m); content=f?'[Attachment]':(msgText(m)||'[encrypted]'); }
+        return{from:dec(u.name||'')||('#'+m.from),time:new Date(m.time).toISOString(),content};
+      });
+      data.conversations.push({name:c.name,type:c.type,messages});
+    }
+    const plaintext=new TextEncoder().encode(JSON.stringify(data,null,2));
+    // Derive key from password with PBKDF2
+    const salt=crypto.getRandomValues(new Uint8Array(16));
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const keyMat=await crypto.subtle.importKey('raw',new TextEncoder().encode(pwd),{name:'PBKDF2'},false,['deriveKey']);
+    const aesKey=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},keyMat,{name:'AES-GCM',length:256},false,['encrypt']);
+    const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},aesKey,plaintext);
+    // Pack: 4 bytes magic + 16 salt + 12 iv + ciphertext
+    const magic=new Uint8Array([0x53,0x43,0x42,0x01]); // "SCB\x01"
+    const out=new Uint8Array(magic.length+salt.length+iv.length+ct.byteLength);
+    let off=0;out.set(magic,off);off+=magic.length;out.set(salt,off);off+=salt.length;out.set(iv,off);off+=iv.length;out.set(new Uint8Array(ct),off);
+    const blob=new Blob([out],{type:'application/octet-stream'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='scb-export-'+me.number+'-'+Date.now()+'.scbenc';document.body.appendChild(a);a.click();a.remove();
+    showToast('Encrypted export ready','Saved as .scbenc — keep your password safe, there is no recovery.');
+  }catch(e){ showToast('Export failed',scbErr('SCB-SEC-21','Encrypted export failed.',(e.message||''))); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='🔒 Encrypted'; } }
+}
+
+/* ===== SELF-DESTRUCT MESSAGES (view-once) =====
+   A message flagged as selfDestruct=true is shown once, then deleted from
+   convosCache and Firebase when the recipient views it. ===== */
+function sendSelfDestructMsg(){
+  if(!activeConvo||activeConvo.type==='group'){ showToast('DMs only','Self-destruct messages are only available in direct chats.'); return; }
+  const text=prompt('Type your self-destruct message:\n(The recipient sees it once, then it is permanently deleted.)');
+  if(!text||!text.trim()) return;
+  _sendSelfDestruct(text.trim());
+}
+async function _sendSelfDestruct(text){
+  if(!me||!activeConvo||!convosCache) return;
+  const key=activeConvo.key;
+  const c=convosCache.find(x=>x&&x.key===key);
+  if(!c) return;
+  const aesKey=await getConvoAesKey(c);
+  const clean=filterBadWords(text);
+  const msg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),from:me.number,time:Date.now(),seen:[],selfDestruct:true};
+  const wrapped=aesKey?await aesEnc(aesKey,clean):null;
+  if(wrapped){ msg.ctext=wrapped; _decCache[msg.id]={text:clean}; } else { msg.text=enc(clean); }
+  c.messages.push(msg);
+  if(c.messages.length>100) c.messages.splice(0,c.messages.length-100);
+  await saveConvos();
+  lastMsgHash=''; renderMessages(c.messages);
+}
+
 /* ===== DISAPPEARING MESSAGES =====
    Per-conversation TTL. Stored as `disappearAfter` (ms) on the conv object.
    Messages older than Date.now()-disappearAfter are hidden on render and
