@@ -3003,8 +3003,9 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 #sb-search input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 14px;outline:none;transition:border-color 0.2s}
 #sb-search input:focus{border-color:var(--accent)}
 #sb-search input::placeholder{color:var(--muted2)}
-#sb-tabs{display:flex;padding:0 14px 8px;gap:4px}
-.sb-tab{flex:1;padding:5px 8px;border-radius:var(--r-xs);font-size:11px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);transition:all 0.15s;border:none;background:transparent}
+#sb-tabs{display:flex;padding:0 8px 8px;gap:3px;overflow-x:auto;scrollbar-width:none}
+#sb-tabs::-webkit-scrollbar{display:none}
+.sb-tab{flex:0 0 auto;padding:5px 9px;border-radius:var(--r-xs);font-size:11px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);transition:all 0.15s;border:none;background:transparent;white-space:nowrap}
 .sb-tab.active{background:var(--accent);color:#fff}
 .admin-dash-tab{flex:1;padding:6px 8px;border-radius:var(--r-xs);font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);border:1px solid var(--border);background:transparent}
 .admin-dash-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -3165,6 +3166,19 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .msg-seen{font-size:10px;color:var(--accent)}
 .msg-row.me .msg-meta{flex-direction:row-reverse}
 .date-divider{text-align:center;font-size:11px;color:var(--muted);padding:12px 0 4px;font-weight:500}
+.call-event-row{display:flex;justify-content:center;padding:6px 0}
+.call-event-pill{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:5px 14px;font-size:12px;color:var(--muted);cursor:pointer;transition:background 0.15s}
+.call-event-pill:hover{background:var(--surface)}
+.call-event-pill .call-ev-icon{font-size:14px}
+.call-event-pill .call-ev-missed{color:#e74c3c}
+.call-log-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.12s}
+.call-log-item:hover{background:var(--surface2)}
+.call-log-icon{font-size:18px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface2);flex-shrink:0}
+.call-log-info{flex:1;min-width:0}
+.call-log-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.call-log-meta{font-size:11px;color:var(--muted);margin-top:1px}
+.call-log-callback{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0}
+.call-log-callback:hover{opacity:0.85}
 #chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted)}
 #chat-empty .icon{font-size:36px;opacity:0.2}
 
@@ -7699,12 +7713,42 @@ const PRESET_AVATARS=[
   {type:'gradient',bg:'linear-gradient(135deg,#13a10e,#00b4d8)',label:'🟢'},
   {type:'gradient',bg:'linear-gradient(135deg,#d13438,#a78bfa)',label:'🔴'},
   {type:'gradient',bg:'linear-gradient(135deg,#6264a0,#00b4d8)',label:'🟣'},
-  // Pixel/emoji presets
+  {type:'gradient',bg:'linear-gradient(135deg,#e91e63,#ff9800)',label:'🌸'},
+  {type:'gradient',bg:'linear-gradient(135deg,#009688,#4caf50)',label:'🌿'},
+  {type:'gradient',bg:'linear-gradient(135deg,#ff5722,#ff9800)',label:'🔶'},
+  // Animals
   {type:'emoji',emoji:'🦊'},{type:'emoji',emoji:'🐼'},{type:'emoji',emoji:'🦁'},
   {type:'emoji',emoji:'🐧'},{type:'emoji',emoji:'🦋'},{type:'emoji',emoji:'🐉'},
+  {type:'emoji',emoji:'🐶'},{type:'emoji',emoji:'🐱'},{type:'emoji',emoji:'🐻'},
+  {type:'emoji',emoji:'🦄'},{type:'emoji',emoji:'🦅'},{type:'emoji',emoji:'🦋'},
+  {type:'emoji',emoji:'🐙'},{type:'emoji',emoji:'🦈'},{type:'emoji',emoji:'🐺'},
+  {type:'emoji',emoji:'🦊'},{type:'emoji',emoji:'🐢'},{type:'emoji',emoji:'🦜'},
+  {type:'emoji',emoji:'🐸'},{type:'emoji',emoji:'🦁'},{type:'emoji',emoji:'🐯'},
+  // Space & tech
   {type:'emoji',emoji:'🤖'},{type:'emoji',emoji:'👾'},{type:'emoji',emoji:'🎃'},
-  {type:'emoji',emoji:'🌟'},{type:'emoji',emoji:'🔥'},{type:'emoji',emoji:'⚡'},
-  {type:'emoji',emoji:'🎮'},{type:'emoji',emoji:'🚀'},{type:'emoji',emoji:'🎵'},
+  {type:'emoji',emoji:'🚀'},{type:'emoji',emoji:'🛸'},{type:'emoji',emoji:'🌍'},
+  {type:'emoji',emoji:'🌙'},{type:'emoji',emoji:'☀️'},{type:'emoji',emoji:'⭐'},
+  {type:'emoji',emoji:'🔭'},{type:'emoji',emoji:'💫'},{type:'emoji',emoji:'🌌'},
+  // Fire & energy
+  {type:'emoji',emoji:'🔥'},{type:'emoji',emoji:'⚡'},{type:'emoji',emoji:'🌟'},
+  {type:'emoji',emoji:'💥'},{type:'emoji',emoji:'🌈'},{type:'emoji',emoji:'❄️'},
+  // Fun & activities
+  {type:'emoji',emoji:'🎮'},{type:'emoji',emoji:'🎵'},{type:'emoji',emoji:'🎨'},
+  {type:'emoji',emoji:'🏆'},{type:'emoji',emoji:'⚽'},{type:'emoji',emoji:'🎸'},
+  {type:'emoji',emoji:'🎯'},{type:'emoji',emoji:'🎲'},{type:'emoji',emoji:'🎭'},
+  {type:'emoji',emoji:'🎬'},{type:'emoji',emoji:'🎤'},{type:'emoji',emoji:'🎧'},
+  // Food & nature
+  {type:'emoji',emoji:'🌸'},{type:'emoji',emoji:'🌺'},{type:'emoji',emoji:'🌻'},
+  {type:'emoji',emoji:'🌴'},{type:'emoji',emoji:'🍀'},{type:'emoji',emoji:'🍁'},
+  {type:'emoji',emoji:'🍕'},{type:'emoji',emoji:'🍦'},{type:'emoji',emoji:'🌮'},
+  // Faces & people
+  {type:'emoji',emoji:'😎'},{type:'emoji',emoji:'🥷'},{type:'emoji',emoji:'🧙'},
+  {type:'emoji',emoji:'🧜'},{type:'emoji',emoji:'🦸'},{type:'emoji',emoji:'🤡'},
+  {type:'emoji',emoji:'👻'},{type:'emoji',emoji:'💀'},{type:'emoji',emoji:'🤠'},
+  // Objects & symbols
+  {type:'emoji',emoji:'💎'},{type:'emoji',emoji:'👑'},{type:'emoji',emoji:'🔮'},
+  {type:'emoji',emoji:'⚔️'},{type:'emoji',emoji:'🛡️'},{type:'emoji',emoji:'🗡️'},
+  {type:'emoji',emoji:'🔑'},{type:'emoji',emoji:'💣'},{type:'emoji',emoji:'🧲'},
 ];
 function openAvatarEditor(forSetup=false,forGroup=false){
   avatarTarget = forSetup ? 'setup' : forGroup ? 'group' : 'profile';
@@ -8149,7 +8193,7 @@ function renderSidebar(){
     const isActive=activeConvo&&activeConvo.key===key;
     const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
     const lastMsg=conv&&conv.messages.length?conv.messages[conv.messages.length-1]:null;
-    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':msgText(lastMsg)||'').substring(0,32):'';
+    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='call'?'📞 '+(lastMsg.missed?scbT('missed_call'):scbT('voice_call')):(msgText(lastMsg)||'')).substring(0,32):'';
     const timeStr=lastMsg?fmtTime(lastMsg.time):'';
     const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
     const inCall=c.type!=='group'&&_numbersInActiveCall.has(Number(c.number));
@@ -9587,6 +9631,11 @@ function removeRemoteScreenTile(num){
 function leaveVoiceChannel(){
   if(!voiceChannelActive) return;
   const {path,isDm,pairKey}=voiceChannelActive;
+  // Capture call tracking state before clearing
+  const wasOutgoing=_dmCallIsOutgoing;
+  const callConvKey=_dmCallConvKey;
+  const callStart=_dmCallStartTime;
+  const callOtherNum=_dmCallOtherNum;
   if(localScreenStream) stopScreenShare();
   _voiceRefs.forEach(({ref,event,handler})=>{ try{ ref.off(event,handler); }catch(e){} });
   _voiceRefs=[];
@@ -9597,9 +9646,17 @@ function leaveVoiceChannel(){
   try{ fbdb.ref(path+'/signals/'+me.number).remove(); }catch(e){}
   if(isDm&&pairKey){ try{ fbdb.ref('calls/'+pairKey).remove(); }catch(e){} }
   voiceChannelActive=null; voiceMuted=false;
+  _dmCallStartTime=null; _dmCallOtherNum=null; _dmCallConvKey=null; _dmCallIsOutgoing=false;
   const bar=document.getElementById('voice-bar');
   if(bar){ bar.style.display='none'; bar.innerHTML=''; }
   if(!isDm){ const conv=getActiveConvoObj(); if(conv) renderChannelBar(conv); }
+  // Only the caller (outgoing) side injects the call event to avoid duplicates
+  if(isDm && wasOutgoing && callConvKey && callStart){
+    const durSecs=Math.round((Date.now()-callStart)/1000);
+    const otherContact=contacts?contacts.find(x=>x.type!=='group'&&String(x.number)===String(callOtherNum)):null;
+    logCallHistory({dir:'out',number:callOtherNum||0,name:otherContact?otherContact.name:'',time:callStart,duration:durSecs});
+    injectCallEventMsg(callConvKey,'voice',durSecs,false);
+  }
 }
 
 // -- QUICK (DIRECT) CALLS — WhatsApp-style ring/accept/decline on top of the
@@ -9640,6 +9697,7 @@ async function startDirectCall(contact){
       cleanupOutgoingWatcher();
       closeModal('outgoing-call-modal');
       const dmKeyStr=dmKey(me.number,contact.number);
+      _dmCallIsOutgoing=true;
       await _beginDmCallSession(dmKeyStr,contact.number,contact.name,pairKey);
     }
   });
@@ -9725,6 +9783,7 @@ async function acceptIncomingCall(){
   // Same stuck-"in a call" hazard as the caller side: the accepting side owns
   // this node too once the call is live, so it must disappear if this tab dies.
   try{ cRef.onDisconnect().remove(); }catch(e){}
+  _dmCallIsOutgoing=false;
   await _beginDmCallSession(dmKey(me.number,otherNum),otherNum,otherName,pairKey);
 }
 function declineIncomingCall(){
@@ -9734,6 +9793,7 @@ function declineIncomingCall(){
   if(pairKey) fbdb.ref('calls/'+pairKey).update({status:'declined'});
   _incomingCallPairKey=null;
 }
+let _dmCallStartTime=null, _dmCallOtherNum=null, _dmCallIsOutgoing=false, _dmCallConvKey=null;
 async function _beginDmCallSession(dmKeyStr,otherNum,otherName,pairKey){
   const path=callPath(dmKeyStr);
   const ok=await _startVoiceSession(path,'📞 Call with '+otherName);
@@ -9745,8 +9805,12 @@ async function _beginDmCallSession(dmKeyStr,otherNum,otherName,pairKey){
     // stuck on for both numbers. Tear the record down on the way out.
     if(pairKey){ try{ await fbdb.ref('calls/'+pairKey).remove(); }catch(e){} }
     showToast('Call ended',scbErr('SCB-CALL-09','Could not start audio on this device.'));
+    _dmCallStartTime=null; _dmCallOtherNum=null; _dmCallConvKey=null;
     return;
   }
+  _dmCallStartTime=Date.now();
+  _dmCallOtherNum=otherNum;
+  _dmCallConvKey=dmKeyStr;
   voiceChannelActive.isDm=true;
   voiceChannelActive.pairKey=pairKey;
   voiceChannelActive.otherNum=otherNum;
@@ -10754,12 +10818,43 @@ function renderUnreadWidget(body){
   if(!items.length){ body.innerHTML='<div class="dash-widget-empty">You\'re all caught up! ✅</div>'; return; }
   body.innerHTML=items.slice(0,8).map(it=>'<div class="dash-list-item" onclick="dashOpenChat(\''+it.c.key+'\')">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.c.name)+'</span><span class="unread-badge" style="margin-left:auto">'+it.unread+'</span></div>').join('');
 }
+function logCallHistory(entry){
+  try{
+    const log=JSON.parse(localStorage.getItem('cc_call_log')||'[]');
+    log.push(entry);
+    localStorage.setItem('cc_call_log',JSON.stringify(log.slice(-100)));
+  }catch(e){}
+}
+function getCallLog(){
+  try{ return JSON.parse(localStorage.getItem('cc_call_log')||'[]'); }catch(e){ return []; }
+}
+function fmtCallDuration(secs){
+  if(!secs||secs<1) return '';
+  const m=Math.floor(secs/60), s=secs%60;
+  return m>0 ? m+':'+(s<10?'0':'')+s : s+'s';
+}
+function injectCallEventMsg(convKey, callType, durationSecs, missed){
+  if(!me||!convKey||!convosCache) return;
+  const conv=convosCache.find(x=>x&&x.key===convKey);
+  if(!conv) return;
+  if(!Array.isArray(conv.messages)) conv.messages=[];
+  const msgId='call_'+convKey+'_'+Date.now();
+  const msg={id:msgId,type:'call',callType:callType||'voice',duration:durationSecs||0,missed:!!missed,from:me.number,time:Date.now()};
+  conv.messages.push(msg);
+  saveConvos().catch(()=>{});
+  if(activeConvo&&activeConvo.key===convKey) renderMessages(conv.messages);
+}
 function logMissedCall(fromNum,fromName){
   try{
     const log=JSON.parse(localStorage.getItem('cc_missed_calls')||'[]');
     log.push({from:fromNum,fromName,time:Date.now()});
     localStorage.setItem('cc_missed_calls',JSON.stringify(log.slice(-30)));
   }catch(e){}
+  logCallHistory({dir:'missed',number:fromNum,name:fromName,time:Date.now(),duration:0});
+  if(me){
+    const convKey=dmKey(me.number,fromNum);
+    injectCallEventMsg(convKey,'voice',0,true);
+  }
 }
 function renderMissedCallsWidget(body){
   let log=[];
@@ -12043,6 +12138,29 @@ function renderMessages(msgs) {
     if (dateStr !== lastDate) {
       lastDate = dateStr;
       const div = document.createElement('div'); div.className = 'date-divider'; div.innerHTML = '<span class="date-divider-label">' + dateStr + '</span>'; wrap.appendChild(div);
+    }
+    // Call event message (WhatsApp-style)
+    if (m.type === 'call') {
+      const durStr = fmtCallDuration(m.duration||0);
+      const timeStr2 = new Date(m.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      const label = m.missed ? scbT('missed_call') : scbT('voice_call');
+      const detail = [timeStr2, durStr].filter(Boolean).join(' · ');
+      const row = document.createElement('div'); row.className = 'call-event-row';
+      const pill = document.createElement('div'); pill.className = 'call-event-pill';
+      pill.innerHTML = '<span class="call-ev-icon'+(m.missed?' call-ev-missed':'')+'">'+
+        (m.missed ? '📵' : '📞')+'</span>'
+        +'<span>'+(m.missed ? '<span class="call-ev-missed">'+esc(label)+'</span>' : esc(label))
+        +(detail ? ' · <span style="color:var(--muted)">'+esc(detail)+'</span>' : '')
+        +'</span>';
+      pill.onclick = function(){
+        if(activeConvo && activeConvo.type !== 'group'){
+          const c = contacts.find(x => x.key === activeConvo.key);
+          if(c) startDirectCall(c);
+        }
+      };
+      row.appendChild(pill);
+      wrap.appendChild(row);
+      return;
     }
     // Poll message
     if (m.poll || m.cpoll) {
@@ -15260,6 +15378,7 @@ openContactPanel=function(){
 const I18N = {
   en:{_name:'English',
     tab_chats:'Chats', tab_groups:'Groups', tab_archived:'Archived', tab_favourites:'★ Favourites',
+    tab_calls:'📞 Calls', tab_unread:'Unread',
     settings:'Settings', profile:'Profile', appearance:'Appearance', messaging:'Messaging',
     notifications:'Notifications', security:'Security', account:'Account', language:'Language',
     theme_colors:'Theme Colours', primary_color:'Primary colour', secondary_color:'Secondary colour',
@@ -15273,9 +15392,12 @@ const I18N = {
     suspicious_msg:'This message looks suspicious', show_anyway:'Show anyway',
     restricted:'This is restricted on your account', forgot_password:'Forgot password?',
     parent_controls:'Manage Child Accounts', linked_accounts:'Manage Linked Accounts',
-    large_text:'Simplified, larger text', type_message:'Type a message…'},
+    large_text:'Simplified, larger text', type_message:'Type a message…',
+    voice_call:'Voice call', missed_call:'Missed call', call_back:'Call back',
+    no_calls:'No call history yet.', no_unread:'You\'re all caught up! ✅'},
   es:{_name:'Español',
     tab_chats:'Chats', tab_groups:'Grupos', tab_archived:'Archivados', tab_favourites:'★ Favoritos',
+    tab_calls:'📞 Llamadas', tab_unread:'No leídos',
     settings:'Ajustes', profile:'Perfil', appearance:'Apariencia', messaging:'Mensajería',
     notifications:'Notificaciones', security:'Seguridad', account:'Cuenta', language:'Idioma',
     theme_colors:'Colores del tema', primary_color:'Color principal', secondary_color:'Color secundario',
@@ -15289,9 +15411,12 @@ const I18N = {
     suspicious_msg:'Este mensaje parece sospechoso', show_anyway:'Mostrar de todos modos',
     restricted:'Esto está restringido en tu cuenta', forgot_password:'¿Olvidaste tu contraseña?',
     parent_controls:'Gestionar cuentas infantiles', linked_accounts:'Gestionar cuentas vinculadas',
-    large_text:'Texto más grande y sencillo', type_message:'Escribe un mensaje…'},
+    large_text:'Texto más grande y sencillo', type_message:'Escribe un mensaje…',
+    voice_call:'Llamada de voz', missed_call:'Llamada perdida', call_back:'Devolver llamada',
+    no_calls:'Aún no hay historial de llamadas.', no_unread:'¡Estás al día! ✅'},
   fr:{_name:'Français',
     tab_chats:'Discussions', tab_groups:'Groupes', tab_archived:'Archivés', tab_favourites:'★ Favoris',
+    tab_calls:'📞 Appels', tab_unread:'Non lus',
     settings:'Paramètres', profile:'Profil', appearance:'Apparence', messaging:'Messagerie',
     notifications:'Notifications', security:'Sécurité', account:'Compte', language:'Langue',
     theme_colors:'Couleurs du thème', primary_color:'Couleur principale', secondary_color:'Couleur secondaire',
@@ -15305,9 +15430,12 @@ const I18N = {
     suspicious_msg:'Ce message semble suspect', show_anyway:'Afficher quand même',
     restricted:'Ceci est restreint sur votre compte', forgot_password:'Mot de passe oublié ?',
     parent_controls:'Gérer les comptes enfants', linked_accounts:'Gérer les comptes liés',
-    large_text:'Texte simplifié et plus grand', type_message:'Écrivez un message…'},
+    large_text:'Texte simplifié et plus grand', type_message:'Écrivez un message…',
+    voice_call:'Appel vocal', missed_call:'Appel manqué', call_back:'Rappeler',
+    no_calls:'Aucun historique d\'appels.', no_unread:'Vous êtes à jour ! ✅'},
   de:{_name:'Deutsch',
     tab_chats:'Chats', tab_groups:'Gruppen', tab_archived:'Archiviert', tab_favourites:'★ Favoriten',
+    tab_calls:'📞 Anrufe', tab_unread:'Ungelesen',
     settings:'Einstellungen', profile:'Profil', appearance:'Darstellung', messaging:'Nachrichten',
     notifications:'Benachrichtigungen', security:'Sicherheit', account:'Konto', language:'Sprache',
     theme_colors:'Themenfarben', primary_color:'Primärfarbe', secondary_color:'Sekundärfarbe',
@@ -15321,7 +15449,9 @@ const I18N = {
     suspicious_msg:'Diese Nachricht sieht verdächtig aus', show_anyway:'Trotzdem anzeigen',
     restricted:'Das ist für dein Konto gesperrt', forgot_password:'Passwort vergessen?',
     parent_controls:'Kinderkonten verwalten', linked_accounts:'Verknüpfte Konten verwalten',
-    large_text:'Vereinfachter, größerer Text', type_message:'Nachricht schreiben…'}
+    large_text:'Vereinfachter, größerer Text', type_message:'Nachricht schreiben…',
+    voice_call:'Sprachanruf', missed_call:'Verpasster Anruf', call_back:'Zurückrufen',
+    no_calls:'Noch kein Anrufverlauf.', no_unread:'Alles gelesen! ✅'}
 };
 let _scbLang = localStorage.getItem('cc_language') || 'en';
 function getLanguage(){ return I18N[_scbLang] ? _scbLang : 'en'; }
@@ -15470,6 +15600,63 @@ renderSidebar = function(){
   if(!list) return;
   list.innerHTML='';
   if(!me){ list.innerHTML='<div class="section-empty">Set up your account first.</div>'; return; }
+
+  // ── Calls tab ──────────────────────────────────────────────────────────────
+  if(currentTab==='calls'){
+    const log=getCallLog().slice().reverse();
+    if(!log.length){ list.innerHTML='<div class="section-empty">'+esc(scbT('no_calls'))+'</div>'; return; }
+    log.forEach(entry=>{
+      const num=entry.number||entry.from||0;
+      const name=entry.name||entry.fromName||('#'+num);
+      const icon=entry.dir==='missed'?'📵':entry.dir==='in'?'📲':'📤';
+      const color=entry.dir==='missed'?'color:#e74c3c':'';
+      const durStr=fmtCallDuration(entry.duration||0);
+      const timeStr=entry.time?new Date(entry.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+      const metaStr=[entry.dir==='missed'?scbT('missed_call'):entry.dir==='in'?'Incoming':'Outgoing',durStr,timeStr].filter(Boolean).join(' · ');
+      const div=document.createElement('div'); div.className='call-log-item';
+      div.innerHTML='<div class="call-log-icon" style="'+color+'">'+icon+'</div>'
+        +'<div class="call-log-info"><div class="call-log-name" style="'+color+'">'+esc(name)+'</div>'
+        +'<div class="call-log-meta">'+esc(metaStr)+'</div></div>'
+        +'<button class="call-log-callback" onclick="(function(){const c=contacts.find(x=>x.type!==\'group\'&&String(x.number)===\''+num+'\');if(c)startDirectCall(c);else showToast(\'Not in contacts\',\'\');})()">'+esc(scbT('call_back'))+'</button>';
+      list.appendChild(div);
+    });
+    return;
+  }
+
+  // ── Unread tab ─────────────────────────────────────────────────────────────
+  if(currentTab==='unread'){
+    const unreadItems=[];
+    contacts.forEach(c=>{
+      const key=c.key||dmKey(me.number,c.number);
+      if(archivedContacts[key]) return;
+      const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
+      if(!conv||!conv.messages) return;
+      const unread=conv.messages.filter(m=>m&&m.from!==me.number&&m.type!=='call'&&(!m.seen||!m.seen.includes(me.number))).length;
+      if(unread>0) unreadItems.push({c,unread,key,conv});
+    });
+    unreadItems.sort((a,b)=>b.unread-a.unread);
+    if(!unreadItems.length){ list.innerHTML='<div class="section-empty">'+esc(scbT('no_unread'))+'</div>'; return; }
+    unreadItems.forEach(({c,unread,key,conv})=>{
+      const isActive=activeConvo&&activeConvo.key===key;
+      const lastMsg=conv.messages.length?conv.messages[conv.messages.length-1]:null;
+      const preview=lastMsg?(lastMsg.gif?'🖼 GIF':(msgText(lastMsg)||'')).substring(0,32):'';
+      const timeStr=lastMsg?fmtTime(lastMsg.time):'';
+      const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
+      const div=document.createElement('div'); div.className='sb-item'+(isActive?' active':'');
+      div.onclick=()=>openChat(c);
+      const hasImg=typeof c.avatar==='string'&&c.avatar.startsWith('data:image/');
+      const avDiv=c.type==='group'
+        ?'<div class="group-avatar" style="background:var(--accent-grad);color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':'👥')+'</div>'
+        :'<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
+      div.innerHTML=avDiv+'<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+'</span><span class="sb-item-time">'+esc(timeStr)+'</span></div>'
+        +'<div class="sb-item-preview">'+esc(preview)+'</div></div>'
+        +'<span class="unread-badge">'+unread+'</span>';
+      list.appendChild(div);
+    });
+    return;
+  }
+
+  // ── Standard tabs ──────────────────────────────────────────────────────────
   let items=contacts.filter(c=>{
     const key=c.key||dmKey(me.number,c.number);
     const isArchived=archivedContacts[key];
@@ -15492,7 +15679,7 @@ renderSidebar = function(){
     const isActive=activeConvo&&activeConvo.key===key;
     const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
     const lastMsg=conv&&conv.messages&&conv.messages.length?conv.messages[conv.messages.length-1]:null;
-    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':(msgText(lastMsg)||'')).substring(0,32):'';
+    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='call'?'📞 '+scbT(lastMsg.missed?'missed_call':'voice_call'):(msgText(lastMsg)||'')).substring(0,32):'';
     const timeStr=lastMsg?fmtTime(lastMsg.time):'';
     const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
     const inCall=c.type!=='group'&&_numbersInActiveCall.has(Number(c.number));
@@ -17058,6 +17245,26 @@ function injectFeatureDom(){
     btn.onclick=function(){ switchTab('favourites', this); };
     tabs.insertBefore(btn, tabs.firstChild);
   }
+  // --- sidebar calls tab (inserted after groups = 3rd original btn = 4th after fav) --
+  if(tabs && !document.getElementById('sb-tab-calls')){
+    const archived=tabs.querySelector('.sb-tab:last-child');
+    const btn=document.createElement('button');
+    btn.className='sb-tab'; btn.id='sb-tab-calls';
+    btn.setAttribute('data-i18n','tab_calls');
+    btn.textContent=scbT('tab_calls');
+    btn.onclick=function(){ switchTab('calls',this); };
+    tabs.insertBefore(btn, archived);
+  }
+  // --- sidebar unread tab (inserted before archived) -------------------------
+  if(tabs && !document.getElementById('sb-tab-unread')){
+    const archived=tabs.querySelector('.sb-tab:last-child');
+    const btn=document.createElement('button');
+    btn.className='sb-tab'; btn.id='sb-tab-unread';
+    btn.setAttribute('data-i18n','tab_unread');
+    btn.textContent=scbT('tab_unread');
+    btn.onclick=function(){ switchTab('unread',this); };
+    tabs.insertBefore(btn, archived);
+  }
   // --- favourite entries in the two existing menus ---------------------------
   const headerMenu=document.getElementById('chat-header-menu');
   if(headerMenu && !document.getElementById('favorite-menu-item')){
@@ -17114,7 +17321,7 @@ function injectFeatureDom(){
   const tagged=[
     ['#sb-tabs .sb-tab:nth-child(2)','tab_chats'],
     ['#sb-tabs .sb-tab:nth-child(3)','tab_groups'],
-    ['#sb-tabs .sb-tab:nth-child(4)','tab_archived'],
+    ['#sb-tabs .sb-tab:last-child','tab_archived'],
     ['#settings-header div','settings']
   ];
   tagged.forEach(pair=>{
