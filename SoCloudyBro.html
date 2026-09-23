@@ -7309,6 +7309,33 @@ function initNoiseSuppressPref(){
 }
 
 let pending2fa=null; // {user, pwdToStore}
+// Login rate limiting: max 5 attempts per identity per 5 minutes
+function _loginRateLimitKey(identity){ return 'cc_ratelimit_'+String(identity).toLowerCase(); }
+function _checkLoginRateLimit(identity){
+  try{
+    const raw=localStorage.getItem(_loginRateLimitKey(identity));
+    if(!raw) return null;
+    const data=JSON.parse(raw);
+    if(Date.now()>data.until) return null; // window expired
+    return data;
+  }catch(e){ return null; }
+}
+function _recordLoginFailure(identity){
+  try{
+    const key=_loginRateLimitKey(identity);
+    const raw=localStorage.getItem(key);
+    let data=raw?JSON.parse(raw):{count:0,until:0};
+    if(Date.now()>data.until){ data={count:0,until:0}; }
+    data.count+=1;
+    if(data.count>=5) data.until=Date.now()+5*60*1000; // lock 5 min after 5 failures
+    localStorage.setItem(key,JSON.stringify(data));
+    return data;
+  }catch(e){ return {count:1,until:0}; }
+}
+function _clearLoginRateLimit(identity){
+  try{ localStorage.removeItem(_loginRateLimitKey(identity)); }catch(e){}
+}
+
 async function submitLogin() {
   const identity = document.getElementById('login-email').value.trim();
   const pwd = document.getElementById('login-password').value.trim();
@@ -7322,6 +7349,14 @@ async function submitLogin() {
   }
   if(!pwd) { err.textContent = scbErr('SCB-AUTH-10','Enter your password.'); return; }
 
+  // Rate limit check before hitting Firebase
+  const rl=_checkLoginRateLimit(identity);
+  if(rl&&rl.until>Date.now()){
+    const secsLeft=Math.ceil((rl.until-Date.now())/1000);
+    err.textContent=scbErr('SCB-AUTH-17',`Too many failed attempts. Try again in ${secsLeft} seconds.`);
+    return;
+  }
+
   const btn = document.getElementById('login-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
 
@@ -7330,7 +7365,7 @@ async function submitLogin() {
     const user = loginByNumber
       ? users.find(u => u.number === parseInt(identity))
       : users.find(u => (u.email||'').toLowerCase() === identity.toLowerCase());
-    if(!user) { err.textContent = scbErr('SCB-AUTH-11',loginByNumber ? `#${identity} is not registered.` : 'No account found with that email.'); return; }
+    if(!user) { _recordLoginFailure(identity); err.textContent = scbErr('SCB-AUTH-11',loginByNumber ? `#${identity} is not registered.` : 'No account found with that email.'); return; }
     if(user.banned) { err.textContent = scbErr('SCB-AUTH-12','This account has been suspended.'); return; }
     // performScheduledAccountDeletion() anonymizes the record in place and
     // blanks `pwd`. The legacy-account path below deliberately treats an empty
@@ -7344,13 +7379,19 @@ async function submitLogin() {
     // Account Recovery to set one. Accepting any password and storing it would
     // let anyone who knows the account number take over the account permanently.
     if(!user.pwd){
+      _recordLoginFailure(identity);
       err.textContent = scbErr('SCB-AUTH-16','This account has no password on file. Use "Forgot password?" to set one via your security questions.');
       return;
     }
     if(!(await verifyPassword(pwd, user.pwd))) {
-      err.textContent = scbErr('SCB-AUTH-14','Incorrect password.');
+      const rd=_recordLoginFailure(identity);
+      const remaining=5-rd.count;
+      err.textContent = scbErr('SCB-AUTH-14', remaining>0
+        ? `Incorrect password. ${remaining} attempt${remaining===1?'':'s'} left before temporary lockout.`
+        : 'Too many failed attempts. Try again in 5 minutes.');
       return;
     }
+    _clearLoginRateLimit(identity);
     // Transparently upgrade legacy weak hashes to the new salted SHA-256 format
     let pwdToStore = user.pwd;
     if(user.pwd.indexOf('$')===-1){ pwdToStore = await hashPassword(pwd); }
@@ -13833,15 +13874,23 @@ async function adminNuclearReset(){
 
     // Clear local conversation cache but keep the admin's own session alive
     convosCache=null;
-    // Remove per-conversation localStorage items but preserve identity + keys
+    // Remove per-conversation localStorage items but preserve identity + keys.
+    // Also strip group contacts from cc_contacts — all groups are gone from Firebase.
     try{
-      const keepKeys=['cc_me','cc_pin','cc_contacts','cc_lang'];
+      const keepKeys=['cc_me','cc_pin','cc_lang'];
       const keep=keepKeys.map(k=>({k,v:localStorage.getItem(k)}));
-      // Remove convo and call caches
+      // Filter contacts: keep only DM contacts for the admin's own number
+      let cleanContacts=[];
+      try{
+        const raw=localStorage.getItem('cc_contacts');
+        const parsed=raw?JSON.parse(raw):[];
+        cleanContacts=(parsed||[]).filter(c=>c&&c.type!=='group');
+      }catch(e){}
       Object.keys(localStorage).forEach(k=>{
-        if(!keepKeys.includes(k)) try{ localStorage.removeItem(k); }catch(e){}
+        if(!keepKeys.includes(k)&&k!=='cc_contacts') try{ localStorage.removeItem(k); }catch(e){}
       });
       keep.forEach(({k,v})=>{ if(v!==null) try{ localStorage.setItem(k,v); }catch(e){} });
+      try{ localStorage.setItem('cc_contacts',JSON.stringify(cleanContacts)); }catch(e){}
     }catch(e){}
 
     showToast('✓ Done','All other accounts wiped. Your account (#'+me.number+') is preserved. Reserved numbers: '+reservedNums.join(', '));
@@ -19456,6 +19505,67 @@ init();
   document.body.appendChild(nav);
   var btns = nav.querySelectorAll('.bottom-nav-btn');
   if (btns.length) btns[0].classList.add('active');
+})();
+</script>
+
+<script>
+/* ===== AUTO-LOCK ON INACTIVITY + SCREEN BLUR ON HIDE =====
+   Auto-lock: if a PIN is set, lock the screen after 10 minutes of no
+   keyboard/mouse/touch activity. The timer resets on every interaction.
+   Screen blur: blur the app content when the tab is hidden or the window
+   loses focus, so the OS task-switcher / screen recorder can't read it. ===== */
+(function scbSecurityHooks(){
+  const AUTO_LOCK_MS = 10 * 60 * 1000; // 10 minutes idle → lock
+  let _idleTimer = null;
+
+  function _resetIdleTimer(){
+    if(!window.me || !localStorage.getItem('cc_pin')) return; // no session or no PIN → nothing to lock
+    clearTimeout(_idleTimer);
+    _idleTimer = setTimeout(function(){
+      // Don't lock if the lock screen is already showing
+      const ls = document.getElementById('lock-screen');
+      if(ls && ls.classList.contains('visible')) return;
+      if(window.me && localStorage.getItem('cc_pin')){
+        if(typeof showLockScreen === 'function') showLockScreen();
+      }
+    }, AUTO_LOCK_MS);
+  }
+
+  // Reset the idle timer on any real user activity
+  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(function(ev){
+    document.addEventListener(ev, _resetIdleTimer, {passive: true, capture: true});
+  });
+  _resetIdleTimer();
+
+  // Screen blur overlay — created once, shown/hidden via visibility events
+  var blurOverlay = document.createElement('div');
+  blurOverlay.id = 'scb-blur-overlay';
+  blurOverlay.style.cssText = [
+    'position:fixed','inset:0','z-index:9998',
+    'background:var(--bg,#111)','display:none',
+    'align-items:center','justify-content:center',
+    'flex-direction:column','gap:12px',
+    'font-size:28px','color:var(--text2,#aaa)',
+    'backdrop-filter:blur(24px)','-webkit-backdrop-filter:blur(24px)',
+    'user-select:none'
+  ].join(';');
+  blurOverlay.innerHTML = '<div style="font-size:40px">🔒</div><div style="font-size:14px;opacity:0.6">Screen hidden</div>';
+  document.body.appendChild(blurOverlay);
+
+  function _showBlur(){
+    if(!window.me) return; // not logged in, nothing sensitive on screen
+    blurOverlay.style.display = 'flex';
+  }
+  function _hideBlur(){
+    blurOverlay.style.display = 'none';
+    _resetIdleTimer();
+  }
+
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) _showBlur(); else _hideBlur();
+  });
+  window.addEventListener('blur', _showBlur);
+  window.addEventListener('focus', _hideBlur);
 })();
 </script>
 </body>
