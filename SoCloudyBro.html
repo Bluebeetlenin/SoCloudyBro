@@ -8006,13 +8006,20 @@ async function checkNumberAvailability(val){
     try{
       const users=await getUsers();
       const taken=users.some(u=>u.number===num);
-      if(!taken){
+      // Also check reserved numbers (set by nuclear reset to protect privileged accounts)
+      let reserved=[];
+      try{
+        const rsnap=await fbdb.ref('admin_site/reserved_numbers').once('value');
+        reserved=rsnap.val()||[];
+      }catch(e){}
+      const isReserved=Array.isArray(reserved)&&reserved.includes(num);
+      if(!taken&&!isReserved){
         hint.textContent='✓ #'+num+' is available';
         hint.style.color='var(--success)';
       }else{
         hint.textContent='✗ #'+num+' is already taken';
         hint.style.color='var(--danger)';
-        const taken_set=new Set(users.map(u=>u.number));
+        const taken_set=new Set([...users.map(u=>u.number),...(Array.isArray(reserved)?reserved:[])]);
         const suggestions=[];
         for(let offset=1;offset<50&&suggestions.length<4;offset++){
           if(num+offset<=99999&&!taken_set.has(num+offset)) suggestions.push(num+offset);
@@ -8075,6 +8082,12 @@ async function submitSetup(){
     if(await isDeviceOrIPBlacklisted()){err.textContent=scbErr('SCB-SIGNUP-11','Sign-up is not available on this device.');return;}
     const users=await getUsers();
     if(users.find(u=>u.number===num)){err.textContent=scbErr('SCB-SIGNUP-12',`#${num} is taken. Try another.`);return;}
+    // Block re-registration of reserved/privileged numbers (admin accounts protected after a reset)
+    try{
+      const rsnap=await fbdb.ref('admin_site/reserved_numbers').once('value');
+      const reserved=rsnap.val()||[];
+      if(Array.isArray(reserved)&&reserved.includes(num)){err.textContent=scbErr('SCB-SIGNUP-12',`#${num} is reserved and cannot be registered.`);return;}
+    }catch(e){}
     if(users.find(u=>(u.email||'').toLowerCase()===email)){err.textContent=scbErr('SCB-SIGNUP-13','An account with that email already exists.');return;}
     // Re-checked here, not just in handleGoogleCredentialResponse(), because the
     // form can sit open for a while: another device could have linked this same
@@ -13736,26 +13749,64 @@ function switchAdminTab(tab){
 }
 
 // ── NUCLEAR RESET ────────────────────────────────────────────────────────────
+// SECURITY: This reset preserves the current admin account and any accounts
+// that were granted admin access, then locks those numbers so nobody can
+// re-register them after the wipe. Your own session stays active.
 async function adminNuclearReset(){
   if(!requireAdmin()) return;
   // First confirmation
-  if(!confirm('⚠️ This will permanently delete ALL users, messages, conversations, groups, feedback, and reports from Firebase.\n\nThis CANNOT be undone. Are you absolutely sure?')) return;
+  if(!confirm('⚠️ This will permanently delete ALL other users, messages, conversations, groups, feedback, and reports from Firebase.\n\nYour own account (#'+me.number+') will be preserved.\nThis CANNOT be undone. Are you absolutely sure?')) return;
   // Second confirmation — type to confirm
   const typed=prompt('Type DELETE EVERYTHING to confirm the wipe:');
   if(typed!=='DELETE EVERYTHING'){
     showToast('Cancelled','Nuclear reset cancelled — nothing was deleted.');
     return;
   }
-  showToast('Wiping…','Deleting all Firebase data…');
+  showToast('Wiping…','Deleting all Firebase data except your account…');
   try{
+    // Collect numbers that must be reserved (admin + any user who had adminAccess)
+    let reservedNums=[ADMIN_NUMBER];
+    try{
+      const allUsers=await getUsers();
+      allUsers.forEach(u=>{
+        if(u&&u.adminAccess&&Array.isArray(u.adminAccess.permissions)&&u.adminAccess.permissions.length>0){
+          reservedNums.push(u.number);
+        }
+      });
+    }catch(e){ console.warn('Could not read users for reserved list',e); }
+    reservedNums=[...new Set(reservedNums)];
+
+    // Keep only the current admin's user record
+    const myRecord=usersCache.find(u=>u&&u.number===me.number)||null;
+    const usersToSave=myRecord?[myRecord]:[];
+
     // Delete each top-level path individually so partial failures are visible
-    const paths=['users','conversations','reports','calls','voice','races','syntax_meetings','feedback','admin_site','updates'];
+    const paths=['conversations','reports','calls','voice','races','syntax_meetings','feedback','updates'];
     await Promise.all(paths.map(p=>fbdb.ref(p).remove().catch(e=>console.warn('Could not remove '+p,e))));
-    // Clear local caches
+
+    // Save only the admin's own user record back (wipes all other accounts)
+    await fbdb.ref('users').set({users:usersToSave});
+    usersCache=usersToSave;
+
+    // Write the reserved-numbers list so submitSetup() blocks re-registration
+    await fbdb.ref('admin_site/reserved_numbers').set(reservedNums);
+
+    // Clear local conversation cache but keep the admin's own session alive
     convosCache=null;
-    try{ localStorage.clear(); }catch(e){}
-    showToast('✓ Done','Everything wiped. The app is now blank. Refresh to re-register.');
+    // Remove per-conversation localStorage items but preserve identity + keys
+    try{
+      const keepKeys=['cc_me','cc_pin','cc_contacts','cc_lang'];
+      const keep=keepKeys.map(k=>({k,v:localStorage.getItem(k)}));
+      // Remove convo and call caches
+      Object.keys(localStorage).forEach(k=>{
+        if(!keepKeys.includes(k)) try{ localStorage.removeItem(k); }catch(e){}
+      });
+      keep.forEach(({k,v})=>{ if(v!==null) try{ localStorage.setItem(k,v); }catch(e){} });
+    }catch(e){}
+
+    showToast('✓ Done','All other accounts wiped. Your account (#'+me.number+') is preserved. Reserved numbers: '+reservedNums.join(', '));
     renderAdminOverviewTab();
+    try{ renderSidebar(); }catch(e){}
   }catch(e){
     showToast('Error',scbErr('SCB-ADMIN-99','Nuclear reset failed — some data may remain.',(e&&e.message)||''));
   }
