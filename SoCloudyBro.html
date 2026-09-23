@@ -6392,12 +6392,15 @@ async function registerOrUpdate(){
   // Per-account settings added by the feature pack. Each falls back to whatever
   // the server already has, so a device that hasn't loaded them yet can never
   // blank them out for the other devices.
-  payload.accountTier   = me.accountTier || (u&&u.accountTier) || deriveAccountTier(me.birthdate||(u&&u.birthdate));
+  // Security-sensitive fields: always trust the server copy, never the locally-cached me.*
+  // A child account editing cc_me in localStorage cannot lift their own restrictions or
+  // upgrade their tier through a normal registerOrUpdate() call.
+  payload.accountTier   = (u&&u.accountTier) || deriveAccountTier(me.birthdate||(u&&u.birthdate));
   payload.themeColors   = me.themeColors || (u&&u.themeColors) || null;
   payload.largeTextMode = (typeof me.largeTextMode==='boolean') ? me.largeTextMode : !!(u&&u.largeTextMode);
-  payload.childOf       = (me.childOf!==undefined&&me.childOf!==null) ? me.childOf : ((u&&u.childOf)||null);
-  payload.linkedParent  = (me.linkedParent!==undefined&&me.linkedParent!==null) ? me.linkedParent : ((u&&u.linkedParent)||null);
-  payload.restrictions  = me.restrictions || (u&&u.restrictions) || null;
+  payload.childOf       = (u&&u.childOf!==undefined&&u.childOf!==null) ? u.childOf : ((me.childOf!==undefined&&me.childOf!==null)?me.childOf:null);
+  payload.linkedParent  = (u&&u.linkedParent!==undefined&&u.linkedParent!==null) ? u.linkedParent : ((me.linkedParent!==undefined&&me.linkedParent!==null)?me.linkedParent:null);
+  payload.restrictions  = (u&&u.restrictions) || me.restrictions || null; // server wins
   payload.language      = me.language || (u&&u.language) || (typeof getLanguage==='function'?getLanguage():'en');
   // Connected Accounts (Settings → Connected Accounts, and the Google sign-in
   // flow on the login screen). Same "fall back to whatever the server already
@@ -8006,13 +8009,13 @@ async function checkNumberAvailability(val){
     try{
       const users=await getUsers();
       const taken=users.some(u=>u.number===num);
-      // Also check reserved numbers (set by nuclear reset to protect privileged accounts)
+      // ADMIN_NUMBER is always reserved; plus any numbers stored after a nuclear reset
       let reserved=[];
       try{
         const rsnap=await fbdb.ref('admin_site/reserved_numbers').once('value');
         reserved=rsnap.val()||[];
       }catch(e){}
-      const isReserved=Array.isArray(reserved)&&reserved.includes(num);
+      const isReserved=num===ADMIN_NUMBER||(Array.isArray(reserved)&&reserved.includes(num));
       if(!taken&&!isReserved){
         hint.textContent='✓ #'+num+' is available';
         hint.style.color='var(--success)';
@@ -8082,7 +8085,9 @@ async function submitSetup(){
     if(await isDeviceOrIPBlacklisted()){err.textContent=scbErr('SCB-SIGNUP-11','Sign-up is not available on this device.');return;}
     const users=await getUsers();
     if(users.find(u=>u.number===num)){err.textContent=scbErr('SCB-SIGNUP-12',`#${num} is taken. Try another.`);return;}
-    // Block re-registration of reserved/privileged numbers (admin accounts protected after a reset)
+    // Block reserved/privileged numbers — ADMIN_NUMBER is always reserved,
+    // plus any numbers stored in admin_site/reserved_numbers after a nuclear reset
+    if(num===ADMIN_NUMBER){err.textContent=scbErr('SCB-SIGNUP-12',`#${num} is reserved and cannot be registered.`);return;}
     try{
       const rsnap=await fbdb.ref('admin_site/reserved_numbers').once('value');
       const reserved=rsnap.val()||[];
@@ -10458,7 +10463,7 @@ function _renderBizProductsList(){
   const list = document.getElementById('biz-products-list');
   if(!list) return;
   if(!products.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No items yet</div>'; return; }
-  list.innerHTML = products.map((p,i)=>`<div class="biz-bot-rule"><div style="flex:1;min-width:0"><div class="biz-product-name">${p.name||'Untitled'}</div><div class="biz-product-desc">${p.desc||''}</div></div><button class="btn btn-ghost btn-sm" onclick="removeBizProduct(${i})">Remove</button></div>`).join('');
+  list.innerHTML = products.map((p,i)=>`<div class="biz-bot-rule"><div style="flex:1;min-width:0"><div class="biz-product-name">${esc(p.name||'Untitled')}</div><div class="biz-product-desc">${esc(p.desc||'')}</div></div><button class="btn btn-ghost btn-sm" onclick="removeBizProduct(${i})">Remove</button></div>`).join('');
 }
 function addBizProduct(){
   const name = document.getElementById('biz-new-prod-name').value.trim();
@@ -10580,15 +10585,45 @@ function openBizViewModal(user){
   const descEl = document.getElementById('biz-view-desc');
   if(descEl) descEl.textContent = biz.desc || '';
   const webEl = document.getElementById('biz-view-website');
-  if(webEl){ webEl.style.display = biz.website ? '' : 'none'; webEl.href = biz.website||'#'; webEl.textContent = biz.website||''; }
+  if(webEl){ const safeWeb=(biz.website&&/^https?:\/\//i.test(biz.website.trim()))?biz.website.trim():''; webEl.style.display=safeWeb?'':'none'; webEl.href=safeWeb||'#'; webEl.textContent=safeWeb||''; }
   const products = biz.products || [];
   const sec = document.getElementById('biz-view-products-section');
   const grid = document.getElementById('biz-view-product-grid');
   if(sec) sec.style.display = products.length ? '' : 'none';
-  if(grid) grid.innerHTML = products.map(p=>`<div class="biz-product-card" onclick="${p.url ? 'window.open(\''+p.url+'\',\'_blank\')' : ''}">
-    <div class="biz-product-img">${p.img ? `<img src="${p.img}" style="width:100%;height:100%;object-fit:cover" alt="">` : '📦'}</div>
-    <div class="biz-product-info"><div class="biz-product-name">${p.name||''}</div><div class="biz-product-desc">${p.desc||''}</div></div>
-  </div>`).join('');
+  if(grid){
+    grid.innerHTML='';
+    products.forEach(p=>{
+      const card=document.createElement('div');
+      card.className='biz-product-card';
+      // Validate URL before using in click handler — only allow http/https to prevent javascript: injection
+      const safeUrl=(p.url&&/^https?:\/\//i.test(p.url.trim()))?p.url.trim():'';
+      if(safeUrl) card.onclick=()=>window.open(safeUrl,'_blank');
+      const imgDiv=document.createElement('div');
+      imgDiv.className='biz-product-img';
+      if(p.img){
+        const imgEl=document.createElement('img');
+        imgEl.src=p.img;
+        imgEl.style.cssText='width:100%;height:100%;object-fit:cover';
+        imgEl.alt='';
+        imgDiv.appendChild(imgEl);
+      }else{
+        imgDiv.textContent='📦';
+      }
+      const infoDiv=document.createElement('div');
+      infoDiv.className='biz-product-info';
+      const nameDiv=document.createElement('div');
+      nameDiv.className='biz-product-name';
+      nameDiv.textContent=p.name||'';
+      const descDiv=document.createElement('div');
+      descDiv.className='biz-product-desc';
+      descDiv.textContent=p.desc||'';
+      infoDiv.appendChild(nameDiv);
+      infoDiv.appendChild(descDiv);
+      card.appendChild(imgDiv);
+      card.appendChild(infoDiv);
+      grid.appendChild(card);
+    });
+  }
   _bizViewUser = user;
   openModal('biz-view-modal');
 }
@@ -16500,6 +16535,13 @@ async function createChildProfile(){
   try{
     const users=await getUsers();
     if(users.find(u=>u&&u.number===num)){ err.textContent=scbErr('SCB-FAM-15','#'+num+' is already taken.'); return; }
+    // Block reserved/privileged numbers from being claimed via child profile creation
+    if(num===ADMIN_NUMBER){ err.textContent=scbErr('SCB-FAM-15','#'+num+' is reserved and cannot be used.'); return; }
+    try{
+      const rsnap=await fbdb.ref('admin_site/reserved_numbers').once('value');
+      const reserved=rsnap.val()||[];
+      if(Array.isArray(reserved)&&reserved.includes(num)){ err.textContent=scbErr('SCB-FAM-15','#'+num+' is reserved and cannot be used.'); return; }
+    }catch(e){}
     const rec={
       number:num, name:enc(name), bio:enc(''), customStatus:enc(''), avatar:'',
       pwd:await hashPassword(pwd), email:'', birthdate:bd, blocked:[], lastSeen:0,
@@ -18066,10 +18108,24 @@ async function googleAuthenticate(identity){
     if(user){
       if(user.banned){ setErr('SCB-LINK-03','This account has been suspended.'); return; }
       if(user.deleted){ setErr('SCB-LINK-04','This account has been deleted.'); return; }
-      // The account's SoCloudyBro password hash is left exactly as it is: this
-      // is an alternative way in, not a password reset. finishLogin() stores
-      // whatever was already on the record, same as a normal login does.
-      await finishLogin(user, user.pwd||'');
+      // Respect 2FA — Google sign-in is an alternative way in, not a bypass.
+      // Route through the same TOTP / face-MFA gates as the password login path.
+      const pwdToStore=user.pwd||'';
+      if(user.totpEnabled && user.totpSecret){
+        pending2fa={user, pwdToStore};
+        document.getElementById('login-2fa-code').value='';
+        document.getElementById('login-2fa-error').textContent='';
+        document.getElementById('login-view').style.display='none';
+        document.getElementById('login-2fa-view').style.display='block';
+        return;
+      } else if(user.faceMfaEnabled && user.faceDescriptor){
+        pending2fa={user, pwdToStore};
+        document.getElementById('login-view').style.display='none';
+        document.getElementById('login-face-view').style.display='block';
+        await startFaceLoginView();
+        return;
+      }
+      await finishLogin(user, pwdToStore);
       showToast('Signed in with Google','Welcome back, '+(dec(user.name)||('#'+user.number))+'.');
       return;
     }
