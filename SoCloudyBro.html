@@ -4308,13 +4308,6 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Customize UI</div><div class="settings-row-sub">Add, remove, drag, and resize widgets on your home screen</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Open Editor</button></div>
           </div>
-          <div class="settings-row">
-            <div class="settings-row-main"><div class="settings-row-label">Accent Color</div><div class="settings-row-sub">Overrides the app's default purple-blue accent</div></div>
-            <div class="settings-row-actions">
-              <input type="color" id="accent-color-input" value="#6b5de8" onchange="saveAccentColor(this.value)" style="width:36px;height:28px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer"/>
-              <button class="btn btn-ghost btn-sm" onclick="resetAccentColor()">Reset</button>
-            </div>
-          </div>
           <div class="settings-inline-field">
             <div class="settings-row-label">Location (for weather &amp; clock)</div>
             <div class="settings-row-sub">Country or city — used with Open-Meteo, no API key needed</div>
@@ -4355,6 +4348,10 @@ body.device-tablet .msg-body{max-width:74%}
           </div>
           <div class="settings-row" style="cursor:pointer" onclick="openFeedbackModal('bug')">
             <div class="settings-row-main"><div class="settings-row-label">🐛 Report a Bug</div><div class="settings-row-sub">Found something broken? Let us know</div></div>
+            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+          </div>
+          <div class="settings-row" style="cursor:pointer" onclick="openContactUs()">
+            <div class="settings-row-main"><div class="settings-row-label">📞 Contact Us</div><div class="settings-row-sub">Get help directly from an SCB admin</div></div>
             <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
           </div>
         </div>
@@ -4505,7 +4502,7 @@ body.device-tablet .msg-body{max-width:74%}
       <p style="margin:0 0 8px">SoCloudyBro is built for private communities. Accounts are invite-based.</p>
       <a href="#" onclick="showPrivacyPolicy();return false;" style="color:var(--accent);text-decoration:none">Privacy Policy</a>
       <span style="margin:0 8px">·</span>
-      <a href="mailto:support@socloudybro.vercel.app" style="color:var(--accent);text-decoration:none">Contact</a>
+      <a href="#" onclick="openContactUs();return false;" style="color:var(--accent);text-decoration:none">Contact</a>
     </div>
   </main>
 </div>
@@ -4543,6 +4540,21 @@ body.device-tablet .msg-body{max-width:74%}
       <h3 style="font-size:15px;margin:20px 0 8px">Contact</h3>
       <p>Questions? Email <a href="mailto:support@socloudybro.vercel.app" style="color:var(--accent)">support@socloudybro.vercel.app</a></p>
     </div>
+  </div>
+</div>
+
+<!-- CONTACT US MODAL -->
+<div class="overlay" id="contact-us-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>📞 Contact Us</h2>
+      <button class="modal-close" onclick="closeModal('contact-us-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding-bottom:8px">
+      <p style="font-size:13px;color:var(--muted);margin:0 0 16px">Reach out to an SCB admin directly. Tap an SCB Number to open a chat, or copy an email address.</p>
+      <div id="contact-us-list"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('contact-us-modal')">Close</button></div>
   </div>
 </div>
 
@@ -6917,7 +6929,6 @@ async function launch(){
   step('initVoiceInput', initVoiceInput);
   step('loadChatBg', loadChatBg);
   step('initTheme', initTheme);
-  step('loadAccentColor', loadAccentColor);
   step('checkAdminPanel', checkAdminPanel);
   step('watchIncomingCalls', watchIncomingCalls);
   step('checkForSiteUpdate', checkForSiteUpdate);
@@ -8294,7 +8305,6 @@ function updateSettingsPanel(){
   updateSecQStatusUI();
   updateDeleteAccountBanner();
   initNoiseSuppressPref();
-  loadAccentColor();
   const loc=getWeatherLocation();
   const locInput=document.getElementById('weather-location-input');
   if(locInput&&loc) locInput.value=loc.name;
@@ -11368,28 +11378,7 @@ function editorPointerUp(){
   renderEditorGrid();
 }
 
-// -- Custom accent color ---------------------------------------------------
-// Only a literal hex colour is ever accepted: the value is read straight from
-// localStorage and interpolated into a CSS custom property (including inside a
-// linear-gradient()), so a corrupt or hand-edited value could otherwise inject
-// arbitrary CSS — including a url() — into every element that uses --accent.
-function isHexColor(v){ return typeof v==='string'&&/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v); }
-function applyCustomAccent(hex){
-  if(!isHexColor(hex)) return;
-  document.documentElement.style.setProperty('--accent',hex);
-  document.documentElement.style.setProperty('--accent-hover',hex);
-  document.documentElement.style.setProperty('--accent-grad','linear-gradient(135deg,'+hex+' 0%,'+hex+' 100%)');
-}
-function saveAccentColor(hex){ localStorage.setItem('cc_accent_color',hex); applyCustomAccent(hex); }
-function loadAccentColor(){ const hex=localStorage.getItem('cc_accent_color'); if(isHexColor(hex)){ applyCustomAccent(hex); const inp=document.getElementById('accent-color-input'); if(inp) inp.value=hex; } }
-function resetAccentColor(){
-  localStorage.removeItem('cc_accent_color');
-  document.documentElement.style.removeProperty('--accent');
-  document.documentElement.style.removeProperty('--accent-hover');
-  document.documentElement.style.removeProperty('--accent-grad');
-  const inp=document.getElementById('accent-color-input'); if(inp) inp.value='#6b5de8';
-  showToast('Reset to default color','');
-}
+// -- Accent color feature removed (use Theme Colors instead) --
 
 function hideAll(){
   document.getElementById('main-empty').style.display='none';
@@ -11775,8 +11764,42 @@ function fmtTime(ts){
   if(d.toDateString()===now.toDateString()) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   return d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
-function openModal(id){document.getElementById(id).classList.add('visible');}
+function openModal(id){const el=document.getElementById(id);if(!el)return;el.style.display='';el.classList.add('visible');}
 function showPrivacyPolicy(){openModal('privacy-modal');}
+
+/* ===== CONTACT US ===== */
+const _SCB_ADMINS = [
+  { priority: 1, role: 'Head Admin', name: 'SoCloudyBro Admin', number: 2015, email: 'support@socloudybro.vercel.app' },
+  { priority: 2, role: 'Support Admin', name: 'SCB Support', number: null, email: 'help@socloudybro.vercel.app' },
+];
+function openContactUs(){
+  const list = document.getElementById('contact-us-list');
+  if(list){
+    list.innerHTML = _SCB_ADMINS.map(a=>`
+      <div style="background:var(--surface2,rgba(127,127,127,.07));border:1px solid var(--border);border-radius:var(--r-sm,10px);padding:12px 14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;background:var(--accent);color:#fff;border-radius:20px">P${a.priority} · ${esc(a.role)}</span>
+        </div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">${esc(a.name)}</div>
+        ${a.email ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span style="font-size:12px;color:var(--text2)">${esc(a.email)}</span>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" onclick="navigator.clipboard.writeText('${esc(a.email)}').then(()=>showToast('Copied','Email address copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: ${esc(a.email)}'))">Copy</button>
+        </div>` : ''}
+        ${a.number ? `<button class="btn btn-sm" style="font-size:12px;padding:4px 12px" onclick="closeModal('contact-us-modal');_openDmWithAdmin(${a.number})">💬 Message #${a.number}</button>` : ''}
+      </div>
+    `).join('');
+  }
+  openModal('contact-us-modal');
+}
+function _openDmWithAdmin(num){
+  if(!me){ showToast('Sign in required','You need to be signed in to send a message.'); return; }
+  if(num===me.number){ showToast('That\'s you','You can\'t message yourself.'); return; }
+  const existing = contacts.find(c=>c.number===num&&c.type!=='group');
+  if(existing){ openChat(existing); return; }
+  const u = usersCache && usersCache.find(x=>x.number===num);
+  const c = { type:'dm', number:num, name:(u&&u.name?dec(u.name):'Admin #'+num), avatar:(u&&u.avatar)||'', key:'dm_'+[me.number,num].sort((a,b)=>a-b).join('_') };
+  contacts.push(c); saveStorage(); openChat(c);
+}
 function closeModal(id){document.getElementById(id).classList.remove('visible');}
 function renderContacts(){renderSidebar();}
 let toastTimer=null;
@@ -14127,10 +14150,11 @@ async function renderAdminFeedbackTab(){
   const body=document.getElementById('admin-dashboard-body');
   body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading…</div>';
   try{
-    const snap=await fbdb.ref(FEEDBACK_PATH).orderByChild('time').limitToLast(100).get();
+    const snap=await fbdb.ref(FEEDBACK_PATH).get();
     const items=[];
-    snap.forEach(c=>{items.push({id:c.key,...c.val()});});
-    items.reverse();
+    snap.forEach(c=>{const v=c.val();if(v&&v.time) items.push({id:c.key,...v});});
+    items.sort((a,b)=>(b.time||0)-(a.time||0));
+    if(items.length>100) items.length=100;
     if(!items.length){body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">No feedback yet.</div>';return;}
     const typeIcons={rate:'⭐',feedback:'💬',bug:'🐛'};
     const statusColor={new:'var(--accent)',reviewed:'var(--muted)',resolved:'var(--success)'};
@@ -15745,6 +15769,13 @@ function setLanguage(code){
   try{ localStorage.setItem('cc_language', code); }catch(e){}
   if(me){ me.language = code; try{ saveStorage(); }catch(e){} }
   applyLanguage();
+  // Re-render all dynamic UI so translated strings appear everywhere
+  try{ if(typeof updateSettingsPanel==='function') updateSettingsPanel(); }catch(e){}
+  try{ if(typeof renderSidebar==='function') renderSidebar(); }catch(e){}
+  try{ if(typeof renderMyCard==='function') renderMyCard(); }catch(e){}
+  try{ if(typeof _renderBizSettings==='function') _renderBizSettings(); }catch(e){}
+  // Keep the language select in sync
+  try{ const sel=document.getElementById('scb-language-select'); if(sel) sel.value=code; }catch(e){}
   showToast(scbT('language'), I18N[code]._name);
 }
 // Anything carrying data-i18n gets its text swapped; placeholders use
