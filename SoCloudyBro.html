@@ -5812,8 +5812,8 @@ const _decCache={};      // msgId -> {text, gif, poll}
 const _dmAesCache={};    // otherNumber -> CryptoKey
 const _groupAesCache={}; // convoKey -> CryptoKey
 const _pubKeyCache={};   // number -> CryptoKey (their ECDH public key)
-let _myKeyPair=null;     // {privateKey, publicKey}
-let _myPubJwk=null;      // string JWK of our public key (published in user record)
+var _myKeyPair=null;     // {privateKey, publicKey} — var so accessible cross-script
+var _myPubJwk=null;      // string JWK of our public key — var so accessible cross-script
 let _disappearRenderTimer=null; // setTimeout handle for disappearing-message re-render
 
 function _b64(buf){const b=new Uint8Array(buf);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
@@ -6149,20 +6149,20 @@ function findDictionaryMatch(word){
   return tieCount===1?best:null; // ambiguous — more than one equally-close word, skip to avoid a wrong guess
 }
 
-// -- STATE --------------------------------------------------------------------
-let me = null;
+// -- STATE (var so these are on window and accessible from other script blocks) --
+var me = null;
 let deviceId = localStorage.getItem('cc_device_id') || (()=>{
   const id = 'dev_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
   localStorage.setItem('cc_device_id', id);
   return id;
 })();
-let contacts = [];
-let activeConvo = null; // {type:'dm'|'group', key, name, avatar, number?}
+var contacts = [];
+var activeConvo = null; // {type:'dm'|'group', key, name, avatar, number?}
 let pollTimer = null, hbTimer = null;
 let lastMsgHash = '';
-let usersCache = [];
+var usersCache = [];
 let reportsCache = [];
-let convosCache = null;
+var convosCache = null;
 let pinPhase = null; // 'set1','set2','chat'
 let pinTemp = null;
 let avatarTarget = null; // 'setup'|'profile'|'group'
@@ -19682,7 +19682,7 @@ function _recordPinFailure(){
   try{
     const raw=localStorage.getItem(_pinLockKey());
     let data=raw?JSON.parse(raw):{count:0,until:0};
-    if(Date.now()>data.until) data={count:0,until:0};
+    if(data.until>0&&Date.now()>data.until) data={count:0,until:0}; // expired lockout: reset
     data.count+=1;
     if(data.count>=5) data.until=Date.now()+15*60*1000;
     localStorage.setItem(_pinLockKey(),JSON.stringify(data));
@@ -19694,10 +19694,10 @@ function _clearPinLock(){ try{ localStorage.removeItem(_pinLockKey()); }catch{} 
 /* ===== LOGIN HISTORY =====
    Last 5 logins stored in user record under loginHistory[]. ===== */
 async function _recordLogin(){
-  if(!me) return;
+  if(!window.me) return;
   try{
     const users=await getUsers();
-    const u=users.find(x=>x.number===me.number);
+    const u=users.find(x=>x.number===window.me.number);
     if(!u) return;
     if(!Array.isArray(u.loginHistory)) u.loginHistory=[];
     u.loginHistory.unshift({time:Date.now(),device:getDeviceLabel(),os:getDeviceOS()});
@@ -19706,9 +19706,9 @@ async function _recordLogin(){
   }catch(e){ console.warn('Login history record failed',e); }
 }
 function openLoginHistory(){
-  if(!me) return;
-  const users=usersCache||[];
-  const u=users.find(x=>x.number===me.number);
+  if(!window.me) return;
+  const users=window.usersCache||[];
+  const u=users.find(x=>x.number===window.me.number);
   const history=(u&&u.loginHistory)||[];
   const rows=history.length
     ? history.map(h=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13px;font-weight:500">${esc(h.device||'Unknown device')}</div><div style="font-size:11px;color:var(--muted)">${esc(h.os||'')}</div></div><div style="font-size:12px;color:var(--muted);text-align:right">${new Date(h.time).toLocaleString()}</div></div>`).join('')
@@ -19729,10 +19729,10 @@ function openLoginHistory(){
    Logs security events (login, pwd change, MFA toggle, key rotation) in
    user record under securityLog[]. Max 20 entries. ===== */
 async function _logSecurityEvent(type, detail=''){
-  if(!me) return;
+  if(!window.me) return;
   try{
     const users=await getUsers();
-    const u=users.find(x=>x.number===me.number);
+    const u=users.find(x=>x.number===window.me.number);
     if(!u) return;
     if(!Array.isArray(u.securityLog)) u.securityLog=[];
     u.securityLog.unshift({time:Date.now(),type,detail,device:getDeviceLabel()});
@@ -19741,8 +19741,8 @@ async function _logSecurityEvent(type, detail=''){
   }catch(e){ console.warn('Security log write failed',e); }
 }
 function openSecurityLog(){
-  const users=usersCache||[];
-  const u=me?users.find(x=>x.number===me.number):null;
+  const users=window.usersCache||[];
+  const u=window.me?users.find(x=>x.number===window.me.number):null;
   const log=(u&&u.securityLog)||[];
   const icons={login:'🔑',password_change:'🔒',mfa_enabled:'🛡',mfa_disabled:'⚠️',key_rotation:'🔄',logout:'🚪',pin_set:'📌',pin_removed:'📌',face_mfa:'📷',recovery_set:'❓'};
   const rows=log.length
@@ -19763,13 +19763,14 @@ function openSecurityLog(){
 /* ===== SECURITY SCORE =====
    0–100 score based on active protections. Shown in settings panel. ===== */
 function _computeSecurityScore(){
+  const _me=window.me; const _uc=window.usersCache; const _pk=window._myPubJwk;
   let score=0; const checks=[];
-  if(me&&me.pwd){ score+=20; checks.push({ok:true,label:'Password set'}); } else checks.push({ok:false,label:'No password'});
-  if(me&&(me.totpEnabled||me.faceMfaEnabled)){ score+=25; checks.push({ok:true,label:'2FA enabled'}); } else checks.push({ok:false,label:'2FA off'});
+  if(_me&&_me.pwd){ score+=20; checks.push({ok:true,label:'Password set'}); } else checks.push({ok:false,label:'No password'});
+  if(_me&&(_me.totpEnabled||_me.faceMfaEnabled)){ score+=25; checks.push({ok:true,label:'2FA enabled'}); } else checks.push({ok:false,label:'2FA off'});
   if(localStorage.getItem('cc_pin')){ score+=15; checks.push({ok:true,label:'PIN lock on'}); } else checks.push({ok:false,label:'No PIN lock'});
-  const u=usersCache&&me?usersCache.find(x=>x&&x.number===me.number):null;
+  const u=_uc&&_me?_uc.find(x=>x&&x.number===_me.number):null;
   if(u&&u.secQ1&&u.secQ2){ score+=15; checks.push({ok:true,label:'Recovery questions set'}); } else checks.push({ok:false,label:'No recovery questions'});
-  if(_myPubJwk){ score+=15; checks.push({ok:true,label:'E2E keys active'}); } else checks.push({ok:false,label:'E2E keys missing'});
+  if(_pk){ score+=15; checks.push({ok:true,label:'E2E keys active'}); } else checks.push({ok:false,label:'E2E keys missing'});
   if(getPrivacyPref('secureLinkWarning',true)){ score+=10; checks.push({ok:true,label:'Secure link warning'}); } else checks.push({ok:false,label:'Link warning off'});
   return {score,checks};
 }
@@ -19791,14 +19792,14 @@ function renderSecurityScore(){
 
 /* ===== E2E KEY ROTATION ===== */
 async function rotateE2EKeys(){
-  if(!me){ showToast('Not logged in','Log in first.'); return; }
+  if(!window.me){ showToast('Not logged in','Log in first.'); return; }
   if(!confirm('Rotate your E2E encryption keys?\n\nMessages sent before rotation can no longer be decrypted on new devices. Existing messages on THIS device are still readable.\n\nThis cannot be undone.')) return;
   try{
-    localStorage.removeItem('cc_e2e_priv_'+me.number);
-    localStorage.removeItem('cc_e2e_pub_'+me.number);
-    _myKeyPair=null; _myPubJwk=null;
-    Object.keys(_dmAesCache).forEach(k=>delete _dmAesCache[k]);
-    Object.keys(_groupAesCache).forEach(k=>delete _groupAesCache[k]);
+    localStorage.removeItem('cc_e2e_priv_'+window.me.number);
+    localStorage.removeItem('cc_e2e_pub_'+window.me.number);
+    window._myKeyPair=null; window._myPubJwk=null;
+    Object.keys(window._dmAesCache||{}).forEach(k=>delete window._dmAesCache[k]);
+    Object.keys(window._groupAesCache||{}).forEach(k=>delete window._groupAesCache[k]);
     const kp=await ensureE2EKeypair();
     if(kp){
       await registerOrUpdate();
@@ -19837,9 +19838,9 @@ document.addEventListener('click', function(e){
 
 /* ===== LAST LOGIN NOTIFICATION ===== */
 function _showLastLoginNotif(){
-  if(!me) return;
-  const users=usersCache||[];
-  const u=users.find(x=>x&&x.number===me.number);
+  if(!window.me) return;
+  const users=window.usersCache||[];
+  const u=users.find(x=>x&&x.number===window.me.number);
   const history=(u&&u.loginHistory)||[];
   if(history.length<2) return; // first login
   const prev=history[1]; // [0] is the one we just recorded
@@ -19860,13 +19861,14 @@ async function exportAllDataEncrypted(){
   if(btn){ btn.disabled=true; btn.textContent='Encrypting…'; }
   try{
     // Build the plain export first (reuse same logic)
-    if(!convosCache) await getConvos();
-    const data={exportedAt:new Date().toISOString(),app:'SoCloudyBro',profile:{name:me.name,number:me.number,email:me.email||null,bio:me.bio||''},contacts:contacts.map(c=>({type:c.type,name:c.name,number:c.number||null,key:c.key})),conversations:[]};
-    for(const c of contacts){
-      const conv=convosCache.find(x=>x&&x.key===c.key);
+    if(!window.convosCache) await getConvos();
+    const _me=window.me; const _cc=window.contacts||[]; const _uc=window.usersCache||[];
+    const data={exportedAt:new Date().toISOString(),app:'SoCloudyBro',profile:{name:_me.name,number:_me.number,email:_me.email||null,bio:_me.bio||''},contacts:_cc.map(c=>({type:c.type,name:c.name,number:c.number||null,key:c.key})),conversations:[]};
+    for(const c of _cc){
+      const conv=(window.convosCache||[]).find(x=>x&&x.key===c.key);
       if(!conv||!conv.messages||!conv.messages.length) continue;
       const messages=conv.messages.map(m=>{
-        const u=m.from===me.number?me:(usersCache&&usersCache.find(x=>x&&x.number===m.from)||{});
+        const u=m.from===_me.number?_me:(_uc.find(x=>x&&x.number===m.from)||{});
         let content;
         if(msgHasGif(m)) content='[GIF]';
         else if(msgHasPoll&&msgHasPoll(m)) content='[Poll]';
@@ -19887,7 +19889,7 @@ async function exportAllDataEncrypted(){
     const out=new Uint8Array(magic.length+salt.length+iv.length+ct.byteLength);
     let off=0;out.set(magic,off);off+=magic.length;out.set(salt,off);off+=salt.length;out.set(iv,off);off+=iv.length;out.set(new Uint8Array(ct),off);
     const blob=new Blob([out],{type:'application/octet-stream'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='scb-export-'+me.number+'-'+Date.now()+'.scbenc';document.body.appendChild(a);a.click();a.remove();
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='scb-export-'+window.me.number+'-'+Date.now()+'.scbenc';document.body.appendChild(a);a.click();a.remove();
     showToast('Encrypted export ready','Saved as .scbenc — keep your password safe, there is no recovery.');
   }catch(e){ showToast('Export failed',scbErr('SCB-SEC-21','Encrypted export failed.',(e.message||''))); }
   finally{ if(btn){ btn.disabled=false; btn.textContent='🔒 Encrypted'; } }
@@ -19897,21 +19899,21 @@ async function exportAllDataEncrypted(){
    A message flagged as selfDestruct=true is shown once, then deleted from
    convosCache and Firebase when the recipient views it. ===== */
 function sendSelfDestructMsg(){
-  if(!activeConvo||activeConvo.type==='group'){ showToast('DMs only','Self-destruct messages are only available in direct chats.'); return; }
+  if(!window.activeConvo||window.activeConvo.type==='group'){ showToast('DMs only','Self-destruct messages are only available in direct chats.'); return; }
   const text=prompt('Type your self-destruct message:\n(The recipient sees it once, then it is permanently deleted.)');
   if(!text||!text.trim()) return;
   _sendSelfDestruct(text.trim());
 }
 async function _sendSelfDestruct(text){
-  if(!me||!activeConvo||!convosCache) return;
-  const key=activeConvo.key;
-  const c=convosCache.find(x=>x&&x.key===key);
+  if(!window.me||!window.activeConvo||!window.convosCache) return;
+  const key=window.activeConvo.key;
+  const c=(window.convosCache||[]).find(x=>x&&x.key===key);
   if(!c) return;
   const aesKey=await getConvoAesKey(c);
   const clean=filterBadWords(text);
-  const msg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),from:me.number,time:Date.now(),seen:[],selfDestruct:true};
+  const msg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),from:window.me.number,time:Date.now(),seen:[],selfDestruct:true};
   const wrapped=aesKey?await aesEnc(aesKey,clean):null;
-  if(wrapped){ msg.ctext=wrapped; _decCache[msg.id]={text:clean}; } else { msg.text=enc(clean); }
+  if(wrapped){ msg.ctext=wrapped; if(typeof _decCache!=='undefined') _decCache[msg.id]={text:clean}; } else { msg.text=enc(clean); }
   c.messages.push(msg);
   if(c.messages.length>100) c.messages.splice(0,c.messages.length-100);
   await saveConvos();
