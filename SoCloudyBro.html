@@ -4093,6 +4093,8 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="ctx-item" onclick="hideHeaderMenu();exportChat()">📤 Export chat</div>
           <div class="ctx-item" onclick="hideHeaderMenu();archiveToggle()" id="archive-menu-item">📁 Archive</div>
           <div class="ctx-item" onclick="hideHeaderMenu();muteToggle()" id="mute-menu-item">🔔 Mute notifications</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();openDisappearingMenu()" id="disappear-menu-item">⏱ Disappearing messages</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item" style="display:none">🔐 Verify security</div>
           <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockUser()" id="block-menu-item" style="display:none">⛔ Block</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openReport()" style="color:var(--danger)">🚩 Report</div>
         </div>
@@ -5773,6 +5775,7 @@ const _groupAesCache={}; // convoKey -> CryptoKey
 const _pubKeyCache={};   // number -> CryptoKey (their ECDH public key)
 let _myKeyPair=null;     // {privateKey, publicKey}
 let _myPubJwk=null;      // string JWK of our public key (published in user record)
+let _disappearRenderTimer=null; // setTimeout handle for disappearing-message re-render
 
 function _b64(buf){const b=new Uint8Array(buf);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
 function _unb64(str){const s=atob(str);const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b.buffer;}
@@ -6516,10 +6519,17 @@ function saveConvos(){
       // Clear it only once the write has settled, which is what both callers
       // already assumed it meant.
       try{
-        // Strip local-only flags before writing — pending:true must never persist to Firebase
+        // Strip local-only flags before writing — pending:true must never persist to Firebase.
+        // Also prune messages that have passed their disappearing-message TTL.
         const toSave=convosCache.map(c=>{
-          if(!c||!c.messages||!c.messages.some(m=>m&&m.pending)) return c;
-          return {...c,messages:c.messages.map(m=>m&&m.pending?{...m,pending:undefined}:m)};
+          if(!c) return c;
+          let msgs=c.messages||[];
+          if(c.disappearAfter&&c.disappearAfter>0){
+            const cutoff=Date.now()-c.disappearAfter;
+            msgs=msgs.filter(m=>!m||!m.time||m.time>cutoff);
+          }
+          if(msgs.some(m=>m&&m.pending)) msgs=msgs.map(m=>m&&m.pending?{...m,pending:undefined}:m);
+          return msgs===c.messages?c:{...c,messages:msgs};
         });
         await putBin(CONVOS_BIN,{conversations:toSave}); _saveConvosPending=null; resolve(); }
       catch(e){ _saveConvosPending=null; reject(e); }
@@ -8297,6 +8307,23 @@ function toggleHeaderMenu(e){
   const menu=document.getElementById('chat-header-menu');
   if(!menu) return;
   const opening=!menu.classList.contains('visible');
+  if(opening){
+    // Show "Verify security" only for DMs where both parties have E2E keys
+    const safetyItem=document.getElementById('safety-numbers-item');
+    if(safetyItem){
+      const isDm=activeConvo&&activeConvo.type!=='group';
+      const theirKey=isDm&&activeConvo.number?_userPubKeyStr(activeConvo.number):null;
+      safetyItem.style.display=(isDm&&theirKey&&_myPubJwk)?'flex':'none';
+    }
+    // Update disappearing label to show current setting
+    const disappearItem=document.getElementById('disappear-menu-item');
+    if(disappearItem&&activeConvo){
+      const conv=convosCache&&convosCache.find(x=>x&&x.key===activeConvo.key);
+      const ttl=conv&&conv.disappearAfter;
+      const label=ttl?_disappearLabel(ttl):'Off';
+      disappearItem.textContent='⏱ Disappearing: '+label;
+    }
+  }
   menu.classList.toggle('visible',opening);
   if(opening) setTimeout(()=>document.addEventListener('click',hideHeaderMenu,{once:true}),0);
 }
@@ -8425,8 +8452,12 @@ function updateOnlineStatus(num){
   const online=u&&isOnline(u.lastSeen);
   const el=document.getElementById('chat-header-sub');
   const customStatus=u&&dec(u.customStatus||'');
-  if(customStatus){ el.textContent=customStatus; el.className=online?'online':''; return; }
-  el.textContent=online?'● Online':`Last seen ${u?fmtTime(u.lastSeen):'unknown'}`;
+  const theirKey=_userPubKeyStr(num);
+  const myKey=me&&_myPubJwk;
+  const e2eOn=!!(theirKey&&myKey);
+  const e2eBadge=e2eOn?' <span style="color:var(--success);font-size:10px;font-weight:600">🔒 E2E</span>':'';
+  if(customStatus){ el.innerHTML=customStatus+e2eBadge; el.className=online?'online':''; return; }
+  el.innerHTML=(online?'● Online':`Last seen ${u?fmtTime(u.lastSeen):'unknown'}`)+e2eBadge;
   el.className=online?'online':'';
 }
 
@@ -12206,6 +12237,20 @@ function renderMessages(msgs) {
   if (activeConvo && activeConvo.type === 'group') {
     const chId = activeChannelId || 'general';
     msgs = (msgs || []).filter(m => (m.channelId || 'general') === chId);
+  }
+  // Disappearing messages: hide expired ones; they'll be pruned on next save
+  if (activeConvo && convosCache) {
+    const _conv = convosCache.find(x => x && x.key === activeConvo.key);
+    if (_conv && _conv.disappearAfter) {
+      msgs = _applyDisappearingFilter(msgs || [], _conv.disappearAfter);
+      // Schedule re-render when the next message would expire
+      const oldest = (msgs||[]).reduce((min,m)=>m.time&&m.time<min?m.time:min, Infinity);
+      if(oldest<Infinity){
+        const delay=Math.max(1000,(oldest+_conv.disappearAfter)-Date.now());
+        clearTimeout(_disappearRenderTimer);
+        _disappearRenderTimer=setTimeout(()=>{ lastMsgHash=''; if(activeConvo&&_conv.key===activeConvo.key) renderMessages(_conv.messages); },delay);
+      }
+    }
   }
   const hash = JSON.stringify(msgs);
   if (hash === lastMsgHash) return;
@@ -19509,6 +19554,103 @@ init();
 </script>
 
 <script>
+/* ===== DISAPPEARING MESSAGES =====
+   Per-conversation TTL. Stored as `disappearAfter` (ms) on the conv object.
+   Messages older than Date.now()-disappearAfter are hidden on render and
+   pruned from storage on the next saveConvos(). ===== */
+const _DISAPPEAR_OPTIONS=[
+  {label:'Off',ms:0},
+  {label:'1 minute',ms:60*1000},
+  {label:'1 hour',ms:60*60*1000},
+  {label:'24 hours',ms:24*60*60*1000},
+  {label:'7 days',ms:7*24*60*60*1000},
+];
+function _disappearLabel(ms){
+  const opt=_DISAPPEAR_OPTIONS.find(o=>o.ms===ms);
+  return opt?opt.label:ms+'ms';
+}
+function openDisappearingMenu(){
+  if(!activeConvo){ showToast('No chat open','Open a chat first.'); return; }
+  const conv=convosCache&&convosCache.find(x=>x&&x.key===activeConvo.key);
+  if(!conv){ showToast('Chat not loaded','Try reopening the chat.'); return; }
+  const current=conv.disappearAfter||0;
+  const opts=_DISAPPEAR_OPTIONS.map(o=>`<option value="${o.ms}"${o.ms===current?' selected':''}>${o.label}</option>`).join('');
+  const dlg=document.createElement('div');
+  dlg.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center';
+  dlg.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;min-width:280px;max-width:90vw;box-shadow:var(--shadow-lg)">
+    <h3 style="margin:0 0 8px;font-size:15px">⏱ Disappearing messages</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 16px">Messages will be hidden and deleted from this chat after the selected time.</p>
+    <select id="_disappear_sel" style="width:100%;padding:8px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px">${opts}</select>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+      <button class="btn btn-sm" style="flex:1" onclick="setDisappearTimer(parseInt(document.getElementById('_disappear_sel').value));this.closest('div[style*=fixed]').remove()">Save</button>
+    </div>
+  </div>`;
+  document.body.appendChild(dlg);
+}
+async function setDisappearTimer(ms){
+  if(!activeConvo) return;
+  const conv=convosCache&&convosCache.find(x=>x&&x.key===activeConvo.key);
+  if(!conv) return;
+  if(ms>0) conv.disappearAfter=ms; else delete conv.disappearAfter;
+  await saveConvos();
+  showToast('Disappearing messages',ms>0?'Set to '+_disappearLabel(ms):'Turned off');
+  lastMsgHash=''; renderMessages(conv.messages);
+}
+// Called from renderMessages — filter expired messages and schedule a prune
+function _applyDisappearingFilter(msgs, disappearAfter){
+  if(!disappearAfter||disappearAfter<=0) return msgs;
+  const cutoff=Date.now()-disappearAfter;
+  return msgs.filter(m=>!m.time||m.time>cutoff);
+}
+
+/* ===== SAFETY NUMBERS (key fingerprint) =====
+   Computes a 40-char hex fingerprint of the shared AES-GCM key bytes so
+   two users can compare out-of-band that no one is intercepting their chat. ===== */
+async function _computeSafetyNumbers(otherNum){
+  const key=await getDmAesKey(otherNum);
+  if(!key) return null;
+  try{
+    const raw=await crypto.subtle.exportKey('raw',key);
+    const hash=await crypto.subtle.digest('SHA-256',raw);
+    const hex=Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    // Format as 5 groups of 8: easier to read aloud
+    return hex.slice(0,40).match(/.{8}/g).join(' ');
+  }catch{ return null; }
+}
+async function openSafetyNumbers(){
+  if(!activeConvo||activeConvo.type==='group'){ showToast('DM only','Safety numbers are only available in 1-on-1 chats.'); return; }
+  const otherNum=activeConvo.number;
+  const fp=await _computeSafetyNumbers(otherNum);
+  if(!fp){ showToast('Not encrypted','This chat doesn\'t have E2E encryption active yet. Ask the other person to open the app to exchange keys.'); return; }
+  const dlg=document.createElement('div');
+  dlg.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center';
+  dlg.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;min-width:300px;max-width:90vw;box-shadow:var(--shadow-lg);text-align:center">
+    <div style="font-size:28px;margin-bottom:8px">🔐</div>
+    <h3 style="margin:0 0 6px;font-size:15px">Security verification</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 16px">Compare this code with <b>#${otherNum}</b> over a call or in person. If it matches on both devices, your chat is secure.</p>
+    <div style="font-family:monospace;font-size:17px;font-weight:700;letter-spacing:0.08em;background:var(--surface2);border-radius:var(--r-sm);padding:14px;word-break:break-all;color:var(--accent)">${esc(fp)}</div>
+    <p style="font-size:11px;color:var(--muted);margin:10px 0 16px">If the codes don\'t match, someone may be intercepting your messages.</p>
+    <button class="btn btn-full" onclick="this.closest('div[style*=fixed]').remove()">Close</button>
+  </div>`;
+  document.body.appendChild(dlg);
+}
+
+/* ===== CLIPBOARD AUTO-CLEAR =====
+   After copying any message, clear the clipboard after 60 seconds so the
+   contents don't linger in the OS clipboard manager. ===== */
+let _clipboardClearTimer=null;
+const _origClipboardWrite=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText.bind(navigator.clipboard):null;
+if(_origClipboardWrite){
+  navigator.clipboard.writeText=function(text){
+    clearTimeout(_clipboardClearTimer);
+    _clipboardClearTimer=setTimeout(()=>{
+      navigator.clipboard.writeText('').catch(()=>{});
+    }, 60000);
+    return _origClipboardWrite(text);
+  };
+}
+
 /* ===== AUTO-LOCK ON INACTIVITY + SCREEN BLUR ON HIDE =====
    Auto-lock: if a PIN is set, lock the screen after 10 minutes of no
    keyboard/mouse/touch activity. The timer resets on every interaction.
