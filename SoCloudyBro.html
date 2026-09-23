@@ -7340,15 +7340,20 @@ async function submitLogin() {
     // rewrite the record from the new session). A deleted account is gone.
     if(user.deleted) { err.textContent = scbErr('SCB-AUTH-13','This account has been deleted.'); return; }
 
-    // Check password
-    if(user.pwd && !(await verifyPassword(pwd, user.pwd))) {
+    // Check password — legacy accounts with no password stored must go through
+    // Account Recovery to set one. Accepting any password and storing it would
+    // let anyone who knows the account number take over the account permanently.
+    if(!user.pwd){
+      err.textContent = scbErr('SCB-AUTH-16','This account has no password on file. Use "Forgot password?" to set one via your security questions.');
+      return;
+    }
+    if(!(await verifyPassword(pwd, user.pwd))) {
       err.textContent = scbErr('SCB-AUTH-14','Incorrect password.');
       return;
     }
     // Transparently upgrade legacy weak hashes to the new salted SHA-256 format
     let pwdToStore = user.pwd;
-    if(user.pwd && user.pwd.indexOf('$')===-1){ pwdToStore = await hashPassword(pwd); }
-    if(!user.pwd){ pwdToStore = await hashPassword(pwd); }
+    if(user.pwd.indexOf('$')===-1){ pwdToStore = await hashPassword(pwd); }
 
     // Accounts created before email/password login existed may have no email
     // on file — require one now so future logins work the normal way.
@@ -10502,7 +10507,7 @@ function _renderBizBotRules(){
   const list = document.getElementById('biz-bot-rules-list');
   if(!list) return;
   if(!rules.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No rules yet — add one below</div>'; return; }
-  list.innerHTML = rules.map((r,i)=>`<div class="biz-bot-rule"><span class="biz-bot-kw">${r.keyword}</span><span class="biz-bot-reply">${r.reply}</span><button class="btn btn-ghost btn-sm" onclick="removeBizBotRule(${i})">×</button></div>`).join('');
+  list.innerHTML = rules.map((r,i)=>`<div class="biz-bot-rule"><span class="biz-bot-kw">${esc(r.keyword||'')}</span><span class="biz-bot-reply">${esc(r.reply||'')}</span><button class="btn btn-ghost btn-sm" onclick="removeBizBotRule(${i})">×</button></div>`).join('');
 }
 function addBizBotRule(){
   const kw = document.getElementById('biz-bot-kw-input').value.trim();
@@ -13987,11 +13992,13 @@ function filterFeedbackAdmin(btn,filter){
 }
 
 async function setFeedbackStatus(id,status){
+  if(!hasPermission('feedback_view')) { showToast('Access denied',scbErr('SCB-ADMIN-01','Admin access required.')); return; }
   try{await fbdb.ref(FEEDBACK_PATH+'/'+id+'/status').set(status);renderAdminFeedbackTab();}
   catch(e){showToast('Error','Could not update status.');}
 }
 
 function replyToFeedback(id,name){
+  if(!hasPermission('feedback_view')) { showToast('Access denied',scbErr('SCB-ADMIN-01','Admin access required.')); return; }
   const reply=prompt('Reply to '+name+':');
   if(!reply) return;
   fbdb.ref(FEEDBACK_PATH+'/'+id).update({adminReply:reply,status:'reviewed'})
@@ -14326,6 +14333,7 @@ function exportModerationLogCsv(){
   })();
 }
 async function renderAdminOverviewTab(){
+  if(!hasPermission('overview')){ const body=document.getElementById('admin-dashboard-body'); if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Access denied.</div>'; return; }
   const body=document.getElementById('admin-dashboard-body');
   body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading stats…</div>';
   try{
@@ -14417,6 +14425,7 @@ async function renderAdminOverviewTab(){
   }
 }
 async function renderAdminUsersTab(){
+  if(!hasPermission('users_view')&&!hasPermission('users_ban')){ const body=document.getElementById('admin-dashboard-body'); if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Access denied.</div>'; return; }
   const body=document.getElementById('admin-dashboard-body');
   body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading users…</div>';
   try{
@@ -14444,6 +14453,7 @@ async function renderAdminUsersTab(){
   }
 }
 async function renderAdminGroupsTab(){
+  if(!hasPermission('groups_view')){ const body=document.getElementById('admin-dashboard-body'); if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Access denied.</div>'; return; }
   const body=document.getElementById('admin-dashboard-body');
   body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading groups…</div>';
   try{
@@ -14477,6 +14487,7 @@ async function adminDeleteGroup(key){
   }catch(e){ showToast('Delete failed',scbErr('SCB-GRP-29','That group couldn\'t be deleted — the server rejected the write.',(e.message||''))); }
 }
 async function renderAdminReportsTab(){
+  if(!hasPermission('reports_view')){ const body=document.getElementById('admin-dashboard-body'); if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Access denied.</div>'; return; }
   const body=document.getElementById('admin-dashboard-body');
   body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading reports…</div>';
   try{
@@ -16591,8 +16602,9 @@ async function submitLinkParent(){
     if(!parent){ err.textContent=scbErr('SCB-FAM-21','No account found with that number.'); return; }
     const age=calcAge(parent.birthdate);
     if(age===null||age<18){ err.textContent=scbErr('SCB-FAM-22','That account isn\'t verified as 18 or older.'); return; }
-    // The password check is what proves the parent is actually present and
-    // consenting — it is verified against the stored salted hash, never stored.
+    // The password check proves the parent is present and consenting.
+    // Reject legacy accounts with no password — they must use recovery first.
+    if(!parent.pwd){ err.textContent=scbErr('SCB-FAM-23','That account has no password set. They must use Account Recovery first.'); return; }
     const ok=await verifyPassword(ppwd, parent.pwd);
     if(!ok){ err.textContent=scbErr('SCB-FAM-23','That password is incorrect.'); return; }
     const mine=users.find(u=>u&&u.number===me.number);
