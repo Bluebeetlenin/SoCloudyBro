@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <!-- LiveKit browser client (UMD build). Used only when LIVEKIT_URL and
      LIVEKIT_TOKEN_ENDPOINT are configured further down; if this script fails to
      load, meetings fall back to the built-in small-mesh WebRTC path, so a
@@ -6330,8 +6331,25 @@ async function putBin(path,data){
 }
 
 // -- USERS ---------------------------------------------------------------------
-async function getUsers(){const d=await getBin(USERS_BIN);usersCache=d.users||[];return usersCache;}
-async function saveUsers(u){await putBin(USERS_BIN,{users:u});usersCache=u;}
+async function getUsers(){
+  const snap=await fbdb.ref(USERS_BIN).get();
+  if(!snap.exists()) return (usersCache=[]);
+  const val=snap.val();
+  // Support both legacy monolithic format {users:[...]} and new per-number format {<number>:{...}}
+  if(val&&val.users!==undefined){
+    usersCache=(Array.isArray(val.users)?val.users:Object.values(val.users||{})).filter(Boolean);
+  } else {
+    usersCache=Object.values(val||{}).filter(u=>u&&u.number!=null);
+  }
+  return usersCache;
+}
+async function saveUsers(u){
+  usersCache=u;
+  const valid=u.filter(x=>x&&x.number!=null);
+  // Write per-number keyed object — replaces the old monolithic {users:[...]} blob.
+  // First write migrates any existing legacy format automatically.
+  await fbdb.ref(USERS_BIN).set(Object.fromEntries(valid.map(x=>[x.number,x])));
+}
 async function getReports(){const d=await getBin('reports');reportsCache=d.reports||[];return reportsCache;}
 async function saveReports(r){await putBin('reports',{reports:r});reportsCache=r;}
 // -- MULTI-DEVICE SESSIONS -----------------------------------------------------
@@ -6475,7 +6493,10 @@ async function registerOrUpdate(){
   const users=await getUsers();
   let u=users.find(x=>x.number===me.number);
   await ensureE2EKeypair();
-  const payload={number:me.number,name:enc(me.name),bio:enc(me.bio||''),customStatus:enc(me.customStatus||''),avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked:me.blocked||(u&&u.blocked)||[],lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
+  // Profile fields stored as plaintext — name/bio/customStatus are public by design
+  // (visible to all users). Encrypting them with a shared client-visible key was
+  // obfuscation only. dec() is kept below for backward compat reading old encrypted values.
+  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked:me.blocked||(u&&u.blocked)||[],lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
   if(_myPubJwk) payload.pubkey=_myPubJwk;
   // Per-account settings added by the feature pack. Each falls back to whatever
   // the server already has, so a device that hasn't loaded them yet can never
@@ -6527,8 +6548,16 @@ async function registerOrUpdate(){
 }
 async function heartbeat(){
   try{
-    const users=await getUsers();
-    const u=users.find(x=>x.number===me.number);
+    // Read only our own record (works in new per-number format; falls back to full
+    // read if we haven't migrated yet — i.e. our record isn't at users/<number>)
+    let u=null;
+    const mySnap=await fbdb.ref(USERS_BIN+'/'+me.number).get();
+    if(mySnap.exists()&&mySnap.val()&&mySnap.val().number!=null){
+      u=mySnap.val();
+    } else {
+      const all=await getUsers();
+      u=all.find(x=>x.number===me.number)||null;
+    }
     if(u){
       u.lastSeen=Date.now();
       const revoked=upsertSession(u);
@@ -6536,7 +6565,8 @@ async function heartbeat(){
         forceLocalLogout('This device was signed out remotely from your account settings.');
         return;
       }
-      await saveUsers(users);
+      // Write only our own record — no full-array write needed
+      await fbdb.ref(USERS_BIN+'/'+me.number).set(u);
     }
   }catch{}
 }
@@ -6546,15 +6576,20 @@ function lookupUser(num){return usersCache.find(u=>u.number===num);}
 // -- CONVOS --------------------------------------------------------------------
 function dmKey(a,b){return 'dm_'+[Number(a),Number(b)].sort((x,y)=>x-y).join('_');}
 async function getConvos(){
-  const d=await getBin(CONVOS_BIN);
-  // Firebase Realtime Database reconstructs arrays with gaps (e.g. after a delete
-  // left a non-sequential index) by filling missing slots with null — every one of
-  // the 50+ `convosCache.find(x=>x&&x.key===...)` call sites across this file would
-  // then crash with "Cannot read properties of undefined/null (reading 'key')" the
-  // moment .find/.filter's callback hit that slot. Stripping falsy entries here,
-  // once, at the single point data enters convosCache, keeps the array guaranteed
-  // clean everywhere downstream instead of guarding every call site individually.
-  convosCache=(d.conversations||[]).filter(Boolean);
+  const snap=await fbdb.ref(CONVOS_BIN).get();
+  let rawArr=[];
+  if(snap.exists()){
+    const val=snap.val();
+    if(val&&val.conversations!==undefined){
+      // Legacy monolithic format: {conversations:[...]}
+      rawArr=Array.isArray(val.conversations)?val.conversations:Object.values(val.conversations||{});
+    } else if(val&&typeof val==='object'){
+      // New per-key format: {<convoKey>:{...convo...}}
+      rawArr=Object.values(val).filter(c=>c&&c.key);
+    }
+  }
+  // Strip falsy slots (Firebase can introduce null gaps in arrays)
+  convosCache=rawArr.filter(Boolean);
   convosCache.forEach(c=>{
     // Wrapped per-conversation: a bug or corrupted field in one conversation
     // (e.g. a group's malformed data) must never block loading/opening any
@@ -6625,7 +6660,10 @@ function saveConvos(){
           if(msgs.some(m=>m&&m.pending)) msgs=msgs.map(m=>{ if(!m||!m.pending) return m; const {pending,...rest}=m; return rest; });
           return msgs===c.messages?c:{...c,messages:msgs};
         });
-        await putBin(CONVOS_BIN,{conversations:toSave}); _saveConvosPending=null; _convosDirty=false; resolve(); }
+        // Write per-conversation key — replaces the old monolithic blob.
+        // update() merges keys so concurrent writers don't clobber each other's conversations.
+        const convoUpdates=Object.fromEntries(toSave.filter(c=>c&&c.key).map(c=>[c.key,c]));
+        await fbdb.ref(CONVOS_BIN).update(convoUpdates); _saveConvosPending=null; _convosDirty=false; resolve(); }
       catch(e){ _saveConvosPending=null; reject(e); }
     },350);
   });
@@ -6885,6 +6923,14 @@ function promptForcedPasswordChange(){
 // -- INIT ----------------------------------------------------------------------
 let launched=false;
 async function init(){
+  // Ensure Firebase anonymous auth is active before any DB read/write.
+  // This runs early — even before login — so security rules checking auth != null
+  // are satisfied for registration writes too.
+  try{
+    if(firebase.auth&&!firebase.auth().currentUser){
+      await firebase.auth().signInAnonymously();
+    }
+  }catch(e){ console.warn('SCB-AUTH: anonymous sign-in failed:',e.message); }
   // (email SDK removed — reports now go through Web3Forms, 2FA uses TOTP)
   loadStorage();
   // Always ensure setup modal is closed if we have a user
@@ -14939,20 +14985,20 @@ const SCB_CANONICAL_RULES = {
     ".write": false,
 
     "users": {
-      // Any authenticated session can read user list (needed for search/contact add)
+      // Public read — needed for contact search/add and profile display
       ".read": true,
-      // Root-level write needed for saveUsers() which writes the full array
-      ".write": true,
+      // Writes require anonymous auth (prevents unauthenticated spam writes)
+      ".write": "auth != null",
       "$userId": {
         ".indexOn": ["number", "linkedSoCloudyBro"]
       }
     },
 
     "conversations": {
-      // Conversations are read by any signed-in user (message content is E2E encrypted)
+      // Public read — message content is E2E encrypted at the app layer
       ".read": true,
-      // Root-level write needed for saveConvos() which writes the full conversations array
-      ".write": true,
+      // Writes require anonymous auth
+      ".write": "auth != null",
       "$convoId": {
         "messages": {
           ".indexOn": ["at"]
@@ -14963,48 +15009,45 @@ const SCB_CANONICAL_RULES = {
     "updates": {
       // Public read for the community feed
       ".read": true,
-      // Any user can post an update; deletes restricted to owner or admin
-      ".write": true,
+      ".write": "auth != null",
       ".indexOn": ["at", "author"]
     },
 
     "reports": {
-      // Readable by all (admin views via app); writable by any user to file a report
       ".read": true,
-      ".write": true
+      ".write": "auth != null"
     },
 
     "calls": {
-      // Signalling data — publicly readable for WebRTC handshake, writable by anyone
+      // Signalling data — publicly readable for WebRTC handshake
       ".read": true,
-      ".write": true
+      ".write": "auth != null"
     },
 
     "voice": {
       ".read": true,
-      ".write": true
+      ".write": "auth != null"
     },
 
     "races": {
       ".read": true,
-      ".write": true
+      ".write": "auth != null"
     },
 
     "syntax_meetings": {
       ".read": true,
-      ".write": true
+      ".write": "auth != null"
     },
 
     "feedback": {
-      // Users write their own feedback; all authenticated reads allowed (admin views via app)
       ".read": true,
-      ".write": true
+      ".write": "auth != null"
     },
 
     "admin_site": {
       // Live code updater — readable by all (needed for update banner), writable by admin via app
       ".read": true,
-      ".write": true
+      ".write": "auth != null"
     },
 
     // Block any other top-level path not listed above
