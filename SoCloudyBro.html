@@ -6622,7 +6622,7 @@ function saveConvos(){
             const cutoff=Date.now()-c.disappearAfter;
             msgs=msgs.filter(m=>!m||!m.time||m.time>cutoff);
           }
-          if(msgs.some(m=>m&&m.pending)) msgs=msgs.map(m=>m&&m.pending?{...m,pending:undefined}:m);
+          if(msgs.some(m=>m&&m.pending)) msgs=msgs.map(m=>{ if(!m||!m.pending) return m; const {pending,...rest}=m; return rest; });
           return msgs===c.messages?c:{...c,messages:msgs};
         });
         await putBin(CONVOS_BIN,{conversations:toSave}); _saveConvosPending=null; resolve(); }
