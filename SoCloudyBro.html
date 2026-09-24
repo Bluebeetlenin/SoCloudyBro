@@ -6923,14 +6923,22 @@ function promptForcedPasswordChange(){
 // -- INIT ----------------------------------------------------------------------
 let launched=false;
 async function init(){
-  // Ensure Firebase anonymous auth is active before any DB read/write.
-  // This runs early — even before login — so security rules checking auth != null
-  // are satisfied for registration writes too.
-  try{
-    if(firebase.auth&&!firebase.auth().currentUser){
-      await firebase.auth().signInAnonymously();
-    }
-  }catch(e){ console.warn('SCB-AUTH: anonymous sign-in failed:',e.message); }
+  // Wait for Firebase auth state to settle before any DB op. If no user exists,
+  // sign in anonymously. onAuthStateChanged fires immediately for an existing
+  // session (anonymous sessions persist across page loads), so this adds no
+  // perceptible delay on return visits and only a single network round-trip on
+  // a fresh page load — far safer than fire-and-forget signInAnonymously().
+  await new Promise(resolve=>{
+    if(!firebase.auth){ resolve(); return; }
+    const unsub=firebase.auth().onAuthStateChanged(async user=>{
+      unsub();
+      if(!user){
+        try{ await firebase.auth().signInAnonymously(); }
+        catch(e){ console.warn('SCB-AUTH: anonymous sign-in failed:',e.message); }
+      }
+      resolve();
+    }, ()=>resolve());
+  });
   // (email SDK removed — reports now go through Web3Forms, 2FA uses TOTP)
   loadStorage();
   // Always ensure setup modal is closed if we have a user
