@@ -6540,7 +6540,10 @@ async function registerOrUpdate(){
   const isNewDevice=hasExistingDevices && !u.devices[deviceId];
   upsertSession(u);
   addLoginSession(u);
-  await saveUsers(users);
+  usersCache=users;
+  // Write only our own record — avoids a race where two users calling saveUsers()
+  // concurrently overwrite each other's changes with stale full-array snapshots.
+  await fbdb.ref(USERS_BIN+'/'+me.number).set(u);
   if(isNewDevice&&!sessionStorage.getItem('cc_new_device_notice_shown')){
     sessionStorage.setItem('cc_new_device_notice_shown','1');
     setTimeout(()=>showToast('New device signed in','If this wasn\'t you, review and revoke devices in Settings → Sessions.'),1500);
@@ -7707,7 +7710,7 @@ function showLockScreen(){
   if(me&&me.name){
     document.getElementById('lock-name').textContent=me.name;
     const av=document.getElementById('lock-avatar');
-    if(av) renderAvatar(av,{name:enc(me.name),avatar:me.avatar||''},80);
+    if(av) renderAvatar(av,{name:me.name,avatar:me.avatar||''},80);
   }
 }
 function hideLockScreen(){document.getElementById('lock-screen').classList.remove('visible');}
@@ -8235,19 +8238,23 @@ async function blockDeviceForAge(){
   localStorage.setItem('cc_age_blocked','1');
   try{
     const ip = await getDeviceIP();
-    const d = await getBin(USERS_BIN);
-    const bl = d.blacklist || [];
+    // Blacklist lives at its own top-level path — NOT nested in users — so reading
+    // or writing it never touches user records.
+    const snap = await fbdb.ref('blacklist').get();
+    const raw = snap.exists() ? snap.val() : [];
+    const bl = (Array.isArray(raw) ? raw : Object.values(raw||{})).filter(Boolean);
     if(!bl.find(b=>b.deviceId===deviceId || (ip && b.ip===ip))){
       bl.push({deviceId, ip: ip||null, reason:'underage_signup', blockedAt: Date.now()});
-      await putBin(USERS_BIN, {users: d.users||[], blacklist: bl});
+      await fbdb.ref('blacklist').set(bl);
     }
   }catch{}
 }
 async function isDeviceOrIPBlacklisted(){
   if(isDeviceAgeBlocked()) return true;
   try{
-    const d = await getBin(USERS_BIN);
-    const bl = d.blacklist || [];
+    const snap = await fbdb.ref('blacklist').get();
+    const raw = snap.exists() ? snap.val() : [];
+    const bl = (Array.isArray(raw) ? raw : Object.values(raw||{})).filter(Boolean);
     if(bl.find(b=>b.deviceId===deviceId)){ localStorage.setItem('cc_age_blocked','1'); return true; }
     const ip = await getDeviceIP();
     if(ip && bl.find(b=>b.ip===ip)){ localStorage.setItem('cc_age_blocked','1'); return true; }
@@ -8403,7 +8410,7 @@ function renderMyCard(){
   if(!me)return;
   document.getElementById('my-name').textContent=me.name;
   const av=document.getElementById('my-avatar');
-  renderAvatar(av,{name:enc(me.name),avatar:me.avatar||''});
+  renderAvatar(av,{name:me.name,avatar:me.avatar||''});
   const statusEl=document.getElementById('my-status-text');
   if(statusEl){
     statusEl.innerHTML=me.customStatus
@@ -8423,7 +8430,7 @@ function updateSettingsPanel(){
   document.getElementById('settings-name-disp').textContent=me.name;
   document.getElementById('settings-num-disp').textContent='#'+me.number;
   document.getElementById('settings-bio-disp').textContent=me.bio||'No bio set';
-  renderAvatar(document.getElementById('settings-avatar'),{name:enc(me.name),avatar:me.avatar||''},60);
+  renderAvatar(document.getElementById('settings-avatar'),{name:me.name,avatar:me.avatar||''},60);
   const hasPin=!!localStorage.getItem('cc_pin');
   document.getElementById('pin-status-text').textContent=hasPin?'PIN is set':'Not set';
   document.getElementById('pin-btn-text').textContent=hasPin?'Change PIN':'Set PIN';
@@ -14133,9 +14140,9 @@ async function submitAdminResetAccount(){
     // Reset to a generic placeholder rather than blank, so the account still
     // renders everywhere (sidebar initials, chat headers, report rows) instead
     // of showing an empty name.
-    u.name=enc('Reset User #'+num);
-    u.bio=enc('');
-    u.customStatus=enc('');
+    u.name='Reset User #'+num;
+    u.bio='';
+    u.customStatus='';
     u.avatar='';
     u.themeColors=null;
     u.largeTextMode=false;
@@ -14943,9 +14950,10 @@ async function adminDeleteGroup(key){
   if(!confirm('Permanently delete this group and all its messages for everyone?')) return;
   try{
     if(!convosCache) await getConvos();
-    const filtered=convosCache.filter(c=>c&&c.key!==key);
-    await putBin(CONVOS_BIN,{conversations:filtered});
-    convosCache=filtered;
+    convosCache=convosCache.filter(c=>c&&c.key!==key);
+    // Delete the specific conversation key — using Firebase remove() so only
+    // that one record is touched, not the entire conversations path.
+    await fbdb.ref(CONVOS_BIN+'/'+key).remove();
     showToast('Group deleted','');
     renderAdminGroupsTab();
   }catch(e){ showToast('Delete failed',scbErr('SCB-GRP-29','That group couldn\'t be deleted — the server rejected the write.',(e.message||''))); }
@@ -15062,6 +15070,12 @@ const SCB_CANONICAL_RULES = {
       ".write": "auth != null"
     },
 
+    "blacklist": {
+      // Device/IP age-block list — separate path so reads/writes never touch user records
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
     // Block any other top-level path not listed above
     "$other": {
       ".read": false,
@@ -15172,10 +15186,13 @@ async function adminCleanFirebase() {
       for (const field of ['name', 'bio', 'customStatus']) {
         if (!acct[field]) continue;
         try {
-          let decoded = dec(acct[field]);
-          if (decoded && typeof decoded === 'string' && decoded.startsWith('v2:')) {
-            profilePatches[`users/${acctKey}/${field}`] = enc(dec(decoded));
-            results.profilesFixed++;
+          // Check for legacy encrypted value and migrate to plaintext
+          if(acct[field] && typeof acct[field]==='string' && acct[field].startsWith('v2:')){
+            const decoded = dec(acct[field]);
+            if(typeof decoded==='string' && !decoded.startsWith('v2:')){
+              profilePatches[`users/${acctKey}/${field}`] = decoded;
+              results.profilesFixed++;
+            }
           }
         } catch(e) { results.errors++; }
       }
@@ -17025,7 +17042,7 @@ async function createChildProfile(){
       if(Array.isArray(reserved)&&reserved.includes(num)){ err.textContent=scbErr('SCB-FAM-15','#'+num+' is reserved and cannot be used.'); return; }
     }catch(e){}
     const rec={
-      number:num, name:enc(name), bio:enc(''), customStatus:enc(''), avatar:'',
+      number:num, name:name, bio:'', customStatus:'', avatar:'',
       pwd:await hashPassword(pwd), email:'', birthdate:bd, blocked:[], lastSeen:0,
       createdAt:Date.now(), accountTier:deriveAccountTier(bd), childOf:me.number,
       // Child profiles start locked down; the parent opens things up deliberately.
@@ -18994,7 +19011,15 @@ let _scbConvoWatchRef=null, _scbConvoWatchCb=null, _scbRtTimer=null;
 // snapshot straight from the listener rather than issuing a second fetch for
 // data we've already been handed. Keep the two in step if either changes.
 function _scbApplyConvoSnapshot(d){
-  convosCache=((d&&d.conversations)||[]).filter(Boolean);
+  // Support both legacy {conversations:[...]} and new per-key {<key>:{...}} format —
+  // keep in step with getConvos() which has the same dual-format logic.
+  let rawArr=[];
+  if(d&&d.conversations!==undefined){
+    rawArr=Array.isArray(d.conversations)?d.conversations:Object.values(d.conversations||{});
+  } else if(d&&typeof d==='object'){
+    rawArr=Object.values(d).filter(c=>c&&c.key);
+  }
+  convosCache=rawArr.filter(Boolean);
   convosCache.forEach(c=>{
     try{
       if(c.messages && !Array.isArray(c.messages)) c.messages=Object.values(c.messages).filter(Boolean);
