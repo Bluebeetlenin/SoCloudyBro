@@ -4735,6 +4735,14 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="field-hint">Since you're under 18, a parent or guardian needs to approve your account. Have them create their own SoCloudyBro account (or log into one they already have) using this same email — they'll see your request waiting for them there.</div>
       </div>
       <div class="field"><label>Bio <span style="color:var(--muted)">(optional)</span></label><textarea id="setup-bio" placeholder="I love Roblox! 🎮" maxlength="120" rows="2"></textarea></div>
+      <div class="field" id="setup-captcha-field">
+        <label>Security check — <span id="setup-captcha-q" style="font-weight:700;color:var(--accent)"></span></label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="setup-captcha-ans" placeholder="Your answer" inputmode="numeric" autocomplete="off" style="flex:1"/>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="refreshCaptcha()" title="New question" style="flex-shrink:0">↻ New</button>
+        </div>
+        <div class="field-hint">Solve the puzzle to prove you're human</div>
+      </div>
       <div class="error-text" id="setup-error"></div>
       <button class="btn btn-full" onclick="submitSetup()">Get Started ↗</button>
       <div class="google-auth-block" id="google-auth-block-signup" style="margin-top:14px">
@@ -14269,7 +14277,7 @@ async function openAdminDashboard(){
 function switchAdminTab(tab){
   adminDashTab=tab;
   document.querySelectorAll('.admin-dash-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  const perm={overview:'overview',users:'users_view',groups:'groups_view',reports:'reports_view',feedback:'feedback_view',code:'code_update'};
+  const perm={overview:'overview',users:'users_view',groups:'groups_view',reports:'reports_view',spam:'users_view',feedback:'feedback_view',code:'code_update'};
   if(!hasPermission(perm[tab]||tab)&&me&&me.number!==ADMIN_NUMBER){
     const body=document.getElementById('admin-dashboard-body');
     if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">You don\'t have permission to view this section.</div>';
@@ -14279,6 +14287,7 @@ function switchAdminTab(tab){
   else if(tab==='users') renderAdminUsersTab();
   else if(tab==='groups') renderAdminGroupsTab();
   else if(tab==='reports') renderAdminReportsTab();
+  else if(tab==='spam') renderAdminSpamTab();
   else if(tab==='feedback') renderAdminFeedbackTab();
   else if(tab==='code') renderAdminCodeTab();
 }
@@ -16174,6 +16183,197 @@ function renderMusicSettings(){
     lfmDisc.onclick=()=>{ clearLastfmUsername(); renderMusicSettings(); if(me) fbdb.ref(USERS_BIN+'/'+me.number+'/'+MUSIC_NP_PATH).remove().catch(()=>{}); };
   }
 }
+
+/* =============================================================================
+   BOT CAPTCHA + SPAM / BOT DETECTION
+   Captcha: random arithmetic/logic puzzle shown on every signup, regenerated
+   on each wrong attempt. Checked before any Firebase writes in submitSetup().
+   Spam detector: sliding-window rate-limit in sendMsg(). Flags written to
+   Firebase spam_flags/<push-id> for admin review.
+   ========================================================================== */
+
+// ---- Captcha ----------------------------------------------------------------
+const _CAPTCHA_OPS = [
+  (a,b)=>({q:a+' + '+b+' = ?',  ans:a+b}),
+  (a,b)=>({q:Math.max(a,b)+' − '+Math.min(a,b)+' = ?', ans:Math.max(a,b)-Math.min(a,b)}),
+  (a,b)=>({q:a+' × '+b+' = ?',  ans:a*b}),
+];
+let _captchaAns = null;
+function refreshCaptcha(){
+  const op = _CAPTCHA_OPS[Math.floor(Math.random()*_CAPTCHA_OPS.length)];
+  const a = Math.floor(Math.random()*10)+1;
+  const b = Math.floor(Math.random()*10)+1;
+  const {q,ans} = op(a,b);
+  _captchaAns = ans;
+  const qEl = document.getElementById('setup-captcha-q');
+  if(qEl) qEl.textContent = q;
+  const ansEl = document.getElementById('setup-captcha-ans');
+  if(ansEl) ansEl.value = '';
+}
+// Generate on load; regenerate whenever the signup tab is shown
+document.addEventListener('DOMContentLoaded', ()=>{
+  refreshCaptcha();
+  if(typeof switchAuthTab==='function'){
+    const _orig=switchAuthTab;
+    switchAuthTab=function(tab){
+      _orig(tab);
+      if(tab==='signup') setTimeout(refreshCaptcha,50);
+    };
+  }
+});
+
+// ---- Spam / bot detector ----------------------------------------------------
+const _spamTimestamps = [];   // rolling window of send timestamps
+let _spamMuteUntil = 0;       // epoch ms, 0 = not muted
+let _spamLastText = '';
+let _spamIdenticalRun = 0;
+const SPAM_WARN_COUNT  = 8;   // msgs in 30s → toast warning
+const SPAM_MUTE_COUNT  = 12;  // msgs in 30s → 5-min mute
+const SPAM_IDENTICAL_WARN = 3; // same message in a row → warning
+const SPAM_IDENTICAL_MUTE = 5; // same message in a row → 5-min mute
+const SPAM_WINDOW_MS  = 30000; // sliding window size
+const SPAM_MUTE_MS    = 5 * 60 * 1000;
+
+// Returns true if send is allowed, false if blocked.
+function checkSpamRate(text){
+  if(!me || me.number === ADMIN_NUMBER) return true;
+  const now = Date.now();
+  // Check active mute
+  if(now < _spamMuteUntil){
+    const secsLeft = Math.ceil((_spamMuteUntil - now) / 1000);
+    showToast('Slow down', 'You\'re muted for spam — '+secsLeft+'s remaining.');
+    return false;
+  }
+  // Sliding window
+  _spamTimestamps.push(now);
+  const cutoff = now - SPAM_WINDOW_MS;
+  while(_spamTimestamps.length && _spamTimestamps[0] < cutoff) _spamTimestamps.shift();
+  const count = _spamTimestamps.length;
+  // Identical message run
+  const trimmed = (text||'').trim();
+  if(trimmed && trimmed === _spamLastText){
+    _spamIdenticalRun++;
+  } else {
+    _spamIdenticalRun = 1;
+    _spamLastText = trimmed;
+  }
+  // Bot/spam heuristics — account age bonus: brand-new accounts get a tighter limit
+  const acctAgeMs = me.createdAt ? now - me.createdAt : Infinity;
+  const newAcctMultiplier = acctAgeMs < 5 * 60 * 1000 ? 0.6 : 1; // 40% stricter if < 5 min old
+  const effectiveCount = Math.ceil(count / newAcctMultiplier);
+  // Hard mute
+  if(effectiveCount >= SPAM_MUTE_COUNT || _spamIdenticalRun >= SPAM_IDENTICAL_MUTE){
+    _spamMuteUntil = now + SPAM_MUTE_MS;
+    showToast('Spam detected', 'You\'ve been muted for 5 minutes.');
+    _reportSpam(_spamIdenticalRun >= SPAM_IDENTICAL_MUTE ? 'identical_messages' : 'rate_limit', count, _spamIdenticalRun);
+    return false;
+  }
+  // Warnings
+  if(effectiveCount >= SPAM_WARN_COUNT){
+    showToast('Slow down', 'You\'re sending messages too quickly.');
+  } else if(_spamIdenticalRun >= SPAM_IDENTICAL_WARN){
+    showToast('Heads up', 'Avoid sending the same message repeatedly.');
+  }
+  return true;
+}
+
+async function _reportSpam(type, msgCount, identicalRun){
+  if(!me) return;
+  try{
+    await fbdb.ref('spam_flags').push({
+      number: me.number,
+      name: me.name||'',
+      type,           // 'rate_limit' | 'identical_messages'
+      msgCount,
+      identicalRun,
+      at: Date.now(),
+      resolved: false
+    });
+  }catch{}
+}
+
+// Patch sendMsg to run spam check before sending
+const _origSendMsgForSpam = sendMsg;
+sendMsg = async function(gifUrl){
+  if(gifUrl && typeof gifUrl !== 'string') return _origSendMsgForSpam.apply(this, arguments);
+  const input = document.getElementById('msg-input');
+  const text = input ? input.value.trim() : '';
+  if(!gifUrl && !checkSpamRate(text)){
+    // checkSpamRate already showed a toast
+    return;
+  }
+  return _origSendMsgForSpam.apply(this, arguments);
+};
+
+// ---- Admin Spam tab ---------------------------------------------------------
+async function renderAdminSpamTab(){
+  if(!requireAdmin()) return;
+  const body = document.getElementById('admin-dashboard-body');
+  if(!body) return;
+  body.innerHTML = '<div style="padding:8px 0;color:var(--muted);font-size:13px">Loading spam reports…</div>';
+  try{
+    const snap = await fbdb.ref('spam_flags').orderByChild('at').limitToLast(50).get();
+    const flags = [];
+    if(snap.exists()){
+      snap.forEach(child=>{ flags.unshift({_key:child.key, ...child.val()}); });
+    }
+    if(!flags.length){
+      body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No spam reports yet.</div>';
+      return;
+    }
+    const rows = flags.map(f=>{
+      const when = f.at ? new Date(f.at).toLocaleString() : '—';
+      const typeLabel = f.type==='identical_messages' ? '🔁 Repeated messages' : '⚡ Rate limit';
+      const detail = f.type==='identical_messages'
+        ? f.identicalRun+' identical in a row'
+        : f.msgCount+' msgs / 30s';
+      const resolvedBadge = f.resolved ? '<span style="font-size:10px;background:var(--success-soft);color:var(--success);padding:2px 6px;border-radius:999px;margin-left:6px">Resolved</span>' : '';
+      return `<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">#${esc(String(f.number))} ${esc(f.name||'')}${resolvedBadge}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${typeLabel} · ${esc(detail)} · ${esc(when)}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${!f.resolved?`<button class="btn btn-ghost btn-sm" onclick="resolveSpamFlag('${esc(f._key)}',this)">Dismiss</button>`:''}
+          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan(${f.number})">Ban</button>
+        </div>
+      </div>`;
+    }).join('');
+    body.innerHTML = `<div style="padding:0 4px"><div style="font-size:12px;color:var(--muted);margin-bottom:8px">${flags.length} flag(s) — most recent first</div>${rows}</div>`;
+  }catch(e){
+    body.innerHTML = '<div style="color:var(--danger);padding:16px">Failed to load spam reports: '+esc(e.message||String(e))+'</div>';
+  }
+}
+
+async function resolveSpamFlag(key, btn){
+  if(!requireAdmin()) return;
+  try{
+    await fbdb.ref('spam_flags/'+key+'/resolved').set(true);
+    if(btn) btn.closest('div[style]').querySelector('[onclick*="resolveSpamFlag"]')?.remove();
+    showToast('Dismissed','');
+    renderAdminSpamTab();
+  }catch(e){ showToast('Failed',e.message||''); }
+}
+
+// ---- Check captcha in submitSetup (patched after DOMContentLoaded) ----------
+document.addEventListener('DOMContentLoaded', ()=>{
+  const _origSubmitSetup = typeof submitSetup === 'function' ? submitSetup : null;
+  if(!_origSubmitSetup) return;
+  submitSetup = async function(){
+    const err = document.getElementById('setup-error');
+    // Only check captcha on signup tab (not login)
+    const signupView = document.getElementById('signup-view');
+    if(!signupView || signupView.style.display !== 'none'){
+      const userAns = parseInt((document.getElementById('setup-captcha-ans')?.value||'').trim(), 10);
+      if(_captchaAns === null || isNaN(userAns) || userAns !== _captchaAns){
+        if(err) err.textContent = scbErr('SCB-SIGNUP-CAP','Please answer the security question correctly.');
+        refreshCaptcha();
+        return;
+      }
+    }
+    return _origSubmitSetup.apply(this, arguments);
+  };
+});
 
 /* =============================================================================
    11. MULTI-LANGUAGE SUPPORT (i18n)
@@ -20113,6 +20313,7 @@ init();
       <button class="admin-dash-tab" data-tab="users" onclick="switchAdminTab('users')">Users</button>
       <button class="admin-dash-tab" data-tab="groups" onclick="switchAdminTab('groups')">Groups</button>
       <button class="admin-dash-tab" data-tab="reports" onclick="switchAdminTab('reports')">Reports</button>
+      <button class="admin-dash-tab" data-tab="spam" onclick="switchAdminTab('spam')">🤖 Spam</button>
       <button class="admin-dash-tab" data-tab="feedback" onclick="switchAdminTab('feedback')">💬 Feedback</button>
       <button class="admin-dash-tab" data-tab="code" onclick="switchAdminTab('code')">🚀 Code</button>
     </div>
