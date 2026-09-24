@@ -5017,6 +5017,7 @@ body.device-tablet .msg-body{max-width:74%}
         <div>
           <div id="cp-name" style="font-size:16px;font-weight:600"></div>
           <div id="cp-nowplaying" style="display:none;margin-top:4px"></div>
+          <div id="cp-music" style="display:none;margin-top:4px"></div>
           <div id="cp-number" style="font-size:12px;color:var(--accent)"></div>
           <div id="cp-bio" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
           <div id="cp-status" style="font-size:11px;margin-top:2px"></div>
@@ -7066,6 +7067,7 @@ async function launch(){
   if(me.mustChangePassword) step('promptForcedPasswordChange', promptForcedPasswordChange);
   if(_resetApplied) step('renderMyCard (after reset)', renderMyCard);
   if(shouldShowTutorial()) step('startTutorial', startTutorial);
+  step('startMusicPolling', ()=>{ if(getSpotifyTokens()||getLastfmUsername()) startMusicPolling(); });
 }
 
 // -- AUTH TABS & LOGIN ---------------------------------------------------------
@@ -15978,6 +15980,202 @@ openContactPanel=function(){
 };
 
 /* =============================================================================
+   MUSIC NOW PLAYING — Spotify + Last.fm
+   Polls the signed-in user's current track every 30 s and writes it to
+   users/<myNumber>/musicNowPlaying in Firebase so contacts can see it.
+   Contacts' music status is read directly from Firebase when their panel opens.
+   ========================================================================== */
+const SPOTIFY_CLIENT_ID = 'c0528b9e158b4bfab6a1135e3ec2d0e8';
+const SPOTIFY_REDIRECT_URI = 'https://socloudybro.vercel.app/SoCloudyBro.html';
+const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state';
+let LASTFM_API_KEY = ''; // filled in by renderMusicSettings after user enters it — or set here once you have a key from last.fm/api/account/create
+const MUSIC_NP_PATH = 'musicNowPlaying';
+const MUSIC_NP_MAX_AGE_MS = 5 * 60 * 1000;
+let _musicPollTimer = null;
+let _lastMusicTrackKey = null;
+
+// -- Spotify PKCE helpers --
+function _musicRandStr(len){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  return Array.from(crypto.getRandomValues(new Uint8Array(len))).map(x=>chars[x%chars.length]).join('');
+}
+async function _pkceChallenge(v){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+}
+
+function getSpotifyTokens(){ try{const r=localStorage.getItem('scb_spotify_tokens');return r?JSON.parse(r):null;}catch{return null;} }
+function setSpotifyTokens(t){ try{localStorage.setItem('scb_spotify_tokens',JSON.stringify(t));}catch{} }
+function clearSpotifyTokens(){ try{localStorage.removeItem('scb_spotify_tokens');localStorage.removeItem('scb_spotify_pkce');}catch{} }
+function getLastfmUsername(){ return localStorage.getItem('scb_lastfm_username')||''; }
+function setLastfmUsername(u){ localStorage.setItem('scb_lastfm_username',u); }
+function clearLastfmUsername(){ localStorage.removeItem('scb_lastfm_username'); }
+
+async function _spotifyRefresh(refreshToken){
+  const res=await fetch('https://accounts.spotify.com/api/token',{method:'POST',body:new URLSearchParams({grant_type:'refresh_token',refresh_token:refreshToken,client_id:SPOTIFY_CLIENT_ID})});
+  if(!res.ok) throw new Error('Spotify refresh failed');
+  const d=await res.json();
+  const t={access_token:d.access_token,refresh_token:d.refresh_token||refreshToken,expires_at:Date.now()+(d.expires_in||3600)*1000};
+  setSpotifyTokens(t); return t;
+}
+async function _getSpotifyToken(){
+  let t=getSpotifyTokens(); if(!t) return null;
+  if(Date.now()>t.expires_at-60000){ try{t=await _spotifyRefresh(t.refresh_token);}catch{clearSpotifyTokens();return null;} }
+  return t.access_token;
+}
+
+async function connectSpotify(){
+  const v=_musicRandStr(128);
+  localStorage.setItem('scb_spotify_pkce',v);
+  const p=new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,response_type:'code',redirect_uri:SPOTIFY_REDIRECT_URI,code_challenge_method:'S256',code_challenge:await _pkceChallenge(v),scope:SPOTIFY_SCOPES,state:'scb_spotify'});
+  window.location.href='https://accounts.spotify.com/authorize?'+p;
+}
+
+async function handleSpotifyCallback(){
+  const url=new URL(window.location.href);
+  if(url.searchParams.get('state')!=='scb_spotify') return;
+  const code=url.searchParams.get('code');
+  url.searchParams.delete('code'); url.searchParams.delete('state'); url.searchParams.delete('error');
+  window.history.replaceState({},'',url.toString());
+  if(!code) return;
+  const verifier=localStorage.getItem('scb_spotify_pkce');
+  if(!verifier) return;
+  localStorage.removeItem('scb_spotify_pkce');
+  try{
+    const res=await fetch('https://accounts.spotify.com/api/token',{method:'POST',body:new URLSearchParams({grant_type:'authorization_code',code,redirect_uri:SPOTIFY_REDIRECT_URI,client_id:SPOTIFY_CLIENT_ID,code_verifier:verifier})});
+    if(!res.ok) throw new Error('Token exchange failed');
+    const d=await res.json();
+    setSpotifyTokens({access_token:d.access_token,refresh_token:d.refresh_token,expires_at:Date.now()+(d.expires_in||3600)*1000});
+    startMusicPolling();
+    renderMusicSettings();
+  }catch(e){ showToast('Spotify connect failed: '+e.message,''); }
+}
+handleSpotifyCallback().catch(()=>{});
+
+async function pollSpotifyNP(){
+  const token=await _getSpotifyToken(); if(!token) return null;
+  try{
+    const res=await fetch('https://api.spotify.com/v1/me/player/currently-playing',{headers:{Authorization:'Bearer '+token}});
+    if(res.status===204||res.status===404) return null;
+    if(!res.ok){ if(res.status===401){clearSpotifyTokens();} return null; }
+    const d=await res.json();
+    if(!d||!d.is_playing||!d.item) return null;
+    return {platform:'spotify',track:d.item.name,artist:(d.item.artists||[]).map(a=>a.name).join(', '),albumArt:d.item.album?.images?.[1]?.url||d.item.album?.images?.[0]?.url||null,since:Date.now()};
+  }catch{return null;}
+}
+
+async function pollLastfmNP(){
+  const username=getLastfmUsername(); if(!username||!LASTFM_API_KEY) return null;
+  try{
+    const res=await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=${encodeURIComponent(username)}&api_key=${LASTFM_API_KEY}&format=json&limit=1`);
+    if(!res.ok) return null;
+    const d=await res.json();
+    const tracks=d?.recenttracks?.track; if(!tracks) return null;
+    const t=Array.isArray(tracks)?tracks[0]:tracks;
+    if(!t?.['@attr']?.nowplaying) return null;
+    const artist=typeof t.artist==='string'?t.artist:(t.artist?.['#text']||'');
+    const albumArt=t.image?.find(i=>i.size==='medium')?.['#text']||null;
+    return {platform:'lastfm',track:t.name,artist,albumArt:albumArt||null,since:Date.now()};
+  }catch{return null;}
+}
+
+async function pollAndUpdateMusicNP(){
+  if(!me) return;
+  let np=await pollSpotifyNP();
+  if(!np) np=await pollLastfmNP();
+  const key=np?np.track+'|'+np.artist:null;
+  if(key===_lastMusicTrackKey) return; // unchanged
+  _lastMusicTrackKey=key;
+  try{
+    const ref=fbdb.ref(USERS_BIN+'/'+me.number+'/'+MUSIC_NP_PATH);
+    if(np) await ref.set(np); else await ref.remove();
+  }catch{}
+}
+
+function startMusicPolling(){
+  stopMusicPolling();
+  pollAndUpdateMusicNP();
+  _musicPollTimer=setInterval(pollAndUpdateMusicNP,30000);
+}
+function stopMusicPolling(){ clearInterval(_musicPollTimer); _musicPollTimer=null; }
+
+// Show contact's music status in their contact panel
+async function renderMusicPill(scbNumber){
+  const el=document.getElementById('cp-music');
+  if(!el) return;
+  el.style.display='none'; el.innerHTML='';
+  try{
+    const snap=await fbdb.ref(USERS_BIN+'/'+scbNumber+'/'+MUSIC_NP_PATH).get();
+    const np=snap.val();
+    if(!np||!np.track) return;
+    if(Date.now()-np.since>MUSIC_NP_MAX_AGE_MS) return;
+    if(!activeConvo||Number(activeConvo.number)!==Number(scbNumber)) return;
+    const overlay=document.getElementById('contact-panel-overlay');
+    if(overlay&&!overlay.classList.contains('visible')) return;
+    const green='#1ed760'; const red='#c0392b';
+    const bg=np.platform==='spotify'?'linear-gradient(90deg,#1ed760,#0d9944)':'linear-gradient(90deg,#d51007,#9e0906)';
+    el.innerHTML='<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:'+bg+';color:#fff">'
+      +'🎵 '+esc(np.track)+(np.artist?' · '+esc(np.artist):'')+'</span>';
+    el.style.display='block';
+  }catch{}
+}
+// Patch openContactPanel to also load music pill
+const _origOpenContactPanelForMusic=openContactPanel;
+openContactPanel=function(){
+  const r=_origOpenContactPanelForMusic.apply(this,arguments);
+  try{
+    const el=document.getElementById('cp-music');
+    if(el){ el.style.display='none'; el.innerHTML=''; }
+    if(activeConvo&&activeConvo.type!=='group'&&activeConvo.number){
+      renderMusicPill(activeConvo.number).catch(()=>{});
+    }
+  }catch(e){}
+  return r;
+};
+
+function renderMusicSettings(){
+  // Spotify row
+  const spTokens=getSpotifyTokens();
+  const spConn=document.getElementById('scb-spotify-connect-btn');
+  const spDisc=document.getElementById('scb-spotify-disconnect-btn');
+  const spSub=document.getElementById('scb-spotify-sub');
+  if(spConn&&spDisc&&spSub){
+    if(spTokens){
+      spConn.style.display='none'; spDisc.style.display='';
+      spSub.textContent='Connected — your current track is shared as your status';
+    }else{
+      spConn.style.display=''; spDisc.style.display='none';
+      spSub.textContent='Not connected';
+    }
+    spConn.onclick=connectSpotify;
+    spDisc.onclick=()=>{ clearSpotifyTokens(); stopMusicPolling(); renderMusicSettings(); if(me) fbdb.ref(USERS_BIN+'/'+me.number+'/'+MUSIC_NP_PATH).remove().catch(()=>{}); };
+  }
+  // Last.fm row
+  const lfmUser=getLastfmUsername();
+  const lfmInput=document.getElementById('scb-lastfm-input');
+  const lfmConn=document.getElementById('scb-lastfm-connect-btn');
+  const lfmDisc=document.getElementById('scb-lastfm-disconnect-btn');
+  const lfmSub=document.getElementById('scb-lastfm-sub');
+  if(lfmConn&&lfmDisc){
+    if(lfmUser){
+      if(lfmInput) lfmInput.style.display='none';
+      lfmConn.style.display='none'; lfmDisc.style.display='';
+      if(lfmSub) lfmSub.textContent='Connected as @'+lfmUser;
+    }else{
+      if(lfmInput) lfmInput.style.display='';
+      lfmConn.style.display=''; lfmDisc.style.display='none';
+      if(lfmSub) lfmSub.textContent='Not connected — enter your Last.fm username so contacts can see what you\'re listening to';
+    }
+    lfmConn.onclick=()=>{
+      const u=(lfmInput?.value||'').trim();
+      if(!u){ showToast('Enter your Last.fm username',''); return; }
+      setLastfmUsername(u); startMusicPolling(); renderMusicSettings();
+    };
+    lfmDisc.onclick=()=>{ clearLastfmUsername(); renderMusicSettings(); if(me) fbdb.ref(USERS_BIN+'/'+me.number+'/'+MUSIC_NP_PATH).remove().catch(()=>{}); };
+  }
+}
+
+/* =============================================================================
    11. MULTI-LANGUAGE SUPPORT (i18n)
    Covers the main chrome — nav, sidebar tabs, settings headings and the
    buttons/notices people see most. It deliberately does NOT try to translate
@@ -18040,6 +18238,30 @@ function injectFeatureSettings(){
       '<div class="settings-row-main"><div class="settings-row-sub" id="scb-connected-note" style="max-width:none"></div></div>'+
     '</div>'+
   '</div>'+
+  '<div class="settings-section" id="scb-music-section" data-settings-tab="profile">'+
+    '<h3>Music</h3>'+
+    '<div class="settings-row" id="scb-spotify-row">'+
+      '<div class="settings-row-main">'+
+        '<div class="settings-row-label">Spotify</div>'+
+        '<div class="settings-row-sub" id="scb-spotify-sub">Not connected</div>'+
+      '</div>'+
+      '<div class="settings-row-actions">'+
+        '<button class="btn btn-ghost btn-sm" id="scb-spotify-connect-btn">Connect</button>'+
+        '<button class="btn btn-ghost btn-sm" id="scb-spotify-disconnect-btn" style="display:none">Disconnect</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="settings-row" id="scb-lastfm-row">'+
+      '<div class="settings-row-main">'+
+        '<div class="settings-row-label">Last.fm</div>'+
+        '<div class="settings-row-sub" id="scb-lastfm-sub">Not connected — enter your Last.fm username so contacts can see what you\'re listening to</div>'+
+      '</div>'+
+      '<div class="settings-row-actions" style="gap:6px;flex-wrap:wrap">'+
+        '<input id="scb-lastfm-input" placeholder="Username" style="height:32px;border:1px solid var(--border);border-radius:7px;padding:0 10px;font-size:13px;background:var(--bg);color:var(--text);width:120px">'+
+        '<button class="btn btn-ghost btn-sm" id="scb-lastfm-connect-btn">Connect</button>'+
+        '<button class="btn btn-ghost btn-sm" id="scb-lastfm-disconnect-btn" style="display:none">Disconnect</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>'+
   '<div class="settings-section" id="scb-family-section" data-settings-tab="profile">'+
     '<h3>Family &amp; Parental Controls</h3>'+
     '<div class="settings-row" id="scb-child-accounts-row" style="display:none;cursor:pointer">'+
@@ -18138,6 +18360,7 @@ function updateFeatureSettingsUI(){
   const np=document.getElementById('scb-now-playing-toggle');
   if(np) np.checked=nowPlayingEnabled();
   try{ renderConnectedAccounts(); }catch(e){ console.warn('connected accounts render failed', e); }
+  try{ renderMusicSettings(); }catch(e){}
 }
 const _origShowSettings = showSettings;
 showSettings = function(){
