@@ -9961,12 +9961,16 @@ function leaveVoiceChannel(){
   const bar=document.getElementById('voice-bar');
   if(bar){ bar.style.display='none'; bar.innerHTML=''; }
   if(!isDm){ const conv=getActiveConvoObj(); if(conv) renderChannelBar(conv); }
-  // Only the caller (outgoing) side injects the call event to avoid duplicates
+  // Caller injects chat message (avoid duplicate — receiver only logs to history)
   if(isDm && wasOutgoing && callConvKey && callStart){
     const durSecs=Math.round((Date.now()-callStart)/1000);
     const otherContact=contacts?contacts.find(x=>x.type!=='group'&&String(x.number)===String(callOtherNum)):null;
-    logCallHistory({dir:'out',number:callOtherNum||0,name:otherContact?otherContact.name:'',time:callStart,duration:durSecs});
-    injectCallEventMsg(callConvKey,'voice',durSecs,false);
+    logCallHistory({dir:'out',number:callOtherNum||0,name:otherContact?otherContact.name:'',time:callStart,duration:durSecs,initiator:me.number});
+    injectCallEventMsg(callConvKey,'voice',durSecs,false,me.number);
+  } else if(isDm && !wasOutgoing && callConvKey && callStart){
+    const durSecs=Math.round((Date.now()-callStart)/1000);
+    const otherContact=contacts?contacts.find(x=>x.type!=='group'&&String(x.number)===String(callOtherNum)):null;
+    logCallHistory({dir:'in',number:callOtherNum||0,name:otherContact?otherContact.name:'',time:callStart,duration:durSecs,initiator:callOtherNum||0});
   }
 }
 
@@ -9974,7 +9978,7 @@ function leaveVoiceChannel(){
 // same voice session plumbing used for group voice channels. ------------------
 function callPath(dmKey){ return voicePath(dmKey,'call'); }
 const CALL_PRESENCE_MAX_MS=6*60*60*1000; // 6h — past this an "active" call record is treated as orphaned
-let _outgoingCallPairKey=null, _outgoingCallRef=null, _outgoingCallHandler=null;
+let _outgoingCallPairKey=null, _outgoingCallRef=null, _outgoingCallHandler=null, _outgoingCallContact=null;
 let _incomingCallPairKey=null, _incomingCallFrom=null, _incomingCallFromName=null, _incomingCallRef=null, _incomingCallHandler=null;
 const _seenIncomingCalls={};
 async function startDirectCall(contact){
@@ -9995,15 +9999,27 @@ async function startDirectCall(contact){
     showToast('Call failed',scbErr('SCB-CALL-07','That call couldn\'t be started.',e.code==='PERMISSION_DENIED'?'Firebase is blocking the "calls" path — check your Realtime Database rules.':(e.message||'')));
     return;
   }
-  _outgoingCallPairKey=pairKey; _outgoingCallRef=cRef;
+  _outgoingCallPairKey=pairKey; _outgoingCallRef=cRef; _outgoingCallContact=contact;
   document.getElementById('outgoing-call-name').textContent=contact.name;
   openModal('outgoing-call-modal');
   _outgoingCallHandler=cRef.on('value',async snap=>{
     const val=snap.val();
-    if(!val){ closeModal('outgoing-call-modal'); cleanupOutgoingWatcher(); return; }
+    if(!val){
+      // Record deleted — other side's app closed or they never answered
+      const _c=_outgoingCallContact;
+      closeModal('outgoing-call-modal'); cleanupOutgoingWatcher();
+      if(_c&&me){ logCallHistory({dir:'no_answer',number:_c.number,name:_c.name,time:Date.now(),duration:0,initiator:me.number}); }
+      return;
+    }
     if(val.status==='declined'){
+      const _c=_outgoingCallContact;
       closeModal('outgoing-call-modal'); showToast('Call declined','');
       cleanupOutgoingWatcher(); cRef.remove();
+      if(_c&&me){
+        const convKey=dmKey(me.number,_c.number);
+        logCallHistory({dir:'declined_out',number:_c.number,name:_c.name,time:Date.now(),duration:0,initiator:me.number});
+        injectCallEventMsg(convKey,'declined',0,false,me.number);
+      }
     }else if(val.status==='active'){
       cleanupOutgoingWatcher();
       closeModal('outgoing-call-modal');
@@ -10015,12 +10031,14 @@ async function startDirectCall(contact){
 }
 function cleanupOutgoingWatcher(){
   if(_outgoingCallRef&&_outgoingCallHandler) _outgoingCallRef.off('value',_outgoingCallHandler);
-  _outgoingCallPairKey=null; _outgoingCallRef=null; _outgoingCallHandler=null;
+  _outgoingCallPairKey=null; _outgoingCallRef=null; _outgoingCallHandler=null; _outgoingCallContact=null;
 }
 function cancelOutgoingCall(){
+  const _c=_outgoingCallContact;
   if(_outgoingCallPairKey) fbdb.ref('calls/'+_outgoingCallPairKey).remove();
   cleanupOutgoingWatcher();
   closeModal('outgoing-call-modal');
+  if(_c&&me){ logCallHistory({dir:'cancelled',number:_c.number,name:_c.name,time:Date.now(),duration:0,initiator:me.number}); }
 }
 function watchIncomingCalls(){
   if(!me||_globalCallsHandler) return;
@@ -10098,11 +10116,12 @@ async function acceptIncomingCall(){
   await _beginDmCallSession(dmKey(me.number,otherNum),otherNum,otherName,pairKey);
 }
 function declineIncomingCall(){
-  const pairKey=_incomingCallPairKey;
+  const pairKey=_incomingCallPairKey, fromNum=_incomingCallFrom, fromName=_incomingCallFromName;
   cleanupIncomingWatcher();
   closeModal('incoming-call-modal');
   if(pairKey) fbdb.ref('calls/'+pairKey).update({status:'declined'});
   _incomingCallPairKey=null;
+  if(me&&fromNum){ logCallHistory({dir:'declined_in',number:fromNum,name:fromName||('#'+fromNum),time:Date.now(),duration:0,initiator:fromNum}); }
 }
 let _dmCallStartTime=null, _dmCallOtherNum=null, _dmCallIsOutgoing=false, _dmCallConvKey=null;
 async function _beginDmCallSession(dmKeyStr,otherNum,otherName,pairKey){
@@ -11303,13 +11322,13 @@ function fmtCallDuration(secs){
   const m=Math.floor(secs/60), s=secs%60;
   return m>0 ? m+':'+(s<10?'0':'')+s : s+'s';
 }
-function injectCallEventMsg(convKey, callType, durationSecs, missed){
+function injectCallEventMsg(convKey, callType, durationSecs, missed, initiatorNum){
   if(!me||!convKey||!convosCache) return;
   const conv=convosCache.find(x=>x&&x.key===convKey);
   if(!conv) return;
   if(!Array.isArray(conv.messages)) conv.messages=[];
   const msgId='call_'+convKey+'_'+Date.now();
-  const msg={id:msgId,type:'call',callType:callType||'voice',duration:durationSecs||0,missed:!!missed,from:me.number,time:Date.now()};
+  const msg={id:msgId,type:'call',callType:callType||'voice',duration:durationSecs||0,missed:!!missed,from:me.number,initiator:initiatorNum||me.number,time:Date.now()};
   conv.messages.push(msg);
   saveConvos().catch(()=>{});
   if(activeConvo&&activeConvo.key===convKey) renderMessages(conv.messages);
@@ -11320,10 +11339,10 @@ function logMissedCall(fromNum,fromName){
     log.push({from:fromNum,fromName,time:Date.now()});
     localStorage.setItem('cc_missed_calls',JSON.stringify(log.slice(-30)));
   }catch(e){}
-  logCallHistory({dir:'missed',number:fromNum,name:fromName,time:Date.now(),duration:0});
+  logCallHistory({dir:'missed',number:fromNum,name:fromName,time:Date.now(),duration:0,initiator:fromNum});
   if(me){
     const convKey=dmKey(me.number,fromNum);
-    injectCallEventMsg(convKey,'voice',0,true);
+    injectCallEventMsg(convKey,'voice',0,true,fromNum);
   }
 }
 function renderMissedCallsWidget(body){
@@ -12640,15 +12659,27 @@ function renderMessages(msgs) {
     if (m.type === 'call') {
       const durStr = fmtCallDuration(m.duration||0);
       const timeStr2 = new Date(m.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-      const label = m.missed ? scbT('missed_call') : scbT('voice_call');
+      const iStarted = m.initiator==null || String(m.initiator)===String(me.number);
+      let icon, labelHtml, isBad=false;
+      if(m.callType==='declined'){
+        icon='📵'; isBad=true;
+        labelHtml='<span class="call-ev-missed">'+esc((iStarted?'Outgoing':'Incoming')+' call · Declined')+'</span>';
+      } else if(m.callType==='no_answer'){
+        icon='📵'; isBad=true;
+        labelHtml='<span class="call-ev-missed">No answer</span>';
+      } else if(m.missed){
+        icon='📵'; isBad=true;
+        labelHtml='<span class="call-ev-missed">'+esc(scbT('missed_call'))+'</span>';
+      } else {
+        icon='📞';
+        labelHtml=esc(iStarted?'Outgoing call':scbT('voice_call'));
+      }
       const detail = [timeStr2, durStr].filter(Boolean).join(' · ');
       const row = document.createElement('div'); row.className = 'call-event-row';
       const pill = document.createElement('div'); pill.className = 'call-event-pill';
-      pill.innerHTML = '<span class="call-ev-icon'+(m.missed?' call-ev-missed':'')+'">'+
-        (m.missed ? '📵' : '📞')+'</span>'
-        +'<span>'+(m.missed ? '<span class="call-ev-missed">'+esc(label)+'</span>' : esc(label))
-        +(detail ? ' · <span style="color:var(--muted)">'+esc(detail)+'</span>' : '')
-        +'</span>';
+      pill.innerHTML = '<span class="call-ev-icon'+(isBad?' call-ev-missed':'')+'">'+icon+'</span>'
+        +'<span>'+labelHtml+(detail ? ' · <span style="color:var(--muted)">'+esc(detail)+'</span>' : '')+'</span>';
+      pill.title = 'Tap to call';
       pill.onclick = function(){
         if(activeConvo && activeConvo.type !== 'group'){
           const c = contacts.find(x => x.key === activeConvo.key);
@@ -16193,11 +16224,13 @@ renderSidebar = function(){
     log.forEach(entry=>{
       const num=entry.number||entry.from||0;
       const name=entry.name||entry.fromName||('#'+num);
-      const icon=entry.dir==='missed'?'📵':entry.dir==='in'?'📲':'📤';
-      const color=entry.dir==='missed'?'color:#e74c3c':'';
+      const _badDir=entry.dir==='missed'||entry.dir==='declined_out'||entry.dir==='declined_in'||entry.dir==='no_answer'||entry.dir==='cancelled';
+      const icon=entry.dir==='in'?'📲':_badDir?'📵':'📤';
+      const color=_badDir?'color:#e74c3c':'';
       const durStr=fmtCallDuration(entry.duration||0);
       const timeStr=entry.time?new Date(entry.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
-      const metaStr=[entry.dir==='missed'?scbT('missed_call'):entry.dir==='in'?'Incoming':'Outgoing',durStr,timeStr].filter(Boolean).join(' · ');
+      const dirLabel=entry.dir==='missed'?scbT('missed_call'):entry.dir==='declined_out'?'Declined':entry.dir==='declined_in'?'You declined':entry.dir==='no_answer'?'No answer':entry.dir==='cancelled'?'Cancelled':entry.dir==='in'?'Incoming':'Outgoing';
+      const metaStr=[dirLabel,durStr,timeStr].filter(Boolean).join(' · ');
       const div=document.createElement('div'); div.className='call-log-item';
       div.innerHTML='<div class="call-log-icon" style="'+color+'">'+icon+'</div>'
         +'<div class="call-log-info"><div class="call-log-name" style="'+color+'">'+esc(name)+'</div>'
