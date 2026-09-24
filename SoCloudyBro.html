@@ -6663,6 +6663,10 @@ function saveConvos(){
         // Write per-conversation key — replaces the old monolithic blob.
         // update() merges keys so concurrent writers don't clobber each other's conversations.
         const convoUpdates=Object.fromEntries(toSave.filter(c=>c&&c.key).map(c=>[c.key,c]));
+        // Null out the legacy nested 'conversations' array key in the same atomic update —
+        // Firebase treats null as "delete". Without this, getConvos() would keep finding
+        // the old key and re-reading stale data, making new messages vanish on reload.
+        convoUpdates['conversations']=null;
         await fbdb.ref(CONVOS_BIN).update(convoUpdates); _saveConvosPending=null; _convosDirty=false; resolve(); }
       catch(e){ _saveConvosPending=null; reject(e); }
     },350);
