@@ -5505,6 +5505,7 @@ const SCB_ERROR_CODES = {
   'SCB-ADMIN-24': {area:'Admin tools', meaning:'Failed to push Firebase Realtime Database rules via the rules proxy Worker'},
   'SCB-ADMIN-25': {area:'Admin tools', meaning:'Firebase data cleanup operation failed'},
   'SCB-ADMIN-26': {area:'Admin tools', meaning:'Firebase diagnosis scan failed'},
+  'SCB-SIGNUP-CAP': {area:'Sign-up', meaning:'Captcha answer missing or incorrect — the security puzzle must be solved to create an account'},
 };
 // Format a user-facing error string. `code` is an SCB-* key above, `message` is
 // the plain-English sentence, `detail` is optional raw technical context (an
@@ -5526,7 +5527,7 @@ function scbErrInfo(code){
 }
 // Pull the SCB-* code back out of an already-formatted message.
 function scbErrCodeOf(text){
-  const m = /\[(SCB-[A-Z]+-\d{2})\]/.exec(String(text||''));
+  const m = /\[(SCB-[A-Z]+-[A-Z0-9]+)\]/.exec(String(text||''));
   return m ? m[1] : null;
 }
 // -- END ERROR CODES ----------------------------------------------------------
@@ -11048,6 +11049,10 @@ function switchSettingsTab(tab){
   try{localStorage.setItem('cc_settings_tab',tab);}catch(e){}
   // Render saved accounts when profile tab is shown
   if(tab==='profile') try{renderSavedAccounts();}catch(e){}
+  // Re-apply feature-specific section visibility AFTER the bulk show/hide
+  // so sections like scb-accessibility-section that are conditionally hidden
+  // don't get re-shown by the loop above.
+  try{updateFeatureSettingsUI();}catch(e){}
 }
 // Multi-account: save current account to cc_accounts
 function _saveAccountToAccounts(meObj){
@@ -14271,8 +14276,9 @@ async function openAdminDashboard(){
       (t==='code'&&hasPermission('code_update'));
     btn.style.display=show?'':'none';
   });
-  // Pick first accessible tab
-  const firstTab=adminDashTab||'overview';
+  // Pick first visible tab (avoids opening on a hidden tab after permission changes)
+  const visibleTabs=[...document.querySelectorAll('.admin-dash-tab')].filter(b=>b.style.display!=='none').map(b=>b.dataset.tab);
+  const firstTab=visibleTabs.includes(adminDashTab)?adminDashTab:(visibleTabs[0]||'overview');
   switchAdminTab(firstTab);
 }
 function switchAdminTab(tab){
