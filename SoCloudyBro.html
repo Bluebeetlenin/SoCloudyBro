@@ -3004,9 +3004,13 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 #sb-search input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 14px;outline:none;transition:border-color 0.2s}
 #sb-search input:focus{border-color:var(--accent)}
 #sb-search input::placeholder{color:var(--muted2)}
-#sb-tabs{display:flex;padding:0 8px 8px;gap:3px;overflow-x:auto;scrollbar-width:none}
+#sb-tabs{display:flex;padding:0 8px 8px;gap:3px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:relative}
 #sb-tabs::-webkit-scrollbar{display:none}
-.sb-tab{flex:0 0 auto;padding:5px 9px;border-radius:var(--r-xs);font-size:11px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);transition:all 0.15s;border:none;background:transparent;white-space:nowrap}
+/* fade-out right edge to signal overflow */
+#sidebar .sb-tabs-wrap{position:relative;overflow:hidden}
+#sidebar .sb-tabs-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:24px;background:linear-gradient(to right,transparent,var(--sidebar-bg,var(--surface)));pointer-events:none;opacity:0;transition:opacity .2s}
+#sidebar .sb-tabs-wrap.overflows::after{opacity:1}
+.sb-tab{flex:0 0 auto;padding:4px 8px;border-radius:var(--r-xs);font-size:10.5px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);transition:all 0.15s;border:none;background:transparent;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis}
 .sb-tab.active{background:var(--accent);color:#fff}
 .admin-dash-tab{flex:0 1 auto;padding:6px 12px;border-radius:var(--r-xs);font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);border:1px solid var(--border);background:transparent;white-space:nowrap}
 .admin-dash-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -4302,6 +4306,14 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Rotate Encryption Keys</div><div class="settings-row-sub">Generates a new E2E keypair — future messages use the new keys</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Rotate</button></div>
           </div>
+          <div class="settings-row" style="cursor:pointer" onclick="exportE2EKey()">
+            <div class="settings-row-main"><div class="settings-row-label">Export Decryption Key</div><div class="settings-row-sub">Copy your key to open messages on another device — keep it private</div></div>
+            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Export</button></div>
+          </div>
+          <div class="settings-row" style="cursor:pointer" onclick="importE2EKey()">
+            <div class="settings-row-main"><div class="settings-row-label">Import Decryption Key</div><div class="settings-row-sub">Paste a key exported from another device to read your messages here</div></div>
+            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Import</button></div>
+          </div>
           <div class="settings-row" style="cursor:pointer" onclick="openLoginHistory()">
             <div class="settings-row-main"><div class="settings-row-label">Login History</div><div class="settings-row-sub">See your last 5 logins and the device used</div></div>
             <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
@@ -4495,49 +4507,252 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- PUBLIC LANDING PAGE — visible before login, satisfies Google OAuth verification -->
 <div id="landing-page" style="display:none;position:fixed;inset:0;z-index:500;overflow-y:auto;background:var(--bg);color:var(--text);font-family:inherit">
-  <nav style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10">
-    <div style="font-size:20px;font-weight:700;color:var(--accent)">☁️ SoCloudyBro</div>
-    <button onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer">Sign In / Sign Up</button>
+  <style>
+    .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;gap:12px}
+    .lp-brand{font-size:18px;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
+    .lp-btn-main{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;transition:opacity .15s,transform .12s}
+    .lp-btn-main:hover{opacity:.88;transform:translateY(-1px)}
+    .lp-hero{text-align:center;padding:60px 24px 48px;max-width:660px;margin:0 auto}
+    .lp-hero h1{font-size:clamp(28px,7vw,52px);font-weight:900;margin:0 0 18px;line-height:1.1;letter-spacing:-.5px}
+    .lp-hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .lp-hero p{font-size:clamp(14px,2.5vw,18px);color:var(--muted);margin:0 0 32px;line-height:1.65;max-width:520px;margin-left:auto;margin-right:auto}
+    .lp-cta-group{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .lp-btn-lg{border:none;border-radius:12px;padding:13px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+    .lp-btn-lg.primary{background:var(--accent);color:#fff}
+    .lp-btn-lg.primary:hover{opacity:.88}
+    .lp-btn-lg.ghost{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+    .lp-btn-lg.ghost:hover{border-color:var(--accent);color:var(--accent)}
+    .lp-badge-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+    .lp-badge{background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+    .lp-section{max-width:860px;margin:0 auto;padding:0 24px 64px}
+    .lp-section-label{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+    .lp-section h2{font-size:clamp(22px,4vw,32px);font-weight:800;margin:0 0 12px;letter-spacing:-.3px;line-height:1.2}
+    .lp-section p.lead{font-size:15px;color:var(--muted);line-height:1.65;margin:0 0 28px}
+    .lp-feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+    .lp-feat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;transition:.15s}
+    .lp-feat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+    .lp-feat-icon{font-size:28px;margin-bottom:10px}
+    .lp-feat-title{font-size:14px;font-weight:700;margin:0 0 5px}
+    .lp-feat-desc{font-size:12.5px;color:var(--muted);line-height:1.55;margin:0}
+    /* mock chat UI */
+    .lp-mock{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+    .lp-mock-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface)}
+    .lp-mock-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6b5de8,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:#fff;font-weight:700}
+    .lp-mock-name{font-size:13px;font-weight:600}
+    .lp-mock-status{font-size:11px;color:var(--muted)}
+    .lp-mock-body{padding:14px;display:flex;flex-direction:column;gap:8px;min-height:180px;background:var(--bg)}
+    .lp-mock-bubble{padding:9px 12px;border-radius:14px;font-size:12.5px;max-width:80%;line-height:1.5}
+    .lp-mock-bubble.them{background:var(--surface);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px}
+    .lp-mock-bubble.me{background:linear-gradient(135deg,#6b5de8,#7c6ff5);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+    .lp-mock-bubble.voice{display:flex;align-items:center;gap:8px;padding:8px 12px}
+    .lp-mock-wave{display:flex;align-items:center;gap:2px;height:20px}
+    .lp-mock-wave span{width:3px;border-radius:2px;background:currentColor;opacity:.7}
+    .lp-mock-reactions{display:flex;gap:4px;margin-top:-4px;padding:0 4px}
+    .lp-mock-chip{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:2px 7px;font-size:11px}
+    .lp-split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+    @media(max-width:600px){.lp-split{grid-template-columns:1fr}.lp-mock{max-width:100%}}
+    .lp-how-steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px}
+    .lp-step{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+    .lp-step-num{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+    .lp-step-title{font-size:14px;font-weight:700;margin:0}
+    .lp-step-desc{font-size:12.5px;color:var(--muted);line-height:1.55;margin:0}
+    .lp-divider{border:none;border-top:1px solid var(--border);margin:0 24px 64px}
+    .lp-footer{text-align:center;padding:32px 24px 40px;border-top:1px solid var(--border);font-size:12.5px;color:var(--muted)}
+    .lp-footer a{color:var(--accent);text-decoration:none}
+    .lp-footer a:hover{text-decoration:underline}
+    .lp-wave-bar{display:flex;align-items:center;gap:2px;height:16px}
+    .lp-wave-bar span{width:2.5px;border-radius:2px;background:var(--accent)}
+  </style>
+
+  <!-- NAV -->
+  <nav class="lp-nav">
+    <div class="lp-brand">☁️ SoCloudyBro</div>
+    <button class="lp-btn-main" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Sign In / Sign Up</button>
   </nav>
 
-  <main style="max-width:680px;margin:0 auto;padding:48px 24px">
-    <div style="text-align:center;margin-bottom:48px">
-      <div style="font-size:56px;margin-bottom:16px">☁️</div>
-      <h1 style="font-size:clamp(28px,6vw,42px);font-weight:800;margin:0 0 16px;line-height:1.2">Private messaging,<br>for your crew.</h1>
-      <p style="font-size:17px;color:var(--muted);margin:0 0 28px;line-height:1.6">SoCloudyBro is a secure, end-to-end encrypted messaging app. Chat privately, make voice and video calls, share updates, and stay connected — all in one place.</p>
-      <button onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:14px 32px;font-size:16px;font-weight:700;cursor:pointer;display:inline-block">Get Started ↗</button>
+  <!-- HERO -->
+  <div class="lp-hero">
+    <div class="lp-badge-row">
+      <span class="lp-badge">🔒 End-to-end encrypted</span>
+      <span class="lp-badge">📞 Free voice &amp; video calls</span>
+      <span class="lp-badge">☁️ Browser-based</span>
     </div>
+    <h1>Chat with anyone.<br><em>Privately.</em></h1>
+    <p>SoCloudyBro is the messaging app for friends, families, and communities. Encrypted chats, voice and video calls, group spaces, and more — right in your browser, totally free.</p>
+    <div class="lp-cta-group">
+      <button class="lp-btn-lg primary" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Get Started — it's free</button>
+      <button class="lp-btn-lg ghost" onclick="document.getElementById('lp-features').scrollIntoView({behavior:'smooth'})">See what's inside ↓</button>
+    </div>
+  </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:48px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
-        <div style="font-size:28px;margin-bottom:8px">🔒</div>
-        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700">End-to-End Encrypted</h3>
-        <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.5">Messages are encrypted on your device. No one — not even us — can read them.</p>
+  <!-- FEATURE HIGHLIGHT: MESSAGING -->
+  <div class="lp-section" id="lp-features">
+    <div class="lp-split">
+      <div>
+        <div class="lp-section-label">Private Messaging</div>
+        <h2>Real conversations, real privacy.</h2>
+        <p class="lead">Every message is end-to-end encrypted on your device before it leaves. React, reply, pin, and search — everything you love in a modern chat.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">↩️</span> Reply to any message in a thread</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">❤️</span> React with emoji — see who reacted</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📌</span> Pin important messages for everyone</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🔍</span> Full-text message search</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">💣</span> View-once self-destructing messages</div>
+        </div>
       </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
-        <div style="font-size:28px;margin-bottom:8px">📞</div>
-        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700">Voice & Video Calls</h3>
-        <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.5">Crystal-clear calls with the people you care about, directly in your browser.</p>
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
-        <div style="font-size:28px;margin-bottom:8px">🌤</div>
-        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700">Community Updates</h3>
-        <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.5">Share updates, announcements and moments with everyone in your community.</p>
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
-        <div style="font-size:28px;margin-bottom:8px">👥</div>
-        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700">Group Chats</h3>
-        <p style="margin:0;font-size:13px;color:var(--muted);line-height:1.5">Create groups for your friends, team, or community and chat together.</p>
+      <div class="lp-mock">
+        <div class="lp-mock-header">
+          <div class="lp-mock-av">S</div>
+          <div><div class="lp-mock-name">Sarah ✦</div><div class="lp-mock-status">🟢 online</div></div>
+        </div>
+        <div class="lp-mock-body">
+          <div class="lp-mock-bubble them">Hey! Did you see what happened today? 👀</div>
+          <div class="lp-mock-bubble me">No way, tell me everything 😭</div>
+          <div class="lp-mock-bubble them">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;border-left:2px solid var(--accent);padding-left:6px">↩ Replying to: No way, tell me everything</div>
+            OK so basically…
+          </div>
+          <div class="lp-mock-reactions"><span class="lp-mock-chip">😂 2</span><span class="lp-mock-chip">❤️ 1</span></div>
+          <div class="lp-mock-bubble me" style="margin-top:4px">🎙️</div>
+        </div>
       </div>
     </div>
+  </div>
 
-    <div style="text-align:center;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)">
-      <p style="margin:0 0 8px">SoCloudyBro is built for private communities. Accounts are invite-based.</p>
-      <a href="#" onclick="showPrivacyPolicy();return false;" style="color:var(--accent);text-decoration:none">Privacy Policy</a>
-      <span style="margin:0 8px">·</span>
-      <a href="#" onclick="openContactUs();return false;" style="color:var(--accent);text-decoration:none">Contact</a>
+  <hr class="lp-divider">
+
+  <!-- FEATURE HIGHLIGHT: CALLS -->
+  <div class="lp-section">
+    <div class="lp-split">
+      <div class="lp-mock" style="order:1">
+        <div class="lp-mock-header" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:none">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:12px;color:#a0aec0;margin-bottom:4px">Voice call · 2:34</div>
+            <div style="font-size:14px;font-weight:700;color:#fff">🎙️ Marcus &amp; You</div>
+          </div>
+        </div>
+        <div class="lp-mock-body" style="background:#0f172a;align-items:center;justify-content:center;gap:16px;padding:28px">
+          <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6b5de8,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;font-weight:700;border:3px solid rgba(107,93,232,0.5)">M</div>
+          <div class="lp-wave-bar">
+            <span style="height:6px"></span><span style="height:12px"></span><span style="height:18px"></span><span style="height:10px"></span><span style="height:14px"></span><span style="height:20px"></span><span style="height:8px"></span><span style="height:16px"></span><span style="height:6px"></span><span style="height:14px"></span>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:8px">
+            <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">🎙️</div>
+            <div style="width:42px;height:42px;border-radius:50%;background:#e53e3e;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">📵</div>
+            <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">🖥️</div>
+          </div>
+        </div>
+      </div>
+      <div style="order:0">
+        <div class="lp-section-label">Voice &amp; Video Calls</div>
+        <h2>Call anyone, anytime. No installs needed.</h2>
+        <p class="lead">Browser-based WebRTC calls — no app download required. Voice call your friends, video chat with family, or host a group meeting. All encrypted.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📞</span> Instant 1-on-1 voice calls</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📹</span> Video calls and group meetings</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🖥️</span> Screen sharing during calls</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🎙️</span> Voice messages you can record and send</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📋</span> Full call history</div>
+        </div>
+      </div>
     </div>
-  </main>
+  </div>
+
+  <hr class="lp-divider">
+
+  <!-- FEATURE HIGHLIGHT: GROUPS -->
+  <div class="lp-section">
+    <div class="lp-split">
+      <div>
+        <div class="lp-section-label">Groups &amp; Communities</div>
+        <h2>Your crew. Your channels.</h2>
+        <p class="lead">Create group spaces with channels, polls, and pinned messages. Perfect for friend groups, families, clubs, and communities of any size.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">#</span> Multiple channels within one group</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📊</span> Live polls your friends can vote on</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🗣️</span> @mention any member</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🎮</span> Built-in games and fun stuff</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📢</span> Announcements &amp; community updates</div>
+        </div>
+      </div>
+      <div class="lp-mock">
+        <div class="lp-mock-header">
+          <div class="lp-mock-av" style="border-radius:10px;background:linear-gradient(135deg,#f093fb,#f5576c)">👥</div>
+          <div><div class="lp-mock-name">The Squad 🔥</div><div class="lp-mock-status">5 members · # general</div></div>
+        </div>
+        <div class="lp-mock-body">
+          <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px">— Today —</div>
+          <div class="lp-mock-bubble them"><b>📊 Poll:</b> Where are we going Friday?<br><span style="font-size:11px;color:var(--muted)">🍕 Pizza — 3 votes<br>🎬 Cinema — 1 vote</span></div>
+          <div class="lp-mock-bubble me">Pizza obviously 🍕🍕</div>
+          <div class="lp-mock-bubble them" style="font-size:11.5px">📌 <b>@everyone</b> Meet at 7pm!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="lp-divider">
+
+  <!-- ALL FEATURES GRID -->
+  <div class="lp-section">
+    <div style="text-align:center;margin-bottom:32px">
+      <div class="lp-section-label" style="justify-content:center;display:flex">Everything included</div>
+      <h2 style="margin-bottom:8px">Packed with features. Zero cost.</h2>
+      <p style="font-size:14px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.6">Everything you need to stay connected — no subscriptions, no ads, no data selling.</p>
+    </div>
+    <div class="lp-feat-grid">
+      <div class="lp-feat-card"><div class="lp-feat-icon">🔒</div><div class="lp-feat-title">End-to-End Encryption</div><p class="lp-feat-desc">Messages are encrypted on your device. Nobody but you and the recipient can read them.</p></div>
+      <div class="lp-feat-card"><div class="lp-feat-icon">📞</div><div class="lp-feat-title">Free Calls</div><p class="lp-feat-desc">Voice and video calls over WebRTC — completely free, right in your browser.</p></div>
+      <div class="lp-feat-card"><div class="lp-feat-icon">🎙️</div><div class="lp-feat-title">Voice Messages</div><p class="lp-feat-desc">Hold to record a voice note and send it instantly. Play it back anytime.</p></div>
+      <div class="lp-feat-card"><div class="lp-feat-icon">📎</div><div class="lp-feat-title">File Sharing</div><p class="lp-feat-desc">Share photos, videos, and files up to 500MB per attachment.</p></div>
+      <div class="lp-feat-card"><div class="lp-feat-icon">💬</div><div class="lp-feat-title">GIFs &amp; Reactions</div><p class="lp-feat-desc">Search and send GIFs, react to messages with emoji, and express yourself.</p></div>
+      <div class="lp-feat-card"><div class="lp-feat-icon">🎵</div><div class="lp-feat-title">Now Playing</div><p class="lp-feat-desc">Show friends what music you're listening to with Spotify and Last.fm integration.</p></div>
+      <div class="lp-feat-card"><div class="lp-feat-icon">🌤️</div><div class="lp-feat-title">Status Updates</div><p class="lp-feat-desc">Share announcements and community updates that everyone in your group can see.</p></div>
+      <div class="lp-feat-card"><div class="lp-feat-icon">📊</div><div class="lp-feat-title">Group Polls</div><p class="lp-feat-desc">Create a vote, see results in real time, and make decisions together.</p></div>
+      <div class="lp-feat-card"><div class="lp-feat-icon">🌙</div><div class="lp-feat-title">Dark &amp; Light Mode</div><p class="lp-feat-desc">Follows your system preference, or switch manually — your eyes, your choice.</p></div>
+    </div>
+  </div>
+
+  <hr class="lp-divider">
+
+  <!-- HOW IT WORKS -->
+  <div class="lp-section">
+    <div style="text-align:center;margin-bottom:32px">
+      <div class="lp-section-label" style="justify-content:center;display:flex">Getting started</div>
+      <h2>Ready in under a minute.</h2>
+    </div>
+    <div class="lp-how-steps">
+      <div class="lp-step">
+        <div class="lp-step-num">1</div>
+        <div><div class="lp-step-title">Get an invite code</div><p class="lp-step-desc">SCB is invite-based to keep it safe. Ask someone already on SCB for a code, or contact an admin.</p></div>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">2</div>
+        <div><div class="lp-step-title">Create your account</div><p class="lp-step-desc">Pick a name and password — no email required. Your account gets a unique SCB number.</p></div>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">3</div>
+        <div><div class="lp-step-title">Add contacts</div><p class="lp-step-desc">Search for friends by their SCB number or share your own. Chats are end-to-end encrypted automatically.</p></div>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">4</div>
+        <div><div class="lp-step-title">Start chatting</div><p class="lp-step-desc">Message, call, react, and share — everything works right in your browser, no app needed.</p></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:40px">
+      <button class="lp-btn-lg primary" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Join SoCloudyBro →</button>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="lp-footer">
+    <div style="font-size:20px;margin-bottom:8px">☁️</div>
+    <div style="font-weight:700;margin-bottom:8px">SoCloudyBro</div>
+    <p style="margin:0 0 12px">Private messaging for everyone.</p>
+    <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
+      <a href="#" onclick="showPrivacyPolicy();return false;">Privacy Policy</a>
+      <a href="#" onclick="openContactUs();return false;">Contact</a>
+    </div>
+  </div>
 </div>
 
 <!-- PRIVACY POLICY MODAL -->
@@ -9389,15 +9604,18 @@ async function toggleVoiceMsgRecording(){
   }
   voiceMsgChunks=[];
   voiceRecordCancelled=false;
-  const mimeType=MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':MediaRecorder.isTypeSupported('audio/ogg')?'audio/ogg':'';
+  const mimeType=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')?'audio/ogg;codecs=opus':MediaRecorder.isTypeSupported('audio/ogg')?'audio/ogg':MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'';
+  const capturedMimeType=mimeType; // capture before recorder is created/stopped
   voiceMsgRecorder=mimeType?new MediaRecorder(voiceMsgStream,{mimeType}):new MediaRecorder(voiceMsgStream);
   voiceMsgRecorder.ondataavailable=e=>{ if(e.data&&e.data.size) voiceMsgChunks.push(e.data); };
   voiceMsgRecorder.onstop=()=>{
     voiceMsgStream.getTracks().forEach(t=>t.stop());
     _showVoiceBar(false);
     if(!voiceRecordCancelled){
-      const blob=new Blob(voiceMsgChunks,{type:voiceMsgRecorder.mimeType||'audio/webm'});
-      if(blob.size) uploadAndSendFile(new File([blob],'voice-message.webm',{type:blob.type}));
+      const actualType=capturedMimeType||(voiceMsgRecorder&&voiceMsgRecorder.mimeType)||'audio/webm';
+      const ext=actualType.includes('ogg')?'.ogg':actualType.includes('mp4')?'.mp4':'.webm';
+      const blob=new Blob(voiceMsgChunks,{type:actualType});
+      if(blob.size) uploadAndSendFile(new File([blob],'voice-message'+ext,{type:actualType}));
     }
     voiceMsgRecorder=null; voiceMsgChunks=[];
   };
@@ -9622,11 +9840,13 @@ async function moveChannel(id,dir){
 const RTC_ICE_SERVERS=[
   {urls:'stun:stun.l.google.com:19302'},
   {urls:'stun:stun1.l.google.com:19302'},
-  {urls:'stun:stun2.l.google.com:19302'},
-  {urls:'stun:stun3.l.google.com:19302'},
   {urls:'stun:stun.cloudflare.com:3478'},
-  {urls:'stun:openrelay.metered.ca:80'},
-  {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'stun:stun.relay.metered.ca:80'},
+  {urls:'turn:global.relay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:global.relay.metered.ca:80?transport=tcp',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:global.relay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turns:global.relay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'},
+  // legacy fallback
   {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
   {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
 ];
@@ -9824,6 +10044,16 @@ function ensureVoicePeer(path,otherNum){
   if(localScreenStream) localScreenStream.getTracks().forEach(t=>pc.addTrack(t,localScreenStream));
   pc.onicecandidate=e=>{
     if(e.candidate) fbdb.ref(path+'/signals/'+otherNum+'/'+me.number+'/candidates').push(e.candidate.toJSON());
+  };
+  pc.oniceconnectionstatechange=()=>{
+    const s=pc.iceConnectionState;
+    if(s==='failed'){
+      try{ pc.restartIce(); }catch(e){}
+      showToast('Call quality issue','Reconnecting…');
+    } else if(s==='disconnected'){
+      // give 8 s for auto-recovery before notifying
+      setTimeout(()=>{ if(pc.iceConnectionState==='disconnected') showToast('Call interrupted','Connection dropped — waiting to recover…'); },8000);
+    }
   };
   pc.ontrack=e=>{
     if(e.track.kind==='video'){
@@ -15142,13 +15372,16 @@ async function adminLoadRules() {
     const r = await fetch(`${FIREBASE_RULES_ENDPOINT}/get`, {
       headers: { 'X-Admin-Number': String(acct.number) }
     });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status} — the rules Worker may need redeployment. Edit rules directly in the Firebase Console → Realtime Database → Rules tab as a workaround.`);
     const data = await r.json();
     const ta = document.getElementById('admin-rules-input');
     if (ta) ta.value = JSON.stringify(data, null, 2);
   } catch(e) {
     selfHeal('SCB-ADMIN-23', e, { context: 'adminLoadRules' });
     showToast(scbErr('SCB-ADMIN-23', 'Failed to load rules', e.message));
+    // Show a helpful inline note
+    const ta = document.getElementById('admin-rules-input');
+    if (ta && !ta.value) ta.placeholder = 'Could not load rules automatically (Worker error). Paste your rules JSON here manually, or edit them in the Firebase Console → Realtime Database → Rules.';
   }
 }
 
@@ -19560,6 +19793,46 @@ window.addEventListener('beforeunload', ()=>{ try{ if(meetingState) leaveMeeting
 try{ injectFeatureDom(); }
 catch(e){ console.error('feature DOM injection failed', e); }
 
+/* ── Sidebar tab overflow indicator ── */
+(function(){
+  function checkTabOverflow(){
+    const tabs=document.getElementById('sb-tabs');
+    if(!tabs) return;
+    const wrap=tabs.closest('.sb-tabs-wrap')||tabs.parentElement;
+    if(!wrap) return;
+    const overflows=tabs.scrollWidth>tabs.clientWidth+2;
+    wrap.classList.toggle('overflows',overflows);
+  }
+  const obs=new ResizeObserver(checkTabOverflow);
+  document.addEventListener('DOMContentLoaded',()=>{
+    const tabs=document.getElementById('sb-tabs');
+    if(tabs){ obs.observe(tabs); checkTabOverflow(); }
+  });
+})();
+
+/* ── Browser tab title unread badge ── */
+(function(){
+  const _origTitle=document.title||'SoCloudyBro';
+  function updateTabTitle(){
+    if(!window.convosCache||!window.me) return;
+    let total=0;
+    (window.convosCache||[]).forEach(c=>{
+      if(!c||!c.messages) return;
+      total+=c.messages.filter(m=>m&&m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))).length;
+    });
+    document.title=total>0?'('+total+') '+_origTitle:_origTitle;
+  }
+  const _savedConvos=window.saveConvos;
+  if(typeof _savedConvos==='function'){
+    window.saveConvos=async function(){
+      const r=await _savedConvos.apply(this,arguments);
+      try{updateTabTitle();}catch(e){}
+      return r;
+    };
+  }
+  setInterval(updateTabTitle,8000);
+})();
+
 /* =============================================================================
    FLOATING IN-CALL WIDGET ("call bubble")
    -----------------------------------------------------------------------------
@@ -20589,6 +20862,60 @@ async function rotateE2EKeys(){
       showToast('Keys rotated','Your E2E encryption keys have been regenerated and published.');
     }
   }catch(e){ showToast('Rotation failed',scbErr('SCB-SEC-22','Key rotation failed.',(e.message||''))); }
+}
+
+/* ===== E2E KEY EXPORT / IMPORT (cross-device) ===== */
+async function exportE2EKey(){
+  if(!window.me){ showToast('Not logged in','Log in first.'); return; }
+  const stored=localStorage.getItem('cc_e2e_priv_'+me.number);
+  const storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+  if(!stored||!storedPub){ showToast('No key yet','Generate a key by sending a message first.'); return; }
+  const bundle=btoa(JSON.stringify({number:me.number,priv:stored,pub:storedPub,v:1}));
+  const el=document.createElement('textarea');
+  el.value=bundle;
+  el.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+  document.body.appendChild(el);
+  el.select();
+  try{
+    await navigator.clipboard.writeText(bundle);
+    showToast('Key copied','Paste it on your other device in Settings → Import Decryption Key. Keep it private.');
+  }catch{
+    showToast('Key ready','Copy the text below from the text area that opened.');
+  }
+  el.remove();
+  // Show in modal for easy copying
+  const txt=document.createElement('div');
+  txt.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px';
+  txt.innerHTML='<div style="background:var(--surface);border-radius:14px;padding:20px;max-width:480px;width:100%">'
+    +'<div style="font-weight:700;margin-bottom:8px;font-size:15px">🔑 Your Decryption Key</div>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">This key lets any device read your messages. Keep it private — treat it like a password.</p>'
+    +'<textarea readonly onclick="this.select()" style="width:100%;height:100px;font-size:11px;font-family:monospace;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);resize:none;box-sizing:border-box">'+bundle+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:12px"><button onclick="navigator.clipboard.writeText(\''+bundle+'\').then(()=>showToast(\'Copied!\',\'\'));this.closest(\'div[style*=fixed]\').remove()" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer">Copy & Close</button><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--text)">Close</button></div>'
+    +'</div>';
+  document.body.appendChild(txt);
+}
+async function importE2EKey(){
+  if(!window.me){ showToast('Not logged in','Log in first.'); return; }
+  const input=prompt('Paste your exported key here:');
+  if(!input||!input.trim()) return;
+  try{
+    const bundle=JSON.parse(atob(input.trim()));
+    if(!bundle||!bundle.priv||!bundle.pub||bundle.v!==1){ showToast('Invalid key','This does not look like a valid exported key.'); return; }
+    if(bundle.number!==me.number){ showToast('Wrong account','This key belongs to a different account number.'); return; }
+    // Validate that the key actually imports correctly
+    const privJwk=JSON.parse(bundle.priv);
+    const pubJwk=JSON.parse(bundle.pub);
+    const pk=await crypto.subtle.importKey('jwk',privJwk,{name:'ECDH',namedCurve:'P-256'},true,['deriveKey','deriveBits']);
+    if(!pk){ showToast('Invalid key','Could not load this key — it may be corrupted.'); return; }
+    localStorage.setItem('cc_e2e_priv_'+me.number,bundle.priv);
+    localStorage.setItem('cc_e2e_pub_'+me.number,bundle.pub);
+    window._myKeyPair=null; window._myPubJwk=null;
+    Object.keys(window._dmAesCache||{}).forEach(k=>delete window._dmAesCache[k]);
+    Object.keys(window._groupAesCache||{}).forEach(k=>delete window._groupAesCache[k]);
+    await ensureE2EKeypair();
+    showToast('Key imported!','Your messages will now decrypt correctly on this device. Reload to decrypt existing messages.');
+    setTimeout(()=>{ if(confirm('Reload now to apply the new key?')) location.reload(); },1500);
+  }catch(e){ showToast('Import failed','Invalid or corrupted key: '+(e.message||'')); }
 }
 
 /* ===== SECURE EXTERNAL LINK WARNING ===== */
