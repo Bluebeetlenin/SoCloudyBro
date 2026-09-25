@@ -6122,16 +6122,13 @@ async function _restoreE2EKeyFromCloud(rawPassword, number){
     const iv=new Uint8Array(_unb64(blob.iv));
     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},wrapKey,_unb64(blob.ct));
     const privJwk=JSON.parse(new TextDecoder().decode(plain));
-    // Re-derive public key from private key to verify and store
-    const privateKey=await crypto.subtle.importKey('jwk',privJwk,{name:'ECDH',namedCurve:'P-256'},true,['deriveKey','deriveBits']);
-    const pubJwk=await crypto.subtle.exportKey('jwk',{type:'public',algorithm:{name:'ECDH',namedCurve:'P-256'},usages:[],extractable:true,...privJwk});
-    // pubJwk reconstruction: derive public key properly from private key pair
-    // We can't derive public from private in WebCrypto directly, so generate a temporary
-    // keypair and use the stored one — instead, fetch the user's pubkey from Firebase
+    // Verify the private key is valid by importing it
+    await crypto.subtle.importKey('jwk',privJwk,{name:'ECDH',namedCurve:'P-256'},true,['deriveKey','deriveBits']);
+    // Get the matching public key from Firebase (stored by this device at sync time)
     const pubSnap=await fbdb.ref(USERS_BIN+'/'+number+'/pubkey').once('value');
     const storedPubJwkStr=pubSnap.val();
     if(!storedPubJwkStr) return false;
-    const publicKey=await crypto.subtle.importKey('jwk',JSON.parse(storedPubJwkStr),{name:'ECDH',namedCurve:'P-256'},true,[]);
+    await crypto.subtle.importKey('jwk',JSON.parse(storedPubJwkStr),{name:'ECDH',namedCurve:'P-256'},true,[]);
     localStorage.setItem('cc_e2e_priv_'+number,JSON.stringify(privJwk));
     localStorage.setItem('cc_e2e_pub_'+number,storedPubJwkStr);
     return true;
@@ -6601,6 +6598,75 @@ function saveStorage(){
   localStorage.setItem('cc_archived', JSON.stringify(archivedContacts));
   localStorage.setItem('cc_muted', JSON.stringify(mutedChats));
   localStorage.setItem('cc_removed', JSON.stringify(removedContacts));
+  _debounceSavePrefs();
+}
+
+// Firebase-backed settings/prefs — stored at users/{number}/prefs so they
+// survive localStorage wipes and sync across devices automatically.
+let _savePrefTimer=null;
+function _debounceSavePrefs(){
+  if(!me||!me.number) return;
+  clearTimeout(_savePrefTimer);
+  _savePrefTimer=setTimeout(savePrefsToFirebase, 2000);
+}
+async function savePrefsToFirebase(){
+  if(!me||!me.number||typeof fbdb==='undefined') return;
+  try{
+    const prefs={
+      contacts:contacts||[],
+      locked:lockedChats||{},
+      archived:archivedContacts||{},
+      muted:mutedChats||{},
+      removed:removedContacts||{},
+      privacy:(()=>{ try{ return JSON.parse(localStorage.getItem('cc_privacy')||'{}'); }catch{ return {}; } })(),
+      dnd:dndEnabled,
+      autocorrect:autocorrectEnabled,
+      quietHours:quietHours,
+      chatBg:(()=>{ try{ return localStorage.getItem('cc_chat_bg')||null; }catch{ return null; } })(),
+      settingsTab:(()=>{ try{ return localStorage.getItem('cc_settings_tab')||null; }catch{ return null; } })(),
+      v:2
+    };
+    await fbdb.ref(USERS_BIN+'/'+me.number+'/prefs').set(prefs);
+  }catch(e){ /* non-fatal — localStorage copy still valid */ }
+}
+async function loadPrefsFromFirebase(){
+  if(!me||!me.number||typeof fbdb==='undefined') return;
+  try{
+    const snap=await fbdb.ref(USERS_BIN+'/'+me.number+'/prefs').once('value');
+    const prefs=snap.val();
+    if(!prefs||prefs.v!==2) return;
+    // Merge: Firebase wins over empty localStorage, but don't overwrite
+    // data the user has set on this device during THIS session.
+    if(Array.isArray(prefs.contacts)&&prefs.contacts.length&&!contacts.length){
+      contacts=prefs.contacts;
+      localStorage.setItem('cc_contacts',JSON.stringify(contacts));
+    }
+    if(prefs.locked&&!Object.keys(lockedChats||{}).length){
+      lockedChats=prefs.locked;
+      localStorage.setItem('cc_locked',JSON.stringify(lockedChats));
+    }
+    if(prefs.archived&&!Object.keys(archivedContacts||{}).length){
+      archivedContacts=prefs.archived;
+      localStorage.setItem('cc_archived',JSON.stringify(archivedContacts));
+    }
+    if(prefs.muted&&!Object.keys(mutedChats||{}).length){
+      mutedChats=prefs.muted;
+      localStorage.setItem('cc_muted',JSON.stringify(mutedChats));
+    }
+    if(prefs.removed&&!Object.keys(removedContacts||{}).length){
+      removedContacts=prefs.removed;
+      localStorage.setItem('cc_removed',JSON.stringify(removedContacts));
+    }
+    if(prefs.privacy&&!localStorage.getItem('cc_privacy')){
+      localStorage.setItem('cc_privacy',JSON.stringify(prefs.privacy));
+    }
+    if(typeof prefs.dnd==='boolean') dndEnabled=prefs.dnd;
+    if(typeof prefs.autocorrect==='boolean') autocorrectEnabled=prefs.autocorrect;
+    if(prefs.quietHours) quietHours=prefs.quietHours;
+    if(prefs.chatBg&&!localStorage.getItem('cc_chat_bg')){
+      localStorage.setItem('cc_chat_bg',prefs.chatBg);
+    }
+  }catch(e){ /* non-fatal */ }
 }
 
 // -- FIREBASE (Realtime Database) ---------------------------------------------
@@ -6792,6 +6858,16 @@ async function registerOrUpdate(){
   // Profile fields stored as plaintext — name/bio/customStatus are public by design
   // (visible to all users). Encrypting them with a shared client-visible key was
   // obfuscation only. dec() is kept below for backward compat reading old encrypted values.
+  // For profile fields: always prefer me.* but fall back to the server copy
+  // if the local value was wiped (e.g. after a reset). This prevents a fresh
+  // session from overwriting good Firebase data with empty strings.
+  if(u){
+    if(!me.name&&u.name) me.name=dec(u.name)||u.name;
+    if(!me.avatar&&u.avatar) me.avatar=u.avatar;
+    if(!me.bio&&u.bio) me.bio=dec(u.bio)||u.bio;
+    if(!me.birthdate&&u.birthdate) me.birthdate=u.birthdate;
+    try{ saveStorage(); }catch(e){}
+  }
   const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked:me.blocked||(u&&u.blocked)||[],lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
   if(_myPubJwk) payload.pubkey=_myPubJwk;
   // Per-account settings added by the feature pack. Each falls back to whatever
@@ -7326,6 +7402,10 @@ async function launch(){
   let _resetApplied=false;
   try{ _resetApplied=await applyPendingAccountReset(); }
   catch(e){ console.error('launch() step failed: applyPendingAccountReset', e); }
+  // Load persisted settings/prefs from Firebase before rendering anything,
+  // so contacts, privacy settings, theme etc. are all available immediately.
+  try{ await loadPrefsFromFirebase(); }
+  catch(e){ console.error('launch() step failed: loadPrefsFromFirebase', e); }
   // Each step is isolated so a failure in any one of them (a render bug, a bad
   // cached value, anything) can't silently take down everything that comes after
   // it — previously this whole function was one unguarded chain, so a single
@@ -7342,6 +7422,8 @@ async function launch(){
   } catch (e) {
     console.error('launch() step failed: registerOrUpdate/getConvos', e);
   }
+  // Re-render profile card now that registerOrUpdate has refreshed me.* from Firebase
+  step('renderMyCard (refreshed)', renderMyCard);
   step('syncContactsFromConvos', syncContactsFromConvos);
   step('renderSidebar (after load)', renderSidebar);
   step('updateOfflineBanner', updateOfflineBanner);
@@ -12255,7 +12337,8 @@ function syncContactsFromConvos(){
       if(removedContacts[dmKey]) return;
       const alreadyHave=contacts.find(x=>x.type!=='group'&&x.number===otherNum);
       if(!alreadyHave){
-        const u=lookupUser(otherNum)||{};
+        const u=lookupUser(otherNum);
+        if(!u) return; // skip contacts for users who don't exist in the user list
         contacts.push({type:'dm',number:otherNum,name:dec(u.name)||'#'+otherNum,bio:dec(u.bio||''),avatar:u.avatar||'',key:c.key});
         changed=true;
       }
@@ -20801,6 +20884,7 @@ function savePrivacyPref(key, val){
   const prefs=_getPrivacyPrefs();
   prefs[key]=val;
   try{ localStorage.setItem('cc_privacy',JSON.stringify(prefs)); }catch{}
+  _debounceSavePrefs();
 }
 function getPrivacyPref(key, defaultVal=true){
   const prefs=_getPrivacyPrefs();
