@@ -7592,6 +7592,13 @@ async function recoverSubmitStep(){
         me.pwd=u.pwd;
         me.mustChangePassword=false;
         try{ saveStorage(); }catch(e){}
+        // Re-sync E2E key under the new password so other devices can restore it
+        _loginRawPwd=newPwd;
+        try{
+          sessionStorage.removeItem('e2e_synced_'+me.number);
+          const privStored=localStorage.getItem('cc_e2e_priv_'+me.number);
+          if(privStored) await _syncE2EKeyToCloud(newPwd,me.number,JSON.parse(privStored));
+        }catch(e){}
       }
       closeModal('recover-account-modal');
       showToast('Password reset','You can now log in with your new password.');
@@ -8675,6 +8682,7 @@ async function submitSetup(){
     }
 
     // Hash the password locally (salted SHA-256) before storing -- never sent or stored in plaintext
+    _loginRawPwd = pwd; // available for E2E cloud key sync during this session
     resetLocalSessionState();
     me={name,email,number:num,bio,birthdate,pwd:await hashPassword(pwd),avatar:tempSetupAvatar||'',createdAt:Date.now()};
     // Stamp the Google identity onto the brand-new account. `sub` is Google's
