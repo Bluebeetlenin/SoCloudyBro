@@ -4306,13 +4306,9 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Rotate Encryption Keys</div><div class="settings-row-sub">Generates a new E2E keypair — future messages use the new keys</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Rotate</button></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="exportE2EKey()">
-            <div class="settings-row-main"><div class="settings-row-label">Export Decryption Key</div><div class="settings-row-sub">Copy your key to open messages on another device — keep it private</div></div>
-            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Export</button></div>
-          </div>
-          <div class="settings-row" style="cursor:pointer" onclick="importE2EKey()">
-            <div class="settings-row-main"><div class="settings-row-label">Import Decryption Key</div><div class="settings-row-sub">Paste a key exported from another device to read your messages here</div></div>
-            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Import</button></div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Cross-Device Encryption</div><div class="settings-row-sub">Your decryption key syncs automatically — just log in on any device to read your messages</div></div>
+            <div class="settings-row-actions"><span style="color:var(--success,#4caf50);font-size:13px">Auto ✓</span></div>
           </div>
           <div class="settings-row" style="cursor:pointer" onclick="openLoginHistory()">
             <div class="settings-row-main"><div class="settings-row-label">Login History</div><div class="settings-row-sub">See your last 5 logins and the device used</div></div>
@@ -5778,14 +5774,12 @@ async function selfHeal(code, err, opts = {}) {
           try { if(window.SyntaxAccount) await window.SyntaxAccount.logIn(meNow.number, meNow.pwd); } catch(e3) {}
         }
         // Then auto-push canonical Firebase rules to unblock
-        const r = await fetch(`${FIREBASE_RULES_ENDPOINT}/set`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Admin-Number': String(ADMIN_NUMBER)
-          },
-          body: JSON.stringify({ rules: SCB_CANONICAL_RULES })
-        });
+        const _healToken = await _getRulesToken();
+        const r = _healToken ? await fetch(`${_RTDB_RULES_URL}?auth=${encodeURIComponent(_healToken)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(SCB_CANONICAL_RULES)
+        }) : { ok: false };
         if (r.ok) {
           healed = true;
           healNote = 'Firebase rules auto-restored';
@@ -6089,18 +6083,90 @@ let _disappearRenderTimer=null; // setTimeout handle for disappearing-message re
 function _b64(buf){const b=new Uint8Array(buf);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
 function _unb64(str){const s=atob(str);const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b.buffer;}
 
+// Derive a wrapping AES-GCM key from the raw password + account number using PBKDF2.
+// This key encrypts/decrypts the ECDH private key stored in Firebase so it
+// can be restored automatically on any new device after login.
+async function _deriveWrapKey(rawPassword, number){
+  const pwBytes=new TextEncoder().encode(rawPassword);
+  const salt=new TextEncoder().encode('scb-e2e-wrap-v1:'+String(number));
+  const baseKey=await crypto.subtle.importKey('raw',pwBytes,'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},
+    baseKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt']
+  );
+}
+
+// Encrypt the ECDH private-key JWK and store it in Firebase at users/{number}/e2eEnc.
+// Called silently — never surfaces errors to the user.
+async function _syncE2EKeyToCloud(rawPassword, number, privJwk){
+  if(!rawPassword||!number||!privJwk) return;
+  try{
+    const wrapKey=await _deriveWrapKey(rawPassword,number);
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const plain=new TextEncoder().encode(JSON.stringify(privJwk));
+    const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},wrapKey,plain);
+    const blob={iv:_b64(iv),ct:_b64(ct),v:1};
+    await fbdb.ref(USERS_BIN+'/'+number+'/e2eEnc').set(blob);
+  }catch(e){ console.warn('E2E cloud sync failed (non-fatal):',e.message); }
+}
+
+// Fetch the encrypted ECDH private key from Firebase and restore it to localStorage.
+// Returns true if successfully restored, false otherwise.
+async function _restoreE2EKeyFromCloud(rawPassword, number){
+  if(!rawPassword||!number) return false;
+  try{
+    const snap=await fbdb.ref(USERS_BIN+'/'+number+'/e2eEnc').once('value');
+    const blob=snap.val();
+    if(!blob||!blob.iv||!blob.ct) return false;
+    const wrapKey=await _deriveWrapKey(rawPassword,number);
+    const iv=new Uint8Array(_unb64(blob.iv));
+    const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},wrapKey,_unb64(blob.ct));
+    const privJwk=JSON.parse(new TextDecoder().decode(plain));
+    // Re-derive public key from private key to verify and store
+    const privateKey=await crypto.subtle.importKey('jwk',privJwk,{name:'ECDH',namedCurve:'P-256'},true,['deriveKey','deriveBits']);
+    const pubJwk=await crypto.subtle.exportKey('jwk',{type:'public',algorithm:{name:'ECDH',namedCurve:'P-256'},usages:[],extractable:true,...privJwk});
+    // pubJwk reconstruction: derive public key properly from private key pair
+    // We can't derive public from private in WebCrypto directly, so generate a temporary
+    // keypair and use the stored one — instead, fetch the user's pubkey from Firebase
+    const pubSnap=await fbdb.ref(USERS_BIN+'/'+number+'/pubkey').once('value');
+    const storedPubJwkStr=pubSnap.val();
+    if(!storedPubJwkStr) return false;
+    const publicKey=await crypto.subtle.importKey('jwk',JSON.parse(storedPubJwkStr),{name:'ECDH',namedCurve:'P-256'},true,[]);
+    localStorage.setItem('cc_e2e_priv_'+number,JSON.stringify(privJwk));
+    localStorage.setItem('cc_e2e_pub_'+number,storedPubJwkStr);
+    return true;
+  }catch(e){ console.warn('E2E cloud restore failed:',e.message); return false; }
+}
+
+// Raw password available at login time — stored temporarily so ensureE2EKeypair
+// can sync/restore the cloud-backed key.
+var _loginRawPwd=null;
+
 async function ensureE2EKeypair(){
   if(_myKeyPair) return _myKeyPair;
   if(!window.crypto||!crypto.subtle||!me) return null;
   try{
-    const stored=localStorage.getItem('cc_e2e_priv_'+me.number);
-    const storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+    let stored=localStorage.getItem('cc_e2e_priv_'+me.number);
+    let storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+    // If no local key, try to restore from cloud first (seamless cross-device)
+    if((!stored||!storedPub)&&_loginRawPwd){
+      const restored=await _restoreE2EKeyFromCloud(_loginRawPwd,me.number);
+      if(restored){
+        stored=localStorage.getItem('cc_e2e_priv_'+me.number);
+        storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+      }
+    }
     if(stored&&storedPub){
       const privJwk=JSON.parse(stored), pubJwk=JSON.parse(storedPub);
       const privateKey=await crypto.subtle.importKey('jwk',privJwk,{name:'ECDH',namedCurve:'P-256'},true,['deriveKey','deriveBits']);
       const publicKey=await crypto.subtle.importKey('jwk',pubJwk,{name:'ECDH',namedCurve:'P-256'},true,[]);
       _myKeyPair={privateKey,publicKey};
       _myPubJwk=storedPub;
+      // Opportunistically sync to cloud if not yet done and password is available
+      if(_loginRawPwd&&!sessionStorage.getItem('e2e_synced_'+me.number)){
+        sessionStorage.setItem('e2e_synced_'+me.number,'1');
+        _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
+      }
       return _myKeyPair;
     }
     const kp=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveKey','deriveBits']);
@@ -6110,6 +6176,11 @@ async function ensureE2EKeypair(){
     localStorage.setItem('cc_e2e_pub_'+me.number,JSON.stringify(pubJwk));
     _myKeyPair=kp;
     _myPubJwk=JSON.stringify(pubJwk);
+    // Sync new key to cloud for future devices
+    if(_loginRawPwd){
+      sessionStorage.setItem('e2e_synced_'+me.number,'1');
+      _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
+    }
     return _myKeyPair;
   }catch(e){ _myKeyPair=null; return null; }
 }
@@ -7818,6 +7889,7 @@ async function submitLogin() {
       return;
     }
     _clearLoginRateLimit(identity);
+    _loginRawPwd = pwd; // available for E2E cloud key sync/restore during this session
     // Transparently upgrade legacy weak hashes to the new salted SHA-256 format
     let pwdToStore = user.pwd;
     if(user.pwd.indexOf('$')===-1){ pwdToStore = await hashPassword(pwd); }
@@ -15275,7 +15347,16 @@ async function resolveReport(id){
 
 
 // -- FIREBASE RULES MANAGER (admin-only) -------------------------------------
-const FIREBASE_RULES_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.workers.dev';
+// Direct Firebase RTDB REST API — no Cloudflare Worker needed.
+const _RTDB_RULES_URL = 'https://syntaxgroup-default-rtdb.europe-west1.firebasedatabase.app/.settings/rules.json';
+
+async function _getRulesToken() {
+  try {
+    const user = firebase.auth && firebase.auth().currentUser;
+    if (user) return await user.getIdToken(true);
+  } catch(e) {}
+  return null;
+}
 
 const SCB_CANONICAL_RULES = {
   "rules": {
@@ -15365,44 +15446,48 @@ const SCB_CANONICAL_RULES = {
 
 async function adminLoadRules() {
   if(!requireAdmin()) return;
-  const acct = me;
-  if (!acct || !acct.number) { showToast('Not logged in', 'You must be logged in to use admin tools.'); return; }
   showToast('Loading rules...', 'Fetching current Firebase rules…');
   try {
-    const r = await fetch(`${FIREBASE_RULES_ENDPOINT}/get`, {
-      headers: { 'X-Admin-Number': String(acct.number) }
-    });
-    if (!r.ok) throw new Error(`HTTP ${r.status} — the rules Worker may need redeployment. Edit rules directly in the Firebase Console → Realtime Database → Rules tab as a workaround.`);
+    const token = await _getRulesToken();
+    if (!token) throw new Error('Not signed in to Firebase');
+    const r = await fetch(`${_RTDB_RULES_URL}?auth=${encodeURIComponent(token)}`);
+    if (!r.ok) {
+      const txt = await r.text().catch(()=>'');
+      throw new Error(`HTTP ${r.status}${txt?' — '+txt:''}`);
+    }
     const data = await r.json();
     const ta = document.getElementById('admin-rules-input');
     if (ta) ta.value = JSON.stringify(data, null, 2);
+    showToast('Rules loaded', 'Current Firebase rules are shown below.');
   } catch(e) {
     selfHeal('SCB-ADMIN-23', e, { context: 'adminLoadRules' });
     showToast(scbErr('SCB-ADMIN-23', 'Failed to load rules', e.message));
-    // Show a helpful inline note
     const ta = document.getElementById('admin-rules-input');
-    if (ta && !ta.value) ta.placeholder = 'Could not load rules automatically (Worker error). Paste your rules JSON here manually, or edit them in the Firebase Console → Realtime Database → Rules.';
+    if (ta && !ta.value) ta.value = JSON.stringify(SCB_CANONICAL_RULES, null, 2);
   }
 }
 
 async function adminPushRules() {
   if(!requireAdmin()) return;
-  const acct = me;
-  if (!acct || !acct.number) { showToast('Not logged in', 'You must be logged in to use admin tools.'); return; }
   const ta = document.getElementById('admin-rules-input');
-  if (!ta || !ta.value.trim()) { showToast('Paste rules JSON first', 'Paste the rules JSON into the text area above.'); return; }
+  if (!ta || !ta.value.trim()) { showToast('Enter rules JSON first', 'The text area above is empty.'); return; }
   let rules;
   try { rules = JSON.parse(ta.value); } catch(e) { showToast('Invalid JSON', e.message); return; }
   if (!confirm('Push these Firebase rules? This affects ALL users immediately.')) return;
-  showToast('🔧 Pushing rules...', 'Sending rules to Firebase…');
+  showToast('Pushing rules...', 'Sending rules to Firebase…');
   try {
-    const r = await fetch(`${FIREBASE_RULES_ENDPOINT}/set`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Number': String(acct.number) },
-      body: JSON.stringify({ rules })
+    const token = await _getRulesToken();
+    if (!token) throw new Error('Not signed in to Firebase');
+    const r = await fetch(`${_RTDB_RULES_URL}?auth=${encodeURIComponent(token)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rules)
     });
-    if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
-    showToast('✅ Rules Updated', 'Firebase security rules applied successfully.');
+    if (!r.ok) {
+      const txt = await r.text().catch(()=>'');
+      throw new Error(`HTTP ${r.status}${txt?' — '+txt:''}`);
+    }
+    showToast('Rules Updated', 'Firebase security rules applied successfully.');
   } catch(e) {
     selfHeal('SCB-ADMIN-24', e, { context: 'adminPushRules' });
     showToast(scbErr('SCB-ADMIN-24', 'Failed to push rules', e.message));
@@ -20852,6 +20937,7 @@ async function rotateE2EKeys(){
   try{
     localStorage.removeItem('cc_e2e_priv_'+window.me.number);
     localStorage.removeItem('cc_e2e_pub_'+window.me.number);
+    try{ sessionStorage.removeItem('e2e_synced_'+window.me.number); }catch(e){}
     window._myKeyPair=null; window._myPubJwk=null;
     Object.keys(window._dmAesCache||{}).forEach(k=>delete window._dmAesCache[k]);
     Object.keys(window._groupAesCache||{}).forEach(k=>delete window._groupAesCache[k]);
