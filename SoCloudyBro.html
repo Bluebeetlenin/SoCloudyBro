@@ -5965,6 +5965,359 @@ async function renderAdminErrorsTab(){
 }
 // -- END ERROR LOG -----------------------------------------------------------
 
+// -- SCB DIAGNOSTICS ENGINE --------------------------------------------------
+// Self-test suite: each check returns {pass, warn, detail}.
+// pass=false → red FAIL; warn=true && pass=true → yellow WARN; else green PASS.
+const SCB_CHECKS = [
+
+  // ── CONFIG ─────────────────────────────────────────────────────────────────
+  { id:'cfg.admin', cat:'Config', name:'Admin number set',
+    run:()=>ADMIN_NUMBER===2015?{pass:true,detail:'#'+ADMIN_NUMBER}:{pass:false,detail:'ADMIN_NUMBER is '+ADMIN_NUMBER} },
+
+  { id:'cfg.siteurl', cat:'Config', name:'SITE_URL matches deployment',
+    run:()=>{
+      const expected=window.location.origin;
+      const ok=SITE_URL&&SITE_URL.includes(expected.replace(/^https?:\/\//,'').split('/')[0]);
+      return {pass:!!ok, warn:!ok, detail:'SITE_URL='+SITE_URL+' page='+expected};
+    }
+  },
+  { id:'cfg.spotify_redirect', cat:'Config', name:'Spotify redirect URI matches page',
+    run:()=>{
+      const cur=window.location.origin+window.location.pathname;
+      const ok=typeof SPOTIFY_REDIRECT_URI==='string'&&SPOTIFY_REDIRECT_URI===cur;
+      return {pass:ok, warn:!ok, detail:'URI='+SPOTIFY_REDIRECT_URI};
+    }
+  },
+  { id:'cfg.spotify_id', cat:'Config', name:'Spotify Client ID present',
+    run:()=>({pass:!!SPOTIFY_CLIENT_ID&&SPOTIFY_CLIENT_ID.length>10,detail:SPOTIFY_CLIENT_ID?'present':'MISSING'}) },
+  { id:'cfg.lastfm', cat:'Config', name:'Last.fm API key present',
+    run:()=>({pass:!!LASTFM_API_KEY&&LASTFM_API_KEY.length>10,detail:LASTFM_API_KEY?'present':'MISSING'}) },
+  { id:'cfg.web3forms', cat:'Config', name:'Web3Forms access key present',
+    run:()=>({pass:!!WEB3FORMS_ACCESS_KEY&&WEB3FORMS_ACCESS_KEY.length>10,detail:WEB3FORMS_ACCESS_KEY?'present':'MISSING'}) },
+
+  // ── FIREBASE ───────────────────────────────────────────────────────────────
+  { id:'fb.sdk', cat:'Firebase', name:'Firebase SDK loaded',
+    run:()=>({pass:typeof firebase!=='undefined'&&typeof firebase.database==='function',detail:typeof firebase==='undefined'?'firebase global missing':'OK'}) },
+  { id:'fb.app', cat:'Firebase', name:'Firebase App initialised',
+    run:()=>{try{const a=firebase.app();return {pass:!!a,detail:a?a.name:'not initialised'};}catch(e){return {pass:false,detail:e.message};}} },
+  { id:'fb.db', cat:'Firebase', name:'Firebase Realtime DB accessible',
+    run:()=>{try{const d=firebase.database();return {pass:!!d,detail:d?'OK':'null'};}catch(e){return {pass:false,detail:e.message};}} },
+  { id:'fb.dburl', cat:'Firebase', name:'DB URL points to europe-west1',
+    run:()=>{
+      try{
+        const url=firebase.database().ref().toString();
+        const ok=url.includes('europe-west1');
+        return {pass:ok,warn:!ok,detail:url};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'fb.read', cat:'Firebase', name:'Can read users/ from Firebase',
+    async:true,
+    run:async()=>{
+      try{
+        const snap=await firebase.database().ref('users').limitToFirst(1).once('value');
+        return {pass:true,detail:'Got '+(snap.numChildren?snap.numChildren():Object.keys(snap.val()||{}).length)+' record(s)'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'fb.write', cat:'Firebase', name:'Can write heartbeat to Firebase',
+    async:true,
+    run:async()=>{
+      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      try{
+        await firebase.database().ref('users/'+me.number+'/lastSeen').set(Date.now());
+        return {pass:true,detail:'Write succeeded'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'fb.rules_errors', cat:'Firebase', name:'errors/ path is writable',
+    async:true,
+    run:async()=>{
+      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      try{
+        const ref=firebase.database().ref('errors').push();
+        await ref.set({ts:Date.now(),code:'DIAG-TEST',user:me.number});
+        await ref.remove();
+        return {pass:true,detail:'Write+delete succeeded'};
+      }catch(e){return {pass:false,detail:e.message+' — add errors/ to Firebase rules'};}
+    }
+  },
+
+  // ── AUTH / SESSION ─────────────────────────────────────────────────────────
+  { id:'auth.firebase', cat:'Auth', name:'Firebase Auth session active',
+    run:()=>{
+      const u=firebase.auth&&firebase.auth().currentUser;
+      return {pass:!!u,detail:u?'uid='+u.uid:'No Firebase currentUser'};
+    }
+  },
+  { id:'auth.me', cat:'Auth', name:'me object is set',
+    run:()=>({pass:!!(me&&me.number),detail:me?'#'+me.number+' '+me.name:'me is null'}) },
+  { id:'auth.me_name', cat:'Auth', name:'me.name is set',
+    run:()=>({pass:!!(me&&me.name),warn:!!(me&&!me.name),detail:me&&me.name?me.name:'Empty name — display issues likely'}) },
+  { id:'auth.me_storage', cat:'Auth', name:'cc_me in localStorage is valid',
+    run:()=>{
+      try{
+        const raw=localStorage.getItem('cc_me');
+        if(!raw) return {pass:false,detail:'cc_me is missing'};
+        const obj=JSON.parse(raw);
+        return {pass:!!(obj&&obj.number),detail:'#'+(obj&&obj.number)};
+      }catch(e){return {pass:false,detail:'JSON parse failed: '+e.message};}
+    }
+  },
+
+  // ── E2E ENCRYPTION ─────────────────────────────────────────────────────────
+  { id:'e2e.priv_local', cat:'E2E Crypto', name:'Private key in localStorage',
+    run:()=>{
+      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      const raw=localStorage.getItem('cc_e2e_priv_'+me.number);
+      return {pass:!!raw,detail:raw?'Present ('+raw.length+' chars)':'Missing — messages on new devices cannot decrypt'};
+    }
+  },
+  { id:'e2e.pub_fb', cat:'E2E Crypto', name:'Public key in Firebase',
+    async:true,
+    run:async()=>{
+      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      try{
+        const snap=await firebase.database().ref('users/'+me.number+'/pubkey').once('value');
+        return {pass:snap.exists(),detail:snap.exists()?'Present':'Missing — recipients cannot encrypt to you'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'e2e.import', cat:'E2E Crypto', name:'Private key is importable',
+    async:true,
+    run:async()=>{
+      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      const raw=localStorage.getItem('cc_e2e_priv_'+me.number);
+      if(!raw) return {pass:false,detail:'No key to import'};
+      try{
+        const jwk=JSON.parse(raw);
+        await crypto.subtle.importKey('jwk',jwk,{name:'ECDH',namedCurve:'P-256'},false,['deriveKey']);
+        return {pass:true,detail:'ECDH P-256 key imported OK'};
+      }catch(e){return {pass:false,detail:'Import failed: '+e.message};}
+    }
+  },
+  { id:'e2e.cloud_backup', cat:'E2E Crypto', name:'Encrypted key backup in Firebase',
+    async:true,
+    run:async()=>{
+      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      try{
+        const snap=await firebase.database().ref('users/'+me.number+'/e2eEnc').once('value');
+        return {pass:snap.exists(),warn:!snap.exists(),detail:snap.exists()?'Backup present':'No cloud backup — cross-device E2E will fail'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+
+  // ── CONTACTS & USERS ───────────────────────────────────────────────────────
+  { id:'contacts.cache', cat:'Contacts', name:'usersCache is populated',
+    run:()=>({pass:Array.isArray(usersCache)&&usersCache.length>0,detail:Array.isArray(usersCache)?usersCache.length+' users':'usersCache is not an array'}) },
+  { id:'contacts.list', cat:'Contacts', name:'contacts array has entries',
+    run:()=>({pass:Array.isArray(contacts)&&contacts.length>0,warn:Array.isArray(contacts)&&contacts.length===0,detail:Array.isArray(contacts)?contacts.length+' contacts':'contacts is not an array'}) },
+  { id:'contacts.phantom', cat:'Contacts', name:'No phantom contacts (unknown users)',
+    run:()=>{
+      if(!Array.isArray(contacts)||!Array.isArray(usersCache)) return {pass:false,detail:'Arrays not ready'};
+      const phantoms=contacts.filter(c=>c.type!=='group'&&c.number&&!lookupUser(c.number));
+      return {pass:phantoms.length===0,warn:phantoms.length>0,detail:phantoms.length>0?phantoms.length+' phantom(s): '+phantoms.map(c=>'#'+c.number).join(', '):'All contacts verified'};
+    }
+  },
+  { id:'contacts.keys', cat:'Contacts', name:'All contact keys are well-formed',
+    run:()=>{
+      if(!Array.isArray(contacts)) return {pass:true,detail:'No contacts'};
+      const bad=contacts.filter(c=>!c.key||typeof c.key!=='string');
+      return {pass:bad.length===0,warn:bad.length>0,detail:bad.length>0?bad.length+' contacts missing keys':'OK'};
+    }
+  },
+  { id:'contacts.my_record', cat:'Contacts', name:'My user record in usersCache',
+    run:()=>{
+      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      const u=lookupUser(me.number);
+      return {pass:!!u,detail:u?'Found: '+dec(u.name||''):'Not in usersCache — profile may not save correctly'};
+    }
+  },
+
+  // ── STORAGE ────────────────────────────────────────────────────────────────
+  { id:'storage.accessible', cat:'Storage', name:'localStorage accessible',
+    run:()=>{
+      try{localStorage.setItem('__scb_diag__','1');localStorage.removeItem('__scb_diag__');return {pass:true,detail:'OK'};}
+      catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'storage.quota', cat:'Storage', name:'localStorage not near quota',
+    run:()=>{
+      try{
+        let used=0;
+        for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);used+=(k.length+(localStorage.getItem(k)||'').length)*2;}
+        const kb=Math.round(used/1024);
+        const warn=kb>4000;
+        return {pass:!warn||kb<5000,warn:warn,detail:kb+' KB used (limit ≈5 MB)'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'storage.contacts_json', cat:'Storage', name:'cc_contacts parses correctly',
+    run:()=>{
+      try{
+        const raw=localStorage.getItem('cc_contacts');
+        if(!raw) return {pass:true,warn:true,detail:'cc_contacts not in localStorage (using in-memory)'};
+        JSON.parse(raw);
+        return {pass:true,detail:'Parseable — '+JSON.parse(raw).length+' entries'};
+      }catch(e){return {pass:false,detail:'JSON error: '+e.message};}
+    }
+  },
+
+  // ── CRITICAL FUNCTIONS ─────────────────────────────────────────────────────
+  { id:'fn.core', cat:'Functions', name:'Core functions exist',
+    run:()=>{
+      const needed=['sendMsg','renderSidebar','openChat','getUsers','lookupUser',
+                    'showToast','selfHeal','ensureE2EKeypair','saveStorage',
+                    'loadPrefsFromFirebase','syncContactsFromConvos'];
+      const missing=needed.filter(f=>typeof window[f]!=='function');
+      return {pass:missing.length===0,detail:missing.length?'Missing: '+missing.join(', '):'All '+needed.length+' present'};
+    }
+  },
+  { id:'fn.enc', cat:'Functions', name:'enc/dec helpers work',
+    run:()=>{
+      try{
+        const test='hello SCB'; const encoded=enc(test);
+        return {pass:typeof encoded==='string'&&encoded.length>0,detail:'enc("'+test+'")="'+encoded.slice(0,30)+'"'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'fn.lookupUser', cat:'Functions', name:'lookupUser returns consistent results',
+    run:()=>{
+      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      const u1=lookupUser(me.number); const u2=lookupUser(me.number);
+      return {pass:u1===u2,warn:u1!==u2,detail:u1?'Consistent reference ('+dec(u1.name||'')+')':(u2?'Inconsistent!':'Not found')};
+    }
+  },
+  { id:'fn.esc', cat:'Functions', name:'esc() prevents XSS injection',
+    run:()=>{
+      try{
+        const out=esc('<script>alert(1)</script>');
+        const safe=!out.includes('<script>');
+        return {pass:safe,detail:safe?'Escaped OK → '+out.slice(0,40):'UNSAFE — XSS risk'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+
+  // ── SECURITY ───────────────────────────────────────────────────────────────
+  { id:'sec.pin', cat:'Security', name:'PIN or 2FA configured',
+    run:()=>{
+      const hasPIN=!!localStorage.getItem('cc_pin');
+      return {pass:hasPIN,warn:!hasPIN,detail:hasPIN?'PIN set':'No PIN — account less protected'};
+    }
+  },
+  { id:'sec.blocked_list', cat:'Security', name:'blocked list is valid',
+    run:()=>{
+      const b=me&&me.blocked;
+      if(!b) return {pass:true,detail:'Empty (no blocks)'};
+      return {pass:Array.isArray(b),warn:!Array.isArray(b),detail:Array.isArray(b)?b.length+' blocked numbers':'blocked is not an array: '+typeof b};
+    }
+  },
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
+  { id:'ui.sidebar', cat:'UI', name:'Sidebar DOM element present',
+    run:()=>{const el=document.getElementById('sidebar');return {pass:!!el,detail:el?'Found':'#sidebar missing'};} },
+  { id:'ui.toast', cat:'UI', name:'Toast system works',
+    run:()=>{
+      try{showToast('Diagnostics','Self-test toast check');return {pass:true,detail:'Toast dispatched'};}
+      catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+];
+
+// Run all checks (async-aware) and return result array
+async function _runSCBChecks(onProgress){
+  const results=[];
+  for(let i=0;i<SCB_CHECKS.length;i++){
+    const chk=SCB_CHECKS[i];
+    if(onProgress) onProgress(i, SCB_CHECKS.length, chk.name);
+    let r;
+    try{
+      r=chk.async ? await chk.run() : chk.run();
+    }catch(e){
+      r={pass:false,detail:'Check threw: '+e.message};
+    }
+    results.push({...chk, ...r});
+    // Log failures to error log
+    if(!r.pass) _logError('DIAG-'+chk.id.toUpperCase().replace('.','_'), chk.name+' — '+r.detail, chk.cat, 'diagnostics', false);
+  }
+  return results;
+}
+
+async function renderAdminDiagnosticsTab(){
+  const body=document.getElementById('admin-dashboard-body');
+  if(!body) return;
+  body.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted)"><div style="font-size:28px">🔍</div><div style="margin-top:8px">Click <strong>Run Diagnostics</strong> to scan for errors.</div>'
+    +'<button class="btn" style="margin-top:14px" onclick="_launchDiagnostics()">▶ Run Diagnostics</button></div>';
+}
+window._launchDiagnostics = async function(){
+  const body=document.getElementById('admin-dashboard-body');
+  if(!body) return;
+  let prog=0;
+  const total=SCB_CHECKS.length;
+  const bar=(n,t,name)=>{
+    const pct=Math.round(n/t*100);
+    const bEl=document.getElementById('diag-progbar');
+    const tEl=document.getElementById('diag-progtext');
+    if(bEl) bEl.style.width=pct+'%';
+    if(tEl) tEl.textContent='Running: '+name+' ('+n+'/'+t+')';
+  };
+  body.innerHTML=`<div style="padding:16px">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px" id="diag-progtext">Starting…</div>
+    <div style="background:var(--surface2);border-radius:4px;height:8px;overflow:hidden;margin-bottom:16px">
+      <div id="diag-progbar" style="height:100%;background:linear-gradient(90deg,#4f8ef7,#6b5de8);width:0%;transition:width .2s"></div>
+    </div>
+    <div id="diag-results" style="font-size:13px;color:var(--muted)">Scanning…</div>
+  </div>`;
+  const results=await _runSCBChecks(bar);
+  // Summary
+  const fails=results.filter(r=>!r.pass);
+  const warns=results.filter(r=>r.pass&&r.warn);
+  const passes=results.filter(r=>r.pass&&!r.warn);
+  const cats=[...new Set(results.map(r=>r.cat))];
+  const catHTML=cats.map(cat=>{
+    const items=results.filter(r=>r.cat===cat);
+    const rows=items.map(r=>{
+      const icon=r.pass?(r.warn?'⚠️':'✅'):'❌';
+      const bg=r.pass?(r.warn?'rgba(255,193,7,.08)':'rgba(39,174,96,.08)'):'rgba(231,76,60,.08)';
+      const col=r.pass?(r.warn?'#f39c12':'var(--success,#27ae60)'):'var(--danger,#e74c3c)';
+      return `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 6px;border-radius:6px;margin-bottom:2px;background:${bg}">
+        <span style="font-size:15px;flex-shrink:0;margin-top:-1px">${icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:500;color:var(--text)">${esc(r.name)}</div>
+          <div style="font-size:11px;color:${col};word-break:break-word">${esc(r.detail||'')}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${esc(cat)}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+  const summaryColor=fails.length?'var(--danger,#e74c3c)':warns.length?'#f39c12':'var(--success,#27ae60)';
+  const summaryLabel=fails.length?fails.length+' failure'+(fails.length>1?'s':''):warns.length?warns.length+' warning'+(warns.length>1?'s':''):'All clear';
+  document.getElementById('diag-results').innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;flex:1;min-width:80px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:var(--success,#27ae60)">${passes.length}</div>
+        <div style="font-size:10px;color:var(--muted)">Passed</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;flex:1;min-width:80px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:#f39c12">${warns.length}</div>
+        <div style="font-size:10px;color:var(--muted)">Warnings</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;flex:1;min-width:80px;text-align:center">
+        <div style="font-size:20px;font-weight:700;color:${summaryColor}">${fails.length}</div>
+        <div style="font-size:10px;color:var(--muted)">Failures</div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:${summaryColor};margin-bottom:14px">
+      ${fails.length?'❌':'⚠️'} ${esc(summaryLabel)} in ${results.length} checks
+      <button class="btn btn-sm btn-ghost" style="float:right;font-size:11px" onclick="_launchDiagnostics()">↻ Re-run</button>
+    </div>
+    ${catHTML}`;
+};
+// -- END DIAGNOSTICS ENGINE --------------------------------------------------
+
 
 // -- OWNER-CONFIGURABLE PLACEHOLDERS ------------------------------------------
 // (Self-healing admin alerts need no configuration: notifyAdminByEmail() sends
@@ -14810,7 +15163,8 @@ async function openAdminDashboard(){
       (t==='spam'&&hasPermission('users_view'))||
       (t==='feedback'&&hasPermission('feedback_view'))||
       (t==='code'&&hasPermission('code_update'))||
-      (t==='errors'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()));
+      (t==='errors'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()))||
+      (t==='diagnostics'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()));
     btn.style.display=show?'':'none';
   });
   _updateErrBadge();
@@ -14836,6 +15190,7 @@ function switchAdminTab(tab){
   else if(tab==='feedback') renderAdminFeedbackTab();
   else if(tab==='code') renderAdminCodeTab();
   else if(tab==='errors') renderAdminErrorsTab();
+  else if(tab==='diagnostics') renderAdminDiagnosticsTab();
 }
 
 // ── NUCLEAR RESET ────────────────────────────────────────────────────────────
@@ -20915,6 +21270,7 @@ init();
       <button class="admin-dash-tab" data-tab="feedback" onclick="switchAdminTab('feedback')">💬 Feedback</button>
       <button class="admin-dash-tab" data-tab="code" onclick="switchAdminTab('code')">🚀 Code</button>
       <button class="admin-dash-tab" id="admin-err-tab" data-tab="errors" onclick="switchAdminTab('errors')">⚠️ Errors</button>
+      <button class="admin-dash-tab" data-tab="diagnostics" onclick="switchAdminTab('diagnostics')">🔍 Diagnostics</button>
     </div>
     <div class="modal-body" id="admin-dashboard-body" style="padding-bottom:14px;max-height:520px;overflow-y:auto"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('admin-dashboard-modal')">Close</button></div>
