@@ -4054,7 +4054,7 @@ body.device-tablet .msg-body{max-width:74%}
 
 <div id="shell">
   <div id="sidebar">
-    <div id="sb-titlebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><defs><linearGradient id="scb-logo-grad" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f8ef7"/><stop offset="0.5" stop-color="#6b5de8"/><stop offset="1" stop-color="#8b3fbd"/></linearGradient></defs><path d="M7 17a4 4 0 1 1 .3-7.98A5.5 5.5 0 0 1 18 10.5a4 4 0 0 1-.6 7.5H7z" fill="url(#scb-logo-grad)"/><path d="M9.4 18.2l-1.9 3 3.5-1.5z" fill="url(#scb-logo-grad)"/></svg><span>SoCloudyBro</span><button id="admin-dash-btn" class="icon-btn" onclick="openAdminDashboard()" title="Admin Dashboard" style="display:none;margin-left:auto;-webkit-app-region:no-drag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z"/></svg></button></div>
+    <div id="sb-titlebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><defs><linearGradient id="scb-logo-grad" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f8ef7"/><stop offset="0.5" stop-color="#6b5de8"/><stop offset="1" stop-color="#8b3fbd"/></linearGradient></defs><path d="M7 17a4 4 0 1 1 .3-7.98A5.5 5.5 0 0 1 18 10.5a4 4 0 0 1-.6 7.5H7z" fill="url(#scb-logo-grad)"/><path d="M9.4 18.2l-1.9 3 3.5-1.5z" fill="url(#scb-logo-grad)"/></svg><span>SoCloudyBro</span><button id="admin-dash-btn" class="icon-btn" onclick="openAdminDashboard()" title="Admin Dashboard" style="display:none;margin-left:auto;-webkit-app-region:no-drag;position:relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z"/></svg><span id="admin-err-badge" hidden style="position:absolute;top:-3px;right:-3px;background:#e74c3c;color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px;line-height:1.4;pointer-events:none"></span></button></div>
     <div id="sb-head">
       <div id="my-card" onclick="showSettings()">
         <div id="my-avatar-wrap">
@@ -5754,6 +5754,8 @@ async function selfHeal(code, err, opts = {}) {
   const msg = (err && err.message) || String(err || '');
   let healed = false;
   let healNote = '';
+  // Record immediately (healed status updated after recovery attempt)
+  const _errEntry = { code, msg, context, detail: err&&err.stack?String(err.stack).slice(0,400):null };
 
   try {
     // 1. Network / timeout errors → retry with backoff
@@ -5812,6 +5814,8 @@ async function selfHeal(code, err, opts = {}) {
       showToast('⚠️ Self-Healing', 'Could not auto-fix: ' + (healNote || msg.slice(0, 80)));
     }
   }
+  // Log the error with final healed status
+  if(typeof _logError==='function') _logError(_errEntry.code, _errEntry.msg, _errEntry.detail, _errEntry.context, healed);
   return healed;
 }
 
@@ -5819,15 +5823,147 @@ async function selfHeal(code, err, opts = {}) {
 // through a try/catch and attempt self-healing automatically.
 window.addEventListener('unhandledrejection', e => {
   const err = e.reason;
+  _logError('SCB-SYS-06', (err&&err.message)||String(err||''), null, 'unhandledRejection', false, err&&err.stack);
   selfHeal('SCB-SYS-06', err, { silent: false });
   console.error('[SCB unhandled rejection]', err);
   e.preventDefault();
 });
 window.addEventListener('error', e => {
-  selfHeal('SCB-SYS-07', e.error || new Error(e.message), { silent: false });
-  console.error('[SCB global error]', e.error || e.message);
+  const err = e.error || new Error(e.message);
+  _logError('SCB-SYS-07', e.message||'Script error', e.filename?e.filename+':'+e.lineno:'', 'globalError', false, err&&err.stack);
+  selfHeal('SCB-SYS-07', err, { silent: false });
+  console.error('[SCB global error]', err);
 });
 // -- END SELF-HEALING ---------------------------------------------------------
+
+// -- ERROR LOG ---------------------------------------------------------------
+// Persistent session log of every error that passes through scbErr/selfHeal.
+// Capped at 300 entries (ring buffer). Survives hot-reloads via sessionStorage.
+const _ERR_LOG_KEY = 'scb_error_log';
+const _ERR_LOG_MAX = 300;
+let _errorLog = (()=>{
+  try{ const s=sessionStorage.getItem(_ERR_LOG_KEY); return s?JSON.parse(s):[]; }catch{ return []; }
+})();
+
+function _logError(code, message, detail, context, healed, stack){
+  const entry={
+    ts: Date.now(),
+    code: code||'',
+    message: String(message||'').slice(0,300),
+    detail: detail?String(detail).slice(0,200):undefined,
+    context: context||undefined,
+    healed: !!healed,
+    stack: stack?String(stack).slice(0,600):undefined
+  };
+  _errorLog.push(entry);
+  if(_errorLog.length>_ERR_LOG_MAX) _errorLog.splice(0, _errorLog.length-_ERR_LOG_MAX);
+  try{ sessionStorage.setItem(_ERR_LOG_KEY, JSON.stringify(_errorLog)); }catch{}
+  _updateErrBadge();
+  // Write to Firebase errors/ path — all users write their errors so admin
+  // can see cross-session issues in the Error Log tab.
+  // Fire-and-forget; never blocks the caller; skips if not signed in yet.
+  if(typeof fbdb!=='undefined' && typeof me!=='undefined' && me && me.number){
+    const fbEntry={...entry}; delete fbEntry.stack;
+    fbEntry.user=me.number;
+    try{ fbdb.ref('errors').push(fbEntry).catch(()=>{}); }catch{}
+  }
+}
+function _clearErrorLog(){
+  _errorLog=[];
+  try{ sessionStorage.removeItem(_ERR_LOG_KEY); }catch{}
+  _updateErrBadge();
+}
+function _updateErrBadge(){
+  const count=_errorLog.length;
+  const tab=document.getElementById('admin-err-tab');
+  if(tab){ tab.textContent=count>0?'⚠️ Errors ('+count+')':'⚠️ Errors'; tab.style.color=count>0?'var(--danger,#e74c3c)':''; }
+  const badge=document.getElementById('admin-err-badge');
+  if(badge){ badge.hidden=count===0; badge.textContent=count>99?'99+':String(count); }
+}
+function _buildErrorReport(){
+  const lines=['SCB Error Report — '+new Date().toISOString(),'Generated by: #'+(me&&me.number||'?'),'','Code\tTime\tContext\tMessage\tDetail\tHealed'];
+  _errorLog.forEach(e=>{
+    const t=new Date(e.ts).toISOString().replace('T',' ').slice(0,19);
+    lines.push([e.code||'—',t,e.context||'—',(e.message||'').replace(/\t/g,' '),(e.detail||'').replace(/\t/g,' '),e.healed?'YES':'NO'].join('\t'));
+  });
+  return lines.join('\n');
+}
+async function renderAdminErrorsTab(){
+  const body=document.getElementById('admin-dashboard-body');
+  if(!body) return;
+  // Merge local log with Firebase remote errors (if admin)
+  let remoteErrors=[];
+  if(me&&me.number===ADMIN_NUMBER&&typeof fbdb!=='undefined'){
+    try{
+      const snap=await fbdb.ref('errors').orderByChild('ts').limitToLast(200).once('value');
+      if(snap.exists()){
+        snap.forEach(c=>{ if(c.val()) remoteErrors.push(c.val()); });
+      }
+    }catch{}
+  }
+  // Merge and deduplicate by ts+code
+  const seen=new Set(_errorLog.map(e=>e.ts+'|'+e.code));
+  const merged=[..._errorLog,...remoteErrors.filter(e=>!seen.has(e.ts+'|'+e.code))];
+  merged.sort((a,b)=>b.ts-a.ts);
+
+  const unhealed=merged.filter(e=>!e.healed);
+  const summary=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 16px;flex:1;min-width:100px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:var(--text)">${merged.length}</div>
+      <div style="font-size:11px;color:var(--muted)">Total Errors</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 16px;flex:1;min-width:100px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:${unhealed.length?'var(--danger,#e74c3c)':'var(--success)'}">${unhealed.length}</div>
+      <div style="font-size:11px;color:var(--muted)">Unrecovered</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 16px;flex:1;min-width:100px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:var(--text)">${remoteErrors.length}</div>
+      <div style="font-size:11px;color:var(--muted)">Remote (Firebase)</div>
+    </div>
+  </div>`;
+
+  let filterState='all';
+  const render=()=>{
+    const list=filterState==='unhealed'?merged.filter(e=>!e.healed):
+                filterState==='sys'?merged.filter(e=>e.code.startsWith('SCB-SYS')):
+                merged;
+    if(!list.length) return '<div style="padding:20px;text-align:center;color:var(--muted)">No errors recorded'+(filterState!=='all'?' for this filter':'')+'.</div>';
+    return list.map(e=>{
+      const t=new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      const day=new Date(e.ts).toLocaleDateString([],{month:'short',day:'numeric'});
+      const info=SCB_ERROR_CODES[e.code]||null;
+      return `<div style="border-bottom:1px solid var(--border);padding:9px 2px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <code style="font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px;color:var(--accent)">${esc(e.code||'?')}</code>
+          <span style="font-size:11px;color:var(--muted)">${esc(day+' '+t)}</span>
+          ${e.context?`<span style="font-size:11px;color:var(--muted);font-style:italic">${esc(e.context)}</span>`:''}
+          <span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:10px;background:${e.healed?'var(--success,#27ae60)':'var(--danger,#e74c3c)'};color:#fff">${e.healed?'Healed':'Unrecovered'}</span>
+        </div>
+        <div style="font-size:13px;margin-top:4px;color:var(--text)">${esc(e.message||'')}</div>
+        ${e.detail?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(e.detail)}</div>`:''}
+        ${info?`<div style="font-size:11px;color:var(--text2);margin-top:2px;font-style:italic">${esc(info.meaning)}</div>`:''}
+      </div>`;
+    }).join('');
+  };
+
+  body.innerHTML=`<div style="padding:12px">
+    ${summary}
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="this.closest('.err-log-wrap').querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('all')" class="btn btn-sm btn-ghost efilter active">All</button>
+      <button onclick="this.closest('.err-log-wrap').querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('unhealed')" class="btn btn-sm btn-ghost efilter">Unrecovered</button>
+      <button onclick="this.closest('.err-log-wrap').querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('sys')" class="btn btn-sm btn-ghost efilter">System</button>
+      <button onclick="navigator.clipboard.writeText(_buildErrorReport()).then(()=>showToast('Copied','Error report copied to clipboard.'))" class="btn btn-sm" style="margin-left:auto">📋 Copy Report</button>
+      <button onclick="if(confirm('Clear the local error log?')){_clearErrorLog();renderAdminErrorsTab();}" class="btn btn-sm btn-ghost" style="color:var(--danger,#e74c3c)">🗑 Clear</button>
+    </div>
+    <div class="err-log-wrap" id="err-log-list" style="max-height:360px;overflow-y:auto;font-family:var(--font-mono,monospace)">${render()}</div>
+  </div>`;
+  window.errFilterChange=(f)=>{
+    filterState=f;
+    const wrap=body.querySelector('.err-log-wrap');
+    if(wrap) wrap.innerHTML=render();
+  };
+}
+// -- END ERROR LOG -----------------------------------------------------------
 
 
 // -- OWNER-CONFIGURABLE PLACEHOLDERS ------------------------------------------
@@ -14673,9 +14809,11 @@ async function openAdminDashboard(){
       (t==='reports'&&hasPermission('reports_view'))||
       (t==='spam'&&hasPermission('users_view'))||
       (t==='feedback'&&hasPermission('feedback_view'))||
-      (t==='code'&&hasPermission('code_update'));
+      (t==='code'&&hasPermission('code_update'))||
+      (t==='errors'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()));
     btn.style.display=show?'':'none';
   });
+  _updateErrBadge();
   // Pick first visible tab (avoids opening on a hidden tab after permission changes)
   const visibleTabs=[...document.querySelectorAll('.admin-dash-tab')].filter(b=>b.style.display!=='none').map(b=>b.dataset.tab);
   const firstTab=visibleTabs.includes(adminDashTab)?adminDashTab:(visibleTabs[0]||'overview');
@@ -14697,6 +14835,7 @@ function switchAdminTab(tab){
   else if(tab==='spam') renderAdminSpamTab();
   else if(tab==='feedback') renderAdminFeedbackTab();
   else if(tab==='code') renderAdminCodeTab();
+  else if(tab==='errors') renderAdminErrorsTab();
 }
 
 // ── NUCLEAR RESET ────────────────────────────────────────────────────────────
@@ -15538,6 +15677,14 @@ const SCB_CANONICAL_RULES = {
       ".read": "auth != null",
       ".write": "auth != null",
       ".indexOn": ["at", "reporter"]
+    },
+
+    "errors": {
+      // Error log entries — writable by any authenticated session, readable by admin only.
+      // Admin reads all cross-session errors in the Error Log tab.
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["ts"]
     },
 
     // Block any other top-level path not listed above
@@ -20767,6 +20914,7 @@ init();
       <button class="admin-dash-tab" data-tab="spam" onclick="switchAdminTab('spam')">🤖 Spam</button>
       <button class="admin-dash-tab" data-tab="feedback" onclick="switchAdminTab('feedback')">💬 Feedback</button>
       <button class="admin-dash-tab" data-tab="code" onclick="switchAdminTab('code')">🚀 Code</button>
+      <button class="admin-dash-tab" id="admin-err-tab" data-tab="errors" onclick="switchAdminTab('errors')">⚠️ Errors</button>
     </div>
     <div class="modal-body" id="admin-dashboard-body" style="padding-bottom:14px;max-height:520px;overflow-y:auto"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('admin-dashboard-modal')">Close</button></div>
