@@ -6191,7 +6191,7 @@ const SCB_CHECKS = [
   { id:'fn.esc', cat:'Functions', name:'esc() prevents XSS injection',
     run:()=>{
       try{
-        const out=esc('<script>alert(1)</script>');
+        const out=esc('<script>alert(1)<\/script>');
         const safe=!out.includes('<script>');
         return {pass:safe,detail:safe?'Escaped OK → '+out.slice(0,40):'UNSAFE — XSS risk'};
       }catch(e){return {pass:false,detail:e.message};}
