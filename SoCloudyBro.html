@@ -5765,29 +5765,19 @@ async function selfHeal(code, err, opts = {}) {
       healNote = healed ? 'Network retry succeeded' : 'Network retry exhausted';
     }
 
-    // 2. Auth / permission errors → refresh auth, then try pushing canonical rules
+    // 2. Auth / permission errors → refresh auth token
+    // Note: Firebase RTDB /.settings/rules.json requires a Google OAuth2 admin token,
+    // not a Firebase ID token. Attempting to push rules from the client will fail with
+    // 401. Rule updates must be done via Firebase Console.
     else if (/permission_denied|unauthorized|401|403/i.test(msg)) {
       try {
-        // First try auth refresh
         const meNow = me;
         if (meNow && meNow.number && meNow.pwd) {
           try { if(window.SyntaxAccount) await window.SyntaxAccount.logIn(meNow.number, meNow.pwd); } catch(e3) {}
         }
-        // Then auto-push canonical Firebase rules to unblock
-        const _healToken = await _getRulesToken();
-        const r = _healToken ? await fetch(`${_RTDB_RULES_URL}?auth=${encodeURIComponent(_healToken)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(SCB_CANONICAL_RULES)
-        }) : { ok: false };
-        if (r.ok) {
-          healed = true;
-          healNote = 'Firebase rules auto-restored';
-          if (retryFn) { await retryFn(); }
-        } else {
-          healNote = 'Rules push failed: HTTP ' + r.status;
-        }
-      } catch(e2) { healNote = 'Auth/rules heal failed: ' + (e2.message || e2); }
+        if (retryFn) { await retryFn(); healed = true; healNote = 'Auth refresh succeeded'; }
+        else { healNote = 'Auth refreshed — retry your action'; }
+      } catch(e2) { healNote = 'Auth refresh failed: ' + (e2.message || e2); }
     }
 
     // 3. Corrupted/encrypted profile data → run healMeFields
@@ -6613,7 +6603,7 @@ async function savePrefsToFirebase(){
   if(!me||!me.number||typeof fbdb==='undefined') return;
   try{
     const prefs={
-      contacts:contacts||[],
+      contacts:(contacts||[]).map(({type,number,name,key,bio,info,members})=>({type,number,name,key,bio:bio||undefined,info:info||undefined,members:members||undefined})),
       locked:lockedChats||{},
       archived:archivedContacts||{},
       muted:mutedChats||{},
@@ -6634,7 +6624,7 @@ async function loadPrefsFromFirebase(){
   try{
     const snap=await fbdb.ref(USERS_BIN+'/'+me.number+'/prefs').once('value');
     const prefs=snap.val();
-    if(!prefs||prefs.v!==2) return;
+    if(!prefs) return;
     // Merge: Firebase wins over empty localStorage, but don't overwrite
     // data the user has set on this device during THIS session.
     if(Array.isArray(prefs.contacts)&&prefs.contacts.length&&!contacts.length){
@@ -6660,11 +6650,15 @@ async function loadPrefsFromFirebase(){
     if(prefs.privacy&&!localStorage.getItem('cc_privacy')){
       localStorage.setItem('cc_privacy',JSON.stringify(prefs.privacy));
     }
-    if(typeof prefs.dnd==='boolean') dndEnabled=prefs.dnd;
-    if(typeof prefs.autocorrect==='boolean') autocorrectEnabled=prefs.autocorrect;
-    if(prefs.quietHours) quietHours=prefs.quietHours;
+    // Only apply boolean settings if localStorage has no explicit value (i.e. never been set on this device)
+    if(typeof prefs.dnd==='boolean'&&localStorage.getItem('cc_dnd')===null) dndEnabled=prefs.dnd;
+    if(typeof prefs.autocorrect==='boolean'&&localStorage.getItem('cc_autocorrect')===null) autocorrectEnabled=prefs.autocorrect;
+    if(prefs.quietHours&&localStorage.getItem('cc_quiet_hours')===null) quietHours=prefs.quietHours;
     if(prefs.chatBg&&!localStorage.getItem('cc_chat_bg')){
       localStorage.setItem('cc_chat_bg',prefs.chatBg);
+    }
+    if(prefs.settingsTab&&!localStorage.getItem('cc_settings_tab')){
+      localStorage.setItem('cc_settings_tab',prefs.settingsTab);
     }
   }catch(e){ /* non-fatal */ }
 }
@@ -6852,6 +6846,7 @@ async function logOutOtherSessions(){
   }catch(e){ showToast('Error', scbErr('SCB-SEC-02','Your other devices couldn\'t be signed out — the server rejected the change.',e.message)); }
 }
 async function registerOrUpdate(){
+  if(!me||!me.number) return;
   const users=await getUsers();
   let u=users.find(x=>x.number===me.number);
   await ensureE2EKeypair();
@@ -6922,6 +6917,7 @@ async function registerOrUpdate(){
   }
 }
 async function heartbeat(){
+  if(!me||!me.number) return;
   try{
     // Read only our own record (works in new per-number format; falls back to full
     // read if we haven't migrated yet — i.e. our record isn't at users/<number>)
@@ -8485,7 +8481,8 @@ function renderAvatar(el,user,size=38){
   if(!el)return;
   el.style.width=size+'px';el.style.height=size+'px';el.style.fontSize=(size*0.38)+'px';
   const letter=(user&&dec(user.name)||'?').charAt(0).toUpperCase();
-  const safeSrc=(user&&typeof user.avatar==='string'&&user.avatar.startsWith('data:image/'))?user.avatar:'';
+  const _av=user&&typeof user.avatar==='string'?user.avatar:'';
+  const safeSrc=(_av.startsWith('data:image/')||_av.startsWith('https://'))?_av:'';
   if(safeSrc){
     el.innerHTML=`<img src="${safeSrc}" onerror="avatarFallback(this,'${letter}')" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
     el.style.background='';
@@ -10679,7 +10676,8 @@ function openForwardModal(m){
       const av=document.createElement('div');
       av.className=c.type==='group'?'group-avatar':'avatar';
       av.style.cssText='width:36px;height:36px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%';
-      if(c.avatar&&String(c.avatar).startsWith('data:image/')) av.innerHTML='<img src="'+c.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+      const _fwAv=(lookupUser(c.number)||{}).avatar||c.avatar||'';
+      if(_fwAv&&(String(_fwAv).startsWith('data:image/')||String(_fwAv).startsWith('https://'))) av.innerHTML='<img src="'+_fwAv+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
       else av.textContent=c.type==='group'?'👥':(dec(c.name)||'?').charAt(0).toUpperCase();
       const name=document.createElement('div');
       name.style.cssText='font-size:13px;font-weight:500';
@@ -12131,7 +12129,8 @@ function openTryItChatPicker(){
       const av=document.createElement('div');
       av.className=c.type==='group'?'group-avatar':'avatar';
       av.style.cssText='width:36px;height:36px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%';
-      if(c.avatar&&String(c.avatar).startsWith('data:image/')) av.innerHTML='<img src="'+c.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+      const _tryAv=(lookupUser(c.number)||{}).avatar||c.avatar||'';
+      if(_tryAv&&(String(_tryAv).startsWith('data:image/')||String(_tryAv).startsWith('https://'))) av.innerHTML='<img src="'+_tryAv+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
       else av.textContent=c.type==='group'?'👥':(dec(c.name)||'?').charAt(0).toUpperCase();
       const name=document.createElement('div');
       name.style.cssText='font-size:13px;font-weight:500';
@@ -12341,6 +12340,14 @@ function syncContactsFromConvos(){
         if(!u) return; // skip contacts for users who don't exist in the user list
         contacts.push({type:'dm',number:otherNum,name:dec(u.name)||'#'+otherNum,bio:dec(u.bio||''),avatar:u.avatar||'',key:c.key});
         changed=true;
+      }else{
+        // Refresh avatar and name from live usersCache for existing DM contacts
+        const u=lookupUser(otherNum);
+        if(u){
+          if(u.avatar&&alreadyHave.avatar!==u.avatar){alreadyHave.avatar=u.avatar;changed=true;}
+          const freshName=dec(u.name)||'#'+otherNum;
+          if(freshName&&alreadyHave.name!==freshName){alreadyHave.name=freshName;changed=true;}
+        }
       }
     } else if(isGroup&&isParticipant){
       if(removedContacts[c.key]) return;
@@ -12607,7 +12614,7 @@ function openContactPanel() {
     mutualEl.textContent = mutualCount > 0 ? `${mutualCount} mutual group${mutualCount === 1 ? '' : 's'}` : '';
   }
   const av = document.getElementById('cp-avatar');
-  renderAvatar(av, { name: enc(c.name), avatar: c.avatar || u.avatar || '' });
+  renderAvatar(av, { name: enc(c.name), avatar: (u&&u.avatar)||c.avatar||'' });
   openModal('contact-panel-overlay');
 }
 function saveCpNickname() {
@@ -13123,7 +13130,7 @@ function renderMessages(msgs) {
       const u = lookupUser(m.from) || {};
       const avDiv = document.createElement('div'); avDiv.className = 'msg-avatar';
       avDiv.style.cssText = 'background:var(--accent-grad);color:#fff;';
-      if (typeof u.avatar==='string' && u.avatar.startsWith('data:image/') && u.avatar.length < 500000){ const img=document.createElement('img'); img.src=u.avatar; img.style.cssText='width:100%;height:100%;object-fit:cover;'; avDiv.appendChild(img); }
+      if (typeof u.avatar==='string' && (u.avatar.startsWith('data:image/')||u.avatar.startsWith('https://')) && u.avatar.length < 500000){ const img=document.createElement('img'); img.src=u.avatar; img.style.cssText='width:100%;height:100%;object-fit:cover;'; avDiv.appendChild(img); }
       else avDiv.textContent = (dec(u.name || '') || '?').charAt(0).toUpperCase();
       row.appendChild(avDiv);
     }
@@ -15460,9 +15467,8 @@ const SCB_CANONICAL_RULES = {
       ".read": true,
       // Writes require anonymous auth (prevents unauthenticated spam writes)
       ".write": "auth != null",
-      "$userId": {
-        ".indexOn": ["number", "linkedSoCloudyBro"]
-      }
+      // Index at the users level so orderByChild('number') on fbdb.ref('users') works
+      ".indexOn": ["number", "linkedSoCloudyBro"]
     },
 
     "conversations": {
@@ -15527,6 +15533,13 @@ const SCB_CANONICAL_RULES = {
       ".write": "auth != null"
     },
 
+    "spam_flags": {
+      // Spam reports indexed for orderByChild('at') queries in admin panel
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["at", "reporter"]
+    },
+
     // Block any other top-level path not listed above
     "$other": {
       ".read": false,
@@ -15537,25 +15550,11 @@ const SCB_CANONICAL_RULES = {
 
 async function adminLoadRules() {
   if(!requireAdmin()) return;
-  showToast('Loading rules...', 'Fetching current Firebase rules…');
-  try {
-    const token = await _getRulesToken();
-    if (!token) throw new Error('Not signed in to Firebase');
-    const r = await fetch(`${_RTDB_RULES_URL}?auth=${encodeURIComponent(token)}`);
-    if (!r.ok) {
-      const txt = await r.text().catch(()=>'');
-      throw new Error(`HTTP ${r.status}${txt?' — '+txt:''}`);
-    }
-    const data = await r.json();
-    const ta = document.getElementById('admin-rules-input');
-    if (ta) ta.value = JSON.stringify(data, null, 2);
-    showToast('Rules loaded', 'Current Firebase rules are shown below.');
-  } catch(e) {
-    selfHeal('SCB-ADMIN-23', e, { context: 'adminLoadRules' });
-    showToast(scbErr('SCB-ADMIN-23', 'Failed to load rules', e.message));
-    const ta = document.getElementById('admin-rules-input');
-    if (ta && !ta.value) ta.value = JSON.stringify(SCB_CANONICAL_RULES, null, 2);
-  }
+  // Firebase RTDB /.settings/rules.json requires a Google OAuth2 admin token,
+  // not a Firebase ID token from getIdToken(). Load canonical rules locally instead.
+  const ta = document.getElementById('admin-rules-input');
+  if (ta) ta.value = JSON.stringify(SCB_CANONICAL_RULES, null, 2);
+  showToast('Canonical rules loaded', 'Copy the rules below and paste them in Firebase Console → Realtime Database → Rules.');
 }
 
 async function adminPushRules() {
@@ -15564,25 +15563,13 @@ async function adminPushRules() {
   if (!ta || !ta.value.trim()) { showToast('Enter rules JSON first', 'The text area above is empty.'); return; }
   let rules;
   try { rules = JSON.parse(ta.value); } catch(e) { showToast('Invalid JSON', e.message); return; }
-  if (!confirm('Push these Firebase rules? This affects ALL users immediately.')) return;
-  showToast('Pushing rules...', 'Sending rules to Firebase…');
-  try {
-    const token = await _getRulesToken();
-    if (!token) throw new Error('Not signed in to Firebase');
-    const r = await fetch(`${_RTDB_RULES_URL}?auth=${encodeURIComponent(token)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(rules)
-    });
-    if (!r.ok) {
-      const txt = await r.text().catch(()=>'');
-      throw new Error(`HTTP ${r.status}${txt?' — '+txt:''}`);
-    }
-    showToast('Rules Updated', 'Firebase security rules applied successfully.');
-  } catch(e) {
-    selfHeal('SCB-ADMIN-24', e, { context: 'adminPushRules' });
-    showToast(scbErr('SCB-ADMIN-24', 'Failed to push rules', e.message));
+  // Firebase RTDB rules API requires a Google OAuth2 admin token — not available in browser.
+  // Direct the admin to paste these rules manually in Firebase Console.
+  const consoleUrl = 'https://console.firebase.google.com/project/syntaxgroup/database/syntaxgroup-default-rtdb/rules';
+  if (confirm('Firebase rules cannot be pushed directly from the browser (requires a service account token).\n\nOpen Firebase Console to paste them manually?')) {
+    window.open(consoleUrl, '_blank');
   }
+  showToast('Use Firebase Console', 'Copy the JSON from the text area and paste it in Firebase Console → Rules.');
 }
 // -- END FIREBASE RULES MANAGER -----------------------------------------------
 
@@ -16411,7 +16398,7 @@ openContactPanel=function(){
    Contacts' music status is read directly from Firebase when their panel opens.
    ========================================================================== */
 const SPOTIFY_CLIENT_ID = 'c0528b9e158b4bfab6a1135e3ec2d0e8';
-const SPOTIFY_REDIRECT_URI = 'https://socloudybro.vercel.app/SoCloudyBro.html';
+const SPOTIFY_REDIRECT_URI = (()=>{ try{ return window.location.origin+window.location.pathname; }catch{ return SITE_URL+'/SoCloudyBro.html'; } })();
 const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state';
 let LASTFM_API_KEY = '3f2d804a4670e778decdc44f3c8bb43e';
 const MUSIC_NP_PATH = 'musicNowPlaying';
@@ -17079,10 +17066,12 @@ renderSidebar = function(){
       const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
       const div=document.createElement('div'); div.className='sb-item'+(isActive?' active':'');
       div.onclick=()=>openChat(c);
-      const hasImg=typeof c.avatar==='string'&&c.avatar.startsWith('data:image/');
+      const _freshU0=c.type!=='group'?lookupUser(c.number):null;
+      const _liveAv0=(_freshU0&&_freshU0.avatar)||c.avatar||'';
+      const hasImg=typeof _liveAv0==='string'&&(_liveAv0.startsWith('data:image/')||_liveAv0.startsWith('https://'));
       const avDiv=c.type==='group'
         ?'<div class="group-avatar" style="background:var(--accent-grad);color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':'👥')+'</div>'
-        :'<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
+        :'<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv0)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
       div.innerHTML=avDiv+'<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+'</span><span class="sb-item-time">'+esc(timeStr)+'</span></div>'
         +'<div class="sb-item-preview">'+esc(preview)+'</div></div>'
         +'<span class="unread-badge">'+unread+'</span>';
@@ -17122,10 +17111,12 @@ renderSidebar = function(){
     div.className='sb-item'+(isActive?' active':'');
     div.onclick=()=>openChat(c);
     div.oncontextmenu=(e)=>{e.preventDefault();showContactCtxMenu(e,c);};
-    const hasImg = typeof c.avatar==='string' && c.avatar.startsWith('data:image/');
+    const _freshU=c.type!=='group'?lookupUser(c.number):null;
+    const _liveAv=(_freshU&&_freshU.avatar)||c.avatar||'';
+    const hasImg = typeof _liveAv==='string' && (_liveAv.startsWith('data:image/')||_liveAv.startsWith('https://'));
     const avDiv = c.type==='group'
       ? '<div class="group-avatar" style="background:var(--accent-grad);color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':'👥')+'</div>'
-      : '<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
+      : '<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
     div.innerHTML = avDiv +
       '<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+
       (c.type!=='group'?verifiedBadge(c.number):'')+
@@ -20299,7 +20290,8 @@ function _cwFillContacts(list, pick, dmOnly){
     const av = document.createElement('div');
     av.className = c.type==='group' ? 'group-avatar' : 'avatar';
     av.style.cssText = 'width:36px;height:36px;font-size:14px;background:linear-gradient(135deg,#4C46C4,#7C5FD4);color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%';
-    if(c.avatar && String(c.avatar).startsWith('data:image/')) av.innerHTML = '<img src="'+c.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    const _pickAv=(lookupUser(c.number)||{}).avatar||c.avatar||'';
+    if(_pickAv && (String(_pickAv).startsWith('data:image/')||String(_pickAv).startsWith('https://'))) av.innerHTML = '<img src="'+_pickAv+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
     else av.textContent = c.type==='group' ? '👥' : (dec(c.name)||'?').charAt(0).toUpperCase();
     const nm = document.createElement('div');
     nm.style.cssText = 'font-size:13px;font-weight:500';
