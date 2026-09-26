@@ -888,7 +888,7 @@ select{cursor:pointer}
 .pin-digit{width:52px;height:60px;text-align:center;font-size:22px;font-weight:600;border-radius:var(--r-sm);letter-spacing:0}
 
 /* ── PROFILE AVATAR EDITOR ── */
-#avatar-modal { z-index: 250; }
+#avatar-modal { z-index: 610; }
 #privacy-modal { z-index: 600; }
 #camera-modal { z-index: 600; }
 #avatar-presets{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
@@ -1403,11 +1403,8 @@ body.device-tablet .msg-body{max-width:74%}
 }
 
 /* ── COMPOSE AREA ── */
-#chat-footer {
-  padding: 10px 16px 10px 12px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-}
+/* #chat-footer base is defined in the minified block above (position:relative,
+   z-index:60, badge-clearance right padding). Only add properties not there. */
 #msg-input {
   font-size: 14px;
   padding: 9px 16px;
@@ -2119,7 +2116,7 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Log Out</div><div class="settings-row-sub">Sign out of your account on this device</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Log Out</button></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="confirmDeleteAccount()">
+          <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label" style="color:var(--danger)">Delete Account</div><div class="settings-row-sub" id="delete-account-sub">Permanently remove your account and data</div></div>
             <div class="settings-row-actions"><button class="btn btn-danger btn-sm" id="delete-account-btn" onclick="deleteMyAccountStep1()">Delete</button></div>
           </div>
@@ -10913,7 +10910,7 @@ function _openDmWithAdmin(num){
   const c = { type:'dm', number:num, name:(u&&u.name?dec(u.name):'Admin #'+num), avatar:(u&&u.avatar)||'', key:'dm_'+[me.number,num].sort((a,b)=>a-b).join('_') };
   contacts.push(c); saveStorage(); openChat(c);
 }
-function closeModal(id){document.getElementById(id).classList.remove('visible');}
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('visible');}
 function renderContacts(){renderSidebar();}
 let toastTimer=null;
 function showToast(title,body){
@@ -13110,7 +13107,7 @@ function adminMessage(num){
       if(!u){showToast('User not found',scbErr('SCB-ADMIN-12','No user with that account number was found.'));return;}
       const c={type:'dm',number:num,name:dec(u.name)||'#'+num,avatar:u.avatar||'',key:'dm_'+[me.number,num].sort((a,b)=>a-b).join('_')};
       contacts.push(c);saveStorage();openChat(c);
-    });
+    }).catch(e=>showToast('Error',e.message));
   }
 }
 
@@ -19470,7 +19467,7 @@ function _deliverScheduledMsg(id){
   list=list.filter(m=>m.id!==id); try{ localStorage.setItem(k,JSON.stringify(list)); }catch{}
   if(!item.convo||!item.text) return;
   if(activeConvo&&String(activeConvo.number)===String(item.convo)){
-    const el=document.getElementById('msg-input'); if(el){ el.value=item.text; sendMessage&&sendMessage(); }
+    const el=document.getElementById('msg-input'); if(el){ el.value=item.text; sendMsg&&sendMsg(); }
   }
 }
 function _initScheduledMsgs(){
