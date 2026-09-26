@@ -2585,10 +2585,15 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="btn btn-full" id="login-2fa-btn" onclick="submit2faCode()">Verify ↗</button>
     </div>
     <div class="modal-body" id="login-face-view" style="display:none;padding-bottom:14px;padding-top:14px;">
-      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Look at your camera to verify it's you.</p>
-      <div style="position:relative;width:100%;max-width:280px;margin:0 auto 12px;border-radius:var(--r-sm);overflow:hidden;background:#000">
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Look at your camera — you'll be verified automatically.</p>
+      <div style="position:relative;width:100%;max-width:320px;margin:0 auto 10px;border-radius:var(--r-sm);overflow:hidden;background:#000">
         <video id="login-face-video" autoplay muted playsinline style="width:100%;display:block;transform:scaleX(-1)"></video>
+        <canvas id="login-face-canvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)"></canvas>
       </div>
+      <div style="width:100%;max-width:320px;margin:0 auto 8px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;display:none" id="login-face-conf-wrap">
+        <div id="login-face-confidence" style="height:100%;width:0%;border-radius:3px;transition:width .2s,background .2s"></div>
+      </div>
+      <div id="login-face-conf-label" style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:6px;min-height:16px"></div>
       <div class="error-text" id="login-face-error" style="text-align:center"></div>
       <button class="btn btn-full" id="login-face-btn" onclick="submitFaceLogin()">Verify with Face ↗</button>
       <button class="btn btn-ghost btn-full" onclick="closeModal('setup-modal');location.reload()" style="margin-top:8px">Cancel</button>
@@ -2600,11 +2605,12 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="modal">
     <div class="modal-header"><h2>📷 Set Up Face Recognition</h2><p>This captures a face descriptor (a set of measurements) — not a photo — stored on your account for login verification.</p></div>
     <div class="modal-body" style="padding-bottom:14px">
-      <div style="position:relative;width:100%;max-width:280px;margin:0 auto 12px;border-radius:var(--r-sm);overflow:hidden;background:#000">
+      <div style="position:relative;width:100%;max-width:320px;margin:0 auto 10px;border-radius:var(--r-sm);overflow:hidden;background:#000">
         <video id="face-enroll-video" autoplay muted playsinline style="width:100%;display:block;transform:scaleX(-1)"></video>
+        <canvas id="face-enroll-canvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)"></canvas>
       </div>
       <div class="error-text" id="face-enroll-error" style="text-align:center"></div>
-      <div id="face-enroll-status" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+      <div id="face-enroll-status" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px">Loading…</div>
       <button class="btn btn-full" id="face-enroll-btn" onclick="captureFaceEnrollment()">Capture My Face ↗</button>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="cancelFaceEnrollment()">Cancel</button></div>
@@ -5801,8 +5807,13 @@ function onToggleTotpClick(){
 // Mutually exclusive with TOTP for simplicity: enabling one is meant as an
 // alternative to the other, per "as an MFA option if you don't have Google
 // Authenticator" — not a second method stacked on top of TOTP.
-const FACE_MATCH_THRESHOLD=0.55; // face-api.js's own recommended cutoff is ~0.6;
-// slightly stricter here since this gates account login, not just a casual tag
+// Face recognition — uses face-api.js (lazy-loaded).
+// Stores an averaged 128-D descriptor (not a photo) from 5 enrollment frames.
+// Auto-captures on enrollment when face is stable; auto-verifies on login when
+// 2 consecutive frames match below the distance threshold.
+const FACE_MATCH_THRESHOLD=0.48;
+const FACE_ENROLL_SAMPLES=5;
+const FACE_MODEL_URL='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
 let _faceApiModelsLoaded=false;
 async function _ensureFaceApi(){
   if(typeof faceapi!=='undefined') return;
@@ -5817,18 +5828,32 @@ async function _ensureFaceApi(){
 async function loadFaceApiModels(){
   if(_faceApiModelsLoaded) return;
   await _ensureFaceApi();
-  const MODEL_URL='https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
   await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+    faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
+    faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
+    faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
   ]);
   _faceApiModelsLoaded=true;
 }
-async function detectFaceDescriptor(videoEl){
-  const result=await faceapi.detectSingleFace(videoEl,new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks().withFaceDescriptor();
-  return result ? result.descriptor : null;
+function _avgDescriptors(descriptors){
+  const len=descriptors[0].length, avg=new Float32Array(len);
+  for(const d of descriptors) for(let i=0;i<len;i++) avg[i]+=d[i]/descriptors.length;
+  return avg;
+}
+function _drawFaceOverlay(canvas, video, detection){
+  const W=canvas.offsetWidth||canvas.width, H=canvas.offsetHeight||canvas.height;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,W,H);
+  // oval guide
+  ctx.beginPath(); ctx.ellipse(W/2,H/2,W*0.28,H*0.42,0,0,2*Math.PI);
+  ctx.strokeStyle=detection?'#22c55e':'rgba(255,255,255,0.3)'; ctx.lineWidth=2.5; ctx.stroke();
+  if(detection&&video.videoWidth){
+    const sx=W/video.videoWidth, sy=H/video.videoHeight;
+    const b=detection.box;
+    // video is mirrored (scaleX(-1)) so canvas is too — x is already flipped
+    ctx.strokeStyle='#22c55e'; ctx.lineWidth=2;
+    ctx.strokeRect(b.x*sx, b.y*sy, b.width*sx, b.height*sy);
+  }
 }
 function onToggleFaceMfaClick(){
   if(!me) return;
@@ -5838,53 +5863,127 @@ function onToggleFaceMfaClick(){
     startFaceEnrollment();
   }
 }
-let _faceEnrollStream=null;
+// ── Enrollment ────────────────────────────────────────────────────────────────
+let _faceEnrollStream=null, _faceEnrollLoopTimer=null, _faceEnrollAutoActive=false;
 async function startFaceEnrollment(){
   const statusEl=document.getElementById('face-enroll-status');
   const errEl=document.getElementById('face-enroll-error');
-  errEl.textContent='';
+  errEl.textContent=''; _faceEnrollAutoActive=false;
   openModal('face-mfa-setup-modal');
-  statusEl.textContent='Loading face detection model…';
+  statusEl.textContent='Loading face detection models…';
   try{
     await loadFaceApiModels();
-    statusEl.textContent='Position your face in frame, then capture.';
-    _faceEnrollStream=await navigator.mediaDevices.getUserMedia({video:{width:280,height:210}});
-    document.getElementById('face-enroll-video').srcObject=_faceEnrollStream;
+    _faceEnrollStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
+    const video=document.getElementById('face-enroll-video');
+    video.srcObject=_faceEnrollStream;
+    await new Promise(r=>{ video.onloadedmetadata=r; });
+    statusEl.textContent='Center your face in the oval — capture starts automatically.';
+    _startEnrollLoop();
   }catch(e){
-    errEl.textContent=scbErr('SCB-SEC-03','The camera or face-recognition model couldn\'t start, so enrolment can\'t run.',(e.message||'could not start.'));
+    errEl.textContent=scbErr('SCB-SEC-03','The camera or face-recognition model couldn\'t start.',(e.message||'could not start.'));
     statusEl.textContent='';
   }
 }
-function cancelFaceEnrollment(){
-  if(_faceEnrollStream){ _faceEnrollStream.getTracks().forEach(t=>t.stop()); _faceEnrollStream=null; }
-  closeModal('face-mfa-setup-modal');
-}
-async function captureFaceEnrollment(){
-  const errEl=document.getElementById('face-enroll-error');
+let _enrollStableCount=0;
+function _startEnrollLoop(){
+  _enrollStableCount=0;
+  const video=document.getElementById('face-enroll-video');
+  const canvas=document.getElementById('face-enroll-canvas');
   const statusEl=document.getElementById('face-enroll-status');
+  async function tick(){
+    if(!_faceEnrollStream||_faceEnrollAutoActive) return;
+    try{
+      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      if(canvas) _drawFaceOverlay(canvas,video,det);
+      if(det){
+        _enrollStableCount++;
+        if(_enrollStableCount<4){ statusEl.textContent='Face detected — hold still…'; }
+        else{
+          statusEl.textContent='Hold still — capturing…';
+          _faceEnrollAutoActive=true;
+          _runEnrollCapture(video,statusEl);
+          return;
+        }
+      } else {
+        _enrollStableCount=0;
+        statusEl.textContent='Center your face in the oval — capture starts automatically.';
+      }
+    }catch(e){}
+    _faceEnrollLoopTimer=setTimeout(tick,350);
+  }
+  tick();
+}
+async function _runEnrollCapture(video,statusEl){
+  const errEl=document.getElementById('face-enroll-error');
   const btn=document.getElementById('face-enroll-btn');
-  errEl.textContent='';
-  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Capturing…';
+  const samples=[];
+  for(let i=0;i<FACE_ENROLL_SAMPLES;i++){
+    await new Promise(r=>setTimeout(r,280));
+    try{
+      const d=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      if(d) samples.push(d.descriptor);
+    }catch(e){}
+  }
+  if(samples.length<3){
+    btn.disabled=false; btn.textContent='Capture My Face ↗'; _faceEnrollAutoActive=false;
+    errEl.textContent=scbErr('SCB-SEC-04','Too few clear frames — ensure good lighting and try again.');
+    statusEl.textContent='Center your face in the oval.';
+    _faceEnrollLoopTimer=setTimeout(()=>_startEnrollLoop(),800);
+    return;
+  }
+  await _saveEnrollDescriptor(_avgDescriptors(samples));
+  btn.disabled=false; btn.textContent='Capture My Face ↗';
+}
+async function _saveEnrollDescriptor(avgDesc){
+  const errEl=document.getElementById('face-enroll-error');
   try{
-    const video=document.getElementById('face-enroll-video');
-    const descriptor=await detectFaceDescriptor(video);
-    if(!descriptor){ errEl.textContent=scbErr('SCB-SEC-04','No face detected — make sure your face is clearly visible and try again.'); return; }
-    const descArr=Array.from(descriptor); // Float32Array -> plain array for JSON/Firebase storage
+    const descArr=Array.from(avgDesc);
     const users=await getUsers();
     const u=users.find(x=>x.number===me.number);
-    if(u){ u.faceDescriptor=descArr; u.faceMfaEnabled=true; u.totpEnabled=false; u.totpSecret=''; } // mutually exclusive, see note above
+    if(u){ u.faceDescriptor=descArr; u.faceMfaEnabled=true; u.totpEnabled=false; u.totpSecret=''; }
     await saveUsers(users);
     me.faceDescriptor=descArr; me.faceMfaEnabled=true; me.totpEnabled=false; saveStorage();
     if(_faceEnrollStream){ _faceEnrollStream.getTracks().forEach(t=>t.stop()); _faceEnrollStream=null; }
-    closeModal('face-mfa-setup-modal');
-    updateFaceMfaStatusUI();
-    updateTotpStatusUI();
+    if(_faceEnrollLoopTimer){ clearTimeout(_faceEnrollLoopTimer); _faceEnrollLoopTimer=null; }
+    closeModal('face-mfa-setup-modal'); updateFaceMfaStatusUI(); updateTotpStatusUI();
     showToast('Face recognition enabled','This is now your login verification method.');
   }catch(e){
-    errEl.textContent=scbErr('SCB-SEC-05','Your face couldn\'t be enrolled — capturing or saving the face data failed.',(e.message||'capture failed.'));
-  }finally{
-    btn.disabled=false; btn.textContent='Capture My Face ↗';
+    errEl.textContent=scbErr('SCB-SEC-05','Couldn\'t save face data — try again.',(e.message||''));
+    _faceEnrollAutoActive=false;
+    _faceEnrollLoopTimer=setTimeout(()=>_startEnrollLoop(),800);
   }
+}
+// Manual capture fallback (button still works)
+async function captureFaceEnrollment(){
+  if(_faceEnrollAutoActive) return;
+  if(_faceEnrollLoopTimer){ clearTimeout(_faceEnrollLoopTimer); _faceEnrollLoopTimer=null; }
+  _faceEnrollAutoActive=true;
+  const errEl=document.getElementById('face-enroll-error');
+  const statusEl=document.getElementById('face-enroll-status');
+  const btn=document.getElementById('face-enroll-btn');
+  errEl.textContent=''; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const video=document.getElementById('face-enroll-video');
+    const samples=[];
+    for(let i=0;i<FACE_ENROLL_SAMPLES;i++){
+      const d=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      if(d) samples.push(d.descriptor);
+      await new Promise(r=>setTimeout(r,280));
+    }
+    if(!samples.length){ errEl.textContent=scbErr('SCB-SEC-04','No face detected — make sure your face is clearly visible.'); _faceEnrollAutoActive=false; _startEnrollLoop(); return; }
+    statusEl.textContent='Saving…';
+    await _saveEnrollDescriptor(_avgDescriptors(samples));
+  }catch(e){
+    errEl.textContent=scbErr('SCB-SEC-05','Couldn\'t capture your face.',(e.message||''));
+    _faceEnrollAutoActive=false; _startEnrollLoop();
+  }finally{ btn.disabled=false; btn.textContent='Capture My Face ↗'; }
+}
+function cancelFaceEnrollment(){
+  if(_faceEnrollStream){ _faceEnrollStream.getTracks().forEach(t=>t.stop()); _faceEnrollStream=null; }
+  if(_faceEnrollLoopTimer){ clearTimeout(_faceEnrollLoopTimer); _faceEnrollLoopTimer=null; }
+  _faceEnrollAutoActive=false;
+  closeModal('face-mfa-setup-modal');
 }
 async function disableFaceMfa(){
   try{
@@ -5904,33 +6003,97 @@ function updateFaceMfaStatusUI(){
   if(me&&me.faceMfaEnabled){ sub.textContent='On — verify with your camera at login'; btn.textContent='Disable'; }
   else{ sub.textContent='Off — an alternative to an authenticator app, using your camera'; btn.textContent='Enable'; }
 }
-let _faceLoginStream=null;
+// ── Login ─────────────────────────────────────────────────────────────────────
+let _faceLoginStream=null, _faceLoginLoopTimer=null, _faceLoginAutoVerifying=false;
 async function startFaceLoginView(){
   document.getElementById('login-face-error').textContent='';
+  const confWrap=document.getElementById('login-face-conf-wrap');
+  const confBar=document.getElementById('login-face-confidence');
+  const confLabel=document.getElementById('login-face-conf-label');
+  if(confWrap) confWrap.style.display='none';
+  if(confBar){ confBar.style.width='0%'; }
+  if(confLabel) confLabel.textContent='';
+  _faceLoginAutoVerifying=false;
   try{
     await loadFaceApiModels();
-    _faceLoginStream=await navigator.mediaDevices.getUserMedia({video:{width:280,height:210}});
-    document.getElementById('login-face-video').srcObject=_faceLoginStream;
+    _faceLoginStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
+    const video=document.getElementById('login-face-video');
+    video.srcObject=_faceLoginStream;
+    await new Promise(r=>{ video.onloadedmetadata=r; });
+    _startLoginLoop();
   }catch(e){
-    document.getElementById('login-face-error').textContent=scbErr('SCB-AUTH-02','The camera or face-recognition model couldn\'t start, so face login can\'t run.',(e.message||'could not start.'));
+    document.getElementById('login-face-error').textContent=scbErr('SCB-AUTH-02','The camera or face-recognition model couldn\'t start.',(e.message||'could not start.'));
   }
 }
+let _loginMatchCount=0;
+function _startLoginLoop(){
+  _loginMatchCount=0;
+  const video=document.getElementById('login-face-video');
+  const canvas=document.getElementById('login-face-canvas');
+  const confWrap=document.getElementById('login-face-conf-wrap');
+  const confBar=document.getElementById('login-face-confidence');
+  const confLabel=document.getElementById('login-face-conf-label');
+  async function tick(){
+    if(!_faceLoginStream||_faceLoginAutoVerifying) return;
+    if(!pending2fa) return;
+    try{
+      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      if(canvas) _drawFaceOverlay(canvas,video,det);
+      if(det&&pending2fa.user.faceDescriptor){
+        const dist=faceapi.euclideanDistance(Array.from(det.descriptor),pending2fa.user.faceDescriptor);
+        const conf=Math.max(0,Math.min(100,Math.round((1-(dist/FACE_MATCH_THRESHOLD))*100)));
+        if(confWrap) confWrap.style.display='block';
+        if(confBar){ confBar.style.width=conf+'%'; confBar.style.background=conf>75?'#22c55e':conf>45?'#f59e0b':'#ef4444'; }
+        if(confLabel) confLabel.textContent=conf+'% match';
+        if(dist<FACE_MATCH_THRESHOLD){
+          _loginMatchCount++;
+          if(_loginMatchCount>=2){
+            _faceLoginAutoVerifying=true;
+            await _finishFaceLogin(det.descriptor);
+            return;
+          }
+        } else { _loginMatchCount=0; }
+      } else {
+        _loginMatchCount=0;
+        if(confWrap) confWrap.style.display='none';
+        if(confLabel) confLabel.textContent='';
+      }
+    }catch(e){}
+    _faceLoginLoopTimer=setTimeout(tick,400);
+  }
+  tick();
+}
+async function _finishFaceLogin(descriptor){
+  const btn=document.getElementById('login-face-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  try{
+    if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
+    if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
+    await finishLogin(pending2fa.user, pending2fa.pwdToStore);
+    pending2fa=null;
+  }catch(e){
+    document.getElementById('login-face-error').textContent=scbErr('SCB-AUTH-07','Face login couldn\'t be completed.',e.message);
+    _faceLoginAutoVerifying=false; _startLoginLoop();
+  }finally{ btn.disabled=false; btn.textContent='Verify with Face ↗'; }
+}
+// Manual verify fallback
 async function submitFaceLogin(){
   const err=document.getElementById('login-face-error'); err.textContent='';
   if(!pending2fa){ err.textContent=scbErr('SCB-AUTH-03','Session expired — log in again.'); return; }
+  if(_faceLoginAutoVerifying) return;
+  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
+  _faceLoginAutoVerifying=true;
   const btn=document.getElementById('login-face-btn'); btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
   try{
     const video=document.getElementById('login-face-video');
-    const liveDescriptor=await detectFaceDescriptor(video);
-    if(!liveDescriptor){ err.textContent=scbErr('SCB-AUTH-04','No face detected — try again.'); return; }
+    const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+    if(!det){ err.textContent=scbErr('SCB-AUTH-04','No face detected — try again.'); _faceLoginAutoVerifying=false; _startLoginLoop(); return; }
     const stored=pending2fa.user.faceDescriptor;
     if(!stored||!stored.length){ err.textContent=scbErr('SCB-AUTH-05','No face on file for this account.'); return; }
-    const distance=faceapi.euclideanDistance(Array.from(liveDescriptor),stored);
-    if(distance>FACE_MATCH_THRESHOLD){ err.textContent=scbErr('SCB-AUTH-06','Face didn\'t match — try again with better lighting.'); return; }
-    if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
-    await finishLogin(pending2fa.user, pending2fa.pwdToStore);
-    pending2fa=null;
-  }catch(e){ err.textContent=scbErr('SCB-AUTH-07','Face login couldn\'t be completed — the camera or face-matching step failed.',e.message); }
+    const distance=faceapi.euclideanDistance(Array.from(det.descriptor),stored);
+    if(distance>FACE_MATCH_THRESHOLD){ err.textContent=scbErr('SCB-AUTH-06','Face didn\'t match — try in better lighting.'); _faceLoginAutoVerifying=false; _startLoginLoop(); return; }
+    await _finishFaceLogin(det.descriptor);
+  }catch(e){ err.textContent=scbErr('SCB-AUTH-07','Face login couldn\'t be completed.',e.message); _faceLoginAutoVerifying=false; _startLoginLoop(); }
   finally{ btn.disabled=false; btn.textContent='Verify with Face ↗'; }
 }
 function openTotpSetup(){
