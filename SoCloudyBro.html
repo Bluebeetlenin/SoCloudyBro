@@ -7734,7 +7734,7 @@ function applyAutocorrect(el){
   const word=val.slice(start,pos-1);
   const lower=word.toLowerCase();
   if(word.length<2) return;
-  const fix=AC_DICT[lower] || findDictionaryMatch(lower);
+  const fix=AC_DICT[lower];
   if(!fix || fix===lower) return;
   let corrected=fix;
   if(/[a-zA-Z]/.test(word[0]) && word[0]===word[0].toUpperCase()) corrected=corrected.charAt(0).toUpperCase()+corrected.slice(1);
@@ -7756,7 +7756,7 @@ function finalizeAutocorrect(el){
   if(looksLikeMentionOrUrl(val,start)) return;
   const word=val.slice(start,end);
   const lower=word.toLowerCase();
-  const fix=AC_DICT[lower] || findDictionaryMatch(lower);
+  const fix=AC_DICT[lower];
   if(!fix||fix===lower) return;
   let corrected=fix;
   if(/[a-zA-Z]/.test(word[0]) && word[0]===word[0].toUpperCase()) corrected=corrected.charAt(0).toUpperCase()+corrected.slice(1);
