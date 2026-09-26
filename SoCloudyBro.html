@@ -10773,7 +10773,7 @@ function _openDmWithAdmin(num){
 }
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('visible');}
 function renderContacts(){renderSidebar();}
-let toastTimer=null;
+var toastTimer=null;
 function showToast(title,body){
   const t=document.getElementById('toast');
   t.style.borderLeftColor=''; // reset any color from previous call
