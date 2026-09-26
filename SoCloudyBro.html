@@ -8885,12 +8885,13 @@ function ctxAction(action){
   else if(action==='translate'){
     const txt=msgText(ctxMsg);
     if(!txt){ showToast('Nothing to translate',''); ctxMsg=null; return; }
+    const _tMsgId=ctxMsg.id; // capture before ctxMsg is nulled below
     showToast('Translating…','');
-    fetch('https://api.mymemory.translated.web/get?q='+encodeURIComponent(txt.substring(0,500))+'&langpair=autodetect|en')
+    fetch('https://api.mymemory.translated.web/get?q='+encodeURIComponent(txt.substring(0,500))+'&langpair=auto|en')
       .then(r=>r.json()).then(d=>{
         const tr=(d&&d.responseData&&d.responseData.translatedText)||'';
         if(tr && tr.toLowerCase()!==txt.toLowerCase()){
-          const msgEl=document.querySelector('[data-msg-id="'+ctxMsg.id+'"] .bubble');
+          const msgEl=document.querySelector('[data-msg-id="'+_tMsgId+'"] .bubble');
           if(msgEl){
             let tDiv=msgEl.querySelector('.msg-translation');
             if(!tDiv){ tDiv=document.createElement('div'); tDiv.className='msg-translation'; tDiv.style.cssText='font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:4px;padding-top:4px;font-style:italic'; msgEl.appendChild(tDiv); }
@@ -13789,7 +13790,7 @@ async function adminDeleteUser(number,name){
   try{
     await fbdb.ref('users/'+number).update({deleted:true,deletedAt:Date.now(),banned:true});
     // Remove from local users cache
-    if(window._usersCache) window._usersCache=window._usersCache.filter(u=>String(u.number)!==String(number));
+    usersCache=usersCache.filter(u=>String(u.number)!==String(number));
     showToast('Account deleted','User #'+number+' has been marked as deleted.');
     renderAdminUsersTab();
   }catch(e){ showToast('Delete failed',scbErr('SCB-ADMIN-30','Could not delete that account.',(e&&e.message)||'')); }
