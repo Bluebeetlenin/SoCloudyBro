@@ -702,7 +702,9 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 /* ── CHAT FOOTER ── */
 :root{--badge-clearance:100px}
 #chat-footer{padding:8px var(--badge-clearance) 8px 12px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;position:relative;z-index:60}
-#compose-row{display:flex;align-items:flex-end;gap:8px;position:relative;z-index:61}
+#compose-row{display:flex;align-items:flex-end;gap:8px;position:relative;z-index:61;flex-wrap:wrap}
+#compose-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+#compose-input-row{display:flex;align-items:flex-end;gap:8px;flex:1;min-width:0}
 /* Reserved clearance, not a fight over z-index: hosting-injected badges (e.g. a
    "Powered by Netlify" pill some deploy setups add, which isn't part of this file
    and can't be removed from here) tend to sit fixed in the bottom-right corner.
@@ -832,11 +834,11 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 .biz-bot-kw{font-size:12px;font-weight:600;color:var(--accent);flex-shrink:0;min-width:80px;overflow:hidden;text-overflow:ellipsis}
 .biz-bot-reply{font-size:12px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bot-auto-msg{font-size:11px;color:var(--muted);font-style:italic;text-align:center;margin:4px 0}
-#gif-picker{display:none;padding:8px 12px 0;border-top:1px solid var(--border)}
+#gif-picker{display:none;position:absolute;bottom:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:var(--r-sm) var(--r-sm) 0 0;padding:10px 12px 6px;box-shadow:0 -6px 24px rgba(0,0,0,.18);z-index:62;max-height:320px}
 #gif-picker.visible{display:block}
-#gif-search{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 14px;outline:none;margin-bottom:8px}
-#gif-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:200px;overflow-y:auto}
-#gif-grid img{width:100%;height:80px;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity 0.15s}
+#gif-search{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 14px;outline:none;margin-bottom:8px;box-sizing:border-box}
+#gif-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:220px;overflow-y:auto}
+#gif-grid img{width:100%;height:90px;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity 0.15s}
 #gif-grid img:hover{opacity:0.8}
 
 /* ── AUTOCORRECT SUGGESTION ── */
@@ -1010,10 +1012,14 @@ body.device-phone .header-actions::-webkit-scrollbar{display:none}
 body.device-phone .header-actions .icon-btn{flex-shrink:0;font-size:15px;padding:6px}
 /* The floating theme toggle collides with the bottom nav bar on phones --
    the same control already lives in Settings → Appearance, so hide it here */
-body.device-phone #compose-row{gap:6px;padding:8px 10px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+body.device-phone #compose-row{flex-direction:column;gap:0;padding:0;padding-bottom:env(safe-area-inset-bottom,0px)}
+body.device-phone #compose-actions{width:100%;padding:6px 10px;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);flex-wrap:nowrap}
+body.device-phone #compose-actions::-webkit-scrollbar{display:none}
+body.device-phone #compose-input-row{width:100%;padding:8px 10px;gap:8px}
 body.device-phone #sb-bottom .icon-btn{flex:1}
-body.device-phone #send-btn{width:44px;height:44px;font-size:17px}
-body.device-phone .compose-btn{width:40px;height:40px;font-size:17px}
+body.device-phone #send-btn{width:44px;height:44px;font-size:17px;flex-shrink:0}
+body.device-phone .compose-btn{width:40px;height:40px;font-size:17px;flex-shrink:0}
+body.device-phone #msg-input{flex:1}
 body.device-phone #sb-restore-btn{display:none!important}
 body.device-phone #focus-mode-btn{display:none!important}
 body.device-phone #main-empty{padding-bottom:72px}
@@ -1143,9 +1149,14 @@ body.device-tablet .msg-body{max-width:74%}
   .header-actions::-webkit-scrollbar { display: none; }
   .header-actions .icon-btn { flex-shrink: 0; font-size: 15px; padding: 6px; }
 
-  /* Compose area */
-  #compose-row { gap: 6px !important; padding: 8px 10px !important; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important; }
-  #msg-input { font-size: 16px !important; } /* prevent iOS auto-zoom */
+  /* Compose area — two-row stack: actions on top, input+send below */
+  #compose-row { flex-direction: column !important; gap: 0 !important; padding: 0 !important; padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
+  #compose-actions { width: 100% !important; padding: 6px 10px !important; gap: 4px !important; overflow-x: auto !important; scrollbar-width: none !important; border-bottom: 1px solid var(--border) !important; flex-wrap: nowrap !important; }
+  #compose-actions::-webkit-scrollbar { display: none !important; }
+  #compose-input-row { width: 100% !important; padding: 8px 10px !important; gap: 8px !important; }
+  .compose-btn { width: 40px !important; height: 40px !important; font-size: 17px !important; flex-shrink: 0 !important; }
+  #send-btn { width: 44px !important; height: 44px !important; font-size: 17px !important; flex-shrink: 0 !important; }
+  #msg-input { flex: 1 !important; font-size: 16px !important; } /* prevent iOS auto-zoom */
 
   /* Emoji font — ensures correct rendering on all mobile platforms */
   #msg-input, .msg-text, .msg-bubble { font-family: 'Inter', system-ui, -apple-system, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
@@ -1797,10 +1808,6 @@ body.device-tablet .msg-body{max-width:74%}
         <button class="icon-btn" onclick="toggleMsgSearch()" title="Close search">✕</button>
       </div>
       <div id="autocorrect-bar"></div>
-      <div id="gif-picker">
-        <input type="text" id="gif-search" placeholder="Search GIFs…" oninput="searchGifs(this.value)"/>
-        <div id="gif-grid"></div>
-      </div>
       <div id="chat-bg-wrapper">
         <div id="chat-anim-overlay"></div>
         <div id="group-desc-banner" style="display:none"></div>
@@ -1808,6 +1815,11 @@ body.device-tablet .msg-body{max-width:74%}
         <div id="messages-wrap"></div>
       </div>
       <div id="chat-footer">
+        <!-- GIF picker: floats above the footer as a popover panel -->
+        <div id="gif-picker">
+          <input type="text" id="gif-search" placeholder="Search GIFs…" oninput="searchGifs(this.value)"/>
+          <div id="gif-grid"></div>
+        </div>
         <div id="reply-preview-row" style="display:none">
           <div id="reply-preview-text"></div>
           <span id="reply-preview-cancel" onclick="cancelReply()" title="Cancel reply">✕</span>
@@ -1821,19 +1833,25 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div id="compose-row">
           <div id="mention-suggest" class="mention-suggest"></div>
-          <button class="compose-btn" onclick="openAttachPicker()" title="Attach file (max 500MB)">📎</button>
-          <input type="file" id="file-attach-input" style="display:none" onchange="handleFileAttach(this)"/>
-          <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleCameraCapture(this)"/>
-          <button class="compose-btn gif-btn" onclick="toggleGif()" title="GIF">GIF</button>
-          <button class="compose-btn" onclick="openCameraCapture()" title="Take photo">📷</button>
-          <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none">📊</button>
-          <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game">🎮</button>
-          <button class="compose-btn" id="self-destruct-btn" onclick="sendSelfDestructMsg()" title="Send a view-once message (self-destructs after recipient reads it)">💣</button>
-          <button class="compose-btn" id="schedule-msg-btn" onclick="openScheduleMsg()" title="Schedule this message">🕐</button>
-          <textarea id="msg-input" placeholder="Type a message…" rows="1" maxlength="2000" oninput="onMsgInput(this)" onkeydown="msgKeydown(event)"></textarea>
-          <button class="compose-btn" id="voice-msg-btn" onclick="toggleVoiceMsgRecording()" title="Record voice message">🎙️</button>
-          <button class="compose-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text" style="display:none">🎤</button>
-          <button id="send-btn" onclick="sendMsg()">➤</button>
+          <!-- Action buttons row -->
+          <div id="compose-actions">
+            <button class="compose-btn" onclick="openAttachPicker()" title="Attach file (max 50MB)">📎</button>
+            <input type="file" id="file-attach-input" style="display:none" onchange="handleFileAttach(this)"/>
+            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleCameraCapture(this)"/>
+            <button class="compose-btn gif-btn" onclick="toggleGif()" title="GIF">GIF</button>
+            <button class="compose-btn" onclick="openCameraCapture()" title="Take photo">📷</button>
+            <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none">📊</button>
+            <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game">🎮</button>
+            <button class="compose-btn" id="self-destruct-btn" onclick="sendSelfDestructMsg()" title="View-once message">💣</button>
+            <button class="compose-btn" id="schedule-msg-btn" onclick="openScheduleMsg()" title="Schedule this message">🕐</button>
+            <button class="compose-btn" id="voice-msg-btn" onclick="toggleVoiceMsgRecording()" title="Record voice message">🎙️</button>
+            <button class="compose-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text" style="display:none">🎤</button>
+          </div>
+          <!-- Input + send row -->
+          <div id="compose-input-row">
+            <textarea id="msg-input" placeholder="Type a message…" rows="1" maxlength="2000" oninput="onMsgInput(this)" onkeydown="msgKeydown(event)"></textarea>
+            <button id="send-btn" onclick="sendMsg()">➤</button>
+          </div>
         </div>
         <div id="upload-progress-row" style="display:none">
           <div id="upload-progress-name"></div>
