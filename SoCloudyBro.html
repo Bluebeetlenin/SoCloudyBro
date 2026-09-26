@@ -2103,6 +2103,7 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="ctx-item" onclick="ctxAction('forward')">↪ Forward</div>
   <div class="ctx-item" id="ctx-edit-btn" onclick="ctxAction('edit')">✏️ Edit</div>
   <div class="ctx-item" id="ctx-pin-btn" onclick="ctxAction('pin')">📌 Pin</div>
+  <div class="ctx-item" id="ctx-translate-btn" onclick="ctxAction('translate')">🌐 Translate</div>
   <div class="ctx-sep"></div>
   <div class="ctx-item danger" onclick="ctxAction('delete')">🗑 Delete</div>
 </div>
@@ -7944,6 +7945,7 @@ function hideUploadProgress(){
 function uploadAndSendFile(file){
   if(!activeConvo){ showToast('No chat open',scbErr('SCB-FILE-01','No chat is open, so there is nothing to attach a file to.')); return; }
   if(activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)){ showToast('Cannot send',scbErr('SCB-MSG-02','This conversation is blocked.')); return; }
+  if(me.createdAt && Date.now()-me.createdAt < 86400000){ showToast('Not yet','New accounts can\'t send files for 24 hours after joining.'); return; }
   if(file.size>MAX_UPLOAD_BYTES){
     showToast('File too large',scbErr('SCB-FILE-02','Max attachment size is 500MB (this file is '+fmtFileSize(file.size)+').'));
     return;
@@ -8868,6 +8870,24 @@ function ctxAction(action){
   else if(action==='edit'){startEditMsg(ctxMsg);}
   else if(action==='pin'){togglePinMessage(ctxMsg);}
   else if(action==='forward'){openForwardModal(ctxMsg);}
+  else if(action==='translate'){
+    const txt=msgText(ctxMsg);
+    if(!txt){ showToast('Nothing to translate',''); ctxMsg=null; return; }
+    showToast('Translating…','');
+    fetch('https://api.mymemory.translated.web/get?q='+encodeURIComponent(txt.substring(0,500))+'&langpair=autodetect|en')
+      .then(r=>r.json()).then(d=>{
+        const tr=(d&&d.responseData&&d.responseData.translatedText)||'';
+        if(tr && tr.toLowerCase()!==txt.toLowerCase()){
+          const msgEl=document.querySelector('[data-msg-id="'+ctxMsg.id+'"] .bubble');
+          if(msgEl){
+            let tDiv=msgEl.querySelector('.msg-translation');
+            if(!tDiv){ tDiv=document.createElement('div'); tDiv.className='msg-translation'; tDiv.style.cssText='font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:4px;padding-top:4px;font-style:italic'; msgEl.appendChild(tDiv); }
+            tDiv.textContent='🌐 '+tr;
+          }
+          showToast('Translated','');
+        } else { showToast('No translation found',''); }
+      }).catch(()=>showToast('Translation failed','Check your connection.'));
+  }
   else if(action==='delete'){
     if(!convosCache) return;
     const c=convosCache.find(x=>x&&x.key===activeConvo.key);
@@ -11518,6 +11538,30 @@ function renderMessages(msgs) {
     meta.innerHTML = '<span>' + fmtTime(m.time) + '</span>' + (m.pending ? '<span class="msg-seen" title="Will send once you\'re back online">\u23f3 pending</span>' : (isMe && m.seen && m.seen.length ? '<span class="msg-seen">\u2713 seen by ' + m.seen.length + '</span>' : ''));
     body.appendChild(meta);
     row.appendChild(body); wrap.appendChild(row);
+    // Swipe-to-reply on mobile
+    (function(row,m,isMe){
+      let tx0=0,ty0=0,swiping=false,triggered=false;
+      row.addEventListener('touchstart',function(e){
+        if(e.touches.length!==1) return;
+        tx0=e.touches[0].clientX; ty0=e.touches[0].clientY; swiping=true; triggered=false;
+      },{passive:true});
+      row.addEventListener('touchmove',function(e){
+        if(!swiping||e.touches.length!==1) return;
+        const dx=e.touches[0].clientX-tx0;
+        const dy=e.touches[0].clientY-ty0;
+        if(Math.abs(dy)>Math.abs(dx)*1.2){ swiping=false; return; }
+        const dir=isMe?-1:1; // me swipes left, them swipes right
+        const dist=dx*dir;
+        if(dist>8) row.style.transform='translateX('+(dx*0.4)+'px)';
+        if(dist>60&&!triggered){ triggered=true; startReply(m); }
+      },{passive:true});
+      row.addEventListener('touchend',function(){
+        swiping=false;
+        row.style.transition='transform 0.2s';
+        row.style.transform='';
+        setTimeout(()=>row.style.transition='',200);
+      },{passive:true});
+    })(row,m,isMe);
     let _markedAnySeen = false;
     // Self-destruct: recipient sees it once, then it's deleted
     if (!isMe && m.selfDestruct && (!m.seen || !m.seen.includes(me.number))) {
@@ -13673,20 +13717,31 @@ async function renderAdminUsersTab(){
   try{
     const users=await getUsers();
     if(!users.length){ body.innerHTML='<div style="padding:10px;color:var(--muted)">No users yet.</div>'; return; }
-    body.innerHTML='<div style="font-size:11px;color:var(--muted);padding:0 2px 8px">'+users.length+' user(s)</div>'
+    body.innerHTML='<div style="font-size:11px;color:var(--muted);padding:0 2px 10px;letter-spacing:.03em">'+users.length+' user(s)</div>'
       + users.map(u=>{
         const name=esc(dec(u.name)||'#'+u.number);
         const banned=!!u.banned;
         const verified=!!u.verified;
-        return '<div class="sb-item" style="border-radius:var(--r-sm)">'
-          +'<div class="avatar" style="width:36px;height:36px;background:var(--accent-grad);color:#fff;font-size:14px">'+name.charAt(0).toUpperCase()+'</div>'
-          +'<div class="sb-item-info"><div class="sb-item-name">'+name+(verified?' <span class="verified-badge" title="Verified">✓</span>':'')+(banned?' <span style="color:var(--danger);font-size:10px">(banned)</span>':'')+'</div><div class="sb-item-preview">#'+u.number+'</div></div>'
-          +'<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:180px">'
-          +'<button class="btn btn-ghost btn-sm" onclick="adminMessage('+u.number+')">💬</button>'
+        const isAdmin=String(u.number)===String(ADMIN_NUMBER);
+        const joinDate=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px">'
+          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+          +'<div class="avatar" style="width:40px;height:40px;flex-shrink:0;background:var(--accent-grad);color:#fff;font-size:16px">'+name.charAt(0).toUpperCase()+'</div>'
+          +'<div style="min-width:0;flex:1">'
+          +'<div style="font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+name
+          +(verified?' <span class="verified-badge" title="Verified">✓</span>':'')
+          +(isAdmin?' <span style="font-size:10px;background:var(--accent);color:#fff;border-radius:4px;padding:1px 5px">Admin</span>':'')
+          +(banned?' <span style="font-size:10px;background:var(--danger);color:#fff;border-radius:4px;padding:1px 5px">Banned</span>':'')
+          +'</div>'
+          +'<div style="font-size:11px;color:var(--muted);margin-top:1px">#'+u.number+(joinDate?' · joined '+joinDate:'')+'</div>'
+          +'</div></div>'
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+          +'<button class="btn btn-ghost btn-sm" onclick="adminMessage('+u.number+')" title="Open DM">💬 Message</button>'
           +(verified?'<button class="btn btn-ghost btn-sm" onclick="adminUnverify('+u.number+')">✓ Unverify</button>':'<button class="btn btn-ghost btn-sm" onclick="adminVerify('+u.number+')">☑️ Verify</button>')
-          +(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-danger btn-sm" onclick="adminBan('+u.number+')">🚫 Ban</button>')
-          +(u.number!==ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',\''+name.replace(/'/g,"\\'")+'\',' + JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[]) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Access':'🔑 Grant Access')+'</button>':'')
-          +'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear this profile for a fresh start (messages and groups are untouched)">🔄 Reset</button>'
+          +(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan('+u.number+')">🚫 Ban</button>')
+          +(!isAdmin?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',\''+name.replace(/'/g,"\\'")+'\',' + JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[]) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
+          +'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>'
+          +(!isAdmin?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',\''+name.replace(/'/g,"\\'")+'\')">🗑️ Delete</button>':'')
           +'</div></div>';
       }).join('');
   }catch(e){
@@ -13715,6 +13770,17 @@ async function renderAdminGroupsTab(){
     selfHeal('SCB-ADMIN-21', e, { context: 'renderAdminGroupsTab' });
     body.innerHTML='<div style="color:var(--danger)">'+esc(scbErr('SCB-ADMIN-21','The group list couldn\'t be loaded.',(e&&e.message)||''))+'</div>';
   }
+}
+async function adminDeleteUser(number,name){
+  if(!requireAdmin()) return;
+  if(!confirm('Delete account for '+name+' (#'+number+')?\n\nThis marks the account as deleted in Firebase. Messages and conversations remain but the user cannot log in.\n\nThis cannot be undone.')) return;
+  try{
+    await fbdb.ref('users/'+number).update({deleted:true,deletedAt:Date.now(),banned:true});
+    // Remove from local users cache
+    if(window._usersCache) window._usersCache=window._usersCache.filter(u=>String(u.number)!==String(number));
+    showToast('Account deleted','User #'+number+' has been marked as deleted.');
+    renderAdminUsersTab();
+  }catch(e){ showToast('Delete failed',scbErr('SCB-ADMIN-30','Could not delete that account.',(e&&e.message)||'')); }
 }
 async function adminDeleteGroup(key){
   if(!requireAdmin()) return;
