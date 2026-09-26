@@ -6380,7 +6380,7 @@ const LIVEKIT_MAX_PARTICIPANTS = 40;
 //   2. Create Credentials → OAuth client ID → Application type: "Web
 //      application".
 //   3. Under "Authorized JavaScript origins" add this site's own origin(s) —
-//      for this deployment that is https://socloudybro.netlify.app (add
+//      for this deployment that is https://socloudybro.vercel.app (add
 //      http://localhost:8000 too, or whatever you serve locally on, if you want
 //      it to work while developing). Origins only: scheme + host + port, no
 //      path. "Authorized redirect URIs" can be left empty — the Google Identity
@@ -6434,7 +6434,7 @@ const GIPHY_KEY   = 'WDKqcSqlEfI9xFKr9WUJHHyZrqrwdJxJ';
 const ENC_KEY     = 'cc_s3cr3t_2025';
 const POLL_MS     = 25000;
 const ADMIN_NUMBER = 2015;
-const SITE_URL     = 'https://socloudybro.netlify.app';
+const SITE_URL     = 'https://socloudybro.vercel.app';
 const HB_MS       = 45000;
 // ----------------------------------------------------------------------------
 
@@ -15479,7 +15479,7 @@ async function revokeAllPermissions(userNum){
 
 // ── LIVE CODE UPDATER ─────────────────────────────────────────────────────────
 // Saves the full site HTML to Firebase so admin can push updates without
-// a Netlify redeploy. Connected users get a "new version" banner and reload
+// a Vercel redeploy. Connected users get a "new version" banner and reload
 // into the updated HTML served from Firebase / localStorage cache.
 const ADMIN_SITE_PATH = 'admin_site';
 
@@ -15519,8 +15519,8 @@ async function renderAdminCodeTab(){
       </div>
       <div style="margin-top:14px;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm);font-size:11px;color:var(--muted);line-height:1.6">
         <b style="color:var(--text2)">How it works:</b> Paste the updated HTML, click Save. Connected users get a "New version available" banner.
-        When they reload, the browser serves the new HTML from its local cache — no Netlify deploy needed.
-        To revert everyone to the Netlify-built version, click "Clear override".
+        When they reload, the browser serves the new HTML from its local cache — no Vercel deploy needed.
+        To revert everyone to the Vercel-deployed version, click "Clear override".
       </div>
     `;
   }catch(e){
@@ -15585,7 +15585,7 @@ async function adminCodePublish(btn){
 
 async function adminCodeClearOverride(){
   if(!requireAdmin()) return;
-  if(!confirm('Clear the Firebase override? All users will reload into the original Netlify-built version.')) return;
+  if(!confirm('Clear the Firebase override? All users will reload into the original Vercel-deployed version.')) return;
   try{
     await fbdb.ref(ADMIN_SITE_PATH).remove();
     try{ localStorage.removeItem('scb_site_version'); localStorage.removeItem('scb_site_html'); }catch(e2){}
