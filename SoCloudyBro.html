@@ -1012,10 +1012,11 @@ body.device-phone .header-actions::-webkit-scrollbar{display:none}
 body.device-phone .header-actions .icon-btn{flex-shrink:0;font-size:15px;padding:6px}
 /* The floating theme toggle collides with the bottom nav bar on phones --
    the same control already lives in Settings → Appearance, so hide it here */
-body.device-phone #compose-row{flex-direction:column;gap:0;padding:0;padding-bottom:env(safe-area-inset-bottom,0px)}
-body.device-phone #compose-actions{width:100%;padding:6px 10px;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);flex-wrap:nowrap}
+body.device-phone #chat-footer{padding:0}
+body.device-phone #compose-row{flex-direction:column;gap:0;padding:0}
+body.device-phone #compose-actions{width:100%;padding:6px 12px;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);flex-wrap:nowrap}
 body.device-phone #compose-actions::-webkit-scrollbar{display:none}
-body.device-phone #compose-input-row{width:100%;padding:8px 10px;gap:8px}
+body.device-phone #compose-input-row{width:100%;padding:8px 12px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));gap:8px}
 body.device-phone #sb-bottom .icon-btn{flex:1}
 body.device-phone #send-btn{width:44px;height:44px;font-size:17px;flex-shrink:0}
 body.device-phone .compose-btn{width:40px;height:40px;font-size:17px;flex-shrink:0}
@@ -1150,10 +1151,11 @@ body.device-tablet .msg-body{max-width:74%}
   .header-actions .icon-btn { flex-shrink: 0; font-size: 15px; padding: 6px; }
 
   /* Compose area — two-row stack: actions on top, input+send below */
-  #compose-row { flex-direction: column !important; gap: 0 !important; padding: 0 !important; padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
-  #compose-actions { width: 100% !important; padding: 6px 10px !important; gap: 4px !important; overflow-x: auto !important; scrollbar-width: none !important; border-bottom: 1px solid var(--border) !important; flex-wrap: nowrap !important; }
+  #chat-footer { padding: 0 !important; }
+  #compose-row { flex-direction: column !important; gap: 0 !important; padding: 0 !important; }
+  #compose-actions { width: 100% !important; padding: 6px 12px !important; gap: 4px !important; overflow-x: auto !important; scrollbar-width: none !important; border-bottom: 1px solid var(--border) !important; flex-wrap: nowrap !important; }
   #compose-actions::-webkit-scrollbar { display: none !important; }
-  #compose-input-row { width: 100% !important; padding: 8px 10px !important; gap: 8px !important; }
+  #compose-input-row { width: 100% !important; padding: 8px 12px !important; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important; gap: 8px !important; }
   .compose-btn { width: 40px !important; height: 40px !important; font-size: 17px !important; flex-shrink: 0 !important; }
   #send-btn { width: 44px !important; height: 44px !important; font-size: 17px !important; flex-shrink: 0 !important; }
   #msg-input { flex: 1 !important; font-size: 16px !important; } /* prevent iOS auto-zoom */
