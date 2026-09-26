@@ -1500,6 +1500,14 @@ body.device-tablet .msg-body{max-width:74%}
 .fb-filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .fb-admin-card { transition: box-shadow 0.15s; }
 .fb-admin-card:hover { box-shadow: var(--shadow); }
+/* compact messages */
+.sb-compact .bubble { padding: 4px 10px; }
+.sb-compact .msg-row { margin-bottom: 1px; }
+/* focus mode — hide sidebar */
+.focus-mode #sidebar { display: none !important; }
+.focus-mode #chat-panel { border-radius: 0; }
+/* speed button active state */
+.speed-btn.speed-active { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
 </style>
 </head>
 <body>
@@ -1661,6 +1669,8 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
     <div id="sb-list"></div>
     <div id="sb-bottom">
+      <button class="icon-btn" onclick="openShortcuts()" title="Keyboard shortcuts (?)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/></svg></button>
+      <button class="icon-btn" id="focus-mode-btn" onclick="toggleFocusMode()" title="Focus mode — hide sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
       <button class="icon-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle dark/light mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
       <button class="icon-btn" onclick="openAddContact()" title="New chat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></button>
       <button class="icon-btn" onclick="openNewGroup()" title="New group"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
@@ -1749,6 +1759,7 @@ body.device-tablet .msg-body{max-width:74%}
           <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none">📊</button>
           <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game">🎮</button>
           <button class="compose-btn" id="self-destruct-btn" onclick="sendSelfDestructMsg()" title="Send a view-once message (self-destructs after recipient reads it)">💣</button>
+          <button class="compose-btn" id="schedule-msg-btn" onclick="openScheduleMsg()" title="Schedule this message">🕐</button>
           <textarea id="msg-input" placeholder="Type a message…" rows="1" maxlength="2000" oninput="onMsgInput(this)" onkeydown="msgKeydown(event)"></textarea>
           <button class="compose-btn" id="voice-msg-btn" onclick="toggleVoiceMsgRecording()" title="Record voice message">🎙️</button>
           <button class="compose-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text" style="display:none">🎤</button>
@@ -1836,6 +1847,10 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div class="settings-section" data-settings-tab="chats">
           <h3>Messaging</h3>
+          <div class="settings-row" style="cursor:pointer" onclick="toggleCompactMode()">
+            <div class="settings-row-main"><div class="settings-row-label">Compact Messages</div><div class="settings-row-sub" id="compact-mode-sub">Off — messages have a comfortable amount of spacing</div></div>
+            <div class="settings-row-actions"><button class="btn btn-sm" id="compact-mode-btn">Turn On</button></div>
+          </div>
           <div class="settings-row" style="cursor:pointer" onclick="toggleAutocorrect()">
             <div class="settings-row-main"><div class="settings-row-label">Autocorrect</div><div class="settings-row-sub" id="autocorrect-status-text">On — common typos are fixed automatically as you type</div></div>
             <div class="settings-row-actions"><button class="btn btn-sm" id="autocorrect-toggle-btn">Turn Off</button></div>
@@ -1912,6 +1927,10 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Online Status</div><div class="settings-row-sub">Let others see when you're active</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="online-status-toggle" onchange="savePrivacyPref('showOnline',this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Zero Retention Mode</div><div class="settings-row-sub" id="zero-retention-sub">Off — messages are kept in Firebase as normal</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="zero-retention-toggle" onchange="savePrivacyPref('zeroRetention',this.checked);updateZeroRetentionUI()"><span class="switch-slider"></span></label></div>
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Secure Link Warning</div><div class="settings-row-sub">Confirm before opening external links in messages</div></div>
@@ -2537,6 +2556,8 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div class="field-hint">Solve the puzzle to prove you're human</div>
       </div>
+      <!-- honeypot: bots fill this, humans don't see it -->
+      <input type="text" name="website" id="hp-website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none" aria-hidden="true"/>
       <div class="error-text" id="setup-error"></div>
       <button class="btn btn-full" onclick="submitSetup()">Get Started ↗</button>
       <div class="google-auth-block" id="google-auth-block-signup" style="margin-top:14px">
@@ -2834,9 +2855,13 @@ body.device-tablet .msg-body{max-width:74%}
         <label>Nickname <span style="color:var(--muted)">(only you see this)</span></label>
         <input type="text" id="cp-nickname" placeholder="Add a nickname…" maxlength="24"/>
       </div>
+      <div class="field">
+        <label>Notes <span style="color:var(--muted)">(only you see this)</span></label>
+        <textarea id="cp-notes" placeholder="Add a private note…" rows="2" maxlength="300" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;resize:vertical"></textarea>
+      </div>
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
-      <button class="btn btn-sm" onclick="saveCpNickname()">Save Nickname</button>
+      <button class="btn btn-sm" onclick="saveCpNickname()">Save</button>
       <button class="btn btn-ghost btn-sm" onclick="archiveToggle();closeModal('contact-panel-overlay')">📁 Archive</button>
       <button class="btn btn-danger btn-sm" onclick="deleteContact();closeModal('contact-panel-overlay')">🗑 Delete</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('contact-panel-overlay')">Close</button>
@@ -5410,6 +5435,8 @@ async function init(){
   });
   // (email SDK removed — reports now go through Web3Forms, 2FA uses TOTP)
   loadStorage();
+  _initCompactMode();
+  _initScheduledMsgs();
   // Dismiss splash — Firebase has settled and storage is loaded; the rest of
   // init (landing page, login modal, or launch) runs without the splash overlay.
   // If launch() is called it adds its own fade-out after full initialisation.
@@ -6962,6 +6989,9 @@ async function submitSetup(){
   const err=document.getElementById('setup-error');
   err.textContent='';
 
+  // Honeypot: bots fill this hidden field, humans don't
+  const hp=document.getElementById('hp-website');
+  if(hp&&hp.value){return;} // silently fail for bots
   if(isDeviceAgeBlocked()){err.textContent=scbErr('SCB-SIGNUP-01','Sign-up is not available on this device.');return;}
   if(!name){err.textContent=scbErr('SCB-SIGNUP-02','Enter a name.');return;}
   if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent=scbErr('SCB-SIGNUP-03','Enter a valid email address.');return;}
@@ -7285,7 +7315,8 @@ async function _origOpenChat(c){
   if(c.type!=='group') updateOnlineStatus(c.number);
   else document.getElementById('chat-header-sub').textContent='';
   updateGroupDescBanner(c);
-  document.getElementById('msg-input').focus();
+  const _inp=document.getElementById('msg-input');
+  if(_inp){ _inp.focus(); _loadDraft(); }
 }
 function updateGroupDescBanner(c){
   const banner=document.getElementById('group-desc-banner');
@@ -7642,6 +7673,7 @@ function onMsgInput(el){
   broadcastTyping();
   updateMentionSuggest(el);
   applyAutocorrect(el);
+  _saveDraft();
   const words=el.value.split(/\s/);
   const last=words[words.length-1].toLowerCase().replace(/[^a-z']/g,'');
   const bar=document.getElementById('autocorrect-bar');
@@ -10876,16 +10908,28 @@ function openContactPanel() {
   }
   const av = document.getElementById('cp-avatar');
   renderAvatar(av, { name: enc(c.name), avatar: (u&&u.avatar)||c.avatar||'' });
+  // make avatar tappable for zoom
+  av.style.cursor='zoom-in'; av.onclick=()=>openAvatarZoom(av);
+  // load contact notes
+  const notesEl=document.getElementById('cp-notes');
+  if(notesEl){ const notes=getContactNote(c.number); notesEl.value=notes||''; }
   openModal('contact-panel-overlay');
 }
 function saveCpNickname() {
   if (!activeConvo) return;
   const nick = document.getElementById('cp-nickname').value.trim();
   setNickname(activeConvo.number, nick);
+  // also save notes
+  const notesEl=document.getElementById('cp-notes');
+  if(notesEl) setContactNote(activeConvo.number, notesEl.value.trim());
   renderSidebar();
   document.getElementById('cp-name').textContent = activeConvo.name + (nick ? '  (\u201C' + nick + '\u201D)' : '');
-  showToast('Nickname saved', nick ? '"' + nick + '"' : 'Nickname removed');
+  showToast('Saved', nick ? 'Nickname: "' + nick + '"' : 'Saved');
 }
+// Contact notes (private, localStorage only)
+let _contactNotes=(()=>{try{return JSON.parse(localStorage.getItem('cc_contact_notes')||'{}')}catch{return {}}})();
+function getContactNote(num){return _contactNotes[String(num)]||'';}
+function setContactNote(num,note){if(note){_contactNotes[String(num)]=note;}else{delete _contactNotes[String(num)];}localStorage.setItem('cc_contact_notes',JSON.stringify(_contactNotes));}
 async function deleteContact() {
   if (!activeConvo) return;
   if (!confirm('Delete this contact and chat history?')) return;
@@ -11271,7 +11315,11 @@ function renderFileBubble(bubble,fileData){
     bubble.innerHTML='<a href="'+url+'" target="_blank" rel="noopener"><img src="'+url+'" alt="'+name+'" loading="lazy"/></a>';
   }else if(type.startsWith('audio/')){
     bubble.className='bubble audio-bubble';
-    bubble.innerHTML='<audio controls preload="metadata" src="'+url+'"></audio>';
+    const aid='au'+Math.random().toString(36).slice(2);
+    bubble.innerHTML='<audio id="'+aid+'" controls preload="metadata" src="'+url+'"></audio>'
+      +'<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">'
+      +[0.75,1,1.5,2].map(s=>'<button onclick="setAudioSpeed(\''+aid+'\','+s+',this)" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1px 7px;font-size:10px;cursor:pointer;color:var(--muted);transition:.1s" class="speed-btn'+(s===1?' speed-active':'')+'">'+(s===1?'1×':s+'×')+'</button>').join('')
+      +'</div>';
   }else{
     bubble.className='bubble file-bubble';
     bubble.innerHTML='<span class="file-icon">📄</span><div class="file-info"><div class="file-name">'+name+'</div><div class="file-size">'+size+'</div></div><a class="file-dl" href="'+url+'" target="_blank" rel="noopener" download title="Download">⬇️</a>';
@@ -19154,6 +19202,156 @@ function savePrivacyPref(key, val){
   try{ localStorage.setItem('cc_privacy',JSON.stringify(prefs)); }catch{}
   _debounceSavePrefs();
 }
+
+/* ===== ZERO RETENTION MODE ===== */
+function updateZeroRetentionUI(){
+  const tog=document.getElementById('zero-retention-toggle');
+  const sub=document.getElementById('zero-retention-sub');
+  if(!tog||!sub) return;
+  sub.textContent=tog.checked?'On — your messages are deleted from Firebase after delivery':'Off — messages are kept in Firebase as normal';
+}
+
+/* ===== COMPACT MODE ===== */
+function toggleCompactMode(){
+  const on=document.body.classList.toggle('sb-compact');
+  try{ localStorage.setItem('cc_compact',on?'1':'0'); }catch{}
+  const btn=document.getElementById('compact-mode-btn');
+  const sub=document.getElementById('compact-mode-sub');
+  if(btn) btn.textContent=on?'Turn Off':'Turn On';
+  if(sub) sub.textContent=on?'On — messages are tightly spaced':'Off — messages have a comfortable amount of spacing';
+}
+function _initCompactMode(){
+  try{
+    if(localStorage.getItem('cc_compact')==='1'){
+      document.body.classList.add('sb-compact');
+      const btn=document.getElementById('compact-mode-btn');
+      const sub=document.getElementById('compact-mode-sub');
+      if(btn) btn.textContent='Turn Off';
+      if(sub) sub.textContent='On — messages are tightly spaced';
+    }
+  }catch{}
+}
+
+/* ===== FOCUS MODE ===== */
+let _focusModeOn=false;
+function toggleFocusMode(){
+  _focusModeOn=!_focusModeOn;
+  document.body.classList.toggle('focus-mode',_focusModeOn);
+  const btn=document.getElementById('focus-mode-btn');
+  if(btn) btn.title=_focusModeOn?'Exit focus mode (show sidebar)':'Focus mode — hide sidebar';
+}
+
+/* ===== KEYBOARD SHORTCUTS MODAL ===== */
+function openShortcuts(){ openModal('shortcuts-modal'); }
+
+/* ===== AUDIO PLAYBACK SPEED ===== */
+function setAudioSpeed(audioId,speed,btn){
+  const audio=document.getElementById(audioId);
+  if(audio) audio.playbackRate=speed;
+  const wrap=btn&&btn.closest('div');
+  if(wrap){ wrap.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('speed-active')); btn.classList.add('speed-active'); }
+}
+
+/* ===== AVATAR ZOOM ===== */
+function openAvatarZoom(imgEl){
+  const src=imgEl&&(imgEl.src||(imgEl.querySelector&&imgEl.querySelector('img')&&imgEl.querySelector('img').src));
+  if(!src) return;
+  const ov=document.getElementById('avatar-zoom-overlay');
+  const zm=document.getElementById('avatar-zoom-img');
+  if(!ov||!zm) return;
+  zm.src=src;
+  ov.style.display='flex';
+}
+function closeAvatarZoom(){ const ov=document.getElementById('avatar-zoom-overlay'); if(ov) ov.style.display='none'; }
+
+/* ===== SCHEDULE MESSAGE ===== */
+function openScheduleMsg(){
+  const now=new Date(Date.now()+60000);
+  const dt=document.getElementById('schedule-dt-input');
+  if(dt){
+    const pad=n=>String(n).padStart(2,'0');
+    dt.min=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    dt.value='';
+  }
+  const err=document.getElementById('schedule-error'); if(err) err.textContent='';
+  openModal('schedule-msg-modal');
+}
+function confirmScheduleMsg(){
+  const dt=document.getElementById('schedule-dt-input');
+  const err=document.getElementById('schedule-error');
+  if(!dt||!dt.value){ if(err) err.textContent='Please pick a time.'; return; }
+  const sendAt=new Date(dt.value).getTime();
+  if(sendAt<=Date.now()+30000){ if(err) err.textContent='Please pick a time at least 1 minute in the future.'; return; }
+  const msgInput=document.getElementById('msg-input');
+  const text=msgInput?msgInput.value.trim():'';
+  if(!text){ if(err) err.textContent='Type your message first, then schedule it.'; return; }
+  const k='cc_scheduled_msgs';
+  let list=[]; try{ list=JSON.parse(localStorage.getItem(k)||'[]'); }catch{}
+  const item={id:Date.now(),convo:activeConvo&&activeConvo.number,text,sendAt};
+  list.push(item); try{ localStorage.setItem(k,JSON.stringify(list)); }catch{}
+  setTimeout(()=>_deliverScheduledMsg(item.id),sendAt-Date.now());
+  if(msgInput) msgInput.value='';
+  closeModal('schedule-msg-modal');
+  showToast('Scheduled','Sends at '+new Date(sendAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+}
+function _deliverScheduledMsg(id){
+  const k='cc_scheduled_msgs';
+  let list=[]; try{ list=JSON.parse(localStorage.getItem(k)||'[]'); }catch{}
+  const item=list.find(m=>m.id===id); if(!item) return;
+  list=list.filter(m=>m.id!==id); try{ localStorage.setItem(k,JSON.stringify(list)); }catch{}
+  if(!item.convo||!item.text) return;
+  if(activeConvo&&String(activeConvo.number)===String(item.convo)){
+    const el=document.getElementById('msg-input'); if(el){ el.value=item.text; sendMessage&&sendMessage(); }
+  }
+}
+function _initScheduledMsgs(){
+  const k='cc_scheduled_msgs';
+  let list=[]; try{ list=JSON.parse(localStorage.getItem(k)||'[]'); }catch{}
+  const now=Date.now();
+  for(const item of list){
+    const d=item.sendAt-now;
+    if(d>0) setTimeout(()=>_deliverScheduledMsg(item.id),d);
+  }
+}
+
+/* ===== MESSAGE DRAFTS PER CHAT ===== */
+function _saveDraft(){
+  if(!activeConvo) return;
+  const el=document.getElementById('msg-input'); if(!el) return;
+  const k='cc_draft_'+activeConvo.number;
+  try{ if(el.value) localStorage.setItem(k,el.value); else localStorage.removeItem(k); }catch{}
+}
+function _loadDraft(){
+  if(!activeConvo) return;
+  const k='cc_draft_'+activeConvo.number;
+  const val=localStorage.getItem(k)||'';
+  const el=document.getElementById('msg-input'); if(el) el.value=val;
+}
+
+/* ===== SUSPICIOUS LINK WARNING ===== */
+(function(){
+  const SAFE=['github.com','youtube.com','youtu.be','twitter.com','x.com','wikipedia.org','google.com','claude.ai','anthropic.com'];
+  document.addEventListener('click',function(e){
+    const a=e.target.closest('a[href]'); if(!a) return;
+    const href=a.href; if(!href||!href.startsWith('http')) return;
+    try{
+      const host=new URL(href).hostname.toLowerCase();
+      if(SAFE.some(s=>host===s||host.endsWith('.'+s))) return;
+    }catch{ return; }
+    e.preventDefault();
+    if(confirm('⚠️ External link:\n\n'+href+'\n\nOpen anyway?')) window.open(href,'_blank','noopener,noreferrer');
+  });
+})();
+
+/* ===== KEYBOARD SHORTCUTS ===== */
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='?'&&!e.ctrlKey&&!e.metaKey){ openShortcuts(); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key===','){ e.preventDefault(); if(typeof showSettings==='function') showSettings(); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key==='b'){ e.preventDefault(); toggleFocusMode(); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){ e.preventDefault(); if(typeof toggleMsgSearch==='function') toggleMsgSearch(); return; }
+});
+
 function getPrivacyPref(key, defaultVal=true){
   const prefs=_getPrivacyPrefs();
   return key in prefs ? prefs[key] : defaultVal;
@@ -19164,6 +19362,9 @@ function _initPrivacyToggles(){
     const el=document.getElementById(id);
     if(el) el.checked=getPrivacyPref(key,true);
   }
+  // zero-retention
+  const zr=document.getElementById('zero-retention-toggle');
+  if(zr){ zr.checked=!!getPrivacyPref('zeroRetention',false); updateZeroRetentionUI(); }
 }
 
 /* ===== PIN BRUTE FORCE LOCKOUT =====
@@ -19631,5 +19832,48 @@ if(_origClipboardWrite){
   window.addEventListener('focus', _hideBlur);
 })();
 </script>
+
+<!-- Avatar zoom overlay -->
+<div id="avatar-zoom-overlay" onclick="closeAvatarZoom()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;cursor:zoom-out">
+  <img id="avatar-zoom-img" src="" alt="Profile photo" style="max-width:90vw;max-height:90vh;border-radius:50%;object-fit:cover;box-shadow:0 8px 40px rgba(0,0,0,0.6)"/>
+</div>
+
+<!-- Keyboard shortcut panel -->
+<div class="overlay" id="shortcuts-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h2>⌨️ Keyboard Shortcuts</h2></div>
+    <div class="modal-body" style="padding-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px">
+        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Enter</kbd></div><div style="color:var(--muted)">Send message</div>
+        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Shift+Enter</kbd></div><div style="color:var(--muted)">New line</div>
+        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Esc</kbd></div><div style="color:var(--muted)">Close modals / cancel reply</div>
+        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">?</kbd></div><div style="color:var(--muted)">Show this panel</div>
+        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Ctrl+K</kbd></div><div style="color:var(--muted)">Search messages</div>
+        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Ctrl+,</kbd></div><div style="color:var(--muted)">Open settings</div>
+        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Ctrl+B</kbd></div><div style="color:var(--muted)">Toggle sidebar</div>
+        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">↑</kbd></div><div style="color:var(--muted)">Edit last message (when input empty)</div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('shortcuts-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Schedule message modal -->
+<div class="overlay" id="schedule-msg-modal">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-header"><h2>🕐 Schedule Message</h2><p>Your message will be sent at the time you pick.</p></div>
+    <div class="modal-body" style="padding-bottom:10px">
+      <div class="field">
+        <label>Send at</label>
+        <input type="datetime-local" id="schedule-dt-input" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px"/>
+      </div>
+      <div class="error-text" id="schedule-error"></div>
+    </div>
+    <div class="modal-footer" style="gap:8px">
+      <button class="btn" onclick="confirmScheduleMsg()">Schedule ↗</button>
+      <button class="btn btn-ghost" onclick="closeModal('schedule-msg-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
