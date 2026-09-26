@@ -1008,8 +1008,17 @@ body.device-phone .header-actions::-webkit-scrollbar{display:none}
 body.device-phone .header-actions .icon-btn{flex-shrink:0;font-size:15px;padding:6px}
 /* The floating theme toggle collides with the bottom nav bar on phones --
    the same control already lives in Settings → Appearance, so hide it here */
-body.device-phone #compose-row{gap:6px;padding:8px 10px}
+body.device-phone #compose-row{gap:6px;padding:8px 10px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
 body.device-phone #sb-bottom .icon-btn{flex:1}
+body.device-phone #send-btn{width:44px;height:44px;font-size:17px}
+body.device-phone .compose-btn{width:40px;height:40px;font-size:17px}
+body.device-phone #sb-restore-btn{display:none!important}
+body.device-phone #focus-mode-btn{display:none!important}
+body.device-phone #main-empty{padding-bottom:72px}
+body.device-phone #toast{bottom:calc(64px + env(safe-area-inset-bottom,0px));right:auto;left:50%;transform:translateX(-50%);max-width:calc(100vw - 32px)}
+body.device-phone .bubble.audio-bubble{min-width:0;width:100%}
+body.device-phone .bubble.audio-bubble audio{width:100%;max-width:100%}
+body.device-phone .poll-card{min-width:0;max-width:100%}
 /* Tablets: keep two-pane layout but narrow the sidebar a bit */
 body.device-tablet #sidebar{width:240px}
 body.device-tablet .msg-body{max-width:74%}
@@ -1170,6 +1179,75 @@ body.device-tablet .msg-body{max-width:74%}
     justify-content: space-around;
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
+
+  /* Toast: above bottom nav and centered */
+  #toast {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 50% !important;
+    transform: translateX(50%);
+    max-width: calc(100vw - 32px) !important;
+    width: max-content;
+  }
+
+  /* Compose + send button: 44px touch targets */
+  #send-btn { width: 44px !important; height: 44px !important; font-size: 17px !important; }
+  .compose-btn { width: 40px !important; height: 40px !important; font-size: 17px !important; }
+
+  /* Dashboard: clear bottom nav; single column below 400px */
+  #main-empty { padding-bottom: 72px !important; }
+  @media (max-width: 399px) {
+    #dashboard-grid { grid-template-columns: 1fr !important; }
+  }
+
+  /* Audio bubble: don't overflow narrow screens */
+  .bubble.audio-bubble { min-width: 0 !important; width: 100%; }
+  .bubble.audio-bubble audio { width: 100% !important; max-width: 100%; }
+
+  /* Screen share tiles: constrain to viewport */
+  .screen-tile { width: 100% !important; max-width: 100% !important; }
+
+  /* Settings: tighter padding on mobile */
+  #settings-scroll { padding: 16px !important; }
+  .settings-row { padding: 10px 0 !important; }
+  .settings-section-label { font-size: 10px; }
+
+  /* Settings tabs: horizontal scroll on narrow screens */
+  #settings-tabs-bar { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+  #settings-tabs-bar::-webkit-scrollbar { display: none; }
+
+  /* Admin panel tabs: horizontal scroll */
+  #admin-tabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  #admin-tabs::-webkit-scrollbar { display: none; }
+
+  /* Focus mode sidebar restore: irrelevant on phone (single-pane) */
+  #sb-restore-btn { display: none !important; }
+
+  /* Focus mode button: hide on phone (single-pane makes it meaningless) */
+  #focus-mode-btn { display: none !important; }
+
+  /* Chat header overflow menu: reposition for small screens */
+  #chat-header-menu { right: 8px !important; left: 8px !important; min-width: 0 !important; }
+
+  /* Pinned banner: compact on mobile */
+  #pinned-banner { font-size: 11px; padding: 5px 10px; }
+
+  /* Reaction picker: ensure it doesn't overflow off-screen */
+  #reaction-picker { max-width: calc(100vw - 24px); left: 50% !important; transform: translateX(-50%) !important; }
+
+  /* GIF bubble: constrain width */
+  .bubble.gif-bubble img { max-width: min(220px, 70vw) !important; }
+
+  /* Poll card: full width on mobile */
+  .poll-card { min-width: 0 !important; max-width: 100% !important; }
+
+  /* Sidebar bottom actions: smaller icons */
+  #sb-bottom { padding: 6px 8px; gap: 2px; }
+
+  /* Modal body: ensure it scrolls */
+  .modal-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Context menu: never clip off right edge */
+  #ctx-menu { max-width: calc(100vw - 24px); }
 }
 
 /* ---- Tablet (640px – 1023px) ---- */
