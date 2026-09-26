@@ -466,7 +466,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 :focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 button:focus-visible,.icon-btn:focus-visible,.compose-btn:focus-visible,.btn:focus-visible,
 .ctx-item:focus-visible,.sb-tab:focus-visible,.scb-tab:focus-visible,.channel-pill:focus-visible,
-.update-ch-btn:focus-visible,.ac-word:focus-visible,.scb-suggest-chip:focus-visible,
+.update-ch-btn:focus-visible,.scb-suggest-chip:focus-visible,
 .reaction-chip:focus-visible,.sb-fav-star:focus-visible,.bg-option:focus-visible,.preset-av:focus-visible{
   outline:2px solid var(--focus-ring);outline-offset:2px}
 input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--focus-ring);outline-offset:1px}
@@ -474,7 +474,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px soli
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
 ::-webkit-scrollbar-thumb:hover{background:var(--accent);background-clip:padding-box}
-button,.icon-btn,.compose-btn,#send-btn,.btn,.sb-item,.sb-tab,#my-card,.ctx-item,.update-ch-btn,.reaction-chip,.preset-av,.bg-option,.ac-word,.quick-react-btn,.settings-row,.search-result-item,.poll-option{
+button,.icon-btn,.compose-btn,#send-btn,.btn,.sb-item,.sb-tab,#my-card,.ctx-item,.update-ch-btn,.reaction-chip,.preset-av,.bg-option,.quick-react-btn,.settings-row,.search-result-item,.poll-option{
   transition-timing-function:var(--ease-fluent-soft);
 }
 .icon-btn,.compose-btn,#send-btn,.btn,.preset-av{transition-property:background,color,box-shadow,transform,border-color;transition-duration:0.18s}
@@ -484,7 +484,7 @@ button,.icon-btn,.compose-btn,#send-btn,.btn,.sb-item,.sb-tab,#my-card,.ctx-item
 .btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(90,82,213,0.28)}
 .sb-item:hover,.search-result-item:hover,.settings-row:hover,.ctx-item:hover{transform:translateX(2px)}
 .sb-item,.search-result-item,.settings-row,.ctx-item,#my-card{transition-property:background,transform;transition-duration:0.2s;transition-timing-function:var(--ease-fluent-soft)}
-.reaction-chip:hover,.ac-word:hover{transform:translateY(-1px) scale(1.05)}
+.reaction-chip:hover{transform:translateY(-1px) scale(1.05)}
 .preset-av:hover,.bg-option:hover{transform:scale(1.05)}
 img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 #messages-wrap{scroll-behavior:smooth}
@@ -10787,7 +10787,6 @@ function showToast(title,body){
 }
 
 function showUndoSendToast(originalText, msg, convo) {
-  // Show a brief "Edit" button so users can pull back an autocorrected message
   const t = document.getElementById('toast');
   t.style.borderLeftColor = 'var(--success)';
   document.getElementById('toast-title').textContent = '✓ Message sent';
@@ -11567,14 +11566,12 @@ async function sendMsg(gifUrl) {
   // whatever the user typed.
   if (gifUrl && typeof gifUrl !== 'string') gifUrl = null;
   const input = document.getElementById('msg-input');
-  finalizeAutocorrect(input);
   const rawText = input.value.trim();
   if (!rawText && !gifUrl) return;
   if (!activeConvo || !me) return;
   if (activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)) { showToast('Cannot send', scbErr('SCB-MSG-16','This conversation is blocked.')); return; }
   const _originalText = rawText; // for undo-send toast
   input.value = ''; autoResize(input);
-  document.getElementById('autocorrect-bar').classList.remove('visible');
   document.getElementById('gif-picker').classList.remove('visible');
   const _sendBtn = document.getElementById('send-btn');
   _sendBtn.disabled = true;
@@ -11648,7 +11645,6 @@ async function sendMsg(gifUrl) {
         await saveConvos();
         delete msg.pending;
         lastMsgHash = ''; renderMessages(c.messages);
-        // Offer undo for autocorrected text (only for plain text messages)
         if (_originalText && !gifUrl) showUndoSendToast(_originalText, msg, c);
       } catch (e) {
         // Save failed (likely a connectivity blip) -- keep the message locally and queue it
