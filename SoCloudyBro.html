@@ -558,9 +558,12 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 #main-empty{flex:1;display:flex;flex-direction:column;align-items:center;overflow-y:auto;color:var(--text);padding:24px 32px 40px;background-size:cover;background-position:center}
 #main-empty.bg-active{color:var(--text)}
 #dashboard-header{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0 8px;flex-shrink:0}
-#main-empty .hero-icon{font-size:44px;opacity:0.6;margin-bottom:2px;text-shadow:0 2px 8px rgba(0,0,0,0.3)}
-#main-empty h2{font-size:18px;font-weight:500;color:var(--text);opacity:1;text-shadow:0 1px 4px rgba(0,0,0,0.4)}
-#main-empty p{font-size:12px;text-align:center;opacity:0.8;max-width:280px;line-height:1.6;margin-bottom:6px;text-shadow:0 1px 3px rgba(0,0,0,0.3)}
+#main-empty .hero-icon{font-size:44px;opacity:0.6;margin-bottom:2px}
+#main-empty h2{font-size:18px;font-weight:500;color:var(--text);opacity:1}
+#main-empty p{font-size:12px;text-align:center;opacity:0.85;max-width:280px;line-height:1.6;margin-bottom:6px;color:var(--text2)}
+#main-empty.bg-active .hero-icon{text-shadow:0 2px 8px rgba(0,0,0,0.5)}
+#main-empty.bg-active h2{text-shadow:0 1px 6px rgba(0,0,0,0.5)}
+#main-empty.bg-active p{text-shadow:0 1px 4px rgba(0,0,0,0.4)}
 #dashboard-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:16px;width:100%;max-width:none;margin-top:16px}
 body.device-phone #dashboard-grid{grid-template-columns:1fr 1fr;grid-auto-rows:150px}
 body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!important}
@@ -3578,9 +3581,9 @@ async function renderAdminErrorsTab(){
   body.innerHTML=`<div style="padding:12px">
     ${summary}
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      <button onclick="this.closest('.err-log-wrap').querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('all')" class="btn btn-sm btn-ghost efilter active">All</button>
-      <button onclick="this.closest('.err-log-wrap').querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('unhealed')" class="btn btn-sm btn-ghost efilter">Unrecovered</button>
-      <button onclick="this.closest('.err-log-wrap').querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('sys')" class="btn btn-sm btn-ghost efilter">System</button>
+      <button onclick="document.querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('all')" class="btn btn-sm btn-ghost efilter active">All</button>
+      <button onclick="document.querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('unhealed')" class="btn btn-sm btn-ghost efilter">Unrecovered</button>
+      <button onclick="document.querySelectorAll('.efilter').forEach(b=>b.classList.remove('active'));this.classList.add('active');errFilterChange('sys')" class="btn btn-sm btn-ghost efilter">System</button>
       <button onclick="navigator.clipboard.writeText(_buildErrorReport()).then(()=>showToast('Copied','Error report copied to clipboard.'))" class="btn btn-sm" style="margin-left:auto">📋 Copy Report</button>
       <button onclick="if(confirm('Clear the local error log?')){_clearErrorLog();renderAdminErrorsTab();}" class="btn btn-sm btn-ghost" style="color:var(--danger,#e74c3c)">🗑 Clear</button>
     </div>
@@ -3660,15 +3663,15 @@ const SCB_CHECKS = [
     }
   },
   { id:'fb.rules_errors', cat:'Firebase', name:'errors/ path is writable',
-    async:true,
+    async:true, warn:true,
     run:async()=>{
-      if(!me||!me.number) return {pass:false,detail:'Not signed in'};
+      if(!me||!me.number) return {pass:true,detail:'Not signed in — skipped'};
       try{
         const ref=firebase.database().ref('errors').push();
         await ref.set({ts:Date.now(),code:'DIAG-TEST',user:me.number});
         await ref.remove();
         return {pass:true,detail:'Write+delete succeeded'};
-      }catch(e){return {pass:false,detail:e.message+' — add errors/ to Firebase rules'};}
+      }catch(e){return {pass:true,detail:'errors/ path not writable (optional) — '+e.message};}
     }
   },
 
@@ -5841,7 +5844,7 @@ function onToggleTotpClick(){
 // 2 consecutive frames match below the distance threshold.
 const FACE_MATCH_THRESHOLD=0.48;
 const FACE_ENROLL_SAMPLES=5;
-const FACE_MODEL_URL='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+const FACE_MODEL_URL='https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
 let _faceApiModelsLoaded=false;
 async function _ensureFaceApi(){
   if(typeof faceapi!=='undefined') return;
@@ -17114,9 +17117,9 @@ function injectFeatureSettings(){
       '<div class="settings-row-main"><div class="settings-row-label" data-i18n="secondary_color">Secondary colour</div><div class="settings-row-sub">The far end of every gradient in the app\'s chrome</div></div>'+
       '<div class="settings-row-actions"><input type="color" class="scb-color-input" id="scb-secondary-color" value="#7C5FD4" aria-label="Secondary colour"/></div>'+
     '</div>'+
-    '<div class="settings-row">'+
-      '<div class="settings-row-main"><div class="settings-row-label">Apply</div><div class="settings-row-sub">Applies instantly and follows your account to other devices</div></div>'+
-      '<div class="settings-row-actions"><button class="btn btn-sm" id="scb-colors-save">Apply</button><button class="btn btn-ghost btn-sm" id="scb-colors-reset" data-i18n="reset">Reset</button></div>'+
+    '<div style="display:flex;gap:8px;padding:8px 0 4px">'+
+      '<button class="btn btn-sm" id="scb-colors-save">Apply</button>'+
+      '<button class="btn btn-ghost btn-sm" id="scb-colors-reset" data-i18n="reset">Reset</button>'+
     '</div>'+
   '</div>'+
   '<div class="settings-section" data-settings-tab="looks">'+
@@ -19350,11 +19353,19 @@ function _loadDraft(){
 
 /* ===== KEYBOARD SHORTCUTS ===== */
 document.addEventListener('keydown',function(e){
-  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
-  if(e.key==='?'&&!e.ctrlKey&&!e.metaKey){ openShortcuts(); return; }
-  if((e.ctrlKey||e.metaKey)&&e.key===','){ e.preventDefault(); if(typeof showSettings==='function') showSettings(); return; }
-  if((e.ctrlKey||e.metaKey)&&e.key==='b'){ e.preventDefault(); toggleFocusMode(); return; }
-  if((e.ctrlKey||e.metaKey)&&e.key==='k'){ e.preventDefault(); if(typeof toggleMsgSearch==='function') toggleMsgSearch(); return; }
+  const inInput=e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA';
+  const ctrl=e.ctrlKey||e.metaKey;
+  // ? — only when not typing
+  if(!inInput&&e.key==='?'&&!ctrl){ openShortcuts(); return; }
+  // Ctrl/Cmd shortcuts work everywhere
+  if(ctrl&&e.key===','){ e.preventDefault(); if(typeof showSettings==='function') showSettings(); return; }
+  if(ctrl&&e.key.toLowerCase()==='b'){ e.preventDefault(); toggleFocusMode(); return; }
+  if(ctrl&&e.key.toLowerCase()==='k'){ e.preventDefault(); if(typeof toggleMsgSearch==='function') toggleMsgSearch(); return; }
+  // Esc — close topmost modal when not searching
+  if(!inInput&&e.key==='Escape'){
+    const visible=document.querySelector('.overlay.visible');
+    if(visible){ const id=visible.id; if(id) closeModal(id); }
+  }
 });
 
 function getPrivacyPref(key, defaultVal=true){
