@@ -495,7 +495,7 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 #shell{position:relative;z-index:1;display:flex;height:100vh;width:100%;background:var(--bg2);box-shadow:var(--shadow-lg)}
 
 /* ── SIDEBAR ── */
-#sidebar{width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);backdrop-filter:blur(20px)}
+#sidebar{width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);backdrop-filter:blur(20px);color:var(--text)}
 #sb-titlebar{height:32px;display:flex;align-items:center;padding:0 14px;gap:8px;background:var(--bg3);border-bottom:1px solid var(--border);-webkit-app-region:drag;flex-shrink:0}
 #sb-titlebar span{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:0.2px}
 #sb-head{padding:12px 14px;border-bottom:1px solid var(--border)}
@@ -555,24 +555,24 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 
 /* ── MAIN ── */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg2)}
-#main-empty{flex:1;display:flex;flex-direction:column;align-items:center;overflow-y:auto;color:var(--muted);padding:24px 32px 40px;background-size:cover;background-position:center}
+#main-empty{flex:1;display:flex;flex-direction:column;align-items:center;overflow-y:auto;color:var(--text);padding:24px 32px 40px;background-size:cover;background-position:center}
 #main-empty.bg-active{color:var(--text)}
 #dashboard-header{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0 8px;flex-shrink:0}
-#main-empty .hero-icon{font-size:44px;opacity:0.2;margin-bottom:2px}
-#main-empty h2{font-size:18px;font-weight:300;color:var(--muted);opacity:0.6}
-#main-empty p{font-size:12px;text-align:center;opacity:0.5;max-width:280px;line-height:1.6;margin-bottom:6px}
+#main-empty .hero-icon{font-size:44px;opacity:0.6;margin-bottom:2px;text-shadow:0 2px 8px rgba(0,0,0,0.3)}
+#main-empty h2{font-size:18px;font-weight:500;color:var(--text);opacity:1;text-shadow:0 1px 4px rgba(0,0,0,0.4)}
+#main-empty p{font-size:12px;text-align:center;opacity:0.8;max-width:280px;line-height:1.6;margin-bottom:6px;text-shadow:0 1px 3px rgba(0,0,0,0.3)}
 #dashboard-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:16px;width:100%;max-width:none;margin-top:16px}
 body.device-phone #dashboard-grid{grid-template-columns:1fr 1fr;grid-auto-rows:150px}
 body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!important}
-.dash-widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:16px;text-align:left;color:var(--text);min-height:80px;box-shadow:0 6px 20px rgba(0,0,0,0.16),0 1px 3px rgba(0,0,0,0.1);overflow:hidden;position:relative;transition:transform .18s var(--ease-fluent-soft),box-shadow .18s}
+.dash-widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:16px;text-align:left;color:var(--text);min-height:80px;box-shadow:0 6px 24px rgba(0,0,0,0.28),0 1px 3px rgba(0,0,0,0.18);overflow:hidden;position:relative;transition:transform .18s var(--ease-fluent-soft),box-shadow .18s}
 .dash-widget:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,0.22),0 1px 3px rgba(0,0,0,0.12)}
 .dash-widget.hero{background:var(--accent-grad);color:#fff;border-color:transparent}
 .dash-widget.hero .dash-widget-title{color:rgba(255,255,255,0.85)}
 .dash-widget.hero .dash-widget-empty{color:rgba(255,255,255,0.75)}
 .dash-widget.hero .dash-list-item:hover{background:rgba(255,255,255,0.12)}
-.dash-widget-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.dash-widget-empty{font-size:12px;color:var(--muted);opacity:.7;padding:6px 0}
-.dash-list-item{display:flex;align-items:center;gap:8px;padding:7px 8px;margin:0 -8px;font-size:13px;cursor:pointer;border-radius:10px;transition:background .12s}
+.dash-widget-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.dash-widget-empty{font-size:12px;color:var(--text2);opacity:.8;padding:6px 0}
+.dash-list-item{display:flex;align-items:center;gap:8px;padding:7px 8px;margin:0 -8px;font-size:13px;cursor:pointer;border-radius:10px;transition:background .12s;color:var(--text)}
 .dash-list-item:hover{background:var(--surface2)}
 .dash-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .dash-dot.on{background:#2ecc71}.dash-dot.off{background:var(--muted);opacity:.4}
@@ -1506,6 +1506,10 @@ body.device-tablet .msg-body{max-width:74%}
 /* focus mode — hide sidebar */
 .focus-mode #sidebar { display: none !important; }
 .focus-mode #chat-panel { border-radius: 0; }
+/* sidebar restore button — visible only when sidebar is hidden */
+#sb-restore-btn { display:none; position:fixed; left:0; top:50%; transform:translateY(-50%); z-index:800; background:var(--surface); border:1px solid var(--border); border-left:none; border-radius:0 8px 8px 0; padding:10px 6px; cursor:pointer; color:var(--text2); box-shadow:2px 0 8px rgba(0,0,0,0.2); font-size:14px; line-height:1; }
+#sb-restore-btn:hover { background:var(--surface2); color:var(--accent); }
+.focus-mode #sb-restore-btn { display:flex; align-items:center; }
 /* speed button active state */
 .speed-btn.speed-active { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
 </style>
@@ -1643,6 +1647,7 @@ body.device-tablet .msg-body{max-width:74%}
   </div>
 </div>
 
+<button id="sb-restore-btn" onclick="toggleFocusMode()" title="Show sidebar (Ctrl+B)">&#x276F;</button>
 <div id="shell">
   <div id="sidebar">
     <div id="sb-titlebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><defs><linearGradient id="scb-logo-grad" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f8ef7"/><stop offset="0.5" stop-color="#6b5de8"/><stop offset="1" stop-color="#8b3fbd"/></linearGradient></defs><path d="M7 17a4 4 0 1 1 .3-7.98A5.5 5.5 0 0 1 18 10.5a4 4 0 0 1-.6 7.5H7z" fill="url(#scb-logo-grad)"/><path d="M9.4 18.2l-1.9 3 3.5-1.5z" fill="url(#scb-logo-grad)"/></svg><span>SoCloudyBro</span><button id="admin-dash-btn" class="icon-btn" onclick="openAdminDashboard()" title="Admin Dashboard" style="display:none;margin-left:auto;-webkit-app-region:no-drag;position:relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z"/></svg><span id="admin-err-badge" hidden style="position:absolute;top:-3px;right:-3px;background:#e74c3c;color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px;line-height:1.4;pointer-events:none"></span></button></div>
