@@ -3015,7 +3015,13 @@ firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
 let fbstorage = null;
 try{ fbstorage = firebase.storage(); }catch(e){ console.warn('SCB: Firebase Storage unavailable:', e.message); }
-const MAX_UPLOAD_BYTES = 500*1024*1024; // 500MB cap on file/voice attachments
+const MAX_UPLOAD_BYTES = 50*1024*1024; // 50MB cap on file/voice attachments
+// Cloudinary unsigned upload — create a free account at cloudinary.com, then:
+//   1. Copy your Cloud Name from the dashboard and paste it below
+//   2. Go to Settings → Upload → Add upload preset → set Signing Mode to "Unsigned" → save
+//   3. Paste the preset name below
+const CLOUDINARY_CLOUD = 'YOUR_CLOUD_NAME';
+const CLOUDINARY_PRESET = 'YOUR_UPLOAD_PRESET';
 // -- ERROR CODES --------------------------------------------------------------
 // Every error message a user can actually SEE (toasts, inline error text under
 // form fields, the "needs attention" banner, the file-scan note, the remote
@@ -7947,37 +7953,43 @@ function uploadAndSendFile(file){
   if(activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)){ showToast('Cannot send',scbErr('SCB-MSG-02','This conversation is blocked.')); return; }
   if(me.createdAt && Date.now()-me.createdAt < 86400000){ showToast('Not yet','New accounts can\'t send files for 24 hours after joining.'); return; }
   if(file.size>MAX_UPLOAD_BYTES){
-    showToast('File too large',scbErr('SCB-FILE-02','Max attachment size is 500MB (this file is '+fmtFileSize(file.size)+').'));
+    showToast('File too large',scbErr('SCB-FILE-02','Max attachment size is 50MB (this file is '+fmtFileSize(file.size)+').'));
+    return;
+  }
+  if(!CLOUDINARY_CLOUD||CLOUDINARY_CLOUD==='YOUR_CLOUD_NAME'){
+    showToast('Upload not configured',scbErr('SCB-FILE-03','Set CLOUDINARY_CLOUD and CLOUDINARY_PRESET in the app config to enable file sharing.'));
     return;
   }
   showUploadProgress(0,file.name);
-  const path='attachments/'+activeConvo.key+'/'+Date.now()+'_'+sanitizeFileName(file.name);
-  let task;
-  try{
-    task=fbstorage.ref(path).put(file);
-  }catch(e){
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('upload_preset',CLOUDINARY_PRESET);
+  fd.append('public_id','scb/'+activeConvo.key+'/'+Date.now()+'_'+sanitizeFileName(file.name));
+  const xhr=new XMLHttpRequest();
+  xhr.open('POST','https://api.cloudinary.com/v1_1/'+CLOUDINARY_CLOUD+'/auto/upload',true);
+  xhr.upload.onprogress=function(ev){
+    if(ev.lengthComputable) showUploadProgress(Math.round(ev.loaded/ev.total*100),file.name);
+  };
+  xhr.onload=async function(){
     hideUploadProgress();
-    showToast('Upload failed',scbErr('SCB-FILE-03','Your file upload couldn\'t be started.',(e.message||'Could not start upload.')));
-    return;
-  }
-  task.on('state_changed',
-    snap=>{ const pct=snap.totalBytes?Math.round(snap.bytesTransferred/snap.totalBytes*100):0; showUploadProgress(pct,file.name); },
-    err=>{
-      hideUploadProgress();
-      if(err&&err.code==='storage/unauthorized') showToast('Upload failed',scbErr('SCB-FILE-04','Firebase Storage rules are blocking uploads — check the Rules tab.'));
-      else showToast('Upload failed',scbErr('SCB-FILE-05','Your file upload failed part-way through.',(err&&err.message)||'Check your connection and try again.'));
-    },
-    async()=>{
+    if(xhr.status===200){
       try{
-        const url=await task.snapshot.ref.getDownloadURL();
-        hideUploadProgress();
-        await sendFileMsg({name:file.name,url,type:file.type||'application/octet-stream',size:file.size});
+        const res=JSON.parse(xhr.responseText);
+        await sendFileMsg({name:file.name,url:res.secure_url,type:file.type||'application/octet-stream',size:file.size});
       }catch(e){
-        hideUploadProgress();
-        showToast('Upload failed',scbErr('SCB-FILE-06','Your file uploaded, but the attachment couldn\'t be saved to the chat.',(e.message||'Could not finish upload.')));
+        showToast('Upload failed',scbErr('SCB-FILE-06','File uploaded but couldn\'t be saved to the chat.',(e.message||'')));
       }
+    } else {
+      let detail='';
+      try{ detail=JSON.parse(xhr.responseText).error&&JSON.parse(xhr.responseText).error.message; }catch{}
+      showToast('Upload failed',scbErr('SCB-FILE-05','Cloudinary rejected the upload.',(detail||'Status '+xhr.status)));
     }
-  );
+  };
+  xhr.onerror=function(){
+    hideUploadProgress();
+    showToast('Upload failed',scbErr('SCB-FILE-05','Your file upload failed — check your connection.'));
+  };
+  xhr.send(fd);
 }
 async function sendFileMsg(fileMeta){
   if(!activeConvo||!me) return;
