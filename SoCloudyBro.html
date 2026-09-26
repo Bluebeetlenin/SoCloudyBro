@@ -398,7 +398,7 @@
 :root{
   --r-card:20px;--r:14px;--r-sm:10px;--r-xs:8px;--r-pill:999px;
   --accent:#5A52D5;--accent2:#4C46C4;--accent-hover:#6B62E0;--accent-bright:#7B74F0;
-  --accent-grad:linear-gradient(135deg,#4C46C4 0%,#7C5FD4 55%,#FF6F5E 100%);
+  --accent-grad:linear-gradient(135deg,#4C46C4 0%,#7C5FD4 100%);
   --success:#13a10e;--danger:#d13438;--warn:#ca5010;
   /* Soft tints of the status colours, so banners/cards that need a wash of
      colour stop hardcoding rgba() values that only read well in one theme. */
@@ -481,7 +481,7 @@ button,.icon-btn,.compose-btn,#send-btn,.btn,.sb-item,.sb-tab,#my-card,.ctx-item
 .icon-btn:hover,.compose-btn:hover{transform:translateY(-1px) scale(1.04)}
 .icon-btn:active,.compose-btn:active,#send-btn:active,.btn:active{transform:scale(0.92);transition-duration:0.08s}
 #send-btn:hover{transform:translateY(-1px) scale(1.06);box-shadow:0 6px 18px rgba(107,93,232,0.35)}
-.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(107,93,232,0.3)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(90,82,213,0.28)}
 .sb-item:hover,.search-result-item:hover,.settings-row:hover,.ctx-item:hover{transform:translateX(2px)}
 .sb-item,.search-result-item,.settings-row,.ctx-item,#my-card{transition-property:background,transform;transition-duration:0.2s;transition-timing-function:var(--ease-fluent-soft)}
 .reaction-chip:hover,.ac-word:hover{transform:translateY(-1px) scale(1.05)}
@@ -2949,6 +2949,9 @@ body.device-tablet .msg-body{max-width:74%}
 <!-- MESSAGE SEARCH RESULTS -->
 <div id="msg-search-results" style="display:none;position:absolute;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:40;max-height:300px;overflow-y:auto;box-shadow:var(--shadow)"></div>
 
+<!-- CryptoJS 4.2.0 — AES-256 used for profile field obfuscation (enc/dec).
+     Was previously inlined; now loaded from CDN to keep file size small. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
@@ -2974,7 +2977,8 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
-const fbstorage = firebase.storage();
+let fbstorage = null;
+try{ fbstorage = firebase.storage(); }catch(e){ console.warn('SCB: Firebase Storage unavailable:', e.message); }
 const MAX_UPLOAD_BYTES = 500*1024*1024; // 500MB cap on file/voice attachments
 // -- ERROR CODES --------------------------------------------------------------
 // Every error message a user can actually SEE (toasts, inline error text under
@@ -4658,6 +4662,12 @@ function loadStorage(){
   // repair pass right here. Persist the fix so this only has to run once.
   if(me && healMeFields(me)) saveStorage();
   contacts      = (safeParse('cc_contacts', [])||[]).filter(Boolean);
+  // Heal any contact names still stored as v2:... ciphertext (same idea as
+  // healMeFields above). Happens when contacts were cached before dec() started
+  // working (i.e. before CryptoJS was re-added after the face-api removal).
+  let _cHealed=false;
+  contacts.forEach(c=>{ if(c&&typeof c.name==='string'&&c.name.startsWith('v2:')){ c.name=dec(c.name)||c.name; _cHealed=true; } });
+  if(_cHealed) saveStorage();
   lockedChats   = safeParse('cc_locked', {});
   archivedContacts = safeParse('cc_archived', {});
   mutedChats    = safeParse('cc_muted', {});
@@ -6978,7 +6988,8 @@ function renderSidebar(){
     div.oncontextmenu=(e)=>{e.preventDefault();showContactCtxMenu(e,c);};
     const _safeGrpAv=(c.avatar&&typeof c.avatar==='string'&&(c.avatar.startsWith('data:image/')||c.avatar.startsWith('https://')))?`<img src="${esc(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">`:'👥';
     const avDiv=c.type==='group'?`<div class="group-avatar" style="background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;font-size:16px;">${_safeGrpAv}</div>`:`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?'background:none;':''}">${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(c.name||'?').charAt(0).toUpperCase()}</div><div class="${online?'online-ring':'offline-ring'}"></div></div>`;
-    div.innerHTML=`${avDiv}<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">${esc(c.name)}${c.type!=='group'?verifiedBadge(c.number):''}${inCall?' <span title="In a call now" style="color:var(--success)">\u260E</span>':''}</span><span class="sb-item-time">${timeStr}</span></div><div class="sb-item-preview">${esc(preview)}</div></div>`;
+    const _cDispName=dec(c.name)||c.name||'?';
+    div.innerHTML=`${avDiv}<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">${esc(_cDispName)}${c.type!=='group'?verifiedBadge(c.number):''}${inCall?' <span title="In a call now" style="color:var(--success)">\u260E</span>':''}</span><span class="sb-item-time">${timeStr}</span></div><div class="sb-item-preview">${esc(preview)}</div></div>`;
     list.appendChild(div);
   });
 }
@@ -7074,7 +7085,7 @@ async function _origOpenChat(c){
   // Header
   const _bizUser = c.type!=='group'&&c.number ? lookupUser(c.number) : null;
   const _bizActive = _bizUser && _bizUser.bizProfile && _bizUser.bizProfile.enabled;
-  document.getElementById('chat-header-name').innerHTML=esc(c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser(\''+c.number+'\'))">BIZ</span>' : '');
+  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser(\''+c.number+'\'))">BIZ</span>' : '');
   const pollBtn=document.getElementById('poll-compose-btn');if(pollBtn) pollBtn.style.display=c.type==='group'?'flex':'none';
   const gameBtn=document.getElementById('game-compose-btn');if(gameBtn) gameBtn.style.display='flex';
   const addMemberBtn=document.getElementById('add-member-btn');if(addMemberBtn) addMemberBtn.style.display=c.type==='group'?'flex':'none';
@@ -8501,7 +8512,7 @@ async function startDirectCall(contact){
     return;
   }
   _outgoingCallPairKey=pairKey; _outgoingCallRef=cRef; _outgoingCallContact=contact;
-  document.getElementById('outgoing-call-name').textContent=contact.name;
+  document.getElementById('outgoing-call-name').textContent=dec(contact.name)||contact.name;
   openModal('outgoing-call-modal');
   _outgoingCallHandler=cRef.on('value',async snap=>{
     const val=snap.val();
@@ -9252,20 +9263,27 @@ async function applyCustomBgPhoto(input){
   const file=input.files&&input.files[0];
   input.value='';
   if(!file) return;
+  const readAsDataUrl=()=>new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(file); });
   try{
     let url='';
-    if(typeof firebase!=='undefined'&&me&&me.number){
-      const ref=firebase.storage().ref('bg_photos/'+me.number+'/custom_bg');
-      await ref.put(file);
-      url=await ref.getDownloadURL();
+    if(fbstorage&&me&&me.number){
+      try{
+        const ref=fbstorage.ref('bg_photos/'+me.number+'/custom_bg');
+        await ref.put(file);
+        url=await ref.getDownloadURL();
+      }catch(storageErr){
+        // Firebase Storage blocked or permission denied — fall back to local data URL
+        url=await readAsDataUrl();
+      }
     } else {
-      url=await new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(file); });
+      url=await readAsDataUrl();
     }
+    if(!url) return;
     localStorage.setItem('cc_bg_custom_url',url);
     setChatBg('custom', document.getElementById('bg-opt-custom-btn'));
     showToast('Background set','Your photo is now your chat background');
   }catch(e){
-    showToast('Failed','Could not apply photo background');
+    showToast('Failed','Could not apply photo background: '+e.message);
   }
 }
 
@@ -10698,7 +10716,7 @@ function openContactPanel() {
   const c = activeConvo;
   const u = lookupUser(c.number) || {};
   const nick = getNickname(c.number);
-  document.getElementById('cp-name').textContent = c.name + (nick ? '  (\u201C' + nick + '\u201D)' : '');
+  document.getElementById('cp-name').textContent = (dec(c.name)||c.name) + (nick ? '  (\u201C' + nick + '\u201D)' : '');
   document.getElementById('cp-number').textContent = '#' + c.number;
   document.getElementById('cp-bio').textContent = dec(u.bio || '') || 'No bio';
   document.getElementById('cp-nickname').value = nick || '';
