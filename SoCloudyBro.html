@@ -1538,34 +1538,44 @@ body.device-tablet .msg-body{max-width:74%}
     margin-bottom:48px;
   "></div>
 
-  <!-- Feature highlights -->
+  <!-- Feature tip cards — horizontally scrollable -->
   <div style="
-    display:flex;flex-wrap:wrap;justify-content:center;gap:10px;
-    max-width:480px;
-  ">
-    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)">
-      <span style="font-size:16px">🔒</span><span>End-to-end encrypted chat</span>
+    width:100%;max-width:540px;
+    display:flex;gap:10px;
+    overflow-x:auto;padding-bottom:4px;
+    scrollbar-width:none;-ms-overflow-style:none;
+  " id="scb-splash-tips">
+    <div style="flex:0 0 auto;width:180px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);border-radius:16px;padding:14px 15px">
+      <div style="font-size:22px;margin-bottom:8px">📹</div>
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:5px;line-height:1.3">Try out meetings!</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5">Start a video call with any of your contacts — right from the chat.</div>
     </div>
-    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)">
-      <span style="font-size:16px">🎵</span><span>Live music sharing</span>
+    <div style="flex:0 0 auto;width:180px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);border-radius:16px;padding:14px 15px">
+      <div style="font-size:22px;margin-bottom:8px">🎵</div>
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:5px;line-height:1.3">Connect Spotify or Last.fm</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5">Show your friends what you're listening to in real time.</div>
     </div>
-    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)">
-      <span style="font-size:16px">📹</span><span>HD video meetings</span>
+    <div style="flex:0 0 auto;width:180px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);border-radius:16px;padding:14px 15px">
+      <div style="font-size:22px;margin-bottom:8px">👥</div>
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:5px;line-height:1.3">Create a group!</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5">Bring your whole crew into one place with group chats and channels.</div>
     </div>
-    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)">
-      <span style="font-size:16px">👥</span><span>Groups &amp; channels</span>
+    <div style="flex:0 0 auto;width:180px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);border-radius:16px;padding:14px 15px">
+      <div style="font-size:22px;margin-bottom:8px">🌤️</div>
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:5px;line-height:1.3">Share your weather</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5">Add your city to your profile so friends can see what it's like where you are.</div>
     </div>
-    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)">
-      <span style="font-size:16px">🌤️</span><span>Weather &amp; live status</span>
-    </div>
-    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)">
-      <span style="font-size:16px">🔔</span><span>Smart notifications</span>
+    <div style="flex:0 0 auto;width:180px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);border-radius:16px;padding:14px 15px">
+      <div style="font-size:22px;margin-bottom:8px">🔒</div>
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:5px;line-height:1.3">Everything's encrypted</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5">Your messages are end-to-end encrypted — only you and your contacts can read them.</div>
     </div>
   </div>
 </div>
 <style>
 @keyframes scb-spin{to{transform:rotate(360deg)}}
 #scb-splash{font-family:'Inter',system-ui,sans-serif}
+#scb-splash-tips::-webkit-scrollbar{display:none}
 </style>
 
 <div id="lock-screen">
