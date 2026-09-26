@@ -841,11 +841,6 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 #gif-grid img{width:100%;height:90px;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity 0.15s}
 #gif-grid img:hover{opacity:0.8}
 
-/* ── AUTOCORRECT SUGGESTION ── */
-#autocorrect-bar{display:none;padding:4px 12px;gap:8px;overflow-x:auto;white-space:nowrap}
-#autocorrect-bar.visible{display:flex}
-.ac-word{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:3px 10px;font-size:12px;cursor:pointer;flex-shrink:0;transition:background 0.15s}
-.ac-word:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* ── MODALS ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);z-index:600;display:none;align-items:center;justify-content:center;padding:16px}
@@ -1806,7 +1801,6 @@ body.device-tablet .msg-body{max-width:74%}
         <button class="icon-btn" onclick="msgSearchNav(1)" title="Next match">↓</button>
         <button class="icon-btn" onclick="toggleMsgSearch()" title="Close search">✕</button>
       </div>
-      <div id="autocorrect-bar"></div>
       <div id="chat-bg-wrapper">
         <div id="chat-anim-overlay"></div>
         <div id="group-desc-banner" style="display:none"></div>
@@ -1937,10 +1931,6 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="settings-row" style="cursor:pointer" onclick="toggleCompactMode()">
             <div class="settings-row-main"><div class="settings-row-label">Compact Messages</div><div class="settings-row-sub" id="compact-mode-sub">Off — messages have a comfortable amount of spacing</div></div>
             <div class="settings-row-actions"><button class="btn btn-sm" id="compact-mode-btn">Turn On</button></div>
-          </div>
-          <div class="settings-row" style="cursor:pointer" onclick="toggleAutocorrect()">
-            <div class="settings-row-main"><div class="settings-row-label">Autocorrect</div><div class="settings-row-sub" id="autocorrect-status-text">On — common typos are fixed automatically as you type</div></div>
-            <div class="settings-row-actions"><button class="btn btn-sm" id="autocorrect-toggle-btn">Turn Off</button></div>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="chats">
@@ -4639,51 +4629,6 @@ if (window.matchMedia) {
 }
 applyDeviceType();
 
-// -- AUTOCORRECT DICTIONARY -----------------------------------------------
-const AC_DICT={teh:'the',waht:'what',adn:'and',taht:'that',recieve:'receive',occured:'occurred',definately:'definitely',seperate:'separate',probly:'probably',realy:'really',wierd:'weird',untill:'until',becuase:'because',dont:"don't",cant:"can't",wont:"won't",im:"I'm",ive:"I've",youre:"you're",theyre:"they're",wouldnt:"wouldn't",couldnt:"couldn't",shouldnt:"shouldn't",hav:'have',wil:'will',goin:'going',somethin:'something',everythin:'everything',nothin:'nothing',liek:'like',thnks:'thanks',thx:'thanks',pls:'please',plz:'please',u:'you',ur:'your',r:'are',b4:'before','2day':'today','2moro':'tomorrow',gr8:'great',l8r:'later'};
-// Common-word dictionary used to autocorrect typos that AREN'T in AC_DICT —
-// any typed word within one edit (insert/delete/swap/substitute) of exactly
-// one of these gets corrected to it, so coverage isn't limited to a fixed list.
-const DICT_WORDS=["it's","that's","there's","here's","what's","who's","let's","he's","she's","where's","how's","when's","why's","one's","someone's","everyone's",'noon','midnight','morning','afternoon','tonight','tomorrow','yesterday','second','seconds','minutes','hours','dollar','dollars','cent','cents','price','cheap','expensive','about','above','across','after','again','against','all','almost','alone','along','already','also','although','always','among','and','another','any','anyone','anything','anywhere','are','around','as','ask','asked','at','away','back','bad','be','became','because','become','been','before','behind','being','believe','below','best','better','between','big','both','bring','but','buy','by','call','called','came','can','cannot','car','care','change','chat','check','come','comes','coming','could','day','days','did','different','do','does','doing','done','down','during','each','early','easy','eat','either','end','enough','even','evening','ever','every','everyone','everything','example','far','feel','feeling','feet','few','find','fine','first','food','for','found','friend','friends','from','fun','game','games','get','gets','getting','give','given','go','goes','going','gone','good','got','great','group','guess','had','hand','happy','hard','has','have','having','he','head','hear','heard','hello','help','awesome','amazing','cool','wow','gonna','wanna','gotta','kinda','yeah','yep','nope','totally','honestly','basically','seriously','obviously','literally','actually','exactly','absolutely','definitely','her','here','hey','hi','high','him','his','home','hope','hour','house','how','however','hundred','idea','if','important','in','into','is','it','its','job','join','just','keep','kind','knew','know','known','large','last','late','later','laugh','learn','leave','left','less','let','life','like','line','list','little','live','long','look','looking','lot','love','made','make','making','man','many','match','may','maybe','me','mean','meant','meet','men','message','might','mind','mine','minute','miss','mom','moment','money','month','more','morning','most','move','movie','much','music','must','my','name','near','need','never','new','news','next','nice','night','no','not','nothing','now','number','of','off','offer','often','oh','ok','okay','old','on','once','one','online','only','open','or','other','our','out','over','own','part','party','people','perhaps','phone','photo','picture','place','plan','play','played','playing','please','point','probably','problem','put','question','quite','rather','read','ready','real','really','reason','remember','right','run','sad','said','same','saw','say','school','see','seem','seen','send','sent','sentence','set','several','share','she','should','show','side','since','small','so','some','someone','something','sometimes','song','soon','sorry','sound','start','state','still','stop','story','study','stuff','such','sure','take','talk','talking','team','tell','than','thank','thanks','that','the','their','them','then','there','these','they','thing','things','think','this','those','thought','three','through','time','to','today','together','told','too','took','toward','true','try','turn','two','under','understand','until','up','upon','us','use','used','died','die','dies','dying','cried','tried','worked','walked','talked','looked','helped','started','needed','seemed','happened','changed','moved','lived','loved','hoped','closed','opened','turned','learned','planned','stopped','watched','waited','checked','missed','passed','decided','realized','noticed','agreed','arrived','finished','fixed','broke','built','bought','brought','caught','taught','spent','kept','slept','woke','wrote','drove','threw','grew','flew','fell','felt','held','met','paid','ran','sat','ate','gave','shook','began','sang','drank','stood','forgot','charger','chargers','battery','laptop','keyboard','headset','headphones','speaker','speakers','router','wifi','internet','server','update','password','account','setting','settings','profile','sandwich','lunch','dinner','breakfast','snack','weekend','schedule','calendar','reminder','alarm','traffic','weather','restaurant','grocery','coffee','significantly','completely','immediately','generally','especially','eventually','currently','recently','personally','originally','apparently','unfortunately','fortunately','certainly','surely','finally','simply','easily','quickly','slowly','clearly','mostly','mainly','possibly','hopefully','normally','usually','typically','constantly','frequently','occasionally','rarely','hardly','nearly','directly','entirely','truly','fully','partly','largely','greatly','highly','deeply','strongly','properly','correctly','perfectly','naturally','very','video','wait','want','wanted','was','watch','watching','water','way','we','week','well','went','were','what','when','where','whether','which','while','who','whole','why','will','with','within','without','word','work','world','would','write','wrong','year','years','yes','yet','you','young','your','yours'];
-const DICTIONARY=new Set([...DICT_WORDS,...Object.values(AC_DICT).map(w=>w.toLowerCase().replace(/[^a-z']/g,''))]);
-function damerauLevenshtein(a,b){
-  const al=a.length,bl=b.length;
-  const d=[];
-  for(let i=0;i<=al;i++) d[i]=[i];
-  for(let j=0;j<=bl;j++) d[0][j]=j;
-  for(let i=1;i<=al;i++){
-    for(let j=1;j<=bl;j++){
-      const cost=a[i-1]===b[j-1]?0:1;
-      d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+cost);
-      if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]) d[i][j]=Math.min(d[i][j],d[i-2][j-2]+cost);
-    }
-  }
-  return d[al][bl];
-}
-function commonPrefixLen(a,b){
-  let i=0; while(i<a.length&&i<b.length&&a[i]===b[i]) i++; return i;
-}
-function findDictionaryMatch(word){
-  if(word.length<3||DICTIONARY.has(word)) return null;
-  // Recognize simple plural/inflected forms of known words as already valid
-  // (e.g. "songs" from "song") instead of "correcting" them to the base word.
-  for(const suf of ['s','es','ed','ing','er','ers']){
-    if(word.length>suf.length+2 && word.endsWith(suf) && DICTIONARY.has(word.slice(0,-suf.length))) return null;
-  }
-  // Longer words can have 2-letter slips (e.g. "awesoome" -> "awesome") and still
-  // be unambiguous; short words stay capped at 1 edit so we don't guess wildly.
-  const maxDist=word.length>=8?2:1;
-  let best=null,bestDist=Infinity,tieCount=0;
-  for(const w of DICTIONARY){
-    if(Math.abs(w.length-word.length)>maxDist) continue;
-    const d=damerauLevenshtein(word,w);
-    if(d>maxDist) continue;
-    if(d===2 && commonPrefixLen(word,w)<3) continue; // typos rarely change a word's start — be stricter on bigger guesses
-    if(d<bestDist){ bestDist=d; best=w; tieCount=1; }
-    else if(d===bestDist){ tieCount++; }
-  }
-  return tieCount===1?best:null; // ambiguous — more than one equally-close word, skip to avoid a wrong guess
-}
 
 // -- STATE (var so these are on window and accessible from other script blocks) --
 var me = null;
@@ -4708,7 +4653,6 @@ let lockedChats = {};
 let archivedContacts = {};
 let mutedChats = {};
 let dndEnabled = localStorage.getItem('cc_dnd')==='1';
-let autocorrectEnabled = localStorage.getItem('cc_autocorrect')!=='0';
 let quietHours = (()=>{ try{ return JSON.parse(localStorage.getItem('cc_quiet_hours')||'{"enabled":false,"start":"22:00","end":"07:00"}'); }catch{ return {enabled:false,start:'22:00',end:'07:00'}; } })();
 let currentTab = 'chats';
 let ctxMsg = null;
@@ -4823,7 +4767,6 @@ async function savePrefsToFirebase(){
       removed:removedContacts||{},
       privacy:(()=>{ try{ return JSON.parse(localStorage.getItem('cc_privacy')||'{}'); }catch{ return {}; } })(),
       dnd:dndEnabled,
-      autocorrect:autocorrectEnabled,
       quietHours:quietHours,
       chatBg:(()=>{ try{ return localStorage.getItem('cc_chat_bg')||null; }catch{ return null; } })(),
       settingsTab:(()=>{ try{ return localStorage.getItem('cc_settings_tab')||null; }catch{ return null; } })(),
@@ -4865,7 +4808,6 @@ async function loadPrefsFromFirebase(){
     }
     // Only apply boolean settings if localStorage has no explicit value (i.e. never been set on this device)
     if(typeof prefs.dnd==='boolean'&&localStorage.getItem('cc_dnd')===null) dndEnabled=prefs.dnd;
-    if(typeof prefs.autocorrect==='boolean'&&localStorage.getItem('cc_autocorrect')===null) autocorrectEnabled=prefs.autocorrect;
     if(prefs.quietHours&&localStorage.getItem('cc_quiet_hours')===null) quietHours=prefs.quietHours;
     if(prefs.chatBg&&!localStorage.getItem('cc_chat_bg')){
       localStorage.setItem('cc_chat_bg',prefs.chatBg);
@@ -7709,79 +7651,12 @@ function renderCrossChannelTyping(c){
   el.innerHTML='✏️ '+notices.slice(0,2).join(' · ');
 }
 
-// -- AUTOCORRECT ---------------------------------------------------------------
-// Auto-replaces a finished word (one followed by a space/punctuation) with its
-// AC_DICT correction, mirroring how phone keyboards autocorrect as you type.
-function looksLikeMentionOrUrl(val,idx){
-  const re=/[a-zA-Z0-9@._\-\/:?&=%#~]/;
-  let s=idx,e=idx;
-  while(s>0 && re.test(val[s-1])) s--;
-  while(e<val.length && re.test(val[e])) e++;
-  const token=val.slice(s,e);
-  return /^@/.test(token) || /^(https?:\/\/|www\.)/i.test(token) || /[a-z0-9-]+\.[a-z]{2,}(\/|$)/i.test(token);
-}
-function applyAutocorrect(el){
-  if(!autocorrectEnabled) return;
-  const val=el.value;
-  const pos=el.selectionStart;
-  if(pos<2 || pos!==el.selectionEnd) return;
-  const boundary=val[pos-1];
-  if(!/[\s,!?;:]/.test(boundary)) return;
-  let start=pos-2;
-  while(start>=0 && /[a-zA-Z0-9']/.test(val[start])) start--;
-  start++;
-  if(looksLikeMentionOrUrl(val,start)) return;
-  const word=val.slice(start,pos-1);
-  const lower=word.toLowerCase();
-  if(word.length<2) return;
-  const fix=AC_DICT[lower];
-  if(!fix || fix===lower) return;
-  let corrected=fix;
-  if(/[a-zA-Z]/.test(word[0]) && word[0]===word[0].toUpperCase()) corrected=corrected.charAt(0).toUpperCase()+corrected.slice(1);
-  el.value=val.slice(0,start)+corrected+val.slice(pos-1);
-  const newPos=start+corrected.length+1;
-  el.setSelectionRange(newPos,newPos);
-}
-// Corrects the trailing word even with no boundary character after it — needed
-// because pressing Enter sends the message immediately, before a normal
-// space/punctuation-triggered input event would have run the check.
-function finalizeAutocorrect(el){
-  if(!autocorrectEnabled) return;
-  const val=el.value;
-  let end=val.length;
-  while(end>0 && /\s/.test(val[end-1])) end--;
-  let start=end;
-  while(start>0 && /[a-zA-Z0-9']/.test(val[start-1])) start--;
-  if(end-start<2) return;
-  if(looksLikeMentionOrUrl(val,start)) return;
-  const word=val.slice(start,end);
-  const lower=word.toLowerCase();
-  const fix=AC_DICT[lower];
-  if(!fix||fix===lower) return;
-  let corrected=fix;
-  if(/[a-zA-Z]/.test(word[0]) && word[0]===word[0].toUpperCase()) corrected=corrected.charAt(0).toUpperCase()+corrected.slice(1);
-  el.value=val.slice(0,start)+corrected+val.slice(end);
-}
+function finalizeAutocorrect(){} // removed
 function onMsgInput(el){
   autoResize(el);
   broadcastTyping();
   updateMentionSuggest(el);
-  applyAutocorrect(el);
   _saveDraft();
-  const words=el.value.split(/\s/);
-  const last=words[words.length-1].toLowerCase().replace(/[^a-z']/g,'');
-  const bar=document.getElementById('autocorrect-bar');
-  bar.innerHTML='';
-  if(last.length>1&&AC_DICT[last]){
-    bar.classList.add('visible');
-    const w=document.createElement('div');w.className='ac-word';w.textContent=AC_DICT[last];
-    w.onclick=()=>{
-      words[words.length-1]=AC_DICT[last];
-      el.value=words.join(' ')+' ';
-      bar.classList.remove('visible');bar.innerHTML='';el.focus();
-    };
-    bar.appendChild(w);
-  }else{bar.classList.remove('visible');}
 }
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 function msgKeydown(e){
@@ -10569,19 +10444,6 @@ function requestNotifPerm(){
   }
 }
 
-function toggleAutocorrect(){
-  autocorrectEnabled = !autocorrectEnabled;
-  localStorage.setItem('cc_autocorrect', autocorrectEnabled?'1':'0');
-  updateAutocorrectUI();
-  showToast(autocorrectEnabled ? 'Autocorrect is on' : 'Autocorrect is off', autocorrectEnabled ? 'Common typos will be fixed automatically as you type.' : 'Your messages will be sent exactly as typed.');
-}
-function updateAutocorrectUI(){
-  const btn=document.getElementById('autocorrect-toggle-btn');
-  const sub=document.getElementById('autocorrect-status-text');
-  if(!btn||!sub) return;
-  btn.textContent = autocorrectEnabled ? 'Turn Off' : 'Turn On';
-  sub.textContent = autocorrectEnabled ? "On — common typos are fixed automatically as you type" : "Off — your messages are sent exactly as typed";
-}
 
 function toggleDND(){
   dndEnabled = !dndEnabled;
