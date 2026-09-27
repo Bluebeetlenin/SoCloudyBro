@@ -11564,19 +11564,21 @@ async function sendMsg(gifUrl) {
   // whatever the user typed.
   if (gifUrl && typeof gifUrl !== 'string') gifUrl = null;
   const input = document.getElementById('msg-input');
+  if (!input) return;
   const rawText = input.value.trim();
   if (!rawText && !gifUrl) return;
   if (!activeConvo || !me) return;
   if (activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)) { showToast('Cannot send', scbErr('SCB-MSG-16','This conversation is blocked.')); return; }
   const _originalText = rawText; // for undo-send toast
   input.value = ''; autoResize(input);
-  document.getElementById('gif-picker').classList.remove('visible');
+  document.getElementById('gif-picker')?.classList.remove('visible');
   const _sendBtn = document.getElementById('send-btn');
-  _sendBtn.disabled = true;
-  // Pop animation on send
-  _sendBtn.classList.remove('sent-pop');
-  void _sendBtn.offsetWidth; // reflow to restart animation
-  _sendBtn.classList.add('sent-pop');
+  if (_sendBtn) {
+    _sendBtn.disabled = true;
+    _sendBtn.classList.remove('sent-pop');
+    void _sendBtn.offsetWidth;
+    _sendBtn.classList.add('sent-pop');
+  }
   try {
     if (!convosCache) await getConvos();
     const key = activeConvo.key;
