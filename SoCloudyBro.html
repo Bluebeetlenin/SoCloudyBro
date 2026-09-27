@@ -655,6 +655,13 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .screen-tile video{width:100%;display:block;aspect-ratio:16/9;object-fit:contain;background:#000}
 .screen-tile-label{position:absolute;top:4px;left:6px;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:4px;z-index:1}
 .mention-suggest{position:absolute;bottom:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);max-height:160px;overflow-y:auto;margin-bottom:6px;z-index:50;display:none}
+#slash-palette{position:absolute;bottom:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);max-height:220px;overflow-y:auto;margin-bottom:6px;z-index:51;display:none}
+#slash-palette.visible{display:block}
+.slash-cmd-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;transition:background .12s}
+.slash-cmd-item:hover,.slash-cmd-item.active{background:var(--hover)}
+.slash-cmd-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.slash-cmd-name{font-weight:600;font-size:13px;color:var(--text);font-family:'Inter',sans-serif}
+.slash-cmd-desc{font-size:12px;color:var(--muted);font-family:'Inter',sans-serif}
 .mention-suggest.visible{display:block}
 .mention-suggest-item{padding:7px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s}
 .mention-suggest-item:hover,.mention-suggest-item.active{background:var(--surface2)}
@@ -1826,6 +1833,7 @@ body.device-tablet .msg-body{max-width:74%}
           <button id="voice-record-send" onclick="stopAndSendVoice()">Send ➤</button>
         </div>
         <div id="compose-row">
+          <div id="slash-palette"></div>
           <div id="mention-suggest" class="mention-suggest"></div>
           <!-- Action buttons row -->
           <div id="compose-actions">
@@ -19837,6 +19845,364 @@ if(_origClipboardWrite){
   window.addEventListener('blur', _showBlur);
   window.addEventListener('focus', _hideBlur);
 })();
+
+/* =============================================================================
+   SLASH COMMANDS + CLOUDY CHAT
+   ============================================================================= */
+(function(){
+
+// ── SLASH COMMAND REGISTRY ──────────────────────────────────────────────────
+const SLASH_CMDS = [
+  { cmd:'/gif',     icon:'🎞️',  args:'[search]',           desc:'Send a GIF',
+    run:(args)=>{ const q=args.trim(); if(q){ _slashGif(q); } else toggleGif(); } },
+  { cmd:'/shrug',   icon:'🤷',  args:'',                   desc:'¯\\_(ツ)_/¯',
+    run:()=>{ _insertText('¯\\_(ツ)_/¯'); } },
+  { cmd:'/me',      icon:'💬',  args:'[text]',              desc:'Narrate an action',
+    run:(args)=>{ if(args.trim()) _insertText('/me '+args.trim(),true); } },
+  { cmd:'/poll',    icon:'📊',  args:'[question]',          desc:'Create a poll',
+    run:(args)=>{ if(typeof openPollModal==='function') openPollModal(args.trim()||''); } },
+  { cmd:'/clear',   icon:'🗑️',  args:'',                   desc:'Clear the input box',
+    run:()=>{ const el=document.getElementById('msg-input'); if(el){el.value='';autoResize(el);} } },
+  { cmd:'/call',    icon:'📞',  args:'',                   desc:'Start a voice call',
+    run:()=>{ if(typeof startCall==='function') startCall(); else if(typeof cloudyStartCall==='function'&&activeConvo) cloudyStartCall(activeConvo.name||''); else showToast('Call','Open a chat first'); } },
+  { cmd:'/pin',     icon:'📌',  args:'',                   desc:'Pin a message',
+    run:()=>{ showToast('Pin','Long-press or right-click a message to pin it.'); } },
+  { cmd:'/mute',    icon:'🔕',  args:'',                   desc:'Mute/unmute this chat',
+    run:()=>{ if(activeConvo&&typeof mutedChats!=='undefined'){ const k=activeConvo.key; mutedChats[k]=!mutedChats[k]; saveStorage(); showToast('Chat',mutedChats[k]?'Muted':'Unmuted'); } else showToast('Mute','Open a chat first'); } },
+  { cmd:'/image',   icon:'🖼️',  args:'',                   desc:'Attach an image',
+    run:()=>{ const fi=document.getElementById('file-attach-input'); if(fi){fi.accept='image/*';fi.click();} } },
+  { cmd:'/file',    icon:'📎',  args:'',                   desc:'Attach a file',
+    run:()=>{ if(typeof openAttachPicker==='function') openAttachPicker(); } },
+  { cmd:'/remind',  icon:'⏰',  args:'[time] [text]',       desc:'Set a reminder (e.g. /remind 5m Call Alex)',
+    run:(args)=>{ _slashRemind(args.trim()); } },
+  { cmd:'/whisper', icon:'🤫',  args:'@user [text]',        desc:'Send a private message',
+    run:(args)=>{ _slashWhisper(args.trim()); } },
+  { cmd:'/cloudy',  icon:'☁️',  args:'[message]',           desc:'Chat with Cloudy',
+    run:(args)=>{ _openCloudy(); if(args.trim()) setTimeout(()=>_sendToCloudyChat(args.trim()),400); } },
+];
+
+function _insertText(text, send=false){
+  const el=document.getElementById('msg-input');
+  if(!el) return;
+  el.value=text;
+  autoResize(el);
+  if(send) sendMsg();
+}
+
+function _slashGif(query){
+  if(typeof toggleGif==='function') toggleGif();
+  setTimeout(()=>{
+    const gi=document.getElementById('gif-search');
+    if(gi){gi.value=query; gi.dispatchEvent(new Event('input'));}
+  },300);
+}
+
+function _slashRemind(args){
+  const m=args.match(/^(\d+)\s*(m(?:in(?:utes?)?)?|h(?:ours?)?|s(?:econds?)?)\s+(.+)$/i)
+         ||args.match(/^(in\s+\d+\s*(?:min(?:utes?)?|hours?))\s+(.+)$/i);
+  if(!m){
+    if(typeof openScheduleMsg==='function') openScheduleMsg();
+    showToast('Reminder','Usage: /remind 5m Call Alex');
+    return;
+  }
+  let delay, text;
+  if(m[3]){ // first pattern
+    const unit=m[2].toLowerCase();
+    const n=parseInt(m[1]);
+    delay=(unit.startsWith('h')?n*3600000:unit.startsWith('s')?n*1000:n*60000);
+    text=m[3];
+  } else {
+    delay=60000; text=m[2]; // fallback
+  }
+  setTimeout(()=>showToast('⏰ Reminder',text),delay);
+  showToast('Reminder','Set! I\'ll remind you in '+args.split(' ')[0]+' '+args.split(' ')[1]+'.');
+}
+
+function _slashWhisper(args){
+  const m=args.match(/^@?(\S+)\s+(.+)$/);
+  if(!m){ showToast('/whisper','Usage: /whisper @name message'); return; }
+  const name=m[1], text=m[2];
+  if(typeof cloudySendMessage==='function') cloudySendMessage(name, '🤫 [whisper] '+text);
+  else showToast('Whisper','Could not find contact: '+name);
+}
+
+// ── PALETTE UI ──────────────────────────────────────────────────────────────
+function _showSlashPalette(q){
+  const pal=document.getElementById('slash-palette');
+  if(!pal) return;
+  const filter=q.toLowerCase();
+  const matches=SLASH_CMDS.filter(c=>c.cmd.includes(filter)||c.desc.toLowerCase().includes(filter));
+  if(!matches.length){_hideSlashPalette();return;}
+  pal.innerHTML='';
+  matches.forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.className='slash-cmd-item'+(i===0?' active':'');
+    el.innerHTML=`<span class="slash-cmd-icon">${c.icon}</span><span class="slash-cmd-name">${esc(c.cmd)}</span><span style="color:var(--muted);font-size:12px;margin-left:2px">${esc(c.args)}</span><span class="slash-cmd-desc" style="margin-left:8px">${esc(c.desc)}</span>`;
+    el.dataset.idx=i;
+    el.onclick=()=>_execSlashItem(matches,i);
+    pal.appendChild(el);
+  });
+  pal.classList.add('visible');
+  pal._matches=matches;
+}
+function _hideSlashPalette(){
+  const pal=document.getElementById('slash-palette');
+  if(pal){pal.classList.remove('visible');pal.innerHTML='';pal._matches=null;}
+}
+function _execSlashItem(matches,idx){
+  const item=matches[idx];
+  if(!item) return;
+  const el=document.getElementById('msg-input');
+  if(el) el.value='';
+  _hideSlashPalette();
+  // Extract args: anything after the command in the input at time of selection
+  const args=(el&&el.value)||'';
+  item.run(args);
+}
+function _execActiveSlash(){
+  const pal=document.getElementById('slash-palette');
+  if(!pal||!pal._matches) return false;
+  const active=pal.querySelector('.slash-cmd-item.active');
+  const idx=active?parseInt(active.dataset.idx):0;
+  const el=document.getElementById('msg-input');
+  // extract args typed after /command
+  let args='';
+  if(el){
+    const val=el.value;
+    const spIdx=val.indexOf(' ');
+    args=spIdx>=0?val.slice(spIdx+1).trim():'';
+    el.value='';
+  }
+  _hideSlashPalette();
+  if(pal._matches[idx]) pal._matches[idx].run(args);
+  return true;
+}
+
+// ── PATCH onMsgInput ─────────────────────────────────────────────────────────
+const _scbOrigOnMsgInput2 = onMsgInput;
+onMsgInput = function(el){
+  try{ _scbOrigOnMsgInput2(el); }catch(e){}
+  const val=el.value;
+  if(val.startsWith('/')){
+    const spIdx=val.indexOf(' ');
+    const query=spIdx>=0?val.slice(1,spIdx):val.slice(1);
+    _showSlashPalette(query);
+  } else {
+    _hideSlashPalette();
+  }
+};
+
+// ── PATCH msgKeydown ──────────────────────────────────────────────────────────
+const _scbOrigMsgKeydown = msgKeydown;
+msgKeydown = function(e){
+  const pal=document.getElementById('slash-palette');
+  if(pal&&pal.classList.contains('visible')){
+    const items=[...pal.querySelectorAll('.slash-cmd-item')];
+    let idx=items.findIndex(i=>i.classList.contains('active'));
+    if(e.key==='ArrowDown'){e.preventDefault();idx=(idx+1)%items.length;items.forEach((it,j)=>it.classList.toggle('active',j===idx));return;}
+    if(e.key==='ArrowUp'){e.preventDefault();idx=(idx-1+items.length)%items.length;items.forEach((it,j)=>it.classList.toggle('active',j===idx));return;}
+    if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();if(_execActiveSlash()) return;}
+    if(e.key==='Escape'){e.preventDefault();_hideSlashPalette();return;}
+  }
+  _scbOrigMsgKeydown(e);
+};
+
+// ── CLOUDY CHAT CONTACT ───────────────────────────────────────────────────────
+const CLOUDY_NUMBER='00000';
+const CLOUDY_CONTACT={type:'dm',number:CLOUDY_NUMBER,name:'Cloudy',avatar:'',bio:'Your AI assistant — chat, call, or schedule anything.',key:'dm_00000_cloudy',_isCloudy:true};
+
+function _injectCloudyContact(){
+  if(!contacts) return;
+  if(!contacts.some(c=>c.number===CLOUDY_NUMBER)){
+    contacts.unshift(CLOUDY_CONTACT);
+    // Don't saveStorage — this is a synthetic contact, persisted in memory only
+  }
+}
+
+function _openCloudy(){
+  _injectCloudyContact();
+  if(typeof openChat==='function') openChat(CLOUDY_CONTACT);
+}
+
+// Cloudy chat responses
+function _cloudyChatReply(userText){
+  const t=userText.toLowerCase().trim();
+
+  // greetings
+  if(/^(hi|hello|hey|howdy|yo|sup|hiya|what'?s up|how are you)/.test(t))
+    return _cloudyGreet();
+
+  // calls
+  if(/\b(call|voice call|phone|dial)\b/.test(t)){
+    setTimeout(()=>{ if(typeof startCall==='function') startCall(); else showToast('Cloudy','Starting a call...'); },400);
+    return '📞 Starting a call for you!';
+  }
+  // meetings / video
+  if(/\b(meeting|video call|video|zoom|meet)\b/.test(t)){
+    setTimeout(()=>{ if(typeof startVideoCall==='function') startVideoCall(); else showToast('Cloudy','Starting a video meeting...'); },400);
+    return '🎥 Opening a video meeting!';
+  }
+  // schedule / remind
+  if(/\b(remind|reminder|schedule|alarm|at \d|in \d)\b/.test(t)){
+    setTimeout(()=>{ if(typeof openScheduleMsg==='function') openScheduleMsg(); },400);
+    return '⏰ Opening the scheduler — set your time and message.';
+  }
+  // send message
+  const mSend=userText.match(/(?:send|message|text|dm|tell)\s+(.+?)\s+(?:that|saying|:)\s+(.+)/i);
+  if(mSend){
+    const who=mSend[1].trim(), what=mSend[2].trim();
+    if(typeof cloudySendMessage==='function') cloudySendMessage(who,what);
+    return `✉️ Sending "${what}" to ${who}.`;
+  }
+  // poll
+  if(/\bpoll\b/.test(t)){
+    setTimeout(()=>{ if(typeof openPollModal==='function') openPollModal(); },400);
+    return '📊 Opening the poll creator!';
+  }
+  // theme
+  const mTheme=t.match(/\b(dark|light|auto)\b.*mode|\bmode\b.*(dark|light|auto)/);
+  if(mTheme){
+    const mode=(mTheme[1]||mTheme[2]).toLowerCase();
+    if(typeof setTheme==='function') setTheme(mode);
+    return `🎨 Switched to ${mode} mode.`;
+  }
+  // settings
+  if(/\bsettings\b/.test(t)){
+    setTimeout(()=>{ if(typeof showSettings==='function') showSettings(); },400);
+    return '⚙️ Opening settings.';
+  }
+  // time
+  if(/\btime\b/.test(t)||/what time/.test(t)){
+    const now=new Date();
+    return `🕐 It's ${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}.`;
+  }
+  // jokes
+  if(/\bjoke\b/.test(t)){
+    const jokes=["Why don't scientists trust atoms? Because they make up everything!","I told my computer I needed a break. Now it won't stop sending me Kit-Kat ads.","Why do programmers prefer dark mode? Because light attracts bugs!","I asked my dog what 2 minus 2 is. He said nothing."];
+    return '😄 '+jokes[Math.floor(Math.random()*jokes.length)];
+  }
+  // help
+  if(/\bhelp\b|\bwhat can you do\b|\bcommands\b/.test(t)){
+    return "☁️ Here's what I can do:\n• **Call** — say 'start a call'\n• **Meeting** — say 'start a video meeting'\n• **Remind** — say 'remind me in 5 min to…'\n• **Message** — say 'message Alex saying hi'\n• **Poll** — say 'create a poll'\n• **Theme** — say 'dark mode' or 'light mode'\n• **Settings** — say 'open settings'\n• Or type /command for quick shortcuts!";
+  }
+  // weather (stub)
+  if(/\bweather\b/.test(t)) return "🌤️ I can't fetch live weather yet, but you can ask me to open a weather site!";
+
+  // fallback
+  const fallbacks=[
+    "Got it! Anything else you need?",
+    "I'm here if you need me! Try asking me to start a call, set a reminder, or send someone a message.",
+    "Sure thing! You can also use slash commands like /call, /remind, or /poll.",
+    "I'm Cloudy ☁️ — your always-on assistant. What can I do for you?",
+  ];
+  return fallbacks[Math.floor(Math.random()*fallbacks.length)];
+}
+
+function _cloudyGreet(){
+  const h=new Date().getHours();
+  const tod=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  return `${tod}! ☁️ I'm Cloudy, your AI assistant. I can help you start calls, set reminders, send messages, and more. What would you like to do?`;
+}
+
+// Intercept sendMsg when activeConvo is Cloudy
+const _scbOrigSendMsg = typeof sendMsg==='function'?sendMsg:null;
+function _sendToCloudyChat(text){
+  if(!text||!text.trim()) return;
+  // Write user's message into Cloudy convo (local only)
+  const key=CLOUDY_CONTACT.key;
+  let store=JSON.parse(localStorage.getItem('cc_cloudy_msgs')||'[]');
+  const userMsg={id:Date.now().toString(36),from:me&&me.number||'me',time:Date.now(),text:text,side:'out'};
+  store.push(userMsg);
+  // Generate reply
+  const reply=_cloudyChatReply(text);
+  const botMsg={id:(Date.now()+1).toString(36),from:CLOUDY_NUMBER,time:Date.now()+500,text:reply,side:'in'};
+  store.push(botMsg);
+  if(store.length>200) store=store.slice(-200);
+  localStorage.setItem('cc_cloudy_msgs',JSON.stringify(store));
+  // Re-render if still in Cloudy chat
+  if(activeConvo&&activeConvo._isCloudy) _renderCloudyChat();
+}
+
+function _renderCloudyChat(){
+  const feed=document.getElementById('msg-feed');
+  if(!feed) return;
+  feed.innerHTML='';
+  const store=JSON.parse(localStorage.getItem('cc_cloudy_msgs')||'[]');
+  store.forEach(msg=>{
+    const div=document.createElement('div');
+    const isOut=msg.side==='out'||(me&&msg.from===me.number);
+    div.className='msg-row '+(isOut?'msg-out':'msg-in');
+    const bubble=document.createElement('div');
+    bubble.className='msg-bubble';
+    // Render markdown-ish bold
+    bubble.innerHTML=esc(msg.text).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    div.appendChild(bubble);
+    feed.appendChild(div);
+  });
+  feed.scrollTop=feed.scrollHeight;
+}
+
+// Hook openChat to detect Cloudy
+const _scbOrigOpenChat2 = typeof openChat==='function'?openChat:null;
+if(_scbOrigOpenChat2){
+  // We wrap openChat at end so our version is the live one
+  const _wrapped = openChat;
+  window._openChatWithCloudyHook = function(c){
+    _injectCloudyContact(); // keep Cloudy in list
+    if(c&&c._isCloudy){
+      // Show Cloudy chat UI using existing chat area
+      if(typeof showChatArea==='function') showChatArea();
+      // Set activeConvo
+      if(typeof activeConvo!=='undefined') window.activeConvo=CLOUDY_CONTACT;
+      // Render
+      setTimeout(_renderCloudyChat,100);
+      // Set header name
+      const title=document.getElementById('chat-header-name')||document.querySelector('.chat-title');
+      if(title) title.textContent='☁️ Cloudy';
+      const sub=document.getElementById('chat-header-sub')||document.querySelector('.chat-subtitle');
+      if(sub) sub.textContent='AI Assistant • always online';
+      return Promise.resolve();
+    }
+    return _wrapped(c);
+  };
+}
+
+// Override sendMsg for Cloudy convo
+(function(){
+  const _origSend=sendMsg;
+  sendMsg=function(){
+    if(activeConvo&&activeConvo._isCloudy){
+      const el=document.getElementById('msg-input');
+      if(!el) return;
+      const text=el.value.trim();
+      if(!text) return;
+      el.value='';
+      autoResize(el);
+      _sendToCloudyChat(text);
+      return;
+    }
+    _origSend();
+  };
+})();
+
+// Inject Cloudy into sidebar after login
+document.addEventListener('scb:loggedin',()=>{
+  setTimeout(_injectCloudyContact,500);
+});
+// Also try immediately (for already-loaded sessions)
+if(typeof me!=='undefined'&&me&&me.number){
+  setTimeout(_injectCloudyContact,800);
+}
+// And whenever renderSidebar is called, make sure Cloudy stays there
+const _origRenderSidebar=typeof renderSidebar==='function'?renderSidebar:null;
+if(_origRenderSidebar){
+  renderSidebar=function(){
+    _injectCloudyContact();
+    _origRenderSidebar();
+  };
+}
+
+})(); // end slash+cloudy block
 </script>
 
 <!-- Avatar zoom overlay -->
