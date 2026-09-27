@@ -1616,57 +1616,172 @@ body.device-tablet .msg-body{max-width:74%}
      Shown immediately on page load (pure HTML+CSS, no JS needed to render).
      Dismissed by launch() once the app is fully initialised. ──────────── -->
 <div id="scb-splash">
-  <div id="scb-splash-logo">☁️</div>
-  <div id="scb-splash-name">SoCloudyBro</div>
-  <div id="scb-splash-sub">your messages, your world</div>
-  <div id="scb-splash-dots">
-    <span></span><span></span><span></span>
+  <!-- Floating particles -->
+  <canvas id="scb-splash-canvas" style="position:absolute;inset:0;pointer-events:none"></canvas>
+  <!-- Glass card -->
+  <div id="scb-splash-card">
+    <div id="scb-splash-logo">☁️</div>
+    <div id="scb-splash-name">SoCloudyBro</div>
+    <div id="scb-splash-sub">your messages, your world</div>
+    <div id="scb-splash-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <div id="scb-splash-tip"></div>
+  </div>
+  <!-- Progress bar -->
+  <div id="scb-splash-progress-wrap">
+    <div id="scb-splash-progress-bar"></div>
   </div>
 </div>
 <style>
 #scb-splash{
   position:fixed;inset:0;z-index:99999;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:#0a0a0f;
+  background:#07080f;
   transition:opacity .5s ease;
   font-family:'Inter',system-ui,sans-serif;
-  gap:0;
 }
+#scb-splash-card{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(96,165,250,.2);
+  border-radius:24px;
+  padding:40px 48px 32px;
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  box-shadow:0 0 48px rgba(96,165,250,.12),0 8px 32px rgba(0,0,0,.4);
+  animation:scb-card-in .6s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes scb-card-in{from{opacity:0;transform:scale(.94) translateY(12px)}to{opacity:1;transform:none}}
 #scb-splash-logo{
   font-size:64px;line-height:1;
   animation:scb-float 3s ease-in-out infinite;
-  filter:drop-shadow(0 0 32px rgba(0,120,212,.6));
-  margin-bottom:20px;
+  filter:drop-shadow(0 0 28px rgba(96,165,250,.7));
+  margin-bottom:18px;
 }
 #scb-splash-name{
   font-size:28px;font-weight:700;letter-spacing:-.5px;
   background:linear-gradient(135deg,#60a5fa,#a78bfa);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  margin-bottom:6px;
+  margin-bottom:5px;
 }
 #scb-splash-sub{
-  font-size:13px;color:rgba(255,255,255,.35);letter-spacing:.04em;
-  margin-bottom:40px;
+  font-size:12px;color:rgba(255,255,255,.3);letter-spacing:.06em;text-transform:uppercase;
+  margin-bottom:28px;
 }
 #scb-splash-dots{
-  display:flex;gap:8px;align-items:center;
+  display:flex;gap:8px;align-items:center;margin-bottom:18px;
 }
 #scb-splash-dots span{
   width:7px;height:7px;border-radius:50%;
-  background:rgba(255,255,255,.25);
+  background:rgba(255,255,255,.2);
   animation:scb-bounce .9s ease-in-out infinite;
 }
 #scb-splash-dots span:nth-child(2){animation-delay:.18s}
 #scb-splash-dots span:nth-child(3){animation-delay:.36s}
+#scb-splash-tip{
+  font-size:11.5px;color:rgba(255,255,255,.38);text-align:center;
+  min-height:16px;letter-spacing:.01em;
+  transition:opacity .4s;
+}
+#scb-splash-progress-wrap{
+  position:fixed;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.06);z-index:100000;
+}
+#scb-splash-progress-bar{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#60a5fa,#a78bfa);
+  transition:width .4s ease;
+  border-radius:0 2px 2px 0;
+  box-shadow:0 0 8px rgba(96,165,250,.6);
+}
 @keyframes scb-float{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-8px)}
 }
 @keyframes scb-bounce{
-  0%,80%,100%{transform:scale(.75);background:rgba(255,255,255,.2)}
+  0%,80%,100%{transform:scale(.75);background:rgba(255,255,255,.18)}
   40%{transform:scale(1);background:rgba(96,165,250,.9)}
 }
 </style>
+<script>
+(function(){
+  // ── Particles ──────────────────────────────────────────────────────────────
+  const canvas=document.getElementById('scb-splash-canvas');
+  function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;}
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+  const ctx2=canvas.getContext('2d');
+  const SYMBOLS=['☁️','✦','·','⋆','✧'];
+  const pts=Array.from({length:22},()=>({
+    x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+    sym:SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)],
+    sz:8+Math.random()*14, spd:0.2+Math.random()*0.5,
+    drift:(Math.random()-.5)*0.4, op:0.08+Math.random()*0.18,
+    oy:Math.random()*1000
+  }));
+  let _splashRaf;
+  function drawParticles(){
+    ctx2.clearRect(0,0,canvas.width,canvas.height);
+    const t=Date.now()/1000;
+    pts.forEach(p=>{
+      p.y-=p.spd; p.x+=p.drift;
+      if(p.y<-40){p.y=canvas.height+20;p.x=Math.random()*canvas.width;}
+      if(p.x<-40||p.x>canvas.width+40){p.x=Math.random()*canvas.width;}
+      const wave=Math.sin(t*0.8+p.oy)*0.04;
+      ctx2.globalAlpha=p.op+wave;
+      ctx2.font=p.sz+'px serif';
+      ctx2.fillText(p.sym,p.x,p.y);
+    });
+    ctx2.globalAlpha=1;
+    _splashRaf=requestAnimationFrame(drawParticles);
+  }
+  drawParticles();
+
+  // ── Rotating tips ──────────────────────────────────────────────────────────
+  const TIPS=[
+    'Tip: type / in any chat for quick commands',
+    'Tip: Cloudy is pinned to your sidebar — ask it anything',
+    'Tip: use /remind 5m to set quick reminders',
+    'Tip: long-press a message to react or pin it',
+    'Tip: use /call to start a voice call instantly',
+  ];
+  let _tipIdx=0;
+  const tipEl=document.getElementById('scb-splash-tip');
+  if(tipEl){
+    tipEl.textContent=TIPS[0];
+    setInterval(()=>{
+      tipEl.style.opacity='0';
+      setTimeout(()=>{
+        _tipIdx=(_tipIdx+1)%TIPS.length;
+        tipEl.textContent=TIPS[_tipIdx];
+        tipEl.style.opacity='1';
+      },400);
+    },2800);
+  }
+
+  // ── Progress bar ──────────────────────────────────────────────────────────
+  const bar=document.getElementById('scb-splash-progress-bar');
+  function setProgress(pct){ if(bar) bar.style.width=pct+'%'; }
+  setProgress(15); // DOM ready
+  document.addEventListener('DOMContentLoaded',()=>setProgress(40));
+  // Expose so app init code can advance it
+  window._splashProgress=setProgress;
+  // Animate to 85% while Firebase loads, app will call 100 on dismiss
+  let _prog=40;
+  const _progInterval=setInterval(()=>{
+    _prog=Math.min(85,_prog+Math.random()*4);
+    setProgress(_prog);
+    if(_prog>=85) clearInterval(_progInterval);
+  },300);
+
+  // Stop particle loop when splash is removed
+  const _obs=new MutationObserver(()=>{
+    if(!document.getElementById('scb-splash')){ cancelAnimationFrame(_splashRaf); _obs.disconnect(); }
+  });
+  _obs.observe(document.body,{childList:true});
+})();
+</script>
 
 <div id="lock-screen">
   <div id="lock-left">
@@ -5605,7 +5720,10 @@ async function launch(){
   step('startMusicPolling', ()=>{ if(getSpotifyTokens()||getLastfmUsername()) startMusicPolling(); });
   // Dismiss the splash/loading screen now that the app is fully ready
   const _splash=document.getElementById('scb-splash');
-  if(_splash){ _splash.style.opacity='0'; setTimeout(()=>{ _splash.remove(); },400); }
+  if(_splash){
+    if(window._splashProgress) window._splashProgress(100);
+    setTimeout(()=>{ _splash.style.opacity='0'; setTimeout(()=>{ _splash.remove(); },500); },200);
+  }
 }
 
 // -- AUTH TABS & LOGIN ---------------------------------------------------------
@@ -7195,7 +7313,8 @@ function renderSidebar(){
     div.onclick=()=>openChat(c);
     div.oncontextmenu=(e)=>{e.preventDefault();showContactCtxMenu(e,c);};
     const _safeGrpAv=(c.avatar&&typeof c.avatar==='string'&&(c.avatar.startsWith('data:image/')||c.avatar.startsWith('https://')))?`<img src="${esc(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">`:'👥';
-    const avDiv=c.type==='group'?`<div class="group-avatar" style="background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;font-size:16px;">${_safeGrpAv}</div>`:`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?'background:none;':''}">${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(c.name||'?').charAt(0).toUpperCase()}</div><div class="${online?'online-ring':'offline-ring'}"></div></div>`;
+    const _isCloudyContact=c.avatar==='__cloudy__';
+    const avDiv=c.type==='group'?`<div class="group-avatar" style="background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;font-size:16px;">${_safeGrpAv}</div>`:_isCloudyContact?`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:20px;background:linear-gradient(135deg,#60a5fa,#a78bfa);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:50%;">☁️</div><div class="online-ring" style="background:var(--success)"></div></div>`:`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?'background:none;':''}">${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(c.name||'?').charAt(0).toUpperCase()}</div><div class="${online?'online-ring':'offline-ring'}"></div></div>`;
     const _cDispName=dec(c.name)||c.name||'?';
     div.innerHTML=`${avDiv}<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">${esc(_cDispName)}${c.type!=='group'?verifiedBadge(c.number):''}${inCall?' <span title="In a call now" style="color:var(--success)">\u260E</span>':''}</span><span class="sb-item-time">${timeStr}</span></div><div class="sb-item-preview">${esc(preview)}</div></div>`;
     list.appendChild(div);
@@ -7369,6 +7488,7 @@ function dismissGroupDescBanner(key){
   if(banner) banner.style.display='none';
 }
 function updateOnlineStatus(num){
+  if(String(num)===CLOUDY_NUMBER){ const el=document.getElementById('chat-header-sub'); if(el){el.textContent='AI Assistant · always online';el.className='online';} return; }
   const u=lookupUser(num);
   const online=u&&isOnline(u.lastSeen);
   const el=document.getElementById('chat-header-sub');
@@ -11667,13 +11787,53 @@ async function sendMsg(gifUrl) {
 
 // ── PATCH submitReport TO INCLUDE ADMIN LINK ─────────────────────────────────
 
-// ── PATCH openChat TO CHECK BAN ───────────────────────────────────────────────
+// ── PATCH openChat TO CHECK BAN + CLOUDY ─────────────────────────────────────
 async function openChat(c) {
+  // Cloudy AI chat — short-circuit Firebase entirely
+  if(c && c._isCloudy){
+    activeConvo = {...CLOUDY_CONTACT};
+    lastMsgHash = '';
+    hideAll();
+    document.getElementById('chat-panel').classList.add('visible');
+    if(document.body.classList.contains('device-phone')) document.body.classList.add('chat-open');
+    // Header name + avatar
+    const nameEl = document.getElementById('chat-header-name');
+    if(nameEl) nameEl.innerHTML = '☁️ Cloudy';
+    const subEl = document.getElementById('chat-header-sub');
+    if(subEl){ subEl.textContent = 'AI Assistant · always online'; subEl.className = 'online'; }
+    const haEl = document.getElementById('chat-header-av');
+    if(haEl){
+      haEl.style.cssText = 'border-radius:50%;background:linear-gradient(135deg,#60a5fa,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:22px;';
+      haEl.textContent = '☁️';
+    }
+    // Hide call/group buttons (Cloudy has its own logic)
+    const callBtn = document.getElementById('call-btn'); if(callBtn) callBtn.style.display='flex';
+    const pollBtn = document.getElementById('poll-compose-btn'); if(pollBtn) pollBtn.style.display='none';
+    const chBar = document.getElementById('channel-bar'); if(chBar) chBar.style.display='none';
+    const voiceBar = document.getElementById('voice-bar'); if(voiceBar) voiceBar.style.display='none';
+    // Render local Cloudy messages
+    _renderCloudyChat();
+    const _inp = document.getElementById('msg-input');
+    if(_inp){ _inp.placeholder = 'Message Cloudy…'; _inp.focus(); }
+    // Send welcome if first time
+    const store = JSON.parse(localStorage.getItem('cc_cloudy_msgs')||'[]');
+    if(!store.length){
+      setTimeout(()=>{
+        const h = new Date().getHours();
+        const tod = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+        _cloudyDeliverMsg(`${tod}! ☁️ I'm Cloudy — your AI assistant. I can start calls, set reminders, send messages, and more. Type /help or just ask me anything!`);
+      }, 400);
+    }
+    return;
+  }
   const u = lookupUser(c.number || 0) || {};
   if (u.banned && me && me.number !== ADMIN_NUMBER) {
     showToast('This account has been suspended', scbErr('SCB-AUTH-24','Your account was suspended, so you have been signed out.'));
     return;
   }
+  // Reset msg-input placeholder for normal chats
+  const _inp2 = document.getElementById('msg-input');
+  if(_inp2) _inp2.placeholder = 'Type a message…';
   return _origOpenChat(c);
 }
 
@@ -20009,7 +20169,7 @@ msgKeydown = function(e){
 
 // ── CLOUDY CHAT CONTACT ───────────────────────────────────────────────────────
 const CLOUDY_NUMBER='00000';
-const CLOUDY_CONTACT={type:'dm',number:CLOUDY_NUMBER,name:'Cloudy',avatar:'',bio:'Your AI assistant — chat, call, or schedule anything.',key:'dm_00000_cloudy',_isCloudy:true};
+const CLOUDY_CONTACT={type:'dm',number:CLOUDY_NUMBER,name:'Cloudy',avatar:'__cloudy__',bio:'Your AI assistant — chat, call, or schedule anything.',key:'dm_00000_cloudy',_isCloudy:true};
 
 function _injectCloudyContact(){
   if(!contacts) return;
@@ -20104,23 +20264,16 @@ function _cloudyGreet(){
   return `${tod}! ☁️ I'm Cloudy, your AI assistant. I can help you start calls, set reminders, send messages, and more. What would you like to do?`;
 }
 
-// Intercept sendMsg when activeConvo is Cloudy
-const _scbOrigSendMsg = typeof sendMsg==='function'?sendMsg:null;
 function _sendToCloudyChat(text){
   if(!text||!text.trim()) return;
-  // Write user's message into Cloudy convo (local only)
-  const key=CLOUDY_CONTACT.key;
   let store=JSON.parse(localStorage.getItem('cc_cloudy_msgs')||'[]');
-  const userMsg={id:Date.now().toString(36),from:me&&me.number||'me',time:Date.now(),text:text,side:'out'};
-  store.push(userMsg);
-  // Generate reply
-  const reply=_cloudyChatReply(text);
-  const botMsg={id:(Date.now()+1).toString(36),from:CLOUDY_NUMBER,time:Date.now()+500,text:reply,side:'in'};
-  store.push(botMsg);
+  store.push({id:Date.now().toString(36)+'u',from:me&&me.number||'me',time:Date.now(),text:text,side:'out'});
   if(store.length>200) store=store.slice(-200);
   localStorage.setItem('cc_cloudy_msgs',JSON.stringify(store));
-  // Re-render if still in Cloudy chat
   if(activeConvo&&activeConvo._isCloudy) _renderCloudyChat();
+  // Reply after short delay so it feels conversational
+  const reply=_cloudyChatReply(text);
+  setTimeout(()=>_cloudyDeliverMsg(reply), 600);
 }
 
 function _renderCloudyChat(){
@@ -20129,42 +20282,18 @@ function _renderCloudyChat(){
   feed.innerHTML='';
   const store=JSON.parse(localStorage.getItem('cc_cloudy_msgs')||'[]');
   store.forEach(msg=>{
-    const div=document.createElement('div');
     const isOut=msg.side==='out'||(me&&msg.from===me.number);
-    div.className='msg-row '+(isOut?'msg-out':'msg-in');
+    const row=document.createElement('div');
+    row.className='msg-row '+(isOut?'msg-out':'msg-in');
+    row.style.cssText='display:flex;'+(isOut?'justify-content:flex-end':'justify-content:flex-start')+';margin:2px 12px;';
     const bubble=document.createElement('div');
     bubble.className='msg-bubble';
-    // Render markdown-ish bold
-    bubble.innerHTML=esc(msg.text).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
-    div.appendChild(bubble);
-    feed.appendChild(div);
+    bubble.style.cssText='max-width:72%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.45;word-break:break-word;'+(isOut?'background:var(--accent);color:#fff;border-bottom-right-radius:3px':'background:var(--bg3);color:var(--text);border-bottom-left-radius:3px');
+    bubble.innerHTML=(typeof esc==='function'?esc(msg.text):msg.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    row.appendChild(bubble);
+    feed.appendChild(row);
   });
-  feed.scrollTop=feed.scrollHeight;
-}
-
-// Hook openChat to detect Cloudy
-const _scbOrigOpenChat2 = typeof openChat==='function'?openChat:null;
-if(_scbOrigOpenChat2){
-  // We wrap openChat at end so our version is the live one
-  const _wrapped = openChat;
-  window._openChatWithCloudyHook = function(c){
-    _injectCloudyContact(); // keep Cloudy in list
-    if(c&&c._isCloudy){
-      // Show Cloudy chat UI using existing chat area
-      if(typeof showChatArea==='function') showChatArea();
-      // Set activeConvo
-      if(typeof activeConvo!=='undefined') window.activeConvo=CLOUDY_CONTACT;
-      // Render
-      setTimeout(_renderCloudyChat,100);
-      // Set header name
-      const title=document.getElementById('chat-header-name')||document.querySelector('.chat-title');
-      if(title) title.textContent='☁️ Cloudy';
-      const sub=document.getElementById('chat-header-sub')||document.querySelector('.chat-subtitle');
-      if(sub) sub.textContent='AI Assistant • always online';
-      return Promise.resolve();
-    }
-    return _wrapped(c);
-  };
+  requestAnimationFrame(()=>{ feed.scrollTop=feed.scrollHeight; });
 }
 
 // Override sendMsg for Cloudy convo
@@ -20177,13 +20306,22 @@ if(_scbOrigOpenChat2){
       const text=el.value.trim();
       if(!text) return;
       el.value='';
-      autoResize(el);
+      if(typeof autoResize==='function') autoResize(el);
       _sendToCloudyChat(text);
       return;
     }
     _origSend();
   };
 })();
+
+// Deliver a bot message into Cloudy chat (used for welcome + responses)
+function _cloudyDeliverMsg(text){
+  let store=JSON.parse(localStorage.getItem('cc_cloudy_msgs')||'[]');
+  store.push({id:(Date.now()+1).toString(36)+'b',from:CLOUDY_NUMBER,time:Date.now(),text:text,side:'in'});
+  if(store.length>200) store=store.slice(-200);
+  localStorage.setItem('cc_cloudy_msgs',JSON.stringify(store));
+  if(activeConvo&&activeConvo._isCloudy) _renderCloudyChat();
+}
 
 // Inject Cloudy into sidebar after login
 document.addEventListener('scb:loggedin',()=>{
