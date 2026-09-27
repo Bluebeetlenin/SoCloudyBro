@@ -5619,7 +5619,7 @@ function switchAuthTab(tab) {
   document.getElementById('setup-error').textContent = '';
   document.getElementById('login-error').textContent = '';
 }
-let loginByNumber=false;
+var loginByNumber=false;
 function toggleLoginMode(){
   loginByNumber=!loginByNumber;
   const label=document.getElementById('login-identity-label');
