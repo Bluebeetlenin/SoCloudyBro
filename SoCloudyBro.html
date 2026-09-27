@@ -11927,8 +11927,8 @@ async function openChat(c) {
     const pollBtn = document.getElementById('poll-compose-btn'); if(pollBtn) pollBtn.style.display='none';
     const chBar = document.getElementById('channel-bar'); if(chBar) chBar.style.display='none';
     const voiceBar = document.getElementById('voice-bar'); if(voiceBar) voiceBar.style.display='none';
-    // Render local Cloudy messages
-    _renderCloudyChat();
+    // Render local Cloudy messages (use window.* — functions live inside an IIFE)
+    if(typeof window._renderCloudyChat==='function') window._renderCloudyChat();
     const _inp = document.getElementById('msg-input');
     if(_inp){ _inp.placeholder = 'Message Cloudy…'; _inp.focus(); }
     // Send welcome if first time
@@ -11937,7 +11937,7 @@ async function openChat(c) {
       setTimeout(()=>{
         const h = new Date().getHours();
         const tod = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
-        _cloudyDeliverMsg(`${tod}! ☁️ I'm Cloudy — your AI assistant. I can start calls, set reminders, send messages, and more. Type /help or just ask me anything!`);
+        if(typeof window._cloudyDeliverMsg==='function') window._cloudyDeliverMsg(`${tod}! ☁️ I'm Cloudy — your AI assistant. I can start calls, set reminders, send messages, and more. Type /help or just ask me anything!`);
       }, 400);
     }
     return;
@@ -16037,27 +16037,42 @@ async function scanFileForThreats(fileBlobOrUrl){
 // file attachment in an open conversation was re-submitted on every redraw --
 // which blows through a 4-requests-per-minute quota almost immediately.
 const _scbScanCache = Object.create(null);
+
+function _scanNoteText(r){
+  r = r || {};
+  if(r.status==='submitted') return '✅ Submitted for scanning — always be cautious with files from people you don\'t know.';
+  if(r.status==='unconfigured') return scbErr('SCB-SCAN-03','⚠️ Automatic scanning isn\'t configured yet — only download files from people you trust.');
+  if(r.status==='rate_limited') return scbErr('SCB-SCAN-04','⚠️ Scanner is busy right now, so this file wasn\'t checked — only download files from people you trust.');
+  return scbErr('SCB-SCAN-05','Scan unavailable — only download files from people you trust.',(r.message||'error'));
+}
+
 function scanFileForThreatsCached(target, cacheKey){
   const k = cacheKey || (typeof target==='string' ? target : '');
   if(!k) return scanFileForThreats(target);
+  // Check persistent localStorage cache first — never re-scan a file already checked this session or prior
+  const lsKey = 'cc_scan_' + k.slice(0,120);
+  try{
+    const saved = localStorage.getItem(lsKey);
+    if(saved){ const r=JSON.parse(saved); _scbScanCache[k]=Promise.resolve(r); return _scbScanCache[k]; }
+  }catch(e){}
   if(!_scbScanCache[k]){
-    _scbScanCache[k] = scanFileForThreats(target).catch(e=>({status:'error', message:(e&&e.message)||'Scan request failed'}));
+    _scbScanCache[k] = scanFileForThreats(target)
+      .then(r=>{ try{ localStorage.setItem(lsKey, JSON.stringify(r||{})); }catch(e){} return r; })
+      .catch(e=>({status:'error', message:(e&&e.message)||'Scan request failed'}));
   }
   return _scbScanCache[k];
 }
-// Every non-image/audio file bubble either shows an honest "not configured"
-// notice, or — once VIRUS_SCAN_API_ENDPOINT points at a real proxy — actually
-// submits the file and shows a live pending/result/error note. VirusTotal's
-// /files submission returns an analysis id, not an instant verdict, so this
-// shows "submitted for scanning" rather than falsely implying an instant
-// clean/infected answer; wire up polling GET /analyses/{id} through the same
-// proxy later if you want a resolved verdict shown in-thread.
+
+// Every non-image/audio file bubble shows a scan notice once; result is cached in
+// localStorage so re-opening the chat never re-scans.
 const _origRenderFileBubble = renderFileBubble;
 renderFileBubble = function(bubble, fileData){
   _origRenderFileBubble(bubble, fileData);
   try{
     const type=(fileData&&fileData.type)||'';
     if(type.startsWith('image/')||type.startsWith('audio/')) return;
+    // If a note is already attached (same render pass) don't double-up
+    if(bubble.querySelector('.scb-file-scan-note')) return;
     const note=document.createElement('div');
     note.className='scb-file-scan-note';
     bubble.appendChild(note);
@@ -16065,17 +16080,19 @@ renderFileBubble = function(bubble, fileData){
       note.textContent=scbErr('SCB-SCAN-01','⚠️ Automatic scanning isn\'t configured yet — only download files from people you trust.');
       return;
     }
-    note.textContent='⏳ Scanning for threats…';
     const target=(fileData&&(fileData.url||fileData.blob))||null;
     if(!target){ note.textContent=scbErr('SCB-SCAN-02','⚠️ Nothing to scan — only download files from people you trust.'); return; }
     const cacheKey=(fileData&&(fileData.url||((fileData.name||'')+':'+(fileData.size||0))))||'';
-    scanFileForThreatsCached(target, cacheKey).then(r=>{
-      r = r || {};
-      if(r.status==='submitted') note.textContent='✅ Submitted for scanning — always be cautious with files from people you don\'t know.';
-      else if(r.status==='unconfigured') note.textContent=scbErr('SCB-SCAN-03','⚠️ Automatic scanning isn\'t configured yet — only download files from people you trust.');
-      else if(r.status==='rate_limited') note.textContent=scbErr('SCB-SCAN-04','⚠️ Scanner is busy right now, so this file wasn\'t checked — only download files from people you trust.');
-      else note.textContent=scbErr('SCB-SCAN-05','Scan unavailable — only download files from people you trust.',(r.message||'error'));
-    }).catch(()=>{ note.textContent=scbErr('SCB-SCAN-06','⚠️ Scan unavailable — only download files from people you trust.'); });
+    // Check in-memory cache synchronously — if resolved, show result immediately (no ⏳ flash)
+    const lsKey = 'cc_scan_' + cacheKey.slice(0,120);
+    try{
+      const saved = localStorage.getItem(lsKey);
+      if(saved){ note.textContent=_scanNoteText(JSON.parse(saved)); return; }
+    }catch(e){}
+    note.textContent='⏳ Scanning for threats…';
+    scanFileForThreatsCached(target, cacheKey)
+      .then(r=>{ note.textContent=_scanNoteText(r); })
+      .catch(()=>{ note.textContent=scbErr('SCB-SCAN-06','⚠️ Scan unavailable — only download files from people you trust.'); });
   }catch(e){ console.warn('file scan notice failed', e); }
 };
 
