@@ -2841,22 +2841,48 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="modal-body" style="padding-bottom:14px">
       <div class="field">
         <label>Question 1</label>
-        <select id="secq-q1">
+        <select id="secq-q1" onchange="onSecqSelectChange('secq-q1','secq-q1-custom')">
           <option value="pet">What was the name of your first pet?</option>
           <option value="school">What elementary school did you attend?</option>
           <option value="city">What city were you born in?</option>
-          <option value="food">What's your favorite food?</option>
+          <option value="food">What is your favorite food?</option>
+          <option value="street">What street did you grow up on?</option>
+          <option value="mother_maiden">What is your mother's maiden name?</option>
+          <option value="childhood_friend">What was the name of your best childhood friend?</option>
+          <option value="first_car">What was the make of your first car?</option>
+          <option value="sport">What sport did you play in school?</option>
+          <option value="movie">What is your all-time favourite movie?</option>
+          <option value="teacher">What was your favourite teacher's last name?</option>
+          <option value="nickname">What was your childhood nickname?</option>
+          <option value="birth_hospital">What hospital were you born in?</option>
+          <option value="first_job">What was your first job?</option>
+          <option value="holiday">What was your favourite holiday destination as a child?</option>
+          <option value="custom">✏️ Write my own question…</option>
         </select>
+        <input type="text" id="secq-q1-custom" placeholder="Type your own question" style="margin-top:6px;display:none"/>
         <input type="text" id="secq-a1" placeholder="Your answer" style="margin-top:6px"/>
       </div>
       <div class="field">
         <label>Question 2</label>
-        <select id="secq-q2">
+        <select id="secq-q2" onchange="onSecqSelectChange('secq-q2','secq-q2-custom')">
           <option value="school">What elementary school did you attend?</option>
           <option value="pet">What was the name of your first pet?</option>
           <option value="city">What city were you born in?</option>
-          <option value="food">What's your favorite food?</option>
+          <option value="food">What is your favorite food?</option>
+          <option value="street">What street did you grow up on?</option>
+          <option value="mother_maiden">What is your mother's maiden name?</option>
+          <option value="childhood_friend">What was the name of your best childhood friend?</option>
+          <option value="first_car">What was the make of your first car?</option>
+          <option value="sport">What sport did you play in school?</option>
+          <option value="movie">What is your all-time favourite movie?</option>
+          <option value="teacher">What was your favourite teacher's last name?</option>
+          <option value="nickname">What was your childhood nickname?</option>
+          <option value="birth_hospital">What hospital were you born in?</option>
+          <option value="first_job">What was your first job?</option>
+          <option value="holiday">What was your favourite holiday destination as a child?</option>
+          <option value="custom">✏️ Write my own question…</option>
         </select>
+        <input type="text" id="secq-q2-custom" placeholder="Type your own question" style="margin-top:6px;display:none"/>
         <input type="text" id="secq-a2" placeholder="Your answer" style="margin-top:6px"/>
       </div>
       <div class="error-text" id="secq-error"></div>
@@ -5857,27 +5883,66 @@ function skipTutorial(){
 
 let _pendingTotpSecret=null;
 // -- SECURITY QUESTIONS (account recovery) ---------------------------------
-const SECQ_LABELS={pet:"What was the name of your first pet?",school:"What elementary school did you attend?",city:"What city were you born in?",food:"What's your favorite food?"};
+const SECQ_LABELS={
+  pet:"What was the name of your first pet?",
+  school:"What elementary school did you attend?",
+  city:"What city were you born in?",
+  food:"What is your favorite food?",
+  street:"What street did you grow up on?",
+  mother_maiden:"What is your mother's maiden name?",
+  childhood_friend:"What was the name of your best childhood friend?",
+  first_car:"What was the make of your first car?",
+  sport:"What sport did you play in school?",
+  movie:"What is your all-time favourite movie?",
+  teacher:"What was your favourite teacher's last name?",
+  nickname:"What was your childhood nickname?",
+  birth_hospital:"What hospital were you born in?",
+  first_job:"What was your first job?",
+  holiday:"What was your favourite holiday destination as a child?",
+};
+function onSecqSelectChange(selectId, customId){
+  const sel=document.getElementById(selectId);
+  const inp=document.getElementById(customId);
+  if(!sel||!inp) return;
+  inp.style.display=sel.value==='custom'?'block':'none';
+  if(sel.value==='custom') inp.focus();
+}
 function normalizeSecAnswer(a){ return String(a||'').trim().toLowerCase(); }
+function _secqGetQ(selectId, customId){
+  const sel=document.getElementById(selectId);
+  if(!sel) return '';
+  if(sel.value==='custom'){
+    const t=(document.getElementById(customId)||{}).value||'';
+    return t.trim()?t.trim():'custom';
+  }
+  return SECQ_LABELS[sel.value]||sel.value;
+}
 function openSecurityQuestionsSetup(){
   if(!me) return;
   document.getElementById('secq-a1').value='';
   document.getElementById('secq-a2').value='';
   document.getElementById('secq-error').textContent='';
+  ['secq-q1-custom','secq-q2-custom'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
   openModal('secq-setup-modal');
 }
 async function saveSecurityQuestions(){
   const err=document.getElementById('secq-error'); err.textContent='';
-  const q1=document.getElementById('secq-q1').value, q2=document.getElementById('secq-q2').value;
-  const a1=document.getElementById('secq-a1').value.trim(), a2=document.getElementById('secq-a2').value.trim();
-  if(q1===q2){ err.textContent=scbErr('SCB-RECOV-01','Pick two different questions.'); return; }
+  const q1Key=document.getElementById('secq-q1').value;
+  const q2Key=document.getElementById('secq-q2').value;
+  const q1Text=_secqGetQ('secq-q1','secq-q1-custom');
+  const q2Text=_secqGetQ('secq-q2','secq-q2-custom');
+  const a1=document.getElementById('secq-a1').value.trim();
+  const a2=document.getElementById('secq-a2').value.trim();
+  if(q1Text===q2Text||(q1Key!=='custom'&&q1Key===q2Key)){ err.textContent=scbErr('SCB-RECOV-01','Pick two different questions.'); return; }
   if(!a1||!a2){ err.textContent=scbErr('SCB-RECOV-02','Answer both questions.'); return; }
+  if(q1Key==='custom'&&q1Text==='custom'){ err.textContent='Type your first question.'; return; }
+  if(q2Key==='custom'&&q2Text==='custom'){ err.textContent='Type your second question.'; return; }
   try{
     const hash1=await hashPassword(normalizeSecAnswer(a1));
     const hash2=await hashPassword(normalizeSecAnswer(a2));
     const users=await getUsers();
     const u=users.find(x=>x.number===me.number);
-    const secQuestions=[{q:q1,hash:hash1},{q:q2,hash:hash2}];
+    const secQuestions=[{q:q1Text,hash:hash1},{q:q2Text,hash:hash2}];
     if(u) u.secQuestions=secQuestions;
     await saveUsers(users);
     me.secQuestions=secQuestions; saveStorage();
@@ -20061,6 +20126,10 @@ if(_origClipboardWrite){
 /* =============================================================================
    SLASH COMMANDS + CLOUDY CHAT
    ============================================================================= */
+// These must be globals — referenced by openChat and updateOnlineStatus above
+const CLOUDY_NUMBER='00000';
+const CLOUDY_CONTACT={type:'dm',number:CLOUDY_NUMBER,name:'Cloudy',avatar:'__cloudy__',bio:'Your AI assistant — chat, call, or schedule anything.',key:'dm_00000_cloudy',_isCloudy:true};
+
 (function(){
 
 // ── SLASH COMMAND REGISTRY ──────────────────────────────────────────────────
@@ -20220,9 +20289,6 @@ msgKeydown = function(e){
 };
 
 // ── CLOUDY CHAT CONTACT ───────────────────────────────────────────────────────
-const CLOUDY_NUMBER='00000';
-const CLOUDY_CONTACT={type:'dm',number:CLOUDY_NUMBER,name:'Cloudy',avatar:'__cloudy__',bio:'Your AI assistant — chat, call, or schedule anything.',key:'dm_00000_cloudy',_isCloudy:true};
-
 function _injectCloudyContact(){
   if(!contacts) return;
   if(!contacts.some(c=>c.number===CLOUDY_NUMBER)){
