@@ -5297,6 +5297,7 @@ function checkBirthdaysToday(){
   let seen; try{ seen=JSON.parse(localStorage.getItem('cc_birthday_seen')||'{}'); }catch{ seen={}; }
   for(const u of (usersCache||[])){
     if(!u.birthdate||u.number===me.number) continue;
+    if(!(contacts||[]).some(c=>Number(c.number)===Number(u.number))) continue;
     const b=new Date(u.birthdate);
     if(isNaN(b)||b.getMonth()!==mm||b.getDate()!==dd) continue;
     const seenKey=u.number+'_'+todayKey;
