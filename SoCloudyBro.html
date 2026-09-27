@@ -20441,13 +20441,13 @@ function _cloudyDeliverMsg(text){
   if(activeConvo&&activeConvo._isCloudy) _renderCloudyChat();
 }
 
-// Inject Cloudy into sidebar after login
+// Inject Cloudy into sidebar after login and re-render so it appears immediately
 document.addEventListener('scb:loggedin',()=>{
-  setTimeout(_injectCloudyContact,500);
+  setTimeout(()=>{ _injectCloudyContact(); if(typeof renderSidebar==='function') renderSidebar(); }, 500);
 });
 // Also try immediately (for already-loaded sessions)
 if(typeof me!=='undefined'&&me&&me.number){
-  setTimeout(_injectCloudyContact,800);
+  setTimeout(()=>{ _injectCloudyContact(); if(typeof renderSidebar==='function') renderSidebar(); }, 800);
 }
 // And whenever renderSidebar is called, make sure Cloudy stays there
 const _origRenderSidebar=typeof renderSidebar==='function'?renderSidebar:null;
@@ -20457,6 +20457,11 @@ if(_origRenderSidebar){
     _origRenderSidebar();
   };
 }
+
+// Expose Cloudy helpers as globals — openChat patch at ~line 11931 calls them
+window._renderCloudyChat = _renderCloudyChat;
+window._cloudyDeliverMsg = _cloudyDeliverMsg;
+window._sendToCloudyChat = _sendToCloudyChat;
 
 })(); // end slash+cloudy block
 </script>
