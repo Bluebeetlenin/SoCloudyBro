@@ -18191,6 +18191,8 @@ function promptSecurityQuestionsOnce(){
     if(u && Array.isArray(u.secQuestions) && u.secQuestions.length===2) return;
     localStorage.setItem('cc_secq_prompted_'+me.number,'1');
     setTimeout(()=>{
+      // Don't interrupt the welcome tutorial — new users will see this after they finish it
+      if(shouldShowTutorial && shouldShowTutorial()) return;
       showToast('Set up account recovery','Security questions are the only way to reset your password if you forget it.');
       if(typeof openSecurityQuestionsSetup==='function') openSecurityQuestionsSetup();
     }, 2500);
