@@ -2085,6 +2085,10 @@ body.device-tablet .msg-body{max-width:74%}
             </div>
             <div style="font-size:22px;opacity:0.9" id="sec-score-icon">🔒</div>
           </div>
+          <div class="settings-row" style="cursor:pointer" onclick="openChangePassword()">
+            <div class="settings-row-main"><div class="settings-row-label">Change Password</div><div class="settings-row-sub">Update your account password</div></div>
+            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Change</button></div>
+          </div>
           <div class="settings-row" style="cursor:pointer" onclick="openPinSetup()">
             <div class="settings-row-main"><div class="settings-row-label">PIN Lock</div><div class="settings-row-sub" id="pin-status-text">Not set</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="pin-btn-text">Set PIN</button></div>
@@ -2884,9 +2888,25 @@ body.device-tablet .msg-body{max-width:74%}
   </div>
 </div>
 
+<div class="overlay" id="change-password-modal">
+  <div class="modal">
+    <div class="modal-header"><h2>🔑 Change Password</h2></div>
+    <div class="modal-body" style="padding-bottom:14px">
+      <div class="field"><label>Current password</label><input type="password" id="chpwd-current" placeholder="Current password" autocomplete="current-password"/></div>
+      <div class="field"><label>New password</label><input type="password" id="chpwd-new" placeholder="At least 8 characters" autocomplete="new-password"/></div>
+      <div class="field"><label>Confirm new password</label><input type="password" id="chpwd-confirm" placeholder="Repeat new password" autocomplete="new-password"/></div>
+      <div class="error-text" id="chpwd-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('change-password-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitChangePassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="delete-account-modal">
   <div class="modal">
-    <div class="modal-header"><h2 style="color:var(--danger)">⚠️ Delete Account</h2><p>This starts a 7-day countdown. Your account will be deactivated immediately and permanently deleted after that — messages you've sent will show as "Deleted User" rather than being pulled from other people's conversations. You can cancel any time before the countdown ends.</p></div>
+    <div class="modal-header"><h2 style="color:var(--danger)">⚠️ Delete Account</h2><p>This immediately and permanently deletes your account. Your profile and login are removed at once — messages you've sent will show as "Deleted User". <strong>This cannot be undone.</strong></p></div>
     <div class="modal-body" style="padding-bottom:14px">
       <div class="field"><label>Type your account number (<span id="delete-account-num-hint"></span>) to confirm</label><input type="text" id="delete-account-confirm-input" placeholder="e.g. 4821"/></div>
       <div class="field">
@@ -6534,7 +6554,43 @@ function showLockScreen(){
 function hideLockScreen(){document.getElementById('lock-screen').classList.remove('visible');}
 
 // -- ACCOUNT DELETION (two-step, with a cooldown) -------------------------
-const DELETE_ACCOUNT_COOLDOWN_MS = 7*24*60*60*1000; // 7 days
+const DELETE_ACCOUNT_COOLDOWN_MS = 7*24*60*60*1000; // 7 days (user self-delete)
+
+// ── CHANGE PASSWORD ───────────────────────────────────────────────────────────
+function openChangePassword(){
+  if(!me){ showToast('Not signed in',''); return; }
+  ['chpwd-current','chpwd-new','chpwd-confirm'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('chpwd-error').textContent='';
+  openModal('change-password-modal');
+}
+async function submitChangePassword(){
+  const err=document.getElementById('chpwd-error'); err.textContent='';
+  const cur=document.getElementById('chpwd-current').value;
+  const nw=document.getElementById('chpwd-new').value;
+  const cf=document.getElementById('chpwd-confirm').value;
+  if(!cur){ err.textContent='Enter your current password.'; return; }
+  if(nw.length<8){ err.textContent='New password must be at least 8 characters.'; return; }
+  if(nw!==cf){ err.textContent='Passwords do not match.'; return; }
+  // Verify current password via Firebase Auth re-auth
+  try{
+    const user=firebase.auth().currentUser;
+    if(!user||!user.email){ err.textContent='Cannot re-authenticate — please log out and back in.'; return; }
+    const cred=firebase.auth.EmailAuthProvider.credential(user.email,cur);
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(nw);
+    // Also update hashed pwd in Firebase DB so number-based login still works
+    const hashed=await hashPwd(nw);
+    await fbdb.ref('users/'+me.number).update({pwd:hashed});
+    me.pwd=hashed; saveStorage();
+    closeModal('change-password-modal');
+    showToast('Password updated','Your new password is active.');
+    logSecurityEvent('password_change');
+  }catch(e){
+    const code=e&&e.code||'';
+    if(code==='auth/wrong-password'||code==='auth/invalid-credential') err.textContent='Current password is incorrect.';
+    else err.textContent=scbErr('SCB-AUTH-25','Password change failed: '+(e.message||code));
+  }
+}
 function deleteMyAccountStep1(){
   if(!me) return;
   // Deleting your account needs your PIN, not just clicking through a
@@ -6554,21 +6610,16 @@ function deleteMyAccountStep1(){
 }
 async function confirmAccountDeletion(pin,pinInputs){
   const err=document.getElementById('delete-account-error'); err.textContent='';
+  // #2015 (admin) cannot delete their own account
+  if(me&&Number(me.number)===ADMIN_NUMBER){ err.textContent='The admin account (#2015) cannot be deleted.'; return; }
   const typed=document.getElementById('delete-account-confirm-input').value.trim();
   if(typed!==String(me.number)){ err.textContent=scbErr('SCB-SEC-12','That doesn\'t match your account number.'); if(pinInputs) clearPinInputs(pinInputs); return; }
   const stored=localStorage.getItem('cc_pin');
   if(!stored || hashPin(pin)!==stored){ err.textContent=scbErr('SCB-SEC-13','Incorrect PIN.'); if(pinInputs) clearPinInputs(pinInputs); if(pinInputs&&pinInputs[0]) pinInputs[0].focus(); return; }
   try{
-    const users=await getUsers();
-    const u=users.find(x=>x.number===me.number);
-    if(u){ u.pendingDeletion=true; u.deletionScheduledAt=Date.now()+DELETE_ACCOUNT_COOLDOWN_MS; }
-    await saveUsers(users);
-    me.pendingDeletion=true; me.deletionScheduledAt=Date.now()+DELETE_ACCOUNT_COOLDOWN_MS;
-    saveStorage();
-    closeModal('delete-account-modal');
-    updateDeleteAccountBanner();
-    showToast('Deletion scheduled','Your account will be deleted in 7 days unless you cancel.');
-  }catch(e){ err.textContent=scbErr('SCB-SEC-14','Your account deletion couldn\'t be scheduled — the server rejected the request.',(e.message||'')); }
+    // Instant deletion — no cooldown
+    await performScheduledAccountDeletion();
+  }catch(e){ err.textContent=scbErr('SCB-SEC-14','Your account deletion failed — the server rejected the request.',(e.message||'')); }
 }
 async function cancelAccountDeletion(){
   try{
@@ -13853,7 +13904,7 @@ async function renderAdminUsersTab(){
           +(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan('+u.number+')">🚫 Ban</button>')
           +(!isAdmin?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',\''+name.replace(/'/g,"\\'")+'\',' + JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[]) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>'
-          +(!isAdmin?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',\''+name.replace(/'/g,"\\'")+'\')">🗑️ Delete</button>':'')
+          +((!isAdmin&&Number(u.number)!==ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',\''+name.replace(/'/g,"\\'")+'\')">🗑️ Delete</button>':'')
           +'</div></div>';
       }).join('');
   }catch(e){
@@ -13885,7 +13936,8 @@ async function renderAdminGroupsTab(){
 }
 async function adminDeleteUser(number,name){
   if(!requireAdmin()) return;
-  if(!confirm('Delete account for '+name+' (#'+number+')?\n\nThis marks the account as deleted in Firebase. Messages and conversations remain but the user cannot log in.\n\nThis cannot be undone.')) return;
+  if(Number(number)===ADMIN_NUMBER){ showToast('Protected','The admin account (#2015) cannot be deleted.'); return; }
+  if(!confirm('Delete account for '+name+' (#'+number+')?\n\nThis marks the account as deleted in Firebase immediately. The user cannot log in and their profile is anonymised.\n\nThis cannot be undone.')) return;
   try{
     await fbdb.ref('users/'+number).update({deleted:true,deletedAt:Date.now(),banned:true});
     // Remove from local users cache
