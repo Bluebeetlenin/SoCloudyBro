@@ -3883,11 +3883,13 @@ const SCB_CHECKS = [
       }catch(e){return {pass:false,detail:e.message};}
     }
   },
-  { id:'fn.lookupUser', cat:'Functions', name:'lookupUser returns consistent results',
+  { id:'fn.lookupUser', cat:'Functions', name:'lookupUser finds signed-in user by number',
     run:()=>{
       if(!me||!me.number) return {pass:false,detail:'Not signed in'};
-      const u1=lookupUser(me.number); const u2=lookupUser(me.number);
-      return {pass:u1===u2,warn:u1!==u2,detail:u1?'Consistent reference ('+dec(u1.name||'')+')':(u2?'Inconsistent!':'Not found')};
+      const u=lookupUser(me.number);
+      if(!u) return {pass:false,detail:'lookupUser('+me.number+') returned null — user missing from cache'};
+      const nameMatch=u.number===me.number||Number(u.number)===Number(me.number);
+      return {pass:nameMatch,detail:nameMatch?'Found: '+dec(u.name||'')+'  (#'+u.number+')':'Number mismatch: got #'+u.number+' expected #'+me.number};
     }
   },
   { id:'fn.esc', cat:'Functions', name:'esc() prevents XSS injection',
@@ -4225,13 +4227,8 @@ function dec(str){
       out=CryptoJS.AES.decrypt(out.slice(3),ENC_KEY).toString(CryptoJS.enc.Utf8);
       layers++;
     }
-    if(!out.startsWith('v2:')) return out;
-    // Not AES at all — legacy XOR-encoded value (anything written before the
-    // AES upgrade) still decodes correctly so old profiles/messages don't break.
-    const raw=decodeURIComponent(escape(atob(str)));
-    let res='';
-    for(let i=0;i<raw.length;i++) res+=String.fromCharCode(raw.charCodeAt(i)^ENC_KEY.charCodeAt(i%ENC_KEY.length));
-    return res;
+    // out no longer starts with 'v2:' — fully decrypted
+    return out;
   }catch{return str;}
 }
 // Repairs a `me` object (from localStorage cache, a fresh login, or signup)
