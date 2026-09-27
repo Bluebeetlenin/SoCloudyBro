@@ -3481,12 +3481,10 @@ async function selfHeal(code, err, opts = {}) {
     // 401. Rule updates must be done via Firebase Console.
     else if (/permission_denied|unauthorized|401|403/i.test(msg)) {
       try {
-        const meNow = me;
-        if (meNow && meNow.number && meNow.pwd) {
-          try { if(window.SyntaxAccount) await window.SyntaxAccount.logIn(meNow.number, meNow.pwd); } catch(e3) {}
-        }
+        // meNow.pwd is already a SHA-256 hash; passing it to logIn() would produce
+        // a hash-of-a-hash that never matches → skip re-auth, just retry the action
         if (retryFn) { await retryFn(); healed = true; healNote = 'Auth refresh succeeded'; }
-        else { healNote = 'Auth refreshed — retry your action'; }
+        else { healNote = 'Auth error — please log out and log in again'; }
       } catch(e2) { healNote = 'Auth refresh failed: ' + (e2.message || e2); }
     }
 
@@ -7292,7 +7290,7 @@ async function _origOpenChat(c){
   // Header
   const _bizUser = c.type!=='group'&&c.number ? lookupUser(c.number) : null;
   const _bizActive = _bizUser && _bizUser.bizProfile && _bizUser.bizProfile.enabled;
-  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser(\''+c.number+'\'))">BIZ</span>' : '');
+  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser('+c.number+'))">BIZ</span>' : '');
   const pollBtn=document.getElementById('poll-compose-btn');if(pollBtn) pollBtn.style.display=c.type==='group'?'flex':'none';
   const gameBtn=document.getElementById('game-compose-btn');if(gameBtn) gameBtn.style.display='flex';
   const addMemberBtn=document.getElementById('add-member-btn');if(addMemberBtn) addMemberBtn.style.display=c.type==='group'?'flex':'none';
@@ -19501,7 +19499,7 @@ function _computeSecurityScore(){
   if(_me&&(_me.totpEnabled||_me.faceMfaEnabled)){ score+=25; checks.push({ok:true,label:'2FA enabled'}); } else checks.push({ok:false,label:'2FA off'});
   if(localStorage.getItem('cc_pin')){ score+=15; checks.push({ok:true,label:'PIN lock on'}); } else checks.push({ok:false,label:'No PIN lock'});
   const u=_uc&&_me?_uc.find(x=>x&&x.number===_me.number):null;
-  if(u&&u.secQ1&&u.secQ2){ score+=15; checks.push({ok:true,label:'Recovery questions set'}); } else checks.push({ok:false,label:'No recovery questions'});
+  if(u&&Array.isArray(u.secQuestions)&&u.secQuestions.length===2){ score+=15; checks.push({ok:true,label:'Recovery questions set'}); } else checks.push({ok:false,label:'No recovery questions'});
   if(_pk){ score+=15; checks.push({ok:true,label:'E2E keys active'}); } else checks.push({ok:false,label:'E2E keys missing'});
   if(getPrivacyPref('secureLinkWarning',true)){ score+=10; checks.push({ok:true,label:'Secure link warning'}); } else checks.push({ok:false,label:'Link warning off'});
   return {score,checks};
