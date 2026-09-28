@@ -5172,6 +5172,22 @@ async function registerOrUpdate(){
   if(!me||!me.number) return;
   const users=await getUsers();
   let u=users.find(x=>x.number===me.number);
+  // If this account has no server record, it may be because an admin ran
+  // Nuclear Reset and wiped it. Without this check, a device that's still
+  // logged in (cc_me cached locally) would silently write its own cached
+  // profile straight back to Firebase on the next launch/poll — resurrecting
+  // an account the admin just deleted, with the admin never knowing. Refuse
+  // to recreate any number the reset reserved, and sign this device out.
+  if(!u){
+    try{
+      const rsnap=await fbdb.ref('admin_site/reserved_numbers').get();
+      const reserved=rsnap.exists()?(rsnap.val()||[]):[];
+      if(Array.isArray(reserved)&&reserved.some(n=>Number(n)===Number(me.number))){
+        forceLocalLogout('Your account was removed by an administrator.');
+        return;
+      }
+    }catch(e){ console.error('Reserved-number check failed',e); }
+  }
   await ensureE2EKeypair();
   // Profile fields stored as plaintext — name/bio/customStatus are public by design
   // (visible to all users). Encrypting them with a shared client-visible key was
