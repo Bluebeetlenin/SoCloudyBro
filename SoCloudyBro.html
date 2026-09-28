@@ -1857,7 +1857,11 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
     </div>
     <div id="sb-search">
-  <input type="text" id="sb-search-input" placeholder="🔍  Search…" oninput="onSearchInput(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+  <!-- Honeypot inputs: Chrome targets named inputs for autofill; these absorb
+       any email/password fill-attempts before they reach the search field. -->
+  <input type="text" name="fakeusername_sbsearch" style="display:none" tabindex="-1" aria-hidden="true" autocomplete="username">
+  <input type="password" name="fakepassword_sbsearch" style="display:none" tabindex="-1" aria-hidden="true" autocomplete="current-password">
+  <input type="search" id="sb-search-input" placeholder="🔍  Search…" oninput="onSearchInput(this.value)" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"/>
 </div>
 <div id="search-results" style="display:none;flex-direction:column;max-height:300px;overflow-y:auto;border-bottom:1px solid var(--border);padding:4px 8px"></div>
     <div id="sb-tabs">
@@ -4920,7 +4924,7 @@ async function savePrefsToFirebase(){
   if(!me||!me.number||typeof fbdb==='undefined') return;
   try{
     const prefs={
-      contacts:(contacts||[]).map(({type,number,name,key,bio,info,members})=>({type,number,name,key,bio:bio||undefined,info:info||undefined,members:members||undefined})),
+      contacts:(contacts||[]).filter(c=>c&&String(c.number)!=='00000').map(({type,number,name,key,bio,info,members})=>({type,number,name,key,bio:bio||undefined,info:info||undefined,members:members||undefined})),
       locked:lockedChats||{},
       archived:archivedContacts||{},
       muted:mutedChats||{},
@@ -5261,7 +5265,7 @@ async function heartbeat(){
   }catch{}
 }
 function isOnline(ls){return ls&&(Date.now()-ls)<40000;}
-function lookupUser(num){return usersCache.find(u=>u.number===num);}
+function lookupUser(num){const n=Number(num);return usersCache.find(u=>Number(u.number)===n);}
 
 // -- CONVOS --------------------------------------------------------------------
 function dmKey(a,b){return 'dm_'+[Number(a),Number(b)].sort((x,y)=>x-y).join('_');}
@@ -10835,7 +10839,7 @@ function syncContactsFromConvos(){
   let changed=false;
   convosCache.forEach(c=>{
     const participants=c.participants||c.members||[];
-    const isParticipant=participants.includes(me.number);
+    const isParticipant=participants.some(p=>Number(p)===Number(me.number));
     const isDm=c.key&&c.key.startsWith('dm_');
     const isGroup=c.type==='group'||(c.key&&c.key.startsWith('grp_'));
     // BUG FIX: this used to read `if(!isParticipant&&!isDm) return;` — since isDm
@@ -10855,7 +10859,7 @@ function syncContactsFromConvos(){
     if(removedContacts[c.key]) return;
     if(isDm){
       const parts=c.key.replace('dm_','').split('_');
-      const otherNum=parseInt(parts.find(p=>parseInt(p)!==me.number));
+      const otherNum=parseInt(parts.find(p=>parseInt(p)!==Number(me.number)));
       if(!otherNum||isNaN(otherNum)) return;
       const dmKey='dm_'+[me.number,otherNum].sort((a,b)=>a-b).join('_');
       if(removedContacts[dmKey]) return;
@@ -20323,10 +20327,16 @@ msgKeydown = function(e){
 // ── CLOUDY CHAT CONTACT ───────────────────────────────────────────────────────
 function _injectCloudyContact(){
   if(!contacts) return;
-  if(!contacts.some(c=>c.number===CLOUDY_NUMBER)){
+  // Always replace any stale/incomplete Cloudy entry (e.g. one restored from
+  // Firebase prefs that was saved without _isCloudy / avatar:'__cloudy__').
+  // Clicking a stale entry would fall through to normal-chat logic and break.
+  const idx=contacts.findIndex(c=>c&&String(c.number)===CLOUDY_NUMBER);
+  if(idx===-1){
     contacts.unshift(CLOUDY_CONTACT);
-    // Don't saveStorage — this is a synthetic contact, persisted in memory only
+  } else if(!contacts[idx]._isCloudy){
+    contacts[idx]=CLOUDY_CONTACT;
   }
+  // Don't saveStorage — this is a synthetic contact, persisted in memory only
 }
 
 function _openCloudy(){

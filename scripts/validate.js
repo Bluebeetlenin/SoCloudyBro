@@ -82,9 +82,9 @@ function staticChecks(src) {
     }
   }
 
-  // Check search input has autocomplete=off
-  if (!/<input[^>]*id="sb-search-input"[^>]*autocomplete="off"/.test(src)) {
-    issues.push('AUTOFILL: #sb-search-input is missing autocomplete="off" — browser may autofill email');
+  // Check search input has autocomplete suppression (new-password is stronger than off for Chrome)
+  if (!/<input[^>]*id="sb-search-input"[^>]*autocomplete="(off|new-password)"/.test(src)) {
+    issues.push('AUTOFILL: #sb-search-input is missing autocomplete suppression — browser may autofill email');
   }
 
   // Check virus scan result uses localStorage caching
