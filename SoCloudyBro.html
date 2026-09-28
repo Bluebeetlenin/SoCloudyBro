@@ -1857,7 +1857,7 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
     </div>
     <div id="sb-search">
-  <input type="text" id="sb-search-input" placeholder="🔍  Search…" oninput="onSearchInput(this.value)"/>
+  <input type="text" id="sb-search-input" placeholder="🔍  Search…" oninput="onSearchInput(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
 </div>
 <div id="search-results" style="display:none;flex-direction:column;max-height:300px;overflow-y:auto;border-bottom:1px solid var(--border);padding:4px 8px"></div>
     <div id="sb-tabs">
@@ -11810,6 +11810,7 @@ async function sendMsg(gifUrl) {
   if (activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)) { showToast('Cannot send', scbErr('SCB-MSG-16','This conversation is blocked.')); return; }
   const _originalText = rawText; // for undo-send toast
   input.value = ''; autoResize(input);
+  if(typeof _saveDraft==='function') _saveDraft(); // clear saved draft immediately on send
   document.getElementById('gif-picker')?.classList.remove('visible');
   const _sendBtn = document.getElementById('send-btn');
   if (_sendBtn) {
