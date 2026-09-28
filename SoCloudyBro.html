@@ -4943,7 +4943,11 @@ async function loadPrefsFromFirebase(){
     if(!prefs) return;
     // Merge: Firebase wins over empty localStorage, but don't overwrite
     // data the user has set on this device during THIS session.
-    if(Array.isArray(prefs.contacts)&&prefs.contacts.length&&!contacts.length){
+    // Don't count the synthetic Cloudy contact as a "real" local contact —
+    // if Cloudy was the only entry saved before Firebase synced, real contacts
+    // from prefs would never be restored.
+    const _realLocal=contacts.filter(c=>c&&c.number!=='00000');
+    if(Array.isArray(prefs.contacts)&&prefs.contacts.length&&!_realLocal.length){
       contacts=prefs.contacts;
       localStorage.setItem('cc_contacts',JSON.stringify(contacts));
     }
@@ -5740,6 +5744,16 @@ async function launch(){
     await Promise.all([registerOrUpdate(), getConvos()]);
   } catch (e) {
     console.error('launch() step failed: registerOrUpdate/getConvos', e);
+  }
+  // If registerOrUpdate threw before getUsers() set usersCache, syncContactsFromConvos
+  // would skip every DM contact (lookupUser returns null for everyone). Same for
+  // getConvos: if it threw, convosCache is null and syncContactsFromConvos returns early.
+  // Fetch both explicitly so the contact list always populates on first render.
+  if(!usersCache.length){
+    try{ await getUsers(); }catch(e){ console.error('launch() step failed: getUsers fallback',e); }
+  }
+  if(!convosCache){
+    try{ await getConvos(); }catch(e){ console.error('launch() step failed: getConvos fallback',e); }
   }
   // Re-render profile card now that registerOrUpdate has refreshed me.* from Firebase
   step('renderMyCard (refreshed)', renderMyCard);
