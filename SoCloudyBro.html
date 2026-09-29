@@ -4340,6 +4340,18 @@ function hasPermission(perm){
   return perms.includes(perm);
 }
 
+// Same purpose as requireAdmin(), but for an action a delegated admin can be
+// granted via the permission editor (openPermissionEditor/savePermissions).
+// Using requireAdmin() here would make the grant a no-op: the Users tab and
+// its Ban button are shown to anyone with hasPermission('users_ban'), but
+// the write itself would still refuse everyone except the literal #2015
+// account, so a granted permission would silently never actually work.
+function requirePermission(perm,silent){
+  if(hasPermission(perm)) return true;
+  if(!silent) try{ showToast('Access denied',scbErr('SCB-ADMIN-01','This action is for administrators only.')); }catch(e){}
+  return false;
+}
+
 // Returns true if user should see the Admin button at all
 function hasAnyAdminAccess(){
   if(!me) return false;
@@ -5200,6 +5212,13 @@ async function registerOrUpdate(){
     if(!me.avatar&&u.avatar) me.avatar=u.avatar;
     if(!me.bio&&u.bio) me.bio=dec(u.bio)||u.bio;
     if(!me.birthdate&&u.birthdate) me.birthdate=u.birthdate;
+    // Security-sensitive, admin-controlled — always take the server's current
+    // value (never fall back to a locally-cached one, and never write it back
+    // in `payload` below). Without this, hasPermission()/requirePermission()
+    // checks read me.adminAccess, which was never populated from anywhere,
+    // so a permission an admin granted via the permission editor would never
+    // actually take effect on the grantee's own session.
+    me.adminAccess=u.adminAccess||null;
     try{ saveStorage(); }catch(e){}
   }
   const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked:me.blocked||(u&&u.blocked)||[],lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
@@ -6627,7 +6646,11 @@ async function finishLogin(user, pwdToStore){
     // would be writing back a session that doesn't know about the link.
     googleSub: user.googleSub||null, googleEmail: user.googleEmail||'',
     linkedSyntaxAccount: user.linkedSyntaxAccount||null,
-    linkedSyntaxAccountName: user.linkedSyntaxAccountName||'' };
+    linkedSyntaxAccountName: user.linkedSyntaxAccountName||'',
+    // Without this, hasPermission()/hasAnyAdminAccess() have nothing to read
+    // until the first registerOrUpdate() poll completes after launch, so a
+    // delegated admin's admin button/tabs would flash hidden then appear.
+    adminAccess: user.adminAccess||null };
   saveStorage();
   // Save account to multi-account list
   try{ _saveAccountToAccounts(me); }catch(e){}
@@ -13081,7 +13104,7 @@ async function openAdminPanel(reportedNum){
 // (synced for everyone), instead of the old approach of deleting the record
 // and tracking bans in localStorage only on the admin's own device/browser.
 async function adminBan(num){
-  if(!requireAdmin()) return;
+  if(!requirePermission('users_ban')) return;
   if(!confirm('Ban user #'+num+'? They will be signed out and blocked from using the app.')) return;
   try{
     const users=await getUsers();
@@ -13098,7 +13121,7 @@ async function adminBan(num){
   if(document.getElementById('admin-dashboard-modal').classList.contains('visible')) renderAdminUsersTab();
 }
 async function adminUnban(num){
-  if(!requireAdmin()) return;
+  if(!requirePermission('users_ban')) return;
   try{
     const users=await getUsers();
     const u=users.find(x=>x.number===num);
