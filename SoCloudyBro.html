@@ -1815,7 +1815,7 @@ body.device-tablet .msg-body{max-width:74%}
   </p>
   <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
     <button class="btn" onclick="checkParentalConsentStatus()">Check again</button>
-    <button class="btn btn-ghost btn-sm" onclick="logOut()">Log out</button>
+    <button class="btn btn-ghost" onclick="logOut()">Log out</button>
   </div>
 </div>
 
@@ -2969,7 +2969,7 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="modal-footer">
       <button class="btn" id="pin-confirm-btn" onclick="confirmPin()">Confirm PIN</button>
       <button class="btn btn-ghost" onclick="closeModal('pin-modal')">Cancel</button>
-      <button class="btn btn-danger btn-sm" id="pin-remove-btn" onclick="removePin()" style="display:none">Remove PIN</button>
+      <button class="btn btn-danger" id="pin-remove-btn" onclick="removePin()" style="display:none">Remove PIN</button>
     </div>
   </div>
 </div>
@@ -13570,7 +13570,7 @@ function openPermissionEditor(userNum,userName,currentPerms){
     ${rows}
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="btn" onclick="savePermissions(${userNum})">Save Access</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="revokeAllPermissions(${userNum})">Revoke All Access</button>
+      <button class="btn btn-ghost" style="color:var(--danger)" onclick="revokeAllPermissions(${userNum})">Revoke All Access</button>
       <button class="btn btn-ghost" onclick="closeModal('perm-editor-modal')">Cancel</button>
     </div>`;
   let m=document.getElementById('perm-editor-modal');
