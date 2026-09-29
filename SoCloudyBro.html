@@ -20527,7 +20527,7 @@ function _sendToCloudyChat(text){
 }
 
 function _renderCloudyChat(){
-  const feed=document.getElementById('msg-feed');
+  const feed=document.getElementById('messages-wrap');
   if(!feed) return;
   feed.innerHTML='';
   const store=JSON.parse(localStorage.getItem('cc_cloudy_msgs')||'[]');
