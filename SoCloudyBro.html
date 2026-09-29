@@ -20490,9 +20490,24 @@ function _cloudySafeCalc(expr){
 // showToast/cloudySpeak out for the duration of the call so the resulting
 // confirmation (or "I didn't understand") comes back to us as a value
 // instead of firing a toast + speaking it aloud.
+// The command grammar in handleCloudyTranscript expects imperative phrasing
+// ("open my chat with X"), but chat is more conversational than voice —
+// people type "can you open my chat with X?" or "could you please call
+// Sam". Strip the wrapping politeness/question shell so the same grammar
+// still matches underneath.
+function _cloudyStripPoliteness(text){
+  let s=text.trim();
+  s=s.replace(/^(?:hey |ok |okay |yo )?(?:can|could|would|will) you (?:please )?/i,'');
+  s=s.replace(/^(?:please )?/i,'');
+  s=s.replace(/^(?:i want you to|i need you to)\s+/i,'');
+  s=s.replace(/\?+$/,'');
+  return s.trim();
+}
+
 function _cloudyTryRouteAction(text){
   return new Promise(resolve=>{
     if(typeof handleCloudyTranscript!=='function'){ resolve(null); return; }
+    const stripped=_cloudyStripPoliteness(text);
     let captured=null, understood=true, settled=false;
     const origToast=window.showToast, origSpeak=window.cloudySpeak;
     window.showToast=(title,msg)=>{
@@ -20503,7 +20518,7 @@ function _cloudyTryRouteAction(text){
     };
     window.cloudySpeak=()=>{};
     const restore=()=>{ if(!settled){ settled=true; window.showToast=origToast; window.cloudySpeak=origSpeak; } };
-    try{ handleCloudyTranscript('cloudy '+text); }
+    try{ handleCloudyTranscript('cloudy '+stripped); }
     catch(e){ restore(); resolve(null); return; }
     // the matched action (openChat/sendMsg/etc.) is async — give it a beat
     // to run and call showToast before we put the real one back.
@@ -20530,7 +20545,7 @@ function _cloudyChatReply(userText){
   if(/^(hi|hello|hey|howdy|yo|sup|hiya|what'?s up|how are you|good morning|good evening|good afternoon)\b/.test(t))
     return _cloudyGreet();
 
-  if(/\bwho are you\b|\bwhat are you\b/.test(t))
+  if(/\bwho are you\b|\bwhat are you\b|\byour name\b|\bwhat'?s your name\b/.test(t))
     return "☁️ I'm Cloudy, your built-in assistant. I can act on natural-language requests (open chats, send messages, start calls, change settings...), do quick math, roll dice, tell jokes, and answer questions about using SoCloudyBro. Ask away!";
 
   // calculator — "12*7", "what's 45 + 12", "(3+4)*2"
