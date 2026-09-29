@@ -14025,7 +14025,7 @@ async function renderAdminUsersTab(){
           +'<button class="btn btn-ghost btn-sm" onclick="adminMessage('+u.number+')" title="Open DM">💬 Message</button>'
           +(verified?'<button class="btn btn-ghost btn-sm" onclick="adminUnverify('+u.number+')">✓ Unverify</button>':'<button class="btn btn-ghost btn-sm" onclick="adminVerify('+u.number+')">☑️ Verify</button>')
           +(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan('+u.number+')">🚫 Ban</button>')
-          +(!isAdmin?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',\''+name.replace(/'/g,"\\'")+'\',' + JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[]) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
+          +(!isAdmin?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',\''+name.replace(/'/g,"\\'")+'\',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[])) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>'
           +((!isAdmin&&Number(u.number)!==ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',\''+name.replace(/'/g,"\\'")+'\')">🗑️ Delete</button>':'')
           +'</div></div>';
@@ -19952,7 +19952,7 @@ document.addEventListener('click', function(e){
     <p style="font-size:12px;margin:0 0 16px">This link goes outside SoCloudyBro. Only open it if you trust the sender.</p>
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost btn-sm" style="flex:1" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
-      <button class="btn btn-sm" style="flex:1" onclick="window.open(${JSON.stringify(href)},'_blank','noopener,noreferrer');this.closest('div[style*=fixed]').remove()">Open anyway</button>
+      <button class="btn btn-sm" style="flex:1" onclick="window.open(${esc(JSON.stringify(href))},'_blank','noopener,noreferrer');this.closest('div[style*=fixed]').remove()">Open anyway</button>
     </div>
   </div>`;
   document.body.appendChild(dlg);
