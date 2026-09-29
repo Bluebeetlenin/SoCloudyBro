@@ -14060,12 +14060,25 @@ async function renderAdminGroupsTab(){
 async function adminDeleteUser(number,name){
   if(!requireAdmin()) return;
   if(Number(number)===ADMIN_NUMBER){ showToast('Protected','The admin account (#2015) cannot be deleted.'); return; }
-  if(!confirm('Delete account for '+name+' (#'+number+')?\n\nThis marks the account as deleted in Firebase immediately. The user cannot log in and their profile is anonymised.\n\nThis cannot be undone.')) return;
+  if(!confirm('Permanently delete account for '+name+' (#'+number+')?\n\nThis removes their account from Firebase entirely — not a ban. If they\'re still signed in on a device, they\'ll be signed out the next time it checks in.\n\nThis cannot be undone.')) return;
   try{
-    await fbdb.ref('users/'+number).update({deleted:true,deletedAt:Date.now(),banned:true});
+    await fbdb.ref('users/'+number).remove();
+    // Reserve the number the same way Nuclear Reset does, for the same reason:
+    // registerOrUpdate() treats "no server record" as possibly-just-wiped and
+    // checks this list before deciding whether to recreate the account. Without
+    // reserving it here, a device still signed in as this user would silently
+    // write its own cached profile straight back to Firebase on its next
+    // launch/poll — resurrecting the very account we just deleted.
+    try{
+      const rsnap=await fbdb.ref('admin_site/reserved_numbers').get();
+      const reserved=rsnap.exists()?(rsnap.val()||[]):[];
+      const updated=Array.isArray(reserved)?reserved.filter(n=>Number(n)!==Number(number)):[];
+      updated.push(Number(number));
+      await fbdb.ref('admin_site/reserved_numbers').set([...new Set(updated)]);
+    }catch(e){ console.error('Could not reserve deleted number',e); }
     // Remove from local users cache
     usersCache=usersCache.filter(u=>String(u.number)!==String(number));
-    showToast('Account deleted','User #'+number+' has been marked as deleted.');
+    showToast('Account deleted','User #'+number+' has been permanently deleted.');
     renderAdminUsersTab();
   }catch(e){ showToast('Delete failed',scbErr('SCB-ADMIN-30','Could not delete that account.',(e&&e.message)||'')); }
 }
