@@ -13642,7 +13642,7 @@ async function revokeAllPermissions(userNum){
 const ADMIN_SITE_PATH = 'admin_site';
 
 async function renderAdminCodeTab(){
-  if(!requireAdmin()) return;
+  if(!requirePermission('code_update')) return;
   const body=document.getElementById('admin-dashboard-body');
   body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading…</div>';
   try{
@@ -13713,7 +13713,7 @@ async function adminCodeFetchFirebase(){
 }
 
 async function adminCodePublish(btn){
-  if(!requireAdmin()) return;
+  if(!requirePermission('code_update')) return;
   const ta=document.getElementById('admin-code-editor');
   const noteEl=document.getElementById('admin-code-note');
   const st=document.getElementById('admin-code-status');
@@ -13742,7 +13742,7 @@ async function adminCodePublish(btn){
 }
 
 async function adminCodeClearOverride(){
-  if(!requireAdmin()) return;
+  if(!requirePermission('code_update')) return;
   if(!confirm('Clear the Firebase override? All users will reload into the original Vercel-deployed version.')) return;
   try{
     await fbdb.ref(ADMIN_SITE_PATH).remove();
@@ -14134,7 +14134,7 @@ async function resolveReport(id){
 
 // -- FIREBASE RULES MANAGER (admin-only) -------------------------------------
 // Direct Firebase RTDB REST API — no Cloudflare Worker needed.
-const _RTDB_RULES_URL = 'https://syntaxgroup-default-rtdb.europe-west1.firebasedatabase.app/.settings/rules.json';
+const _RTDB_RULES_URL = 'https://socloudybro-b8606-default-rtdb.europe-west1.firebasedatabase.app/.settings/rules.json';
 
 async function _getRulesToken() {
   try {
@@ -14261,7 +14261,7 @@ async function adminPushRules() {
   try { rules = JSON.parse(ta.value); } catch(e) { showToast('Invalid JSON', e.message); return; }
   // Firebase RTDB rules API requires a Google OAuth2 admin token — not available in browser.
   // Direct the admin to paste these rules manually in Firebase Console.
-  const consoleUrl = 'https://console.firebase.google.com/project/syntaxgroup/database/syntaxgroup-default-rtdb/rules';
+  const consoleUrl = 'https://console.firebase.google.com/project/socloudybro-b8606/database/socloudybro-b8606-default-rtdb/rules';
   if (confirm('Firebase rules cannot be pushed directly from the browser (requires a service account token).\n\nOpen Firebase Console to paste them manually?')) {
     window.open(consoleUrl, '_blank');
   }
