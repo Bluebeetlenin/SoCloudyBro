@@ -5745,6 +5745,11 @@ async function launch(){
       localStorage.removeItem('cc_session_start');
       me=null; launched=false;
       localStorage.removeItem('cc_me');
+      // Also drop the PIN lock — leaving it behind produced exactly the
+      // "cc_pin set but me is null" state that crashed launch() on
+      // me.parentalConsentStatus (SCB-SYS-06) the next time this device
+      // reached the lock screen with a stale session.
+      localStorage.removeItem('cc_pin');
       setTimeout(()=>{ openModal('setup-modal'); if(typeof switchAuthTab==='function') switchAuthTab('login'); showToast('Session expired','Your session has expired. Please log in again.'); },100);
       return;
     }
@@ -6887,6 +6892,20 @@ function checkLockPin(pin,inputs){
   const stored=localStorage.getItem('cc_pin');
   if(hashPin(pin)===stored){
     _clearPinLock();
+    // cc_pin can outlive cc_me/`me` — e.g. an interrupted session-expiry or
+    // account-reset flow that cleared the session but not the PIN. launch()
+    // unconditionally reads me.parentalConsentStatus, so a stale PIN with no
+    // `me` behind it crashed here (SCB-SYS-06) instead of just sending the
+    // user back to login where they belong.
+    if(!me||!me.number){
+      localStorage.removeItem('cc_pin');
+      hideLockScreen();
+      openModal('setup-modal');
+      if(typeof switchAuthTab==='function') switchAuthTab('login');
+      showToast('Please log in',scbErr('SCB-SEC-21','Your session expired — log in again to continue.'));
+      clearPinInputs(inputs);
+      return;
+    }
     if(!launched){launch();}else{hideLockScreen();}
     clearPinInputs(inputs);
   }
