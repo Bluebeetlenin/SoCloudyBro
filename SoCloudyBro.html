@@ -2143,6 +2143,14 @@ body.device-tablet .msg-body{max-width:74%}
             <select id="call-ringtone-select" onchange="saveCallRingtoneChoice(this.value)"></select>
             <button class="btn btn-ghost btn-sm" onclick="previewCallRingtone()">▶ Preview</button>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Ping Sound</div><div class="settings-row-sub">Play a sound when someone pings you</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="ping-sound-toggle" onchange="savePrivacyPref('pingSound',this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-control-row">
+            <select id="ping-sound-select" onchange="savePingSoundChoice(this.value)"></select>
+            <button class="btn btn-ghost btn-sm" onclick="previewPingSound()">▶ Preview</button>
+          </div>
         </div>
         <div class="settings-section" data-settings-tab="security">
           <h3>Security</h3>
@@ -11303,6 +11311,13 @@ const CALL_RINGTONES={
   marimba: {label:'Marimba',      notes:[[349.23,0,0.2,0.14],[440,0.22,0.2,0.14],[349.23,0.44,0.2,0.14],[440,0.66,0.2,0.14]]},
   chimes:  {label:'Chimes',       notes:[[523.25,0,0.3,0.12],[659.25,0.15,0.3,0.11],[783.99,0.30,0.35,0.1]]},
 };
+const PING_SOUNDS={
+  classic: {label:'Classic Buzz', notes:[[440,0,0.05,0.18],[440,0.08,0.05,0.18],[440,0.16,0.09,0.18]]},
+  bell:    {label:'Bell',         notes:[[1567.98,0,0.22,0.15],[1975.53,0.04,0.26,0.11]]},
+  knock:   {label:'Knock',        notes:[[220,0,0.05,0.22],[196,0.09,0.06,0.2]]},
+  laser:   {label:'Laser',        notes:[[1800,0,0.05,0.14],[1200,0.03,0.05,0.14],[800,0.06,0.07,0.14]]},
+  bloop:   {label:'Bloop',        notes:[[660,0,0.05,0.16],[990,0.05,0.09,0.16]]},
+};
 function _scbPlayPattern(ctx,notes){
   const t=ctx.currentTime;
   notes.forEach(([freq,offset,dur,peak])=>_scbTone(ctx,freq,t+offset,dur,peak));
@@ -11340,6 +11355,18 @@ function previewCallRingtone(id){
   _scbPlayPattern(ctx,(CALL_RINGTONES[useId]||CALL_RINGTONES.classic).notes);
 }
 function saveCallRingtoneChoice(id){ savePrivacyPref('callRingtoneId',id); previewCallRingtone(id); }
+function playPingSound(){
+  if(!getPrivacyPref('pingSound',true)||shouldSuppressNotifications()) return;
+  const ctx=_scbAudioCtx(); if(!ctx) return;
+  const id=getPrivacyPref('pingSoundId','classic');
+  _scbPlayPattern(ctx,(PING_SOUNDS[id]||PING_SOUNDS.classic).notes);
+}
+function previewPingSound(id){
+  const ctx=_scbAudioCtx(); if(!ctx) return;
+  const useId=id||document.getElementById('ping-sound-select')?.value||getPrivacyPref('pingSoundId','classic');
+  _scbPlayPattern(ctx,(PING_SOUNDS[useId]||PING_SOUNDS.classic).notes);
+}
+function savePingSoundChoice(id){ savePrivacyPref('pingSoundId',id); previewPingSound(id); }
 function _scbPopulateSoundSelects(){
   const msgSel=document.getElementById('message-sound-select');
   if(msgSel&&!msgSel.options.length){
@@ -11351,6 +11378,11 @@ function _scbPopulateSoundSelects(){
     Object.entries(CALL_RINGTONES).forEach(([id,s])=>{ const o=document.createElement('option'); o.value=id; o.textContent=s.label; callSel.appendChild(o); });
   }
   if(callSel) callSel.value=getPrivacyPref('callRingtoneId','classic');
+  const pingSel=document.getElementById('ping-sound-select');
+  if(pingSel&&!pingSel.options.length){
+    Object.entries(PING_SOUNDS).forEach(([id,s])=>{ const o=document.createElement('option'); o.value=id; o.textContent=s.label; pingSel.appendChild(o); });
+  }
+  if(pingSel) pingSel.value=getPrivacyPref('pingSoundId','classic');
 }
 
 function sendNotif(title,body){
@@ -11857,6 +11889,7 @@ function handleIncomingPing(fromNum){
   const u=lookupUser(fromNum)||{};
   const name=dec(u.name)||'Someone';
   sendNotif('🔔 Ping!',name+' pinged you!');
+  playPingSound();
   const wrap=document.getElementById('chat-bg-wrapper')||document.getElementById('chat-panel');
   if(wrap){
     wrap.classList.remove('scb-ping-shake');
@@ -20574,7 +20607,7 @@ function getPrivacyPref(key, defaultVal=true){
   return key in prefs ? prefs[key] : defaultVal;
 }
 function _initPrivacyToggles(){
-  const ids={readReceipts:'read-receipts-toggle',typingIndicators:'typing-indicator-toggle',showOnline:'online-status-toggle',secureLinkWarning:'secure-links-toggle',messageSound:'message-sound-toggle',callRingtone:'call-ringtone-toggle'};
+  const ids={readReceipts:'read-receipts-toggle',typingIndicators:'typing-indicator-toggle',showOnline:'online-status-toggle',secureLinkWarning:'secure-links-toggle',messageSound:'message-sound-toggle',callRingtone:'call-ringtone-toggle',pingSound:'ping-sound-toggle'};
   for(const [key,id] of Object.entries(ids)){
     const el=document.getElementById(id);
     if(el) el.checked=getPrivacyPref(key,true);
