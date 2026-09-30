@@ -696,6 +696,11 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .call-event-pill:hover{background:var(--surface)}
 .call-event-pill .call-ev-icon{font-size:14px}
 .call-event-pill .call-ev-missed{color:#e74c3c}
+.ping-event-pill{background:color-mix(in srgb,var(--accent) 14%,var(--surface2));border-color:var(--accent);color:var(--accent);font-weight:600}
+@keyframes scbPingShake{0%,100%{transform:translateX(0)}15%{transform:translateX(-7px)}30%{transform:translateX(6px)}45%{transform:translateX(-5px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(1px)}}
+.scb-ping-shake{animation:scbPingShake 0.5s cubic-bezier(.36,.07,.19,.97) both}
+#cp-mutual-friends{font-size:11px;color:var(--muted);margin-top:2px;cursor:pointer}
+#cp-mutual-friends:hover{text-decoration:underline}
 .call-log-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.12s}
 .call-log-item:hover{background:var(--surface2)}
 .call-log-icon{font-size:18px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface2);flex-shrink:0}
@@ -3118,6 +3123,8 @@ body.device-tablet .msg-body{max-width:74%}
           <div id="cp-bio" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
           <div id="cp-status" style="font-size:11px;margin-top:2px"></div>
           <div id="cp-mutual" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+          <div id="cp-mutual-friends" onclick="toggleMutualFriendsList()" style="display:none"></div>
+          <div id="cp-mutual-friends-list" style="display:none;font-size:11px;color:var(--text2);margin-top:4px;max-width:260px"></div>
         </div>
       </div>
     </div>
@@ -3133,6 +3140,7 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
       <button class="btn btn-sm" onclick="saveCpNickname()">Save</button>
+      <button class="btn btn-ghost btn-sm" id="cp-ping-btn" onclick="sendPing()">🔔 Ping</button>
       <button class="btn btn-ghost btn-sm" onclick="archiveToggle();closeModal('contact-panel-overlay')">📁 Archive</button>
       <button class="btn btn-danger btn-sm" onclick="deleteContact();closeModal('contact-panel-overlay')">🗑 Delete</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('contact-panel-overlay')">Close</button>
@@ -7537,7 +7545,7 @@ function renderSidebar(){
     const isActive=activeConvo&&activeConvo.key===key;
     const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
     const lastMsg=conv&&conv.messages.length?conv.messages[conv.messages.length-1]:null;
-    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='call'?'📞 '+(lastMsg.missed?scbT('missed_call'):scbT('voice_call')):(msgText(lastMsg)||'')).substring(0,32):'';
+    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='ping'?'🔔 Ping':lastMsg.type==='call'?'📞 '+(lastMsg.missed?scbT('missed_call'):scbT('voice_call')):(msgText(lastMsg)||'')).substring(0,32):'';
     const timeStr=lastMsg?fmtTime(lastMsg.time):'';
     const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
     const inCall=c.type!=='group'&&_numbersInActiveCall.has(Number(c.number));
@@ -11131,12 +11139,16 @@ function startPoll(){
           if(newHash!==prev){
             const last=c.messages[c.messages.length-1];
             if(last&&last.from!==me.number&&!mutedChats[activeConvo.key]){
-              const u=lookupUser(last.from)||{};
-              const mentioned=last.mentions&&last.mentions.includes(me.number);
-              const txt=msgText(last);
-              const isEveryone=mentioned&&/@(everyone|all)\b/i.test(txt);
-              const title=isEveryone?('📢 '+(dec(u.name)||'Someone')+' mentioned @everyone'):mentioned?('📢 '+(dec(u.name)||'Someone')+' mentioned you'):(dec(u.name)||'New message');
-              sendNotif(title,msgHasGif(last)?'Sent a GIF':txt);
+              if(last.type==='ping'){
+                handleIncomingPing(last.from);
+              } else {
+                const u=lookupUser(last.from)||{};
+                const mentioned=last.mentions&&last.mentions.includes(me.number);
+                const txt=msgText(last);
+                const isEveryone=mentioned&&/@(everyone|all)\b/i.test(txt);
+                const title=isEveryone?('📢 '+(dec(u.name)||'Someone')+' mentioned @everyone'):mentioned?('📢 '+(dec(u.name)||'Someone')+' mentioned you'):(dec(u.name)||'New message');
+                sendNotif(title,msgHasGif(last)?'Sent a GIF':txt);
+              }
             }
             lastMsgHash=newHash; // BUG FIX: this was computed every tick but never
             // actually saved back, so `prev` was always stale — in practice this
@@ -11353,6 +11365,7 @@ function openContactPanel() {
     ).length;
     mutualEl.textContent = mutualCount > 0 ? `${mutualCount} mutual group${mutualCount === 1 ? '' : 's'}` : '';
   }
+  renderMutualFriends(c.number);
   const av = document.getElementById('cp-avatar');
   renderAvatar(av, { name: enc(c.name), avatar: (u&&u.avatar)||c.avatar||'' });
   // make avatar tappable for zoom
@@ -11360,7 +11373,118 @@ function openContactPanel() {
   // load contact notes
   const notesEl=document.getElementById('cp-notes');
   if(notesEl){ const notes=getContactNote(c.number); notesEl.value=notes||''; }
+  updatePingButtonState(c.number);
   openModal('contact-panel-overlay');
+}
+
+// -- MUTUAL FRIENDS --------------------------------------------------------
+// "Friend" here means a DM contact — the same relationship the rest of the
+// app already treats as a contact. Both my own list and the other person's
+// are available client-side already (mine in `contacts`, theirs synced to
+// their own users/{number}/prefs.contacts, which getUsers() already pulls
+// into usersCache for every user — the same data every existing lookupUser()
+// call already relies on), so no new sync path or storage is needed.
+function getMutualFriends(otherNumber){
+  if(!me||!contacts) return [];
+  const myFriendNums=new Set(
+    contacts.filter(x=>x&&x.type==='dm'&&x.number!=null&&String(x.number)!=='00000'&&x.number!==otherNumber).map(x=>x.number)
+  );
+  if(!myFriendNums.size) return [];
+  const other=(usersCache||[]).find(x=>x&&x.number===otherNumber);
+  const theirFriendNums=new Set(
+    ((other&&other.prefs&&other.prefs.contacts)||[])
+      .filter(x=>x&&x.type==='dm'&&x.number!=null&&String(x.number)!=='00000'&&x.number!==me.number)
+      .map(x=>x.number)
+  );
+  const mutualNums=[...myFriendNums].filter(n=>theirFriendNums.has(n));
+  return mutualNums.map(n=>{
+    const u=lookupUser(n);
+    return {number:n,name:(u&&dec(u.name))||('#'+n)};
+  });
+}
+function renderMutualFriends(otherNumber){
+  const label=document.getElementById('cp-mutual-friends');
+  const list=document.getElementById('cp-mutual-friends-list');
+  if(!label||!list) return;
+  const friends=getMutualFriends(otherNumber);
+  list.style.display='none'; list.innerHTML='';
+  if(!friends.length){ label.style.display='none'; label.textContent=''; return; }
+  label.style.display='';
+  label.textContent=`👥 ${friends.length} mutual friend${friends.length===1?'':'s'}`;
+  label._friends=friends;
+}
+function toggleMutualFriendsList(){
+  const label=document.getElementById('cp-mutual-friends');
+  const list=document.getElementById('cp-mutual-friends-list');
+  if(!label||!list||!label._friends) return;
+  const opening=list.style.display==='none';
+  if(opening){
+    list.innerHTML=label._friends.map(f=>
+      `<span class="cloudy-chip" style="display:inline-block;margin:2px" onclick="closeModal('contact-panel-overlay');cloudyOpenChatByNumber(${JSON.stringify(f.number)})">${esc(f.name)}</span>`
+    ).join('');
+  }
+  list.style.display=opening?'block':'none';
+}
+// cloudyFindContact() only matches by name — the mutual-friends list already
+// has the exact contact number, so look up (and open) by number directly.
+function cloudyOpenChatByNumber(num){
+  const target=contacts.find(x=>x&&x.type==='dm'&&x.number===num);
+  if(target){ openChat(target); return; }
+  const u=lookupUser(num);
+  if(u) openChat({type:'dm',number:num,name:u.name||('#'+num),avatar:u.avatar||'',key:dmKey(me.number,num)});
+}
+
+// -- PING --------------------------------------------------------------------
+// A lightweight "hey, pay attention" nudge — like AIM's Buzz — separate from
+// sending a text message. Stored as a normal message (type:'ping') in the
+// shared conversation, so it syncs the same way every other message does;
+// rendered as a centered pill like a call-event, and triggers a shake +
+// notification on the other person's side when it's a brand-new incoming one.
+const PING_COOLDOWN_MS=60*1000;
+function _pingCooldownKey(convKey){ return 'cc_last_ping_'+convKey; }
+function pingCooldownRemaining(convKey){
+  try{
+    const last=parseInt(localStorage.getItem(_pingCooldownKey(convKey))||'0',10);
+    return Math.max(0,PING_COOLDOWN_MS-(Date.now()-last));
+  }catch{ return 0; }
+}
+function updatePingButtonState(otherNumber){
+  const btn=document.getElementById('cp-ping-btn');
+  if(!btn||!me) return;
+  const convKey=dmKey(me.number,otherNumber);
+  const remaining=pingCooldownRemaining(convKey);
+  btn.disabled=remaining>0;
+  btn.textContent=remaining>0?`🔔 Ping (wait ${Math.ceil(remaining/1000)}s)`:'🔔 Ping';
+}
+async function sendPing(){
+  if(!activeConvo||activeConvo.type==='group'||!me){ showToast('Ping','Open a direct chat first.'); return; }
+  const convKey=activeConvo.key;
+  const remaining=pingCooldownRemaining(convKey);
+  if(remaining>0){ showToast('Slow down','Wait '+Math.ceil(remaining/1000)+'s before pinging '+ (activeConvo.name||'them') +' again.'); return; }
+  try{
+    const conv=await getOrMakeConvo(convKey,[me.number,activeConvo.number]);
+    if(!Array.isArray(conv.messages)) conv.messages=[];
+    conv.messages.push({id:'ping_'+convKey+'_'+Date.now(),type:'ping',from:me.number,time:Date.now()});
+    await saveConvos();
+    localStorage.setItem(_pingCooldownKey(convKey),String(Date.now()));
+    updatePingButtonState(activeConvo.number);
+    if(activeConvo.key===convKey){ lastMsgHash=''; renderMessages(conv.messages); }
+    showToast('🔔 Pinged!','You pinged '+(activeConvo.name||'them')+'.');
+  }catch(e){ showToast('Ping failed',scbErr('SCB-MSG-19','Couldn\'t send the ping.',e.message)); }
+}
+// Shake the chat window and notify when a fresh incoming ping arrives —
+// called from the poll loop right where every other new-message notif fires.
+function handleIncomingPing(fromNum){
+  const u=lookupUser(fromNum)||{};
+  const name=dec(u.name)||'Someone';
+  sendNotif('🔔 Ping!',name+' pinged you!');
+  const wrap=document.getElementById('chat-bg-wrapper')||document.getElementById('chat-panel');
+  if(wrap){
+    wrap.classList.remove('scb-ping-shake');
+    void wrap.offsetWidth; // restart the animation if a ping lands twice quickly
+    wrap.classList.add('scb-ping-shake');
+    setTimeout(()=>wrap.classList.remove('scb-ping-shake'),600);
+  }
 }
 function saveCpNickname() {
   if (!activeConvo) return;
@@ -11835,6 +11959,18 @@ function renderMessages(msgs) {
     if (dateStr !== lastDate) {
       lastDate = dateStr;
       const div = document.createElement('div'); div.className = 'date-divider'; div.innerHTML = '<span class="date-divider-label">' + dateStr + '</span>'; wrap.appendChild(div);
+    }
+    // Ping — a lightweight "hey" nudge, rendered as its own centered pill
+    if (m.type === 'ping') {
+      const isMePing = m.from === me.number;
+      const other = isMePing ? (activeConvo && activeConvo.name) : (lookupUser(m.from)||{}).name;
+      const timeStr3 = new Date(m.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      const row = document.createElement('div'); row.className = 'call-event-row';
+      const pill = document.createElement('div'); pill.className = 'call-event-pill ping-event-pill';
+      pill.innerHTML = '<span>🔔</span><span>' + esc(isMePing ? 'You pinged '+(dec(other)||'them') : (dec(other)||'Someone')+' pinged you') + '</span><span style="color:inherit;opacity:.7"> · ' + esc(timeStr3) + '</span>';
+      row.appendChild(pill);
+      wrap.appendChild(row);
+      return;
     }
     // Call event message (WhatsApp-style)
     if (m.type === 'call') {
@@ -15922,7 +16058,7 @@ renderSidebar = function(){
     unreadItems.forEach(({c,unread,key,conv})=>{
       const isActive=activeConvo&&activeConvo.key===key;
       const lastMsg=conv.messages.length?conv.messages[conv.messages.length-1]:null;
-      const preview=lastMsg?(lastMsg.gif?'🖼 GIF':(msgText(lastMsg)||'')).substring(0,32):'';
+      const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='ping'?'🔔 Ping':(msgText(lastMsg)||'')).substring(0,32):'';
       const timeStr=lastMsg?fmtTime(lastMsg.time):'';
       const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
       const div=document.createElement('div'); div.className='sb-item'+(isActive?' active':'');
@@ -15964,7 +16100,7 @@ renderSidebar = function(){
     const isActive=activeConvo&&activeConvo.key===key;
     const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
     const lastMsg=conv&&conv.messages&&conv.messages.length?conv.messages[conv.messages.length-1]:null;
-    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='call'?'📞 '+scbT(lastMsg.missed?'missed_call':'voice_call'):(msgText(lastMsg)||'')).substring(0,32):'';
+    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='ping'?'🔔 Ping':lastMsg.type==='call'?'📞 '+scbT(lastMsg.missed?'missed_call':'voice_call'):(msgText(lastMsg)||'')).substring(0,32):'';
     const timeStr=lastMsg?fmtTime(lastMsg.time):'';
     const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
     const inCall=c.type!=='group'&&_numbersInActiveCall.has(Number(c.number));
