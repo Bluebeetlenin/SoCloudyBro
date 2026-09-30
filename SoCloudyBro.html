@@ -1906,6 +1906,7 @@ body.device-tablet .msg-body{max-width:74%}
     <div id="sb-tabs">
       <button class="sb-tab active" onclick="switchTab('chats',this)">Chats</button>
       <button class="sb-tab" onclick="switchTab('groups',this)">Groups</button>
+      <button class="sb-tab" onclick="switchTab('servers',this)">Servers</button>
       <button class="sb-tab" onclick="switchTab('archived',this)">Archived</button>
     </div>
     <div id="sb-list"></div>
@@ -1915,6 +1916,8 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="icon-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle dark/light mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
       <button class="icon-btn" onclick="openAddContact()" title="New chat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></button>
       <button class="icon-btn" onclick="openNewGroup()" title="New group"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
+      <button class="icon-btn" onclick="openNewGroup(null,true)" title="New server"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="7" rx="2"/><rect x="2" y="13" width="20" height="7" rx="2"/><line x1="6" y1="7.5" x2="6.01" y2="7.5"/><line x1="6" y1="16.5" x2="6.01" y2="16.5"/></svg></button>
+      <button class="icon-btn" onclick="openJoinServer()" title="Join a server"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></button>
       <button class="icon-btn" onclick="showUpdates()" title="Game Updates"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="16" cy="10" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/></svg></button>
       <button class="icon-btn" id="cloudy-btn" onclick="toggleCloudy(this)" title="Cloudy voice assistant — say &quot;Hey Cloudy…&quot;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
       <button class="icon-btn" onclick="showSettings()" title="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="18" r="2" fill="currentColor"/></svg></button>
@@ -3077,13 +3080,18 @@ body.device-tablet .msg-body{max-width:74%}
 
 <div class="overlay" id="group-modal">
   <div class="modal">
-    <div class="modal-header"><h2>New Group</h2><p>Create a group chat and invite your contacts.</p></div>
+    <div class="modal-header"><h2 id="group-modal-title">New Group</h2><p id="group-modal-desc">Create a group chat and invite your contacts.</p></div>
     <div class="modal-body" style="padding-bottom:14px">
       <div style="text-align:center;margin-bottom:12px">
         <div class="group-avatar" id="grp-av-preview" onclick="openAvatarEditor(false,true)" style="width:56px;height:56px;font-size:22px;background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;margin:0 auto;cursor:pointer;border-radius:12px" title="Click to choose group avatar">👥</div>
       </div>
-      <div class="field"><label>Group name</label><input type="text" id="grp-name" maxlength="40" placeholder="e.g. Game Night"/></div>
-      <div class="field"><label>Group info</label><textarea id="grp-info" maxlength="120" rows="2" placeholder="What's this group about?"></textarea></div>
+      <div class="field"><label id="grp-name-label">Group name</label><input type="text" id="grp-name" maxlength="40" placeholder="e.g. Game Night"/></div>
+      <div class="field"><label id="grp-info-label">Group info</label><textarea id="grp-info" maxlength="120" rows="2" placeholder="What's this group about?"></textarea></div>
+      <div class="field">
+        <label class="settings-check-label" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="grp-is-server"/> 🖥️ Make this a Server (multi-channel community with an invite code)
+        </label>
+      </div>
       <div class="field">
         <label>Add members</label>
         <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -3103,6 +3111,17 @@ body.device-tablet .msg-body{max-width:74%}
       <div class="error-text" id="grp-error"></div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="submitNewGroup()">Create Group</button><button class="btn btn-ghost" onclick="closeModal('group-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="join-server-modal">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-header"><h2>🔗 Join a Server</h2><p>Enter an invite code — an admin will need to approve your request.</p></div>
+    <div class="modal-body" style="padding-bottom:14px">
+      <div class="field"><label>Invite code</label><input type="text" id="join-server-code" maxlength="6" placeholder="e.g. 7K2NPX" style="text-transform:uppercase;letter-spacing:2px;text-align:center;font-weight:700" onkeydown="if(event.key==='Enter')submitJoinServer()"/></div>
+      <div class="error-text" id="join-server-error"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="submitJoinServer()">Request to Join</button><button class="btn btn-ghost" onclick="closeModal('join-server-modal')">Cancel</button></div>
   </div>
 </div>
 
@@ -3213,6 +3232,21 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="field"><label>Group name</label><input type="text" id="gp-name-input" maxlength="40"/></div>
         <div class="field"><label>Group info</label><textarea id="gp-info-input" maxlength="120" rows="2"></textarea></div>
         <button class="btn btn-sm" onclick="saveGroupInfo()">Save</button>
+      </div>
+      <!-- Invite code (servers only) -->
+      <div id="gp-invite-section" style="display:none;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Invite Code</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <code id="gp-invite-code" style="flex:1;background:var(--surface2);border-radius:var(--r-sm);padding:8px 10px;font-size:15px;letter-spacing:2px;text-align:center;font-weight:700"></code>
+          <button class="btn btn-ghost btn-sm" onclick="copyServerInviteCode()">📋 Copy</button>
+          <button class="btn btn-ghost btn-sm" id="gp-invite-regen-btn" style="display:none" onclick="regenerateServerInviteCode()">🔄</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Anyone with this code can request to join — an admin must approve.</div>
+      </div>
+      <!-- Pending join requests (server admins only) -->
+      <div id="gp-join-requests-section" style="display:none;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Pending Join Requests</div>
+        <div id="gp-join-requests-list"></div>
       </div>
       <!-- Roles section (admin only) -->
       <div id="gp-roles-section" style="display:none;margin-bottom:12px">
@@ -7758,11 +7792,12 @@ function renderSidebar(){
     const isArchived=archivedContacts[c.key||dmKey(me.number,c.number)];
     if(currentTab==='archived') return isArchived;
     if(currentTab==='chats') return !isArchived&&c.type!=='group';
-    if(currentTab==='groups') return !isArchived&&c.type==='group';
+    if(currentTab==='groups') return !isArchived&&c.type==='group'&&!c.isServer;
+    if(currentTab==='servers') return !isArchived&&c.type==='group'&&!!c.isServer;
     return false;
   });
   if(searchQ){items=items.filter(c=>c.name.toLowerCase().includes(searchQ.toLowerCase())||(c.number&&String(c.number).includes(searchQ)));}
-  if(!items.length){list.innerHTML=`<div class="section-empty">${currentTab==='archived'?'No archived chats.':currentTab==='groups'?'No groups yet.':'No contacts yet.'}</div>`;return;}
+  if(!items.length){list.innerHTML=`<div class="section-empty">${currentTab==='archived'?'No archived chats.':currentTab==='groups'?'No groups yet.':currentTab==='servers'?'No servers yet — create one or join with an invite code.':'No contacts yet.'}</div>`;return;}
   items.forEach(c=>{ 
     const key=c.key||dmKey(me.number,c.number);
     const isActive=activeConvo&&activeConvo.key===key;
@@ -7776,9 +7811,9 @@ function renderSidebar(){
     div.className='sb-item'+(isActive?' active':'');
     div.onclick=()=>openChat(c);
     div.oncontextmenu=(e)=>{e.preventDefault();showContactCtxMenu(e,c);};
-    const _safeGrpAv=(c.avatar&&typeof c.avatar==='string'&&(c.avatar.startsWith('data:image/')||c.avatar.startsWith('https://')))?`<img src="${esc(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">`:'👥';
+    const _safeGrpAv=(c.avatar&&typeof c.avatar==='string'&&(c.avatar.startsWith('data:image/')||c.avatar.startsWith('https://')))?`<img src="${esc(c.avatar)}" style="width:100%;height:100%;object-fit:cover;">`:(c.isServer?'🖥️':'👥');
     const _isCloudyContact=c.avatar==='__cloudy__';
-    const avDiv=c.type==='group'?`<div class="group-avatar" style="background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;font-size:16px;">${_safeGrpAv}</div>`:_isCloudyContact?`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:20px;background:linear-gradient(135deg,#60a5fa,#a78bfa);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:50%;">☁️</div><div class="online-ring" style="background:var(--success)"></div></div>`:`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?'background:none;':''}">${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(c.name||'?').charAt(0).toUpperCase()}</div><div class="${online?'online-ring':'offline-ring'}"></div></div>`;
+    const avDiv=c.type==='group'?`<div class="group-avatar" style="background:${c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'linear-gradient(135deg,#ca5010,#6264a0)'};color:#fff;font-size:16px;">${_safeGrpAv}</div>`:_isCloudyContact?`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:20px;background:linear-gradient(135deg,#60a5fa,#a78bfa);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:50%;">☁️</div><div class="online-ring" style="background:var(--success)"></div></div>`:`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?'background:none;':''}">${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(c.name||'?').charAt(0).toUpperCase()}</div><div class="${online?'online-ring':'offline-ring'}"></div></div>`;
     const _cDispName=dec(c.name)||c.name||'?';
     div.innerHTML=`${avDiv}<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">${esc(_cDispName)}${c.type!=='group'?verifiedBadge(c.number):''}${inCall?' <span title="In a call now" style="color:var(--success)">\u260E</span>':''}</span><span class="sb-item-time">${timeStr}</span></div><div class="sb-item-preview">${esc(preview)}</div></div>`;
     list.appendChild(div);
@@ -8026,15 +8061,18 @@ async function submitAdd(){
 }
 
 // -- NEW GROUP -----------------------------------------------------------------
-function openNewGroup(preselectContact){
+function openNewGroup(preselectContact,asServer){
   if(!me){showToast('Set up first',scbErr('SCB-GRP-01','Finish setting up your account before creating a group.'));return;}
   document.getElementById('grp-name').value='';
   document.getElementById('grp-info').value='';
   document.getElementById('grp-error').textContent='';
   document.getElementById('grp-add-by-num').value='';
+  document.getElementById('grp-is-server').checked=!!asServer;
+  document.getElementById('group-modal-title').textContent=asServer?'New Server':'New Group';
+  document.getElementById('group-modal-desc').textContent=asServer?'Create a multi-channel server and invite your contacts.':'Create a group chat and invite your contacts.';
   tempGroupAvatar=null;
-  document.getElementById('grp-av-preview').innerHTML='👥';
-  document.getElementById('grp-av-preview').style.background='linear-gradient(135deg,#ca5010,#6264a0)';
+  document.getElementById('grp-av-preview').innerHTML=asServer?'🖥️':'👥';
+  document.getElementById('grp-av-preview').style.background=asServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'linear-gradient(135deg,#ca5010,#6264a0)';
   // Build member pick list
   const pick=document.getElementById('member-pick-list');pick.innerHTML='';
   const sel=document.getElementById('selected-members');sel.innerHTML='';
@@ -8133,24 +8171,42 @@ function removeMember(num){
   const row=pick&&[...pick.children].find(r=>String(r.dataset.rowNum)===String(num));
   if(row) row.style.background='';
 }
+// Servers are group conversations with isServer:true — same membership,
+// admin, channel, and E2E-key-wrapping machinery as an ordinary group, just
+// with a distinct identity (icon/sidebar section), a few more starter
+// channels, and an invite code. See joinServerByCode()/approveJoinRequest()
+// for why joining isn't instant: a joiner has no way to unwrap the group's
+// E2E key for themselves, so joining creates a request an existing admin
+// must approve (their browser has the key and does the wrapping), same as
+// any ordinary "add member" already works.
+function generateInviteCode(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I — easy to misread
+  let code='';
+  for(let i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
 async function submitNewGroup(){
   const name=document.getElementById('grp-name').value.trim();
   const info=document.getElementById('grp-info').value.trim();
+  const isServer=document.getElementById('grp-is-server').checked;
   const err=document.getElementById('grp-error');err.textContent='';
-  if(!name){err.textContent=scbErr('SCB-GRP-02','Enter a group name.');return;}
+  if(!name){err.textContent=scbErr('SCB-GRP-02',isServer?'Enter a server name.':'Enter a group name.');return;}
   const chips=document.getElementById('selected-members').querySelectorAll('.chip');
   const memberNums=Array.from(chips).map(c=>parseInt(c.dataset.num));
   if(!memberNums.length){err.textContent=scbErr('SCB-GRP-03','Add at least one member.');return;}
   const allMembers=[me.number,...memberNums];
   const key='grp_'+Date.now();
-  const g={type:'group',key,name,info,avatar:tempGroupAvatar||'',members:allMembers};
+  const g={type:'group',key,name,info,avatar:tempGroupAvatar||'',members:allMembers,isServer};
   contacts.push(g);saveStorage();
   // Store the group convo with both participants AND members so all members can sync
   if(!convosCache) await getConvos();
   let c=convosCache.find(x=>x&&x.key===key);
   if(!c){
-    c={key,type:'group',name,info,avatar:tempGroupAvatar||'',participants:allMembers,members:allMembers,admins:[me.number],coadmins:[],roles:[],memberRoles:{},messages:[],
-      channels:[{id:'general',name:'general',type:'text',order:0},{id:'voice',name:'Voice Chat',type:'voice',order:1}]};
+    c={key,type:'group',name,info,avatar:tempGroupAvatar||'',participants:allMembers,members:allMembers,admins:[me.number],coadmins:[],roles:[],memberRoles:{},messages:[],isServer,
+      channels:isServer
+        ?[{id:'general',name:'general',type:'text',order:0},{id:'announcements',name:'announcements',type:'text',order:1},{id:'voice',name:'Voice Chat',type:'voice',order:2}]
+        :[{id:'general',name:'general',type:'text',order:0},{id:'voice',name:'Voice Chat',type:'voice',order:1}]};
+    if(isServer){ c.inviteCode=generateInviteCode(); c.joinRequests=[]; }
     // Generate a random E2E group key and wrap it individually for each member (Signal-style key wrapping)
     try{
       await ensureE2EKeypair();
@@ -11859,6 +11915,7 @@ function openGroupPanel() {
   const conv = convosCache ? convosCache.find(x=>x&&x.key === activeConvo.key) : null;
   if (!conv) return;
   const isAdmin = conv.admins && conv.admins.includes(me.number);
+  const isServer = !!conv.isServer;
   document.getElementById('gp-name').textContent = activeConvo.name;
   document.getElementById('gp-info-text').textContent = activeConvo.info || '';
   const members = conv.participants || conv.members || [];
@@ -11867,11 +11924,35 @@ function openGroupPanel() {
   document.getElementById('gp-edit-btn').style.display = isAdmin ? 'inline-flex' : 'none';
   document.getElementById('gp-name-edit').style.display = 'none';
   document.getElementById('gp-roles-section').style.display = isAdmin ? 'block' : 'none';
-  // Group avatar
+  // Server-only: invite code (visible to every member \u2014 any member can share
+  // it, same as Discord) and pending join requests (admins only, since
+  // approving is what actually wraps the E2E key for the new member).
+  const inviteSection=document.getElementById('gp-invite-section');
+  inviteSection.style.display = isServer ? 'block' : 'none';
+  if(isServer){
+    document.getElementById('gp-invite-code').textContent = conv.inviteCode || '\u2014';
+    document.getElementById('gp-invite-regen-btn').style.display = isAdmin ? 'inline-flex' : 'none';
+  }
+  const joinReqSection=document.getElementById('gp-join-requests-section');
+  const joinRequests=(conv.joinRequests||[]);
+  joinReqSection.style.display = (isServer && isAdmin && joinRequests.length) ? 'block' : 'none';
+  if(isServer && isAdmin && joinRequests.length){
+    document.getElementById('gp-join-requests-list').innerHTML = joinRequests.map(r=>{
+      const u=lookupUser(r.number)||{};
+      const name=dec(u.name||'')||r.name||('#'+r.number);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px">'
+        +'<div style="flex:1;font-size:13px">'+esc(name)+' <span style="color:var(--muted);font-size:11px">#'+r.number+'</span></div>'
+        +'<button class="btn btn-sm" onclick="approveJoinRequest('+r.number+')">\u2713 Approve</button>'
+        +'<button class="btn btn-ghost btn-sm" onclick="denyJoinRequest('+r.number+')">\u2715</button>'
+        +'</div>';
+    }).join('');
+  }
+  // Group/Server avatar
   const gpAv = document.getElementById('gp-avatar');
   if (typeof activeConvo.avatar==='string' && activeConvo.avatar.startsWith('data:image/')) {
     gpAv.innerHTML = '<img src="' + activeConvo.avatar + '" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>';
-  } else { gpAv.innerHTML = '\uD83D\uDC65'; }
+  } else { gpAv.innerHTML = isServer ? '\uD83D\uDDA5\uFE0F' : '\uD83D\uDC65'; }
+  gpAv.style.background = isServer ? 'linear-gradient(135deg,#5865f2,#3ba55d)' : 'linear-gradient(135deg,#ca5010,#6264a0)';
   // Roles list
   const roles = conv.roles || [];
   const rolesEl = document.getElementById('gp-roles-list');
@@ -12018,6 +12099,79 @@ async function leaveGroup() {
   hideAll(); showMainEmpty();
   renderSidebar();
 }
+
+// -- SERVERS: invite code + join requests ---------------------------------------
+function copyServerInviteCode(){
+  const conv=getActiveConvoObj();
+  if(!conv||!conv.inviteCode) return;
+  navigator.clipboard.writeText(conv.inviteCode).then(
+    ()=>showToast('Copied','Invite code copied to clipboard.'),
+    ()=>showToast('Copy failed',scbErr('SCB-GRP-31','Couldn\'t copy — copy it manually instead.'))
+  );
+}
+async function regenerateServerInviteCode(){
+  const conv=getActiveConvoObj();
+  if(!conv||!conv.isServer) return;
+  if(!(conv.admins&&conv.admins.includes(me.number))){ showToast('Admins only',scbErr('SCB-GRP-32','Only server admins can regenerate the invite code.')); return; }
+  if(!confirm('Generate a new invite code? The old code will stop working.')) return;
+  conv.inviteCode=generateInviteCode();
+  try{ await saveConvos(); openGroupPanel(); showToast('New invite code','The old code no longer works.'); }
+  catch(e){ showToast('Failed',scbErr('SCB-GRP-33','That code couldn\'t be regenerated — the server rejected the write.',(e.message||''))); }
+}
+function openJoinServer(){
+  if(!me){ showToast('Set up first',scbErr('SCB-GRP-34','Finish setting up your account before joining a server.')); return; }
+  const input=document.getElementById('join-server-code'); if(input) input.value='';
+  document.getElementById('join-server-error').textContent='';
+  openModal('join-server-modal');
+}
+async function submitJoinServer(){
+  const err=document.getElementById('join-server-error'); err.textContent='';
+  const codeRaw=document.getElementById('join-server-code').value.trim().toUpperCase();
+  if(!codeRaw){ err.textContent=scbErr('SCB-GRP-35','Enter an invite code.'); return; }
+  if(!convosCache) await getConvos();
+  const conv=convosCache.find(c=>c&&c.isServer&&c.inviteCode===codeRaw);
+  if(!conv){ err.textContent=scbErr('SCB-GRP-36','No server found with that code.'); return; }
+  const members=conv.participants||conv.members||[];
+  if(members.includes(me.number)){ err.textContent=scbErr('SCB-GRP-37','You\'re already a member of that server.'); return; }
+  if(!Array.isArray(conv.joinRequests)) conv.joinRequests=[];
+  if(conv.joinRequests.some(r=>r.number===me.number)){ err.textContent=scbErr('SCB-GRP-38','You\'ve already requested to join — waiting on an admin to approve.'); return; }
+  conv.joinRequests.push({number:me.number,name:me.name||('#'+me.number),time:Date.now()});
+  try{
+    await saveConvos();
+    closeModal('join-server-modal');
+    showToast('Request sent','An admin needs to approve your request to join "'+(conv.name||'that server')+'".');
+  }catch(e){ err.textContent=scbErr('SCB-GRP-39','That request couldn\'t be sent — the server rejected the write.',(e.message||'')); }
+}
+// Approving is what actually grants E2E access: only the approving admin's
+// browser has the server's group key (getGroupAesKey() inside
+// addMemberToGroupKey() requires already being a member), so a join
+// request — rather than an instant join — is what lets that wrapping
+// happen at all, the same way an ordinary "add member" already works.
+async function approveJoinRequest(num){
+  const conv=getActiveConvoObj();
+  if(!conv||!conv.isServer) return;
+  if(!(conv.admins&&conv.admins.includes(me.number))){ showToast('Admins only',scbErr('SCB-GRP-40','Only server admins can approve join requests.')); return; }
+  try{
+    await addMemberToGroupKey(conv,num);
+    const existing=new Set((conv.participants||conv.members||[]).map(Number));
+    existing.add(num);
+    const merged=[...existing];
+    conv.participants=merged; conv.members=merged;
+    conv.joinRequests=(conv.joinRequests||[]).filter(r=>r.number!==num);
+    await saveConvos();
+    openGroupPanel();
+    showToast('Member approved','');
+  }catch(e){ showToast('Failed',scbErr('SCB-GRP-41','That request couldn\'t be approved — the server rejected the write.',(e.message||''))); }
+}
+async function denyJoinRequest(num){
+  const conv=getActiveConvoObj();
+  if(!conv||!conv.isServer) return;
+  if(!(conv.admins&&conv.admins.includes(me.number))){ showToast('Admins only',scbErr('SCB-GRP-42','Only server admins can deny join requests.')); return; }
+  conv.joinRequests=(conv.joinRequests||[]).filter(r=>r.number!==num);
+  try{ await saveConvos(); openGroupPanel(); }
+  catch(e){ showToast('Failed',scbErr('SCB-GRP-43','That couldn\'t be saved — the server rejected the write.',(e.message||''))); }
+}
+
 // Member context menu
 function showMemberCtxMenu(e, num) {
   memberCtxTarget = num;
@@ -16407,14 +16561,16 @@ renderSidebar = function(){
     if(currentTab==='favourites') return isFavorite(key) && !isArchived;
     if(currentTab==='archived') return isArchived;
     if(currentTab==='chats') return !isArchived&&c.type!=='group';
-    if(currentTab==='groups') return !isArchived&&c.type==='group';
+    if(currentTab==='groups') return !isArchived&&c.type==='group'&&!c.isServer;
+    if(currentTab==='servers') return !isArchived&&c.type==='group'&&!!c.isServer;
     return false;
   });
   if(searchQ){ items=items.filter(c=>c.name.toLowerCase().includes(searchQ.toLowerCase())||(c.number&&String(c.number).includes(searchQ))); }
   if(!items.length){
     const empty = currentTab==='favourites' ? 'No favourites yet — star a chat from its ⋯ menu.'
       : currentTab==='archived' ? 'No archived chats.'
-      : currentTab==='groups' ? 'No groups yet.' : 'No contacts yet.';
+      : currentTab==='groups' ? 'No groups yet.'
+      : currentTab==='servers' ? 'No servers yet — create one or join with an invite code.' : 'No contacts yet.';
     list.innerHTML='<div class="section-empty">'+esc(empty)+'</div>';
     return;
   }
@@ -16435,7 +16591,7 @@ renderSidebar = function(){
     const _liveAv=(_freshU&&_freshU.avatar)||c.avatar||'';
     const hasImg = typeof _liveAv==='string' && (_liveAv.startsWith('data:image/')||_liveAv.startsWith('https://'));
     const avDiv = c.type==='group'
-      ? '<div class="group-avatar" style="background:var(--accent-grad);color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':'👥')+'</div>'
+      ? '<div class="group-avatar" style="background:'+(c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'var(--accent-grad)')+';color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':(c.isServer?'🖥️':'👥'))+'</div>'
       : '<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
     div.innerHTML = avDiv +
       '<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+
