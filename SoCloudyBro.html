@@ -1842,6 +1842,22 @@ body.device-tablet .msg-body{max-width:74%}
   </div>
 </div>
 
+<div id="email-verify-gate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:600;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px">
+  <div style="font-size:48px;margin-bottom:16px">📧</div>
+  <h2 style="margin-bottom:8px">Confirm your email to continue</h2>
+  <p style="color:var(--muted);max-width:380px;margin-bottom:6px">
+    SoCloudyBro needs your email confirmed before you can use your account. Verify by linking a Google account below — it just needs to be a real, verified email, not necessarily this exact address.
+  </p>
+  <div id="google-btn-emailverify" style="display:flex;justify-content:center;margin:14px 0"></div>
+  <button class="btn" id="email-verify-fallback" style="display:none" disabled>Google sign-in unavailable</button>
+  <p id="email-verify-note" style="display:none;font-size:12px;color:var(--muted);max-width:360px;margin-bottom:10px"></p>
+  <div class="error-text" id="email-verify-error" style="margin-bottom:6px"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="checkEmailVerifyStatus()">Check again</button>
+    <button class="btn btn-ghost btn-sm" onclick="logOut()">Log out</button>
+  </div>
+</div>
+
 <div class="overlay" id="parental-approval-modal">
   <div class="modal" style="max-width:420px">
     <div class="modal-header"><h2>👪 Approve account</h2><p>Someone signed up using your email as their parent/guardian contact.</p></div>
@@ -5309,6 +5325,10 @@ async function registerOrUpdate(){
   // submitUnlinkParent() already uses for linkedParent.
   payload.googleSub     = me.googleSub || (u&&u.googleSub) || null;
   payload.googleEmail   = me.googleEmail || (u&&u.googleEmail) || '';
+  // Sticky true — OR'd with the server's copy so a device that hasn't caught
+  // up on a verification made elsewhere (or just did one locally) can never
+  // accidentally write the flag back to false.
+  payload.emailVerified = !!(me.emailVerified || (u&&u.emailVerified));
   payload.linkedSyntaxAccount     = (me.linkedSyntaxAccount!==undefined&&me.linkedSyntaxAccount!==null) ? me.linkedSyntaxAccount : ((u&&u.linkedSyntaxAccount)||null);
   payload.linkedSyntaxAccountName = me.linkedSyntaxAccountName || (u&&u.linkedSyntaxAccountName) || '';
   payload.bizProfile    = me.bizProfile || (u&&u.bizProfile) || null;
@@ -5802,6 +5822,23 @@ async function launch(){
   // it here, immediately once the PIN is confirmed correct, instead of
   // requiring a second entry.
   hideLockScreen();
+  // Email verification gate: refresh from the authoritative server record
+  // first (same reason the parental-consent check below does), so verifying
+  // from another device/tab — or the Google-login backfill in
+  // googleAuthenticate() — is picked up immediately instead of needing a
+  // stale local `me.emailVerified` to catch up first.
+  if(needsEmailVerification(me)){
+    try{
+      const users=await getUsers();
+      const u=users.find(x=>x.number===me.number);
+      if(u&&u.emailVerified) me.emailVerified=true;
+    }catch(e){ console.error('Email verification status check failed:',e); }
+    if(needsEmailVerification(me)){
+      saveStorage();
+      showEmailVerifyGate();
+      return;
+    }
+  }
   // Parental consent check runs first and can stop the whole launch: fetch the
   // authoritative server-side status before anything else touches `me`, since
   // registerOrUpdate() below would otherwise write the stale locally-cached
@@ -6716,6 +6753,11 @@ async function submit2faCode(){
 async function finishLogin(user, pwdToStore){
   resetLocalSessionState();
   me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], totpEnabled: !!user.totpEnabled,
+    // createdAt + emailVerified drive the email-verification gate in launch()
+    // (needsEmailVerification()) — without copying them onto `me` here, that
+    // check would only ever work right after signUp() (which sets them
+    // directly), never after an ordinary login.
+    createdAt: user.createdAt||null, emailVerified: !!user.emailVerified,
     // Fields the age-tier / parental-controls / customization features depend
     // on. These live on the server user record; without copying them onto `me`
     // at login they'd be invisible to this session until the next full refetch.
@@ -7320,6 +7362,63 @@ function checkSetupAgeForParentField(){
 // email the minor provided, at which point checkPendingChildApprovals below
 // surfaces the request to them. Honest about the tradeoff: this only works if
 // the parent proactively visits the app; it can't push them a notification.
+function showEmailVerifyGate(){
+  const gate=document.getElementById('email-verify-gate');
+  if(!gate) return;
+  document.getElementById('email-verify-error').textContent='';
+  gate.style.display='flex';
+  const shell=document.getElementById('shell'); if(shell) shell.style.display='none';
+  const splash=document.getElementById('scb-splash'); if(splash) splash.remove();
+  initEmailVerifyGoogleButton();
+}
+function hideEmailVerifyGate(){
+  const gate=document.getElementById('email-verify-gate');
+  if(gate) gate.style.display='none';
+  const shell=document.getElementById('shell'); if(shell) shell.style.display='';
+}
+// A standalone Google-button initializer for the gate screen — mirrors
+// initGoogleSignIn()'s own logic (same configured/origin/loaded checks) but
+// targets the gate's own holder/fallback/note ids instead of the fixed
+// login-screen pair initGoogleSignIn() is hardcoded to.
+function initEmailVerifyGoogleButton(){
+  const holder='google-btn-emailverify', fallbackId='email-verify-fallback', noteId='email-verify-note';
+  const h=document.getElementById(holder), fb=document.getElementById(fallbackId), note=document.getElementById(noteId);
+  function showNote(text){
+    if(h){ h.innerHTML=''; h.style.display='none'; }
+    if(fb) fb.style.display='inline-flex';
+    if(note){ note.textContent=text; note.style.display='block'; }
+  }
+  if(!googleSignInConfigured()){
+    showNote('Google sign-in isn\'t set up on this site yet — contact the admin to get your account verified another way.');
+    return;
+  }
+  const _origin=location.origin;
+  const _knownOrigins=['http://localhost','https://socloudybro','https://cubeleap'];
+  const _originOk=_knownOrigins.some(o=>_origin.startsWith(o))||_origin.startsWith('file://');
+  if(!_originOk){
+    showNote('Google sign-in is disabled on this URL. Contact the admin.');
+    return;
+  }
+  whenGoogleIdentityReady(ready=>{
+    if(!ready){ showNote('Google sign-in couldn\'t load — check your connection and reload the page.'); return; }
+    if(h) h.style.display='flex';
+    if(fb) fb.style.display='none';
+    if(note) note.style.display='none';
+    if(!renderGoogleButton(holder)) showNote('Google sign-in couldn\'t start on this device. Reload and try again.');
+  });
+}
+async function checkEmailVerifyStatus(){
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===me.number);
+    if(u&&u.emailVerified){
+      me.emailVerified=true; saveStorage();
+      location.reload();
+    } else {
+      showToast('Not verified yet','Your email isn\'t confirmed yet — use the Google button above to verify.');
+    }
+  }catch(e){ showToast('Couldn\'t check',scbErr('SCB-SEC-23','Your verification status couldn\'t be checked.',(e.message||'Try again in a moment.'))); }
+}
 function showParentalPendingScreen(){
   const denied=me.parentalConsentStatus==='denied';
   document.getElementById('parental-pending-email').textContent=me.parentEmail||'';
@@ -7573,6 +7672,7 @@ async function submitSetup(){
     if(_pendingGoogleSignup){
       me.googleSub=_pendingGoogleSignup.sub;
       me.googleEmail=_pendingGoogleSignup.email||'';
+      if(_pendingGoogleSignup.emailVerified) me.emailVerified=true;
     }
     if(needsParentalConsent){
       me.parentEmail=parentEmail;
@@ -18445,6 +18545,24 @@ let _pendingGoogleSignup=null;
 let _googleInitDone=false;      // google.accounts.id.initialize() called once
 let _googleGsiTimedOut=false;   // the GIS script never showed up
 
+/* ===== EMAIL VERIFICATION GATE =====
+   A new account must confirm its email before it can do anything. There's no
+   backend here capable of sending a real email to an arbitrary address (the
+   only outbound-email tool, Web3Forms, is tied to the admin's own inbox), so
+   verification instead means linking a Google account whose email Google
+   itself reports as verified — real, honest confirmation that a real person
+   with a genuine email is behind the account, using infrastructure this app
+   already has (Google Identity Services + the ID-token verify Worker), no
+   new backend required. Grandfathered: only accounts created from this
+   feature's rollout onward are gated, so existing accounts aren't locked out
+   retroactively. ===== */
+const EMAIL_VERIFY_GATE_SINCE=new Date('2026-09-30T00:00:00Z').getTime();
+function needsEmailVerification(u){
+  // If Google sign-in isn't configured on this deployment at all, there is no
+  // way to verify — gating would just lock every new signup out permanently.
+  if(!googleSignInConfigured()) return false;
+  return !!(u&&u.createdAt&&u.createdAt>=EMAIL_VERIFY_GATE_SINCE&&!u.emailVerified);
+}
 function googleSignInConfigured(){ return typeof GOOGLE_CLIENT_ID==='string' && GOOGLE_CLIENT_ID.trim().length>0; }
 // True once the owner has deployed google-verify-proxy/worker.js and pasted its
 // URL into GOOGLE_VERIFY_ENDPOINT — i.e. once ID tokens are genuinely verified
@@ -18725,6 +18843,15 @@ async function googleAuthenticate(identity){
     if(user){
       if(user.banned){ setErr('SCB-LINK-03','This account has been suspended.'); return; }
       if(user.deleted){ setErr('SCB-LINK-04','This account has been deleted.'); return; }
+      // Backfill the email-verification gate: Google is telling us this login's
+      // email is verified, so an account still waiting on that (created after
+      // EMAIL_VERIFY_GATE_SINCE, previously logged in some other way) is
+      // cleared right here, once, rather than needing a separate verify step
+      // after this login completes.
+      if(claims.emailVerified && !user.emailVerified){
+        user.emailVerified=true;
+        try{ await saveUsers(users); }catch(e){ console.warn('emailVerified backfill save failed',e); }
+      }
       // Respect 2FA — Google sign-in is an alternative way in, not a bypass.
       // Route through the same TOTP / face-MFA gates as the password login path.
       const pwdToStore=user.pwd||'';
@@ -18753,7 +18880,7 @@ async function googleAuthenticate(identity){
     // they are taken from the identity verifyGoogleCredential() returned — i.e.
     // the Worker's verified claims whenever verification is configured, never a
     // second client-side decode of the token.
-    _pendingGoogleSignup={sub:claims.sub, email:(claims.email||'').toLowerCase(), name:claims.name||''};
+    _pendingGoogleSignup={sub:claims.sub, email:(claims.email||'').toLowerCase(), name:claims.name||'', emailVerified:!!claims.emailVerified};
     switchAuthTab('signup');
     const banner=document.getElementById('google-signup-banner');
     const bannerSub=document.getElementById('google-signup-banner-sub');
@@ -18903,13 +19030,25 @@ async function linkGoogleToCurrentAccount(identity){
     }
     me.googleSub=claims.sub;
     me.googleEmail=(claims.email||'').toLowerCase();
+    const resolvedVerification=!me.emailVerified&&!!claims.emailVerified;
+    if(claims.emailVerified) me.emailVerified=true;
     try{ saveStorage(); }catch(e){}
     // Saved through registerOrUpdate() rather than a direct write, so it goes
     // through the one save path every other per-account field uses and shows up
     // on this account's other devices — same as saveThemeColors() does.
     await registerOrUpdate();
-    renderConnectedAccounts();
+    renderConnectedAccounts(); // self-guards if the Settings panel isn't in the DOM yet
     showToast('Google account connected', (me.googleEmail||'Your Google account')+' can now be used to sign in.');
+    // `launched` is already true by the time the email-verify gate can be
+    // showing (launch() sets it before checking needsEmailVerification()), so
+    // simply calling launch() again would hit its own re-entrancy guard and
+    // do nothing. Reload instead — the same resume pattern logOut()/
+    // forceLocalLogout() already use — so launch() runs its normal flow from
+    // a clean slate and this device's fresh `emailVerified:true` is read back
+    // from cc_me/the server rather than relying on in-memory state surviving.
+    if(resolvedVerification && document.getElementById('email-verify-gate')?.classList.contains('visible')){
+      location.reload();
+    }
   }catch(e){
     // Don't leave `me` claiming a link that never reached the server.
     me.googleSub=null; me.googleEmail='';
