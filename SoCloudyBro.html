@@ -870,6 +870,7 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 @keyframes cloudyTypingBlink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
 .cloudy-chip{background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:var(--r-pill);padding:5px 11px;font-size:12px;cursor:pointer;transition:background .15s}
 .cloudy-chip:hover{background:var(--surface2)}
+.chat-lock-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 
 /* ── MODALS ── */
@@ -3110,17 +3111,30 @@ body.device-tablet .msg-body{max-width:74%}
 
 <div class="overlay" id="chat-lock-overlay">
   <div class="modal" style="max-width:320px;text-align:center">
-    <div class="modal-header"><h2>🔒 Chat Locked</h2><p>Enter your PIN to unlock this chat.</p></div>
+    <div class="modal-header"><h2>🔒 Chat Locked</h2><p id="chat-lock-desc">Enter your PIN to unlock this chat.</p></div>
     <div class="modal-body" style="padding-bottom:14px">
-      <div class="pin-row">
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'chat')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'chat')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'chat')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'chat')"/>
+      <div id="chat-lock-method-tabs" style="display:none;gap:6px;justify-content:center;margin-bottom:12px">
+        <button class="btn btn-ghost btn-sm chat-lock-tab" id="chat-lock-tab-pin" onclick="switchChatLockMethod('pin')">🔢 PIN</button>
+        <button class="btn btn-ghost btn-sm chat-lock-tab" id="chat-lock-tab-face" onclick="switchChatLockMethod('face')">📷 Face</button>
+      </div>
+      <div id="chat-lock-pin-pane">
+        <div class="pin-row">
+          <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'chat')"/>
+          <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'chat')"/>
+          <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'chat')"/>
+          <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'chat')"/>
+        </div>
+      </div>
+      <div id="chat-lock-face-pane" style="display:none">
+        <div style="position:relative;width:100%;max-width:260px;margin:0 auto 10px;border-radius:var(--r-sm);overflow:hidden;background:#000">
+          <video id="chat-lock-face-video" autoplay muted playsinline style="width:100%;display:block;transform:scaleX(-1)"></video>
+          <canvas id="chat-lock-face-canvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)"></canvas>
+        </div>
+        <div id="chat-lock-face-status" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px"></div>
       </div>
       <div class="error-text" id="chat-lock-error" style="text-align:center"></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('chat-lock-overlay')">Cancel</button></div>
+    <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeChatLockOverlay()">Cancel</button></div>
   </div>
 </div>
 
@@ -7027,26 +7041,119 @@ function muteToggle(){
 function lockChatToggle(){
   if(!activeConvo) return;
   const key=activeConvo.key;
-  if(!localStorage.getItem('cc_pin')){showToast('Set a PIN first',scbErr('SCB-SEC-19','Go to Settings → Security to set a PIN.'));return;}
+  const hasPin=!!localStorage.getItem('cc_pin');
+  const hasFace=!!(me&&me.faceMfaEnabled&&me.faceDescriptor&&me.faceDescriptor.length);
+  if(!hasPin&&!hasFace){showToast('Set up a PIN or Face Recognition first',scbErr('SCB-SEC-19','Go to Settings → Security to set a PIN or enable Face Recognition.'));return;}
   if(lockedChats[key]){
     // unlock flow
-    openModal('chat-lock-overlay');
+    openChatLockOverlay();
   }else{
     lockedChats[key]=true;saveStorage();
     document.getElementById('lock-chat-btn').innerHTML="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/></svg>";
-    showToast('Chat locked','This chat is now PIN-protected.');
+    showToast('Chat locked','This chat is now protected — unlock with '+(hasPin&&hasFace?'your PIN or Face Recognition.':hasPin?'your PIN.':'Face Recognition.'));
   }
 }
 function checkChatLockPin(pin,inputs){
   const stored=localStorage.getItem('cc_pin');
   if(hashPin(pin)===stored){
     if(activeConvo){delete lockedChats[activeConvo.key];saveStorage();document.getElementById('lock-chat-btn').innerHTML="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 9.9-1\"/></svg>";}
-    closeModal('chat-lock-overlay');clearPinInputs(inputs);
+    closeChatLockOverlay();clearPinInputs(inputs);
     showToast('Chat unlocked','');
   }else{
     document.getElementById('chat-lock-error').textContent=scbErr('SCB-SEC-20','Incorrect PIN.');
     clearPinInputs(inputs);
   }
+}
+
+// -- CHAT LOCK: PIN + Face Recognition unlock methods ---------------------------
+// Whichever method(s) the account has set up are offered on the unlock screen —
+// PIN if cc_pin is set, Face if the account's login Face Recognition MFA is
+// enabled (reusing its already-enrolled faceDescriptor, not a separate enrollment).
+function openChatLockOverlay(){
+  document.getElementById('chat-lock-error').textContent='';
+  const hasPin=!!localStorage.getItem('cc_pin');
+  const hasFace=!!(me&&me.faceMfaEnabled&&me.faceDescriptor&&me.faceDescriptor.length);
+  const tabs=document.getElementById('chat-lock-method-tabs');
+  tabs.style.display=(hasPin&&hasFace)?'flex':'none';
+  switchChatLockMethod(hasPin?'pin':'face');
+  openModal('chat-lock-overlay');
+}
+function switchChatLockMethod(method){
+  document.getElementById('chat-lock-error').textContent='';
+  const pinPane=document.getElementById('chat-lock-pin-pane'), facePane=document.getElementById('chat-lock-face-pane');
+  const pinTab=document.getElementById('chat-lock-tab-pin'), faceTab=document.getElementById('chat-lock-tab-face');
+  const desc=document.getElementById('chat-lock-desc');
+  if(method==='face'){
+    stopChatLockFaceCheck(); // in case a stale loop is still running
+    pinPane.style.display='none'; facePane.style.display='block';
+    pinTab.classList.remove('active'); faceTab.classList.add('active');
+    desc.textContent='Look at the camera to unlock this chat.';
+    startChatLockFaceCheck();
+  } else {
+    stopChatLockFaceCheck();
+    facePane.style.display='none'; pinPane.style.display='block';
+    faceTab.classList.remove('active'); pinTab.classList.add('active');
+    desc.textContent='Enter your PIN to unlock this chat.';
+    clearPinInputs(document.querySelectorAll('#chat-lock-pin-pane .pin-digit'));
+  }
+}
+function closeChatLockOverlay(){
+  stopChatLockFaceCheck();
+  closeModal('chat-lock-overlay');
+}
+let _chatLockFaceStream=null,_chatLockFaceLoopTimer=null,_chatLockFaceAutoVerifying=false,_chatLockMatchCount=0;
+async function startChatLockFaceCheck(){
+  const statusEl=document.getElementById('chat-lock-face-status');
+  const errEl=document.getElementById('chat-lock-error');
+  _chatLockFaceAutoVerifying=false; _chatLockMatchCount=0;
+  statusEl.textContent='Loading face detection…';
+  try{
+    await loadFaceApiModels();
+    _chatLockFaceStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
+    const video=document.getElementById('chat-lock-face-video');
+    video.srcObject=_chatLockFaceStream;
+    await new Promise(r=>{ video.onloadedmetadata=r; });
+    statusEl.textContent='Center your face in the frame…';
+    _chatLockFaceTick();
+  }catch(e){
+    errEl.textContent=scbErr('SCB-SEC-22','The camera or face-recognition model couldn\'t start.',(e.message||''));
+    statusEl.textContent='';
+  }
+}
+function _chatLockFaceTick(){
+  const video=document.getElementById('chat-lock-face-video');
+  const canvas=document.getElementById('chat-lock-face-canvas');
+  async function tick(){
+    if(!_chatLockFaceStream||_chatLockFaceAutoVerifying) return;
+    try{
+      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      if(canvas) _drawFaceOverlay(canvas,video,det);
+      if(det&&me&&me.faceDescriptor){
+        const dist=faceapi.euclideanDistance(Array.from(det.descriptor),me.faceDescriptor);
+        if(dist<FACE_MATCH_THRESHOLD){
+          _chatLockMatchCount++;
+          if(_chatLockMatchCount>=2){ _chatLockFaceAutoVerifying=true; _finishChatLockFace(); return; }
+        } else { _chatLockMatchCount=0; }
+      } else { _chatLockMatchCount=0; }
+    }catch(e){}
+    _chatLockFaceLoopTimer=setTimeout(tick,400);
+  }
+  tick();
+}
+function stopChatLockFaceCheck(){
+  if(_chatLockFaceStream){ _chatLockFaceStream.getTracks().forEach(t=>t.stop()); _chatLockFaceStream=null; }
+  if(_chatLockFaceLoopTimer){ clearTimeout(_chatLockFaceLoopTimer); _chatLockFaceLoopTimer=null; }
+  _chatLockFaceAutoVerifying=false;
+}
+function _finishChatLockFace(){
+  stopChatLockFaceCheck();
+  if(activeConvo){
+    delete lockedChats[activeConvo.key]; saveStorage();
+    const btn=document.getElementById('lock-chat-btn');
+    if(btn) btn.innerHTML="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 9.9-1\"/></svg>";
+  }
+  closeModal('chat-lock-overlay');
+  showToast('Chat unlocked','');
 }
 
 // -- AVATAR --------------------------------------------------------------------
@@ -7654,7 +7761,7 @@ async function _origOpenChat(c){
   const key=c.key||dmKey(me.number,c.number);
   if(lockedChats[key]){
     activeConvo={...c,key};
-    openModal('chat-lock-overlay');
+    openChatLockOverlay();
     return;
   }
   activeConvo={...c,key};
