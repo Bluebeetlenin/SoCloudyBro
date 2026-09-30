@@ -547,7 +547,15 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 .sb-item-preview{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .unread-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;flex-shrink:0}
 .archived-label{font-size:10px;color:var(--muted2);background:var(--surface3);border-radius:4px;padding:1px 5px}
-#sb-bottom{padding:8px;border-top:1px solid var(--border);display:flex;gap:4px}
+/* overflow-x:auto matches the same pattern already used for
+   .header-actions/#compose-actions/#channel-bar — at a 240px sidebar width
+   (tablet — confirmed on a correctly-classified device-tablet, not just a
+   misclassification edge case) 10 icon buttons don't fit at their real size
+   and, without flex-shrink:0 below, compressed to ~18px wide — well under a
+   usable touch-target size — instead of scrolling. */
+#sb-bottom{padding:8px;border-top:1px solid var(--border);display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+#sb-bottom::-webkit-scrollbar{display:none}
+#sb-bottom .icon-btn{flex-shrink:0}
 .icon-btn{width:36px;height:36px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;font-size:16px;background:transparent;border:none;color:var(--text2)}
 .icon-btn:hover{background:var(--surface2)}
 .icon-btn.active{color:var(--accent)}
@@ -637,6 +645,12 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .mention-chip{background:rgba(107,93,232,0.22);color:var(--accent);border-radius:5px;padding:0 3px;font-weight:600}
 .msg-link{color:var(--accent);text-decoration:underline;word-break:break-all}
 .msg-link.risky-link{color:var(--warn-text);text-decoration:underline wavy}
+/* Own-message bubbles are filled with var(--accent-grad) — the same purple
+   family as --accent — so a link/mention in your own sent message is nearly
+   invisible (measured ~1.1:1 contrast, WCAG needs 4.5:1). Light-on-accent
+   instead of accent-on-accent. */
+.msg-row.me .bubble .msg-link{color:#fff;text-decoration-color:rgba(255,255,255,0.6)}
+.msg-row.me .bubble .mention-chip{color:#fff;background:rgba(255,255,255,0.25)}
 .verified-badge{color:#4f8ef7;font-size:11px;margin-left:2px}
 #channel-bar{display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;flex-shrink:0}
 .channel-pill{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:16px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;border:1px solid transparent;flex-shrink:0}
@@ -644,6 +658,12 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .channel-pill.active{background:var(--accent);color:#fff}
 .channel-pill .ch-mini-btn{font-size:10px;opacity:.7;padding:0 2px;cursor:pointer}
 .channel-pill .ch-mini-btn:hover{opacity:1}
+/* renderChannelBar() actually builds each channel's mini-buttons as SIBLINGS
+   of .channel-pill, not children, so the descendant rule above never
+   matches them — they were falling back to full body font-size at full
+   opacity, one #channel-bar gap apart, reading as a wall of oversized icons. */
+#channel-bar .ch-mini-btn{font-size:10px;opacity:.7;padding:0 2px;cursor:pointer}
+#channel-bar .ch-mini-btn:hover{opacity:1}
 .channel-add-btn{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);border:1px dashed var(--border2);font-size:14px}
 .channel-add-btn:hover{background:var(--surface2)}
 #voice-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);background:rgba(79,142,247,0.08);flex-shrink:0;flex-wrap:wrap}
@@ -661,6 +681,7 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .slash-cmd-item:hover,.slash-cmd-item.active{background:var(--hover)}
 .slash-cmd-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
 .slash-cmd-name{font-weight:600;font-size:13px;color:var(--text);font-family:'Inter',sans-serif}
+.slash-cmd-args{display:inline-block;min-width:78px;color:var(--muted);font-size:12px;margin-left:2px}
 .slash-cmd-desc{font-size:12px;color:var(--muted);font-family:'Inter',sans-serif}
 .mention-suggest.visible{display:block}
 .mention-suggest-item{padding:7px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s}
@@ -706,7 +727,7 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .call-log-icon{font-size:18px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface2);flex-shrink:0}
 .call-log-info{flex:1;min-width:0}
 .call-log-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.call-log-meta{font-size:11px;color:var(--muted);margin-top:1px}
+.call-log-meta{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .call-log-callback{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0}
 .call-log-callback:hover{opacity:0.85}
 #chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted)}
@@ -1024,6 +1045,13 @@ body.device-phone #sidebar{display:flex}
 body.device-phone #chat-panel,body.device-phone #main-empty{display:none}
 body.device-phone.chat-open #sidebar{display:none}
 body.device-phone.chat-open #chat-panel{display:flex;width:100%}
+/* showSettings()/showUpdates() call hideAll() (clears chat-open) but never
+   set an equivalent class of their own — with nothing hiding it, #sidebar's
+   own display:flex/width:100% rules above win, and #main/#settings-panel
+   (both flex:1 in the same row) get squeezed to 0 width. Settings/Updates
+   were rendered but completely off-canvas and unreachable on every phone. */
+body.device-phone:has(#settings-panel.visible) #sidebar,
+body.device-phone:has(#updates-panel.visible) #sidebar{display:none}
 body.device-phone #chat-back-btn{display:inline-flex}
 body.device-phone .modal{max-width:94vw!important;max-height:92dvh}
 body.device-phone .msg-body{max-width:82%}
@@ -1147,6 +1175,11 @@ body.device-tablet .msg-body{max-width:74%}
   body:has(#chat-panel.visible) #chat-panel { display: flex !important; width: 100% !important; }
   body:not(:has(#chat-panel.visible)) #chat-panel,
   body:not(:has(#chat-panel.visible)) #main-empty { display: none !important; }
+  /* Same fix as the device-phone rule above, for a plain resized desktop
+     browser that never got JS-reclassified — Settings/Updates were rendered
+     completely off-canvas with the sidebar still claiming full width. */
+  body:has(#settings-panel.visible) #sidebar,
+  body:has(#updates-panel.visible) #sidebar { display: none !important; }
 
   /* Always show back button on mobile */
   #chat-back-btn { display: inline-flex !important; }
@@ -1178,7 +1211,13 @@ body.device-tablet .msg-body{max-width:74%}
 
   /* Compose area — two-row stack: actions on top, input+send below */
   #chat-footer { padding: 0 !important; }
-  #compose-row { flex-direction: column !important; gap: 0 !important; padding: 0 !important; }
+  /* padding-bottom is deliberately re-declared after the shorthand below —
+     the on-screen-keyboard-lift visualViewport listener sets the --kb-gap
+     custom property; without this, its plain .style.paddingBottom
+     assignment always lost to this rule's !important, so the compose bar
+     never lifted above the keyboard on any phone under 640px width (which
+     is virtually every real phone in portrait). */
+  #compose-row { flex-direction: column !important; gap: 0 !important; padding: 0 !important; padding-bottom: var(--kb-gap, 0px) !important; }
   #compose-actions { width: 100% !important; padding: 6px 12px !important; gap: 4px !important; overflow-x: auto !important; scrollbar-width: none !important; border-bottom: 1px solid var(--border) !important; flex-wrap: nowrap !important; }
   #compose-actions::-webkit-scrollbar { display: none !important; }
   #compose-input-row { width: 100% !important; padding: 8px 12px !important; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important; gap: 8px !important; }
@@ -1294,7 +1333,12 @@ body.device-tablet .msg-body{max-width:74%}
 /* ---- Tablet (640px – 1023px) ---- */
 @media (min-width: 640px) and (max-width: 1023px) {
   #shell { max-width: 100% !important; box-shadow: none !important; border-radius: 0 !important; }
-  #sidebar { width: 240px !important; min-width: 200px !important; }
+  /* Excludes device-phone: a real phone's User-Agent (so its device-phone
+     class) doesn't change on rotation — this range also covers a real
+     phone held in landscape, which this !important 240px clamp broke out
+     of the single-pane layout for (the sidebar got stuck at 240px instead
+     of 100%, leaving #main/#main-empty visible at the same time). */
+  body:not(.device-phone) #sidebar { width: 240px !important; min-width: 200px !important; }
   .msg-body { max-width: 74% !important; }
   .btn { min-height: 40px; }
   #bottom-nav { display: none !important; }
@@ -2105,16 +2149,16 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div class="settings-section" data-settings-tab="chats">
           <h3>Messaging</h3>
-          <div class="settings-row" style="cursor:pointer" onclick="toggleCompactMode()">
+          <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Compact Messages</div><div class="settings-row-sub" id="compact-mode-sub">Off — messages have a comfortable amount of spacing</div></div>
-            <div class="settings-row-actions"><button class="btn btn-sm" id="compact-mode-btn">Turn On</button></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="compact-mode-btn" onchange="toggleCompactMode()"><span class="switch-slider"></span></label></div>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="chats">
           <h3>Notifications</h3>
-          <div class="settings-row" style="cursor:pointer" onclick="toggleDND()">
+          <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Do Not Disturb</div><div class="settings-row-sub" id="dnd-status-text">Off — you'll get notifications as normal</div></div>
-            <div class="settings-row-actions"><button class="btn btn-sm" id="dnd-toggle-btn">Turn On</button></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="dnd-toggle-btn" onchange="toggleDND()"><span class="switch-slider"></span></label></div>
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Quiet Hours</div><div class="settings-row-sub">Automatically silence notifications during this time range every day</div></div>
@@ -2891,7 +2935,7 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
       <div class="error-text" id="login-face-error" style="text-align:center"></div>
       <button class="btn btn-full" id="login-face-btn" onclick="submitFaceLogin()">Verify with Face ↗</button>
-      <button class="btn btn-ghost btn-full" onclick="closeModal('setup-modal');location.reload()" style="margin-top:8px">Cancel</button>
+      <button class="btn btn-ghost btn-full" onclick="cancelFaceLoginView()" style="margin-top:8px">Cancel</button>
     </div>
   </div>
 </div>
@@ -3642,6 +3686,10 @@ const SCB_ERROR_CODES = {
   'SCB-MSG-19': {area:'Messaging', meaning:'Open-tab limit reached'},
   'SCB-MSG-20': {area:'Messaging', meaning:'Restoring a tab failed: that conversation is no longer in the list'},
   'SCB-MSG-21': {area:'Messaging', meaning:'Attachment not sent: the conversation is blocked'},
+  'SCB-MSG-22': {area:'Messaging', meaning:'Ping blocked: the conversation is blocked either way'},
+  'SCB-MSG-23': {area:'Messaging', meaning:'Forward blocked: the destination chat is locked'},
+  'SCB-MSG-24': {area:'Messaging', meaning:'Sending a ping threw'},
+  'SCB-MSG-25': {area:'Messaging', meaning:'Outbox flush: a queued message\'s content was gone (never persisted before an app restart)'},
   'SCB-RECOV-01': {area:'Account recovery / security questions', meaning:'Security questions: both slots use the same question'},
   'SCB-RECOV-02': {area:'Account recovery / security questions', meaning:'Security questions: one or both answers left blank'},
   'SCB-RECOV-03': {area:'Account recovery / security questions', meaning:'Security questions threw while saving'},
@@ -3741,77 +3789,123 @@ function scbErrCodeOf(text){
 // -- END ERROR CODES ----------------------------------------------------------
 
 // -- SELF-HEALING ERROR RECOVERY ----------------------------------------------
+// Looked up by exact code, then by category prefix ('SCB-CALL'), then
+// DEFAULT. `extends` lets many codes share one policy (e.g. every
+// getUserMedia call site) without duplicating it. `retry`/`instructionIfUnrecoverable`
+// can read `opts` (the same opts object the call site passed to selfHeal),
+// which is how a strategy gets at call-site-specific data like a message id.
+const SCB_RECOVERY_STRATEGIES = {
+  'SCB-MSG-18': { // sendMsg() — something broke while preparing/sending a message.
+    // No retry here: this is the OUTER catch, reached only when something
+    // failed before/around the write itself (key derivation, encryption,
+    // membership checks...) — the write's own network-blip case is already
+    // handled separately, right at the saveConvos() call, by queueing the
+    // message in the offline outbox. Blindly re-running this whole function
+    // risks a duplicate send against whatever partial state was left behind.
+    maxRetries: 0,
+    instructionIfUnrecoverable: (err) => isConfigFailure(err)
+      ? 'Messages can\'t be sent right now — the server is rejecting writes. This looks like a site configuration problem, not something retrying fixes. The site owner has been notified.'
+      : 'Your message couldn\'t be sent ('+(err&&err.message||'unknown error')+').',
+  },
+  'SCB-MSG-04': { extends: 'SCB-MSG-18' }, // sendFileMsg — same shape
+
+  'SCB-MSG-01': { // opening a chat failed to load its messages
+    maxRetries: 1,
+    instructionIfUnrecoverable: 'This chat couldn\'t load. Check your connection and try opening it again.',
+  },
+
+  'SCB-GETUSERMEDIA': { // shared by every mic/camera call site
+    maxRetries: 0, // never auto-retry a permission prompt
+    instructionIfUnrecoverable: (err) => ({
+      NotAllowedError:  'Camera/microphone access was blocked. Click the camera/lock icon in your address bar, allow access, then try again.',
+      NotFoundError:    'No camera or microphone was found on this device.',
+      NotReadableError: 'Your camera/microphone is already in use by another app — close it and try again.',
+    }[err&&err.name] || ('Camera/microphone access failed'+(err&&err.name?' ('+err.name+')':'')+'.')),
+  },
+  'SCB-CALL-02':  { extends: 'SCB-GETUSERMEDIA' },
+  'SCB-MSG-06':   { extends: 'SCB-GETUSERMEDIA' },
+  'SCB-MEET-05':  { extends: 'SCB-GETUSERMEDIA' },
+  'SCB-SEC-03':   { extends: 'SCB-GETUSERMEDIA' },
+  'SCB-AUTH-02':  { extends: 'SCB-GETUSERMEDIA' },
+  'SCB-ASST-03':  { extends: 'SCB-GETUSERMEDIA' },
+
+  DEFAULT: { // every code not listed above — same shape the old 5-regex-branch
+             // version tried to cover, minus the two branches (network/auth)
+             // that could never fire because no call site ever passed retryFn.
+    maxRetries: 0,
+    instructionIfUnrecoverable: (err) => {
+      const msg=(err&&err.message)||String(err||'');
+      if (/v2:|ciphertext|invalid|decrypt/i.test(msg)) {
+        if (typeof healMeFields === 'function' && healMeFields(me)) return null; // healed, no instruction needed
+      }
+      if (/localstorage|quota/i.test(msg)) {
+        // Narrower than the old /storage/ regex, which also matched Firebase
+        // Cloud Storage upload errors (storage/unauthorized etc.) and wiped
+        // ALL of localStorage — session, PIN, prefs, cached keys — for an
+        // unrelated file-upload permission problem.
+        try{ localStorage.clear(); return 'Local storage was full or corrupted and has been cleared — you may need to log in again.'; }
+        catch(e2){ /* fall through to generic message below */ }
+      }
+      return 'Something went wrong and couldn\'t be fixed automatically'+(msg?': '+msg:'')+'. Try again; if it keeps happening, tell the site owner.';
+    },
+  },
+};
+function _resolveRecoveryStrategy(code){
+  let s = SCB_RECOVERY_STRATEGIES[code];
+  const seen = new Set();
+  while (s && s.extends && !seen.has(s.extends)) { seen.add(s.extends); s = { ...SCB_RECOVERY_STRATEGIES[s.extends], ...s }; }
+  return s || SCB_RECOVERY_STRATEGIES.DEFAULT;
+}
 // selfHeal(code, err, opts) — called from any significant catch block.
-// Shows "Starting Self-Healing..." toast, attempts automatic recovery based on
-// the error type, then reports the result. Returns true if recovery succeeded.
+// Retries the action (opts.retryFn, or the strategy's own `retry`) a bounded
+// number of times per the matched strategy, then — if still unhealed — works
+// out a specific instruction instead of a generic error, and for a config/
+// permission failure also escalates via the existing flagNeedsAttention/
+// notifyAdminByEmail path (the same one withRetry()/handleSubsystemFailure()
+// already use for getBin/putBin) since that's not something the user can fix
+// themselves. Returns {healed, note} — callers should await this and use
+// `note` for their error toast instead of composing their own, so a healed
+// retry doesn't ALSO show a "failed" toast right behind it.
 async function selfHeal(code, err, opts = {}) {
   const { retryFn, context = '', silent = false } = opts;
-  if (!silent) showToast('🔧 Self-Healing', 'Attempting to auto-fix — please wait…');
-
-  const msg = (err && err.message) || String(err || '');
-  let healed = false;
-  let healNote = '';
-  // Record immediately (healed status updated after recovery attempt)
-  const _errEntry = { code, msg, context, detail: err&&err.stack?String(err.stack).slice(0,400):null };
+  const strategy = _resolveRecoveryStrategy(code);
+  const fn = retryFn || strategy.retry;
+  const willRetry = !!fn && strategy.maxRetries > 0 && !isUnretryable(err);
+  if (!silent && willRetry) showToast('🔧 Self-Healing', 'Attempting to auto-fix — please wait…');
+  let healed = false, note = '';
+  const msgOf = e => (e && e.message) || String(e || '');
 
   try {
-    // 1. Network / timeout errors → retry with backoff
-    if (/network|fetch|timeout|failed to fetch/i.test(msg) && retryFn) {
-      for (let i = 1; i <= 3; i++) {
-        await new Promise(r => setTimeout(r, i * 1500));
-        try { await retryFn(); healed = true; break; } catch(e2) { err = e2; }
+    if (willRetry) {
+      for (let i = 0; i < strategy.maxRetries && !healed; i++) {
+        await scbSleep((strategy.backoffMs ? strategy.backoffMs(i) : 800 * (i + 1)));
+        try { await fn(opts); healed = true; } catch (e2) { err = e2; }
       }
-      healNote = healed ? 'Network retry succeeded' : 'Network retry exhausted';
     }
-
-    // 2. Auth / permission errors → refresh auth token
-    // Note: Firebase RTDB /.settings/rules.json requires a Google OAuth2 admin token,
-    // not a Firebase ID token. Attempting to push rules from the client will fail with
-    // 401. Rule updates must be done via Firebase Console.
-    else if (/permission_denied|unauthorized|401|403/i.test(msg)) {
-      try {
-        // meNow.pwd is already a SHA-256 hash; passing it to logIn() would produce
-        // a hash-of-a-hash that never matches → skip re-auth, just retry the action
-        if (retryFn) { await retryFn(); healed = true; healNote = 'Auth refresh succeeded'; }
-        else { healNote = 'Auth error — please log out and log in again'; }
-      } catch(e2) { healNote = 'Auth refresh failed: ' + (e2.message || e2); }
-    }
-
-    // 3. Corrupted/encrypted profile data → run healMeFields
-    else if (/v2:|ciphertext|invalid|decrypt/i.test(msg) || (code && String(code).startsWith('SCB-PROF'))) {
-      if (typeof healMeFields === 'function') { const _hf = healMeFields(me); if(_hf){ healed = true; healNote = 'Profile cache repaired'; } }
-    }
-
-    // 4. Firebase rules / index missing → log for admin
-    else if (/index|orderby|requires.*index/i.test(msg)) {
-      healNote = 'Missing Firebase index detected — see admin panel';
-      if (typeof renderAdminStatsTab === 'function') {
-        const note = document.getElementById('admin-heal-log');
-        if (note) note.textContent += `\n[${new Date().toISOString()}] Missing index: ${msg}`;
+    if (!healed) {
+      const instr = strategy.instructionIfUnrecoverable;
+      note = typeof instr === 'function' ? instr(err) : instr;
+      if (note === null) { healed = true; } // e.g. DEFAULT's inline healMeFields repair
+      else if (isConfigFailure(err)) {
+        flagNeedsAttention(scbErr(code, note));
+        if (!_selfHealNotifiedFor[context||code]) {
+          _selfHealNotifiedFor[context||code] = true;
+          notifyAdminByEmail('SoCloudyBro: '+(context||code)+' is failing',
+            'Code: '+code+'\nContext: '+(context||'(none)')+'\nError: '+msgOf(err)+'\nUser: #'+((me&&me.number)||'unknown')+'\nTime: '+new Date().toISOString()+
+            '\n\nThis looks like a configuration/permission problem — retries can\'t fix it.');
+        }
       }
-      healed = false;
     }
-
-    // 5. Session/localStorage corruption → clear and prompt re-login
-    else if (/localstorage|quota|storage/i.test(msg)) {
-      try { localStorage.clear(); healed = true; healNote = 'Storage cleared — please log in again'; }
-      catch(e2) { healNote = 'Storage clear failed'; }
-    }
-
-  } catch(healErr) {
-    healNote = 'Heal attempt threw: ' + (healErr.message || healErr);
+  } catch (healErr) {
+    note = 'Self-healing itself failed: ' + msgOf(healErr);
   }
 
   if (!silent) {
-    if (healed) {
-      showToast('✅ Self-Healing Complete', healNote);
-    } else {
-      showToast('⚠️ Self-Healing', 'Could not auto-fix: ' + (healNote || msg.slice(0, 80)));
-    }
+    if (healed && fn) showToast('✅ Fixed automatically', context ? ('Recovered from a problem in '+context+'.') : 'Recovered automatically.');
+    // else: the caller shows its own toast using `note` — no separate "Self-Healing" toast for the common no-retry-available case.
   }
-  // Log the error with final healed status
-  if(typeof _logError==='function') _logError(_errEntry.code, _errEntry.msg, _errEntry.detail, _errEntry.context, healed);
-  return healed;
+  if (typeof _logError === 'function') _logError(code, msgOf(err), err&&err.stack?String(err.stack).slice(0,400):null, context, healed);
+  return { healed, note };
 }
 
 // Global unhandled-rejection / error hooks — catch anything that slipped
@@ -4768,18 +4862,22 @@ async function getGroupAesKey(c){
 
 // Rewrap the existing group key for a newly-added member (requires we already hold the group key)
 async function addMemberToGroupKey(c,newMemberNum){
-  if(!c||!me) return;
+  // Returns true only if the new member's copy of the group key was actually
+  // wrapped and stored — callers must not admit someone as a member on a
+  // false return, or they're permanently stuck unable to decrypt anything.
+  if(!c||!me) return false;
   const groupKey=await getGroupAesKey(c);
-  if(!groupKey) return;
+  if(!groupKey) return false;
   const raw=await _exportRawAesKey(groupKey);
   const rawB64=_b64(raw);
   const aes=await getDmAesKey(newMemberNum);
-  if(!aes) return;
+  if(!aes) return false;
   const payload=await aesEnc(aes,rawB64);
-  if(!payload) return;
+  if(!payload) return false;
   payload.by=me.number;
   c.wrappedKeys=c.wrappedKeys||{};
   c.wrappedKeys[newMemberNum]=payload;
+  return true;
 }
 
 async function getConvoAesKey(c){
@@ -4885,8 +4983,13 @@ function detectDeviceType(){
   const ua = navigator.userAgent || '';
   const isPhoneUA = /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|Mobi/i.test(ua);
   const isTabletUA = /iPad|Android(?!.*Mobile)|Tablet|PlayBook|Silk/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
-  if (isPhoneUA) return 'phone';
+  // Check tablet FIRST — the bare `Mobi` alternative in isPhoneUA also matches
+  // the "Mobile" substring inside a real iPad's UA (e.g. "...Mobile/15E148
+  // Safari..."), which is a standard token in every iOS UA, iPad included.
+  // Checking isPhoneUA first meant every real iPad was misclassified as a
+  // phone and the whole two-pane tablet layout never activated.
   if (isTabletUA) return 'tablet';
+  if (isPhoneUA) return 'phone';
   const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   const w = window.innerWidth, h = window.innerHeight;
   const minSide = Math.min(w, h);
@@ -5046,11 +5149,19 @@ function saveStorage(){
 
 // Firebase-backed settings/prefs — stored at users/{number}/prefs so they
 // survive localStorage wipes and sync across devices automatically.
-let _savePrefTimer=null;
+let _savePrefTimer=null, _savePrefsPending=null, _resolveSavePrefs=null;
 function _debounceSavePrefs(){
   if(!me||!me.number) return;
   clearTimeout(_savePrefTimer);
-  _savePrefTimer=setTimeout(savePrefsToFirebase, 2000);
+  // Track one pending promise across the whole coalescing burst (not just
+  // the final timer) so registerOrUpdate() can await "the write that's
+  // queued" rather than racing it — same shape as saveConvos()/
+  // _saveConvosPending, which fixed the identical race for conversations.
+  if(!_savePrefsPending) _savePrefsPending=new Promise(resolve=>{ _resolveSavePrefs=resolve; });
+  _savePrefTimer=setTimeout(async()=>{
+    try{ await savePrefsToFirebase(); }
+    finally{ const r=_resolveSavePrefs; _savePrefsPending=null; _resolveSavePrefs=null; if(r) r(); }
+  }, 2000);
 }
 async function savePrefsToFirebase(){
   if(!me||!me.number||typeof fbdb==='undefined') return;
@@ -5300,8 +5411,17 @@ async function logOutOtherSessions(){
     showToast('Other devices signed out','They will be logged out automatically on their next check-in.');
   }catch(e){ showToast('Error', scbErr('SCB-SEC-02','Your other devices couldn\'t be signed out — the server rejected the change.',e.message)); }
 }
-async function registerOrUpdate(){
+async function registerOrUpdate(blockedOverride){
   if(!me||!me.number) return;
+  if(_savePrefsPending){
+    // A prefs write is queued (see _debounceSavePrefs) but hasn't landed yet.
+    // getUsers() below reads the whole record including its .prefs subtree
+    // and later writes that same snapshot back verbatim — reading it now
+    // would capture the PRE-write prefs and then silently overwrite the
+    // real write once it lands moments later. Wait for it first, same fix
+    // as the getConvos()/_saveConvosPending race.
+    await _savePrefsPending.catch(()=>{});
+  }
   const users=await getUsers();
   let u=users.find(x=>x.number===me.number);
   // If this account has no server record, it may be because an admin ran
@@ -5341,7 +5461,19 @@ async function registerOrUpdate(){
     me.adminAccess=u.adminAccess||null;
     try{ saveStorage(); }catch(e){}
   }
-  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked:me.blocked||(u&&u.blocked)||[],lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
+  // `blocked` can't use the simple "prefer me.* over server" rule every other
+  // field here uses: that always keeps whatever this device last happened to
+  // have in memory, so any OTHER device/session whose `me.blocked` predates a
+  // block/unblock made elsewhere (very easy — it's only ever populated at
+  // login, never refreshed) silently overwrites the real block with its own
+  // stale copy the next time it calls registerOrUpdate() for anything at all
+  // (an avatar change, a theme toggle...). Server wins by default, like
+  // `restrictions` below — the one device actually performing a block/unblock
+  // (toggleBlockUser/cloudyBlockToggle) passes its new list explicitly instead
+  // of relying on ambient `me.blocked`, so its own change is never lost either.
+  const blocked = blockedOverride!==undefined ? blockedOverride : ((u&&u.blocked)||me.blocked||[]);
+  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked,lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
+  me.blocked = blocked; // keep the in-memory copy consistent with what was actually just persisted
   if(_myPubJwk) payload.pubkey=_myPubJwk;
   // Per-account settings added by the feature pack. Each falls back to whatever
   // the server already has, so a device that hasn't loaded them yet can never
@@ -5428,7 +5560,55 @@ function lookupUser(num){const n=Number(num);return usersCache.find(u=>Number(u.
 
 // -- CONVOS --------------------------------------------------------------------
 function dmKey(a,b){return 'dm_'+[Number(a),Number(b)].sort((x,y)=>x-y).join('_');}
+// Shared by getConvos() (initial load / 25s poll) AND _scbApplyConvoSnapshot()
+// (the realtime .on('value') listener) — these used to duplicate this logic,
+// and the realtime path silently drifted out of sync with a fix made to the
+// other (missing participants/members/joinRequests normalization entirely,
+// and wiping channels to [] instead of reconstructing it). One function used
+// by both closes that gap for good instead of requiring the two to be
+// "kept in step" by hand.
+function _normalizeConvo(c){
+  // Firebase Realtime Database drops empty arrays entirely on write, so any
+  // conversation with zero messages comes back with `messages` missing
+  // (undefined) instead of `[]` — normalize that here, once, at the source,
+  // rather than guarding every single .messages access across the app.
+  // Firebase may return arrays-with-holes as plain objects
+  if(c.messages && !Array.isArray(c.messages)) c.messages=Object.values(c.messages).filter(Boolean);
+  if(!Array.isArray(c.messages)) c.messages=[];
+  // Strip pending flag — it's local-only and must never persist to Firebase
+  c.messages.forEach(m=>{ if(m) delete m.pending; });
+  // Firebase can return arrays-with-holes as plain objects for participants/members too
+  if(c.participants && !Array.isArray(c.participants)) c.participants=Object.values(c.participants).filter(n=>n!=null);
+  if(!Array.isArray(c.participants)) c.participants=[];
+  if(c.members && !Array.isArray(c.members)) c.members=Object.values(c.members).filter(n=>n!=null);
+  if(!Array.isArray(c.members)) c.members=[];
+  // Reconstruct participants from DM key if empty (avoids isMember false-negative)
+  if(c.type!=='group' && !c.participants.length && c.key && c.key.startsWith('dm_')){
+    c.participants=c.key.replace('dm_','').split('_').map(Number).filter(Boolean);
+  }
+  // DMs must not carry channel data — if it leaked in (data bug), strip it
+  if(c.type!=='group') delete c.channels;
+  // Same sparse-array-as-object quirk as messages/participants/members above —
+  // reconstruct instead of discarding, or a round-trip silently wipes every channel.
+  if(c.channels && !Array.isArray(c.channels)) c.channels=Object.values(c.channels).filter(Boolean);
+  if(!Array.isArray(c.channels)) c.channels=c.type==='group'?[]:c.channels;
+  if(c.joinRequests && !Array.isArray(c.joinRequests)) c.joinRequests=Object.values(c.joinRequests).filter(Boolean);
+  if(c.type==='group'){
+    if(!c.admins||!c.admins.length){const m=c.participants||c.members||[];c.admins=m.length?[m[0]]:[];}
+    if(!c.coadmins) c.coadmins=[];
+    if(!c.roles) c.roles=[];
+    if(!c.memberRoles) c.memberRoles={};
+  }
+}
 async function getConvos(){
+  if(_saveConvosPending){
+    // Our own mutation is still queued in the 350ms debounce — reading the
+    // server now would fetch the pre-write snapshot and silently revert the
+    // in-memory change (and then the debounce timer would re-save that
+    // reverted state, losing the change on both ends). Wait for our own
+    // write to land first, so we always read at least what we just wrote.
+    await _saveConvosPending.catch(()=>{});
+  }
   const snap=await fbdb.ref(CONVOS_BIN).get();
   let rawArr=[];
   if(snap.exists()){
@@ -5447,35 +5627,7 @@ async function getConvos(){
     // Wrapped per-conversation: a bug or corrupted field in one conversation
     // (e.g. a group's malformed data) must never block loading/opening any
     // other conversation just because they're normalized in the same pass.
-    try{
-      // Firebase Realtime Database drops empty arrays entirely on write, so any
-      // conversation with zero messages comes back with `messages` missing
-      // (undefined) instead of `[]` — normalize that here, once, at the source,
-      // rather than guarding every single .messages access across the app.
-      // Firebase may return arrays-with-holes as plain objects
-      if(c.messages && !Array.isArray(c.messages)) c.messages=Object.values(c.messages).filter(Boolean);
-      if(!Array.isArray(c.messages)) c.messages=[];
-      // Strip pending flag — it's local-only and must never persist to Firebase
-      c.messages.forEach(m=>{ if(m) delete m.pending; });
-      // Firebase can return arrays-with-holes as plain objects for participants/members too
-      if(c.participants && !Array.isArray(c.participants)) c.participants=Object.values(c.participants).filter(n=>n!=null);
-      if(!Array.isArray(c.participants)) c.participants=[];
-      if(c.members && !Array.isArray(c.members)) c.members=Object.values(c.members).filter(n=>n!=null);
-      if(!Array.isArray(c.members)) c.members=[];
-      // Reconstruct participants from DM key if empty (avoids isMember false-negative)
-      if(c.type!=='group' && !c.participants.length && c.key && c.key.startsWith('dm_')){
-        c.participants=c.key.replace('dm_','').split('_').map(Number).filter(Boolean);
-      }
-      // DMs must not carry channel data — if it leaked in (data bug), strip it
-      if(c.type!=='group') delete c.channels;
-      if(c.channels && !Array.isArray(c.channels)) c.channels=[];
-      if(c.type==='group'){
-        if(!c.admins||!c.admins.length){const m=c.participants||c.members||[];c.admins=m.length?[m[0]]:[];}
-        if(!c.coadmins) c.coadmins=[];
-        if(!c.roles) c.roles=[];
-        if(!c.memberRoles) c.memberRoles={};
-      }
-    }catch(e){ console.error('Failed to normalize conversation',c&&c.key,e); }
+    try{ _normalizeConvo(c); }catch(e){ console.error('Failed to normalize conversation',c&&c.key,e); }
   });
   return convosCache;
 }
@@ -5650,11 +5802,25 @@ async function flushOutbox(){
     if(!c){ clearOutboxConvo(key); continue; }
     try{
       await saveConvos();
-      (ob[key]||[]).forEach(id=>{
+      // The outbox only ever stores message IDs, never their content — if
+      // the page reloaded before this message made it into convosCache (tab
+      // killed, phone locked the PWA, etc.), a fresh getConvos() on relaunch
+      // rebuilds convosCache from the server, which never received it, so
+      // the id below is genuinely gone. This used to clear the outbox entry
+      // unconditionally either way, silently losing such messages with no
+      // sign anything went wrong. There's nothing left to retry for a
+      // missing id, but the loss should not be silent.
+      const idsForKey=ob[key]||[];
+      const missingIds=[];
+      idsForKey.forEach(id=>{
         const m=c.messages.find(x=>x.id===id);
         if(m) delete m.pending;
+        else missingIds.push(id);
       });
       clearOutboxConvo(key);
+      if(missingIds.length){
+        showToast('Message not delivered',scbErr('SCB-MSG-25',missingIds.length+' queued message'+(missingIds.length===1?'':'s')+' in this chat '+(missingIds.length===1?'was':'were')+' lost before it could be resent — most likely the app closed before it saved.'));
+      }
       if(activeConvo&&activeConvo.key===key){ lastMsgHash=''; renderMessages(c.messages); }
     }catch(e){ /* still offline or save failed -- retry on next flush */ break; }
   }
@@ -6523,6 +6689,17 @@ function _startLoginLoop(){
   }
   tick();
 }
+// Releases the login-face-view camera and resets back to a clean login
+// screen — same effect the view's own Cancel button already had inline
+// (closeModal + reload; reload is what actually frees the camera here), now
+// factored out so the global Escape-key handler can reach it too instead of
+// leaving _faceLoginStream running with no visible UI to stop it from.
+function cancelFaceLoginView(){
+  if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
+  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
+  closeModal('setup-modal');
+  location.reload();
+}
 async function _finishFaceLogin(descriptor){
   const btn=document.getElementById('login-face-btn');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
@@ -6859,14 +7036,19 @@ async function submitChangePassword(){
   if(!cur){ err.textContent='Enter your current password.'; return; }
   if(nw.length<8){ err.textContent='New password must be at least 8 characters.'; return; }
   if(nw!==cf){ err.textContent='Passwords do not match.'; return; }
-  // Verify current password via Firebase Auth re-auth
+  // Verify current password against this app's own hashed-password system —
+  // NOT Firebase Auth reauthentication. firebase.auth() here is only ever an
+  // anonymous session (see init()'s signInAnonymously()); this app's real
+  // login/password system is a separate salted-SHA-256 hash stored in the
+  // Realtime Database (hashPassword()/verifyPassword(), the same functions
+  // submitLogin() uses). The old Firebase-Auth-reauth code below always found
+  // no real Firebase Auth user with an email, so it always failed with
+  // "Cannot re-authenticate" no matter what the user typed — this was
+  // leftover from a design that predates the app's own password system and
+  // was never migrated, making Change Password completely non-functional.
   try{
-    const user=firebase.auth().currentUser;
-    if(!user||!user.email){ err.textContent='Cannot re-authenticate — please log out and back in.'; return; }
-    const cred=firebase.auth.EmailAuthProvider.credential(user.email,cur);
-    await user.reauthenticateWithCredential(cred);
-    await user.updatePassword(nw);
-    // Also update hashed pwd in Firebase DB so number-based login still works
+    const ok=await verifyPassword(cur,me.pwd);
+    if(!ok){ err.textContent='Current password is incorrect.'; return; }
     const hashed=await hashPassword(nw);
     await fbdb.ref('users/'+me.number).update({pwd:hashed});
     me.pwd=hashed; saveStorage();
@@ -6874,9 +7056,7 @@ async function submitChangePassword(){
     showToast('Password updated','Your new password is active.');
     _logSecurityEvent('password_change').catch(()=>{});
   }catch(e){
-    const code=e&&e.code||'';
-    if(code==='auth/wrong-password'||code==='auth/invalid-credential') err.textContent='Current password is incorrect.';
-    else err.textContent=scbErr('SCB-AUTH-25','Password change failed: '+(e.message||code));
+    err.textContent=scbErr('SCB-AUTH-25','Password change failed: '+(e.message||''));
   }
 }
 function deleteMyAccountStep1(){
@@ -7122,6 +7302,14 @@ function muteToggle(){
   saveStorage();
 }
 // -- CHAT LOCK -----------------------------------------------------------------
+// Tracks which chat a pending unlock (PIN or Face) applies to. Set explicitly
+// by every entry point into openChatLockOverlay() rather than assumed to be
+// activeConvo — opening a locked chat from the sidebar must NOT point
+// activeConvo at it until it's actually unlocked (see _origOpenChat), or a
+// cancelled/abandoned unlock leaves activeConvo silently pointed at the
+// locked chat while the screen still shows whatever was open before, and the
+// next message you send goes into the locked chat instead.
+let _chatLockTarget=null;
 function lockChatToggle(){
   if(!activeConvo) return;
   const key=activeConvo.key;
@@ -7129,7 +7317,8 @@ function lockChatToggle(){
   const hasFace=!!(me&&me.faceMfaEnabled&&me.faceDescriptor&&me.faceDescriptor.length);
   if(!hasPin&&!hasFace){showToast('Set up a PIN or Face Recognition first',scbErr('SCB-SEC-19','Go to Settings → Security to set a PIN or enable Face Recognition.'));return;}
   if(lockedChats[key]){
-    // unlock flow
+    // unlock flow — this chat is already the active/rendered one
+    _chatLockTarget=activeConvo;
     openChatLockOverlay();
   }else{
     lockedChats[key]=true;saveStorage();
@@ -7140,9 +7329,20 @@ function lockChatToggle(){
 function checkChatLockPin(pin,inputs){
   const stored=localStorage.getItem('cc_pin');
   if(hashPin(pin)===stored){
-    if(activeConvo){delete lockedChats[activeConvo.key];saveStorage();document.getElementById('lock-chat-btn').innerHTML="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 9.9-1\"/></svg>";}
+    const target=_chatLockTarget;
+    if(target){
+      delete lockedChats[target.key];saveStorage();
+      const btn=document.getElementById('lock-chat-btn');
+      if(btn) btn.innerHTML="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 9.9-1\"/></svg>";
+    }
+    _chatLockTarget=null;
     closeChatLockOverlay();clearPinInputs(inputs);
     showToast('Chat unlocked','');
+    // The overlay may have been opened from the sidebar, before the chat was
+    // actually rendered (activeConvo is never pointed at a locked chat until
+    // it's unlocked — see _origOpenChat) — open it now that it's unlocked.
+    // Harmless no-op re-open if this chat was already the active one.
+    if(target) openChat(target);
   }else{
     document.getElementById('chat-lock-error').textContent=scbErr('SCB-SEC-20','Incorrect PIN.');
     clearPinInputs(inputs);
@@ -7157,6 +7357,23 @@ function openChatLockOverlay(){
   document.getElementById('chat-lock-error').textContent='';
   const hasPin=!!localStorage.getItem('cc_pin');
   const hasFace=!!(me&&me.faceMfaEnabled&&me.faceDescriptor&&me.faceDescriptor.length);
+  // Both are re-checked live here, not remembered from whenever the chat was
+  // originally locked — if the only method that chat was locked with has
+  // since been removed (PIN cleared, Face MFA disabled), neither is
+  // available. Defaulting to the face pane in that case (the old
+  // `hasPin?'pin':'face'` always falls to 'face' when both are false) ran a
+  // detection loop against a descriptor that no longer exists — no match is
+  // possible, ever, with no indication anything was wrong. Show a real error
+  // instead of a hopeless camera view.
+  if(!hasPin&&!hasFace){
+    stopChatLockFaceCheck();
+    document.getElementById('chat-lock-method-tabs').style.display='none';
+    document.getElementById('chat-lock-pin-pane').style.display='none';
+    document.getElementById('chat-lock-face-pane').style.display='none';
+    document.getElementById('chat-lock-error').textContent=scbErr('SCB-SEC-24','This chat was locked with a PIN or Face Recognition that\'s no longer set up. Set one up again in Settings → Security to unlock it.');
+    openModal('chat-lock-overlay');
+    return;
+  }
   const tabs=document.getElementById('chat-lock-method-tabs');
   tabs.style.display=(hasPin&&hasFace)?'flex':'none';
   switchChatLockMethod(hasPin?'pin':'face');
@@ -7183,6 +7400,7 @@ function switchChatLockMethod(method){
 }
 function closeChatLockOverlay(){
   stopChatLockFaceCheck();
+  _chatLockTarget=null;
   closeModal('chat-lock-overlay');
 }
 let _chatLockFaceStream=null,_chatLockFaceLoopTimer=null,_chatLockFaceAutoVerifying=false,_chatLockMatchCount=0;
@@ -7231,13 +7449,16 @@ function stopChatLockFaceCheck(){
 }
 function _finishChatLockFace(){
   stopChatLockFaceCheck();
-  if(activeConvo){
-    delete lockedChats[activeConvo.key]; saveStorage();
+  const target=_chatLockTarget;
+  if(target){
+    delete lockedChats[target.key]; saveStorage();
     const btn=document.getElementById('lock-chat-btn');
     if(btn) btn.innerHTML="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 9.9-1\"/></svg>";
   }
+  _chatLockTarget=null;
   closeModal('chat-lock-overlay');
   showToast('Chat unlocked','');
+  if(target) openChat(target);
 }
 
 // -- AVATAR --------------------------------------------------------------------
@@ -7478,9 +7699,13 @@ async function checkParentalConsentStatus(){
     if(u&&u.parentalConsentStatus==='approved'){
       me.parentalConsentStatus='approved';
       saveStorage();
-      document.getElementById('parental-pending-screen').style.display='none';
-      document.getElementById('shell').style.display='';
-      await launch();
+      // launch() already set `launched=true` the first time it hit this
+      // gate (before returning early), so calling launch() again here would
+      // just hit its own `if(launched){hideLockScreen();return;}` guard and
+      // do nothing — leaving an empty shell with no contacts/messages/
+      // polling. Reload instead, the same fix already applied to the
+      // analogous email-verify-gate case in linkGoogleToCurrentAccount().
+      location.reload();
     }else{
       showToast('Still pending','Your parent/guardian hasn\'t approved this account yet.');
     }
@@ -7831,6 +8056,11 @@ function switchTab(tab,btn){
   currentTab=tab;
   document.querySelectorAll('.sb-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  // On phone, the sidebar is hidden (display:none) while a chat is open —
+  // tapping a tab (e.g. the bottom-nav's Chats/Groups while a DM is open)
+  // re-rendered it invisibly with no visible effect. Harmless no-op
+  // everywhere else (desktop/tablet never set chat-open).
+  if(typeof closeChatToSidebar==='function') closeChatToSidebar();
   renderSidebar();
 }
 
@@ -7903,7 +8133,11 @@ async function _origOpenChat(c){
   if(typeof cleanupRaceListeners==='function') cleanupRaceListeners();
   const key=c.key||dmKey(me.number,c.number);
   if(lockedChats[key]){
-    activeConvo={...c,key};
+    // Do NOT touch activeConvo here — it must keep pointing at whatever chat
+    // is actually rendered on screen until this one is really unlocked, or a
+    // cancelled unlock leaves activeConvo silently pointed at a locked chat
+    // no one is looking at (see _chatLockTarget).
+    _chatLockTarget={...c,key};
     openChatLockOverlay();
     return;
   }
@@ -7947,7 +8181,11 @@ async function _origOpenChat(c){
   else{haEl.style.borderRadius='50%';renderAvatar(haEl,lookupUser(c.number)||{name:enc(c.name),avatar:c.avatar||''});}
   renderContacts();
   renderSidebar();
-  try{
+  // Pulled out so selfHeal() can retry exactly this (a fresh getConvos() +
+  // render) without recursing back through _origOpenChat's own catch below —
+  // recursing through the whole function would let a persistent failure
+  // retry itself indefinitely instead of stopping at one bounded attempt.
+  const doOpenChatLoad=async()=>{
     await getConvos();
     // Guard against the user switching chats while the async fetch was in flight:
     // if activeConvo changed, rendering this (now-stale) conversation's messages
@@ -7968,9 +8206,13 @@ async function _origOpenChat(c){
       document.getElementById('voice-bar').style.display='none';
     }
     renderMessages(conv.messages);
+  };
+  try{
+    await doOpenChatLoad();
   }catch(e){
     console.error('openChat failed:',e);
-    showToast('Error loading chat',scbErr('SCB-MSG-01','This chat couldn\'t be loaded — fetching its messages failed.',e.message));
+    const {healed,note}=await selfHeal('SCB-MSG-01',e,{context:'openChat',retryFn:doOpenChatLoad});
+    if(!healed) showToast('Error loading chat',scbErr('SCB-MSG-01',note));
   }
   // Runs regardless of whether the block above succeeded, so a hiccup
   // loading messages can't leave the header stuck on "loading…" forever.
@@ -8189,8 +8431,12 @@ function removeMember(num){
 // any ordinary "add member" already works.
 function generateInviteCode(){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I — easy to misread
-  let code='';
-  for(let i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  const existing=new Set((convosCache||[]).filter(c=>c&&c.isServer&&c.inviteCode).map(c=>c.inviteCode));
+  let code;
+  do{
+    code='';
+    for(let i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  }while(existing.has(code));
   return code;
 }
 async function submitNewGroup(){
@@ -8725,8 +8971,8 @@ async function sendFileMsg(fileMeta){
       }
     }
   }catch(e){
-    selfHeal('SCB-MSG-04', e, { context: 'sendFileMsg' });
-    showToast('Send failed',scbErr('SCB-MSG-04','Your message couldn\'t be sent — the server rejected or failed the write.',e.message));
+    const { healed, note } = await selfHeal('SCB-MSG-04', e, { context: 'sendFileMsg' });
+    if (!healed) showToast('Send failed', scbErr('SCB-MSG-04', note));
   }
 }
 
@@ -8767,7 +9013,8 @@ async function toggleVoiceMsgRecording(){
   try{
     voiceMsgStream=await navigator.mediaDevices.getUserMedia({audio:true});
   }catch(e){
-    showToast('Microphone unavailable',scbErr('SCB-MSG-06','Voice message recording couldn\'t start because the microphone is unavailable.',(e.message||'Permission denied.')));
+    const {note}=await selfHeal('SCB-MSG-06',e,{context:'toggleVoiceMsgRecording',silent:true});
+    showToast('Microphone unavailable',scbErr('SCB-MSG-06',note));
     return;
   }
   voiceMsgChunks=[];
@@ -8856,7 +9103,9 @@ function handleCameraCapture(input){
 let activeChannelId='general';
 function ensureChannels(c){
   if(!c.channels||!c.channels.length){
-    c.channels=[{id:'general',name:'general',type:'text',order:0},{id:'voice',name:'Voice Chat',type:'voice',order:1}];
+    c.channels=c.isServer
+      ?[{id:'general',name:'general',type:'text',order:0},{id:'announcements',name:'announcements',type:'text',order:1},{id:'voice',name:'Voice Chat',type:'voice',order:2}]
+      :[{id:'general',name:'general',type:'text',order:0},{id:'voice',name:'Voice Chat',type:'voice',order:1}];
     return true; // caller should persist
   }
   return false;
@@ -9100,7 +9349,8 @@ async function _startVoiceSession(path,label){
       autoGainControl:true
     }});
   }catch(e){
-    showToast('Microphone unavailable',scbErr('SCB-CALL-02','You couldn\'t join the voice channel because the microphone is unavailable.',(e.message||'Permission denied.')));
+    const {note}=await selfHeal('SCB-CALL-02',e,{context:'_startVoiceSession',silent:true});
+    showToast('Microphone unavailable',scbErr('SCB-CALL-02',note));
     return false;
   }
   const sessionStart=Date.now();
@@ -9723,9 +9973,15 @@ function openForwardModal(m){
 }
 async function forwardToTarget(c){
   if(!forwardMsg||!me) return;
+  const key=c.key||dmKey(me.number,c.number);
+  if(lockedChats[key]){
+    closeModal('forward-modal');
+    showToast('Chat locked',scbErr('SCB-MSG-23','Open and unlock that chat first, then forward the message.'));
+    forwardMsg=null;
+    return;
+  }
   closeModal('forward-modal');
   try{
-    const key=c.key||dmKey(me.number,c.number);
     const conv=await getOrMakeConvo(key,c.type==='group'?c.members:[me.number,c.number]);
     const msg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),from:me.number,time:Date.now(),seen:[],forwarded:true};
     const destAesKey=await getConvoAesKey(conv);
@@ -9887,7 +10143,7 @@ async function toggleBlockUser(){
     me.blocked.splice(idx,1);
   }
   saveStorage();
-  try{ await registerOrUpdate(); }catch(e){ showToast('Failed to sync block',scbErr('SCB-CONT-09','Your block/unblock change couldn\'t be saved to the server.',(e.message||''))); }
+  try{ await registerOrUpdate(me.blocked); }catch(e){ showToast('Failed to sync block',scbErr('SCB-CONT-09','Your block/unblock change couldn\'t be saved to the server.',(e.message||''))); }
   const blockBtn=document.getElementById('block-menu-item');
   if(blockBtn){ blockBtn.innerHTML=willBlock?'✅ Unblock':'⛔ Block'; }
   showToast(willBlock?'User blocked':'User unblocked','');
@@ -9972,6 +10228,32 @@ function openReport(){
   openModal('report-modal');
 }
 // -- WEB3FORMS (report emails to the admin's inbox) -----------------------------
+// Table-based, all-inline-style HTML fragment for the emails Web3Forms sends —
+// email clients (Outlook especially) don't reliably support modern CSS, so
+// this deliberately doesn't reuse the app's own stylesheet. Kept as a fragment
+// (no <html>/<head>) since it's dropped into a `message`/merge-tag field
+// inside Web3Forms' own outer email template, not sent as a standalone email.
+function _scbEmailCard(opts){
+  const {emoji='☁️', title='SoCloudyBro', accentColor='#4C46C4', rows=[], footerNote=''} = opts;
+  const rowsHtml=rows.filter(r=>r&&r.value!=null&&r.value!=='').map(r=>
+    `<tr>
+      <td style="padding:9px 0;border-bottom:1px solid #eef0f6;font:600 12px -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;vertical-align:top;white-space:nowrap;padding-right:16px">${esc(r.label)}</td>
+      <td style="padding:9px 0;border-bottom:1px solid #eef0f6;font:400 14px -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a1a;line-height:1.5">${r.html?r.value:esc(String(r.value))}</td>
+    </tr>`).join('');
+  return `
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">
+    <tr><td style="background:linear-gradient(135deg,${accentColor} 0%,#7C5FD4 100%);background-color:${accentColor};padding:20px 24px">
+      <span style="font-size:20px;font-weight:700;color:#ffffff">${emoji} ${esc(title)}</span>
+    </td></tr>
+    <tr><td style="padding:20px 24px 8px">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%">${rowsHtml}</table>
+    </td></tr>
+    ${footerNote?`<tr><td style="padding:4px 24px 20px"><span style="font:400 12px -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#9ca3af">${esc(footerNote)}</span></td></tr>`:''}
+    <tr><td style="background:#f9fafb;padding:12px 24px;border-top:1px solid #e5e7eb">
+      <span style="font:400 11px -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#9ca3af">SoCloudyBro · automated notification</span>
+    </td></tr>
+  </table>`;
+}
 async function sendWeb3Form(fields){
   const res=await fetch('https://api.web3forms.com/submit',{
     method:'POST',
@@ -10012,7 +10294,22 @@ async function submitReport(){
       reporter_name:me.name,
       reporter_number:me.number,
       reason,
-      time:new Date().toLocaleString()
+      time:new Date().toLocaleString(),
+      // Extra field, additive only — doesn't touch the existing merge-tag
+      // fields above so any custom template already configured on the
+      // Web3Forms dashboard for this form keeps working unchanged. A
+      // template that adds {{summary_html}} gets a ready-made styled card;
+      // one that doesn't reference it is unaffected.
+      summary_html:_scbEmailCard({
+        emoji:'🚩', title:'New Report', accentColor:'#d13438',
+        rows:[
+          {label:'Reported',value:(reported?reported.name:'Unknown')+' (#'+(reported?reported.number:'?')+')'},
+          {label:'Reported by',value:me.name+' (#'+me.number+')'},
+          {label:'Reason',value:reason},
+          {label:'Time',value:new Date().toLocaleString()},
+          {label:'Review',value:`<a href="${esc(adminLink)}" style="color:#4C46C4">Open admin panel →</a>`,html:true},
+        ],
+      }),
     });
     closeModal('report-modal');
     showToast('Report sent','Thank you. We will review this.');
@@ -10744,7 +11041,7 @@ function renderRecentWidget(body){
   body.innerHTML=items.slice(0,6).map(it=>'<div class="dash-list-item" onclick="dashOpenChat(\''+it.c.key+'\')">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>'+esc(it.c.name)+'</b>: '+esc(it.text.substring(0,36))+'</span></div>').join('');
 }
 function renderGroupsWidget(body){
-  const groups=contacts.filter(c=>c.type==='group');
+  const groups=contacts.filter(c=>c.type==='group'&&!c.isServer);
   if(!groups.length){ body.innerHTML='<div class="dash-widget-empty">No groups yet.</div>'; return; }
   body.innerHTML=groups.slice(0,8).map(g=>{
     const conv=convosCache?convosCache.find(x=>x&&x.key===g.key):null;
@@ -11221,15 +11518,10 @@ function updateDNDUI(){
   const btn = document.getElementById('dnd-toggle-btn');
   const sub = document.getElementById('dnd-status-text');
   if(!btn||!sub) return;
-  if(dndEnabled){
-    btn.textContent = 'Turn Off';
-    btn.classList.add('btn-danger');
-    sub.textContent = "On — notifications are silenced. You can turn this off anytime.";
-  }else{
-    btn.textContent = 'Turn On';
-    btn.classList.remove('btn-danger');
-    sub.textContent = "Off — you'll get notifications as normal";
-  }
+  btn.checked = dndEnabled;
+  sub.textContent = dndEnabled
+    ? "On — notifications are silenced. You can turn this off anytime."
+    : "Off — you'll get notifications as normal";
 }
 
 function saveQuietHours(){
@@ -11523,6 +11815,16 @@ function syncContactsFromConvos(){
         // record missing `name` must not blank out a good local one.
         if(typeof c.name==='string' && c.name && alreadyHave.name!==c.name){ alreadyHave.name=c.name; changed=true; }
         if(typeof c.info==='string' && (alreadyHave.info||'')!==c.info){ alreadyHave.info=c.info; changed=true; }
+        // Members were only ever set once, at first sync — a member added,
+        // approved (Servers), or removed afterward never reached anyone
+        // besides whoever performed the action in their own session, so
+        // @mentions and member lists silently went stale for everyone else.
+        const freshMembers=c.participants||c.members||[];
+        const oldMembers=alreadyHave.members||[];
+        if(freshMembers.length!==oldMembers.length||freshMembers.some(n=>!oldMembers.includes(n))){
+          alreadyHave.members=freshMembers.slice();
+          changed=true;
+        }
       }
     }
   });
@@ -11862,6 +12164,8 @@ function pingCooldownRemaining(convKey){
 function updatePingButtonState(otherNumber){
   const btn=document.getElementById('cp-ping-btn');
   if(!btn||!me) return;
+  if(isBlockedEitherWay(otherNumber)){ btn.disabled=true; btn.textContent='🔔 Ping'; btn.style.display='none'; return; }
+  btn.style.display='';
   const convKey=dmKey(me.number,otherNumber);
   const remaining=pingCooldownRemaining(convKey);
   btn.disabled=remaining>0;
@@ -11869,19 +12173,34 @@ function updatePingButtonState(otherNumber){
 }
 async function sendPing(){
   if(!activeConvo||activeConvo.type==='group'||!me){ showToast('Ping','Open a direct chat first.'); return; }
+  // Every other way of reaching someone (sendMsg, calls) already refuses to
+  // go through when either side has blocked the other — pinging had no such
+  // check, so a blocked contact could still shake/notify/sound-alert you
+  // (and you could still ping them), defeating the point of blocking.
+  if(isBlockedEitherWay(activeConvo.number)){ showToast('Can\'t ping',scbErr('SCB-MSG-22','This conversation is blocked.')); return; }
   const convKey=activeConvo.key;
   const remaining=pingCooldownRemaining(convKey);
   if(remaining>0){ showToast('Slow down','Wait '+Math.ceil(remaining/1000)+'s before pinging '+ (activeConvo.name||'them') +' again.'); return; }
+  // Record the cooldown (and disable the button) BEFORE any await — a fast
+  // double-click/tap used to race two calls past the synchronous check above
+  // while the first call's getOrMakeConvo()/saveConvos() were still pending,
+  // sending two pings well inside the 60s cooldown.
+  localStorage.setItem(_pingCooldownKey(convKey),String(Date.now()));
+  updatePingButtonState(activeConvo.number);
   try{
     const conv=await getOrMakeConvo(convKey,[me.number,activeConvo.number]);
     if(!Array.isArray(conv.messages)) conv.messages=[];
     conv.messages.push({id:'ping_'+convKey+'_'+Date.now(),type:'ping',from:me.number,time:Date.now()});
     await saveConvos();
-    localStorage.setItem(_pingCooldownKey(convKey),String(Date.now()));
-    updatePingButtonState(activeConvo.number);
     if(activeConvo.key===convKey){ lastMsgHash=''; renderMessages(conv.messages); }
     showToast('🔔 Pinged!','You pinged '+(activeConvo.name||'them')+'.');
-  }catch(e){ showToast('Ping failed',scbErr('SCB-MSG-19','Couldn\'t send the ping.',e.message)); }
+  }catch(e){
+    // A real failure shouldn't cost the user the full 60s cooldown for a ping
+    // that never actually went out.
+    localStorage.removeItem(_pingCooldownKey(convKey));
+    updatePingButtonState(activeConvo.number);
+    showToast('Ping failed',scbErr('SCB-MSG-24','Couldn\'t send the ping.',e.message));
+  }
 }
 // Shake the chat window and notify when a fresh incoming ping arrives —
 // called from the poll loop right where every other new-message notif fires.
@@ -12107,14 +12426,23 @@ async function submitAddGroupMembers(){
   const nums=Array.from(chips).map(c=>parseInt(c.dataset.num)).filter(n=>!bannedMembers.has(n));
   if(!nums.length){ err.textContent=scbErr('SCB-GRP-15','Select at least one contact.'); return; }
   try{
-    for(const n of nums){ await addMemberToGroupKey(conv,n); }
+    const failed=[];
+    for(const n of nums){ if(!await addMemberToGroupKey(conv,n)) failed.push(n); }
+    const added=nums.filter(n=>!failed.includes(n));
     const existing=new Set((conv.participants||conv.members||[]).map(Number));
-    nums.forEach(n=>existing.add(n));
+    added.forEach(n=>existing.add(n));
     const merged=[...existing];
     conv.participants=merged; conv.members=merged;
     await saveConvos();
     closeModal('add-group-member-modal');
-    showToast('Members added','');
+    if(failed.length&&added.length){
+      showToast('Some members added',scbErr('SCB-GRP-44','Added '+added.length+', but couldn\'t securely add '+failed.length+' (no key exchange with them yet) — ask them to message you first, then retry.'));
+    } else if(failed.length){
+      err.textContent=scbErr('SCB-GRP-44','Couldn\'t securely add those contacts — no key exchange with them yet. Ask them to message you first, then retry.');
+      return;
+    } else {
+      showToast('Members added','');
+    }
     openGroupPanel();
   }catch(e){ err.textContent=scbErr('SCB-GRP-16','Those members couldn\'t be added — the server rejected the write.',e.message); }
 }
@@ -12185,7 +12513,11 @@ async function approveJoinRequest(num){
   if(!conv||!conv.isServer) return;
   if(!(conv.admins&&conv.admins.includes(me.number))){ showToast('Admins only',scbErr('SCB-GRP-40','Only server admins can approve join requests.')); return; }
   try{
-    await addMemberToGroupKey(conv,num);
+    const wrapped=await addMemberToGroupKey(conv,num);
+    if(!wrapped){
+      showToast('Can\'t approve yet',scbErr('SCB-GRP-41','Couldn\'t securely add this person — no key exchange with them yet. Ask them to DM you first, then approve again.'));
+      return;
+    }
     const existing=new Set((conv.participants||conv.members||[]).map(Number));
     existing.add(num);
     const merged=[...existing];
@@ -12536,6 +12868,20 @@ function renderMessages(msgs) {
       renderGame(m.game, m.id, body);
       row.appendChild(body); wrap.appendChild(row); return;
     }
+    // /me narration — the slash-command palette promises "Narrate an action"
+    // but this used to just send "/me waves hello" as a plain text bubble,
+    // literal slash and all. Render it as a centered italic action line instead.
+    const _meText = !m.poll && !m.cpoll && !m.game && !msgHasGif(m) && !msgFileData(m) ? msgText(m) : null;
+    if (typeof _meText === 'string' && _meText.startsWith('/me ') && _meText.length > 4) {
+      const actor = isMe ? 'You' : (dec((lookupUser(m.from)||{}).name || '') || ('#' + m.from));
+      const action = _meText.slice(4).trim();
+      const timeStrMe = new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const row = document.createElement('div'); row.className = 'call-event-row';
+      const pill = document.createElement('div'); pill.className = 'call-event-pill'; pill.style.fontStyle = 'italic';
+      pill.innerHTML = '<span>✱</span><span>' + esc(actor + ' ' + action) + '</span><span style="color:inherit;opacity:.7"> · ' + esc(timeStrMe) + '</span>';
+      row.appendChild(pill); wrap.appendChild(row);
+      return;
+    }
     const row = document.createElement('div'); row.className = 'msg-row ' + (isMe ? 'me' : 'them') + (m.mentions && me && m.mentions.includes(me.number) ? ' mentioned-msg' : '');
     row.setAttribute('data-msg-id', m.id);
     if (activeConvo && activeConvo.type === 'group' && !isMe) {
@@ -12783,8 +13129,8 @@ async function sendMsg(gifUrl) {
       }
     }
   } catch (e) {
-    selfHeal('SCB-MSG-18', e, { context: 'sendMsg' });
-    showToast('Send failed', scbErr('SCB-MSG-18','Your message couldn\'t be sent — the server rejected or failed the write.',e.message));
+    const { healed, note } = await selfHeal('SCB-MSG-18', e, { context: 'sendMsg' });
+    if (!healed) showToast('Send failed', scbErr('SCB-MSG-18', note));
   }
   finally { document.getElementById('send-btn').disabled = false; input.focus(); }
 }
@@ -12862,7 +13208,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function onVPResize() {
       const vv = window.visualViewport;
       const gap = window.innerHeight - vv.height - vv.offsetTop;
-      if (composeArea) composeArea.style.paddingBottom = gap > 10 ? gap + 'px' : '';
+      const px = gap > 10 ? gap + 'px' : '';
+      if (composeArea) {
+        composeArea.style.paddingBottom = px;
+        // Also set as a custom property — the <640px media query's
+        // padding:0!important for #compose-row reads --kb-gap instead of
+        // fighting the plain inline style it always used to win against.
+        composeArea.style.setProperty('--kb-gap', px || '0px');
+      }
     }
     window.visualViewport.addEventListener('resize', onVPResize);
     window.visualViewport.addEventListener('scroll', onVPResize);
@@ -13085,9 +13438,9 @@ function renderReactions(reactions,msg,body){
 
 // -- POLLS -----------------------------------------------------------------
 let pendingPollConvoKey=null;
-function openPollModal(){
+function openPollModal(presetQuestion){
   if(!activeConvo||activeConvo.type!=='group'){showToast('Polls are group only',scbErr('SCB-GRP-24','Polls can only be created in a group chat.'));return;}
-  document.getElementById('poll-question').value='';
+  document.getElementById('poll-question').value=presetQuestion||'';
   document.getElementById('poll-error').textContent='';
   const wrap=document.getElementById('poll-options-wrap');
   wrap.innerHTML='';
@@ -13847,6 +14200,9 @@ function onSearchInput(q){
   const results=[];
   if(convosCache&&me){
     convosCache.forEach(conv=>{
+      // A locked chat's plaintext must never surface anywhere it's not
+      // gated behind the PIN/Face prompt — search results included.
+      if(lockedChats[conv.key]) return;
       const myContacts=contacts.filter(c=>c&&c.key===conv.key);
       const contactName=myContacts.length?myContacts[0].name:'';
       (conv.messages||[]).forEach(m=>{
@@ -14668,7 +15024,22 @@ async function sendAdminWeeklyDigest(btn){
       messages_week:messagesWeek,
       reports_open:reportsOpen,
       top_reports:topReports,
-      time:new Date().toLocaleString()
+      time:new Date().toLocaleString(),
+      // Additive field, same reasoning as the report email above — the
+      // existing merge-tag fields are untouched so any custom Web3Forms
+      // dashboard template already wired to them keeps working.
+      summary_html:_scbEmailCard({
+        emoji:'📊', title:'Weekly Digest', accentColor:'#4C46C4',
+        rows:[
+          {label:'Total users',value:users.length},
+          {label:'Active this week',value:activeWeek},
+          {label:'New this week',value:newWeek},
+          {label:'Messages this week',value:messagesWeek},
+          {label:'Open reports',value:reportsOpen},
+          {label:'Top open reports',value:topReports,html:true},
+        ],
+        footerNote:'Generated '+new Date().toLocaleString(),
+      }),
     });
     localStorage.setItem('cc_last_digest_sent',String(Date.now()));
     const statusEl=document.getElementById('last-digest-sent-text');
@@ -15660,7 +16031,7 @@ function cloudyBlockToggle(name,block){
   else if(!block&&idx!==-1){ me.blocked.splice(idx,1); }
   else{ showToast('Cloudy',block?(c.name+' is already blocked.'):(c.name+' is not blocked.')); return; }
   saveStorage();
-  registerOrUpdate().then(()=>{
+  registerOrUpdate(me.blocked).then(()=>{
     if(activeConvo&&activeConvo.number===c.number){
       const btn=document.getElementById('block-menu-item');
       if(btn){ btn.innerHTML=block?'✅ Unblock':'⛔ Block'; }
@@ -16568,7 +16939,7 @@ renderSidebar = function(){
     unreadItems.forEach(({c,unread,key,conv})=>{
       const isActive=activeConvo&&activeConvo.key===key;
       const lastMsg=conv.messages.length?conv.messages[conv.messages.length-1]:null;
-      const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='ping'?'🔔 Ping':(msgText(lastMsg)||'')).substring(0,32):'';
+      const preview=lockedChats[key]?'🔒 Locked chat':lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='ping'?'🔔 Ping':(msgText(lastMsg)||'')).substring(0,32):'';
       const timeStr=lastMsg?fmtTime(lastMsg.time):'';
       const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
       const div=document.createElement('div'); div.className='sb-item'+(isActive?' active':'');
@@ -16577,7 +16948,7 @@ renderSidebar = function(){
       const _liveAv0=(_freshU0&&_freshU0.avatar)||c.avatar||'';
       const hasImg=typeof _liveAv0==='string'&&(_liveAv0.startsWith('data:image/')||_liveAv0.startsWith('https://'));
       const avDiv=c.type==='group'
-        ?'<div class="group-avatar" style="background:var(--accent-grad);color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':'👥')+'</div>'
+        ?'<div class="group-avatar" style="background:'+(c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'var(--accent-grad)')+';color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':(c.isServer?'🖥️':'👥'))+'</div>'
         :'<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv0)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
       div.innerHTML=avDiv+'<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+'</span><span class="sb-item-time">'+esc(timeStr)+'</span></div>'
         +'<div class="sb-item-preview">'+esc(preview)+'</div></div>'
@@ -16600,7 +16971,7 @@ renderSidebar = function(){
   });
   if(searchQ){ items=items.filter(c=>c.name.toLowerCase().includes(searchQ.toLowerCase())||(c.number&&String(c.number).includes(searchQ))); }
   if(!items.length){
-    const empty = currentTab==='favourites' ? 'No favourites yet — star a chat from its ⋯ menu.'
+    const empty = currentTab==='favourites' ? 'No favourites yet — tap the ☆ next to a chat.'
       : currentTab==='archived' ? 'No archived chats.'
       : currentTab==='groups' ? 'No groups yet.'
       : currentTab==='servers' ? 'No servers yet — create one or join with an invite code.' : 'No contacts yet.';
@@ -16612,7 +16983,7 @@ renderSidebar = function(){
     const isActive=activeConvo&&activeConvo.key===key;
     const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
     const lastMsg=conv&&conv.messages&&conv.messages.length?conv.messages[conv.messages.length-1]:null;
-    const preview=lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='ping'?'🔔 Ping':lastMsg.type==='call'?'📞 '+scbT(lastMsg.missed?'missed_call':'voice_call'):(msgText(lastMsg)||'')).substring(0,32):'';
+    const preview=lockedChats[key]?'🔒 Locked chat':lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='ping'?'🔔 Ping':lastMsg.type==='call'?'📞 '+scbT(lastMsg.missed?'missed_call':'voice_call'):(msgText(lastMsg)||'')).substring(0,32):'';
     const timeStr=lastMsg?fmtTime(lastMsg.time):'';
     const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
     const inCall=c.type!=='group'&&_numbersInActiveCall.has(Number(c.number));
@@ -17106,7 +17477,19 @@ function notifyAdminByEmail(subject, details){
     return sendWeb3Form({
       subject: '⚠️ SoCloudyBro self-heal alert: '+subject,
       message: details,
-      time: new Date().toLocaleString()
+      time: new Date().toLocaleString(),
+      // This alert has no admin-configured dashboard template to preserve
+      // (unlike the report/digest emails), so it's safe to make `message`
+      // itself the styled card rather than just adding an extra field.
+      summary_html:_scbEmailCard({
+        emoji:'⚠️', title:'Self-Heal Alert', accentColor:'#ca5010',
+        rows:[
+          {label:'Issue',value:subject},
+          {label:'Details',value:details},
+          {label:'Time',value:new Date().toLocaleString()},
+        ],
+        footerNote:'The app attempted automatic recovery — this alert means it could not fully resolve the issue on its own.',
+      }),
     }).then(()=>({sent:true}))
       .catch(e=>{
         console.warn('[notifyAdminByEmail] send failed', e);
@@ -19235,7 +19618,12 @@ async function linkGoogleToCurrentAccount(identity){
     // forceLocalLogout() already use — so launch() runs its normal flow from
     // a clean slate and this device's fresh `emailVerified:true` is read back
     // from cc_me/the server rather than relying on in-memory state surviving.
-    if(resolvedVerification && document.getElementById('email-verify-gate')?.classList.contains('visible')){
+    // showEmailVerifyGate()/hideEmailVerifyGate() toggle this element via
+    // inline style.display, never a 'visible' class — check the property
+    // that's actually ever set, not one nothing in the file adds, or this
+    // never fires and the person has to click "Check again" themselves.
+    const _emailGateEl=document.getElementById('email-verify-gate');
+    if(resolvedVerification && _emailGateEl && _emailGateEl.style.display!=='none'){
       location.reload();
     }
   }catch(e){
@@ -19466,21 +19854,7 @@ function _scbApplyConvoSnapshot(d){
   }
   convosCache=rawArr.filter(Boolean);
   convosCache.forEach(c=>{
-    try{
-      if(c.messages && !Array.isArray(c.messages)) c.messages=Object.values(c.messages).filter(Boolean);
-      if(!Array.isArray(c.messages)) c.messages=[];
-      // Strip the transient local-only `pending` flag so a Firebase round-trip
-      // never restores it after a successful send clears it locally (Bug 1).
-      c.messages.forEach(m=>{ if(m) delete m.pending; });
-      if(c.type!=='group') delete c.channels;
-      if(c.channels && !Array.isArray(c.channels)) c.channels=[];
-      if(c.type==='group'){
-        if(!c.admins||!c.admins.length){ const m=c.participants||c.members||[]; c.admins=m.length?[m[0]]:[]; }
-        if(!c.coadmins) c.coadmins=[];
-        if(!c.roles) c.roles=[];
-        if(!c.memberRoles) c.memberRoles={};
-      }
-    }catch(e){ console.error('Failed to normalize conversation', c&&c.key, e); }
+    try{ _normalizeConvo(c); }catch(e){ console.error('Failed to normalize conversation', c&&c.key, e); }
   });
 }
 function startConvoRealtime(){
@@ -20474,7 +20848,7 @@ function toggleCompactMode(){
   try{ localStorage.setItem('cc_compact',on?'1':'0'); }catch{}
   const btn=document.getElementById('compact-mode-btn');
   const sub=document.getElementById('compact-mode-sub');
-  if(btn) btn.textContent=on?'Turn Off':'Turn On';
+  if(btn) btn.checked=on;
   if(sub) sub.textContent=on?'On — messages are tightly spaced':'Off — messages have a comfortable amount of spacing';
 }
 function _initCompactMode(){
@@ -20483,7 +20857,7 @@ function _initCompactMode(){
       document.body.classList.add('sb-compact');
       const btn=document.getElementById('compact-mode-btn');
       const sub=document.getElementById('compact-mode-sub');
-      if(btn) btn.textContent='Turn Off';
+      if(btn) btn.checked=true;
       if(sub) sub.textContent='On — messages are tightly spaced';
     }
   }catch{}
@@ -20586,6 +20960,24 @@ function _loadDraft(){
 }
 
 /* ===== KEYBOARD SHORTCUTS ===== */
+// Modal id -> its real cancel/teardown function, for the Escape handler
+// below. Every entry here owns a live resource (camera stream, an active
+// call's Firebase record + ringtone) that a bare closeModal() would leave
+// running silently in the background.
+const ESCAPE_MODAL_CLEANUP={
+  'chat-lock-overlay': ()=>closeChatLockOverlay(),
+  'face-mfa-setup-modal': ()=>cancelFaceEnrollment(),
+  'incoming-call-modal': ()=>declineIncomingCall(),
+  'outgoing-call-modal': ()=>cancelOutgoingCall(),
+  'setup-modal': ()=>{
+    // setup-modal hosts login/signup/2FA panes too, which own no resource —
+    // only route through the camera-owning cleanup while the face-login
+    // view is the one actually showing (a live _faceLoginStream is exactly
+    // that signal), otherwise close it normally like any other modal.
+    if(typeof _faceLoginStream!=='undefined'&&_faceLoginStream) cancelFaceLoginView();
+    else closeModal('setup-modal');
+  },
+};
 document.addEventListener('keydown',function(e){
   const inInput=e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA';
   const ctrl=e.ctrlKey||e.metaKey;
@@ -20598,7 +20990,20 @@ document.addEventListener('keydown',function(e){
   // Esc — close topmost modal when not searching
   if(!inInput&&e.key==='Escape'){
     const visible=document.querySelector('.overlay.visible');
-    if(visible){ const id=visible.id; if(id) closeModal(id); }
+    if(visible){
+      const id=visible.id;
+      // A handful of modals own a live resource (camera stream, an active
+      // call's Firebase record + ringtone) that only their dedicated cancel
+      // function releases — a bare closeModal() just hides the overlay and
+      // silently leaves that resource running (camera left on; an incoming
+      // call's ringtone looping forever off-screen; an outgoing call still
+      // live so it can auto-connect the mic later if the other side
+      // answers). Route those through their real teardown; everything else
+      // still just closes normally.
+      const cleanup=ESCAPE_MODAL_CLEANUP[id];
+      if(cleanup) cleanup();
+      else if(id) closeModal(id);
+    }
   }
 });
 
@@ -21105,7 +21510,16 @@ const SLASH_CMDS = [
   { cmd:'/clear',   icon:'🗑️',  args:'',                   desc:'Clear the input box',
     run:()=>{ const el=document.getElementById('msg-input'); if(el){el.value='';autoResize(el);} } },
   { cmd:'/call',    icon:'📞',  args:'',                   desc:'Start a voice call',
-    run:()=>{ if(typeof startCall==='function') startCall(); else if(typeof cloudyStartCall==='function'&&activeConvo) cloudyStartCall(activeConvo.name||''); else showToast('Call','Open a chat first'); } },
+    // `startCall` never existed as a function, so this always fell through
+    // to cloudyStartCall(activeConvo.name) — a by-name DM contact lookup that
+    // can never match the chat you're already in, so /call in a group always
+    // reported "couldn't find that contact" instead of joining its voice
+    // channel. Go straight to the right action for the chat that's open.
+    run:()=>{
+      if(!activeConvo){ showToast('Call','Open a chat first'); return; }
+      if(activeConvo.type==='group'){ if(typeof cloudyJoinVoiceChannel==='function') cloudyJoinVoiceChannel(); }
+      else{ const c=contacts.find(x=>x&&x.key===activeConvo.key); if(c) startDirectCall(c); else showToast('Call','Open a chat first'); }
+    } },
   { cmd:'/pin',     icon:'📌',  args:'',                   desc:'Pin a message',
     run:()=>{ showToast('Pin','Long-press or right-click a message to pin it.'); } },
   { cmd:'/mute',    icon:'🔕',  args:'',                   desc:'Mute/unmute this chat',
@@ -21140,23 +21554,22 @@ function _slashGif(query){
 
 function _slashRemind(args){
   const m=args.match(/^(\d+)\s*(m(?:in(?:utes?)?)?|h(?:ours?)?|s(?:econds?)?)\s+(.+)$/i)
-         ||args.match(/^(in\s+\d+\s*(?:min(?:utes?)?|hours?))\s+(.+)$/i);
+         ||args.match(/^in\s+(\d+)\s*(min(?:utes?)?|hours?)\s+(.+)$/i);
   if(!m){
     if(typeof openScheduleMsg==='function') openScheduleMsg();
     showToast('Reminder','Usage: /remind 5m Call Alex');
     return;
   }
-  let delay, text;
-  if(m[3]){ // first pattern
-    const unit=m[2].toLowerCase();
-    const n=parseInt(m[1]);
-    delay=(unit.startsWith('h')?n*3600000:unit.startsWith('s')?n*1000:n*60000);
-    text=m[3];
-  } else {
-    delay=60000; text=m[2]; // fallback
-  }
+  // Both patterns now capture the same 3 groups (n, unit, text) — the old
+  // "in N minutes" fallback used to throw its own number away and hardcode a
+  // flat 60s delay no matter what was actually asked for.
+  const n=parseInt(m[1],10);
+  const unit=m[2].toLowerCase();
+  const text=m[3];
+  const delay=unit.startsWith('h')?n*3600000:unit.startsWith('s')?n*1000:n*60000;
+  const unitLabel=unit.startsWith('h')?'hour':unit.startsWith('s')?'second':'minute';
   setTimeout(()=>showToast('⏰ Reminder',text),delay);
-  showToast('Reminder','Set! I\'ll remind you in '+args.split(' ')[0]+' '+args.split(' ')[1]+'.');
+  showToast('Reminder','Set! I\'ll remind you in '+n+' '+unitLabel+(n===1?'':'s')+'.');
 }
 
 function _slashWhisper(args){
@@ -21178,7 +21591,7 @@ function _showSlashPalette(q){
   matches.forEach((c,i)=>{
     const el=document.createElement('div');
     el.className='slash-cmd-item'+(i===0?' active':'');
-    el.innerHTML=`<span class="slash-cmd-icon">${c.icon}</span><span class="slash-cmd-name">${esc(c.cmd)}</span><span style="color:var(--muted);font-size:12px;margin-left:2px">${esc(c.args)}</span><span class="slash-cmd-desc" style="margin-left:8px">${esc(c.desc)}</span>`;
+    el.innerHTML=`<span class="slash-cmd-icon">${c.icon}</span><span class="slash-cmd-name">${esc(c.cmd)}</span><span class="slash-cmd-args">${esc(c.args)}</span><span class="slash-cmd-desc" style="margin-left:8px">${esc(c.desc)}</span>`;
     el.dataset.idx=i;
     el.onclick=()=>_execSlashItem(matches,i);
     pal.appendChild(el);
@@ -21315,26 +21728,42 @@ function _cloudyStripPoliteness(text){
   return s.trim();
 }
 
+// Two overlapping calls used to each save/restore window.showToast independently:
+// if call B started while call A's swap was still installed, B's "original" was
+// actually A's fake function, and A's restore (firing first, in start order) put
+// the REAL showToast back — which B's later restore then overwrote AGAIN with
+// A's now-stale fake, permanently breaking window.showToast for the rest of the
+// page session (nothing ever pointed it at the real function again). Serialize
+// all calls through one queue so only one swap is ever active — the saved
+// "original" is always the real function, never another call's fake — and
+// forward any showToast a call doesn't recognize as its own captured response
+// to the real function instead of silently discarding it.
+let _cloudyRouteQueue=Promise.resolve();
 function _cloudyTryRouteAction(text){
-  return new Promise(resolve=>{
+  const run=()=>new Promise(resolve=>{
     if(typeof handleCloudyTranscript!=='function'){ resolve(null); return; }
     const stripped=_cloudyStripPoliteness(text);
     let captured=null, understood=true, settled=false;
-    const origToast=window.showToast, origSpeak=window.cloudySpeak;
+    const realToast=window.showToast, realSpeak=window.cloudySpeak;
     window.showToast=(title,msg)=>{
       if(captured===null){
         captured=(typeof msg==='string'?msg:(msg&&msg.message))||title||'';
         if(/SCB-ASST-06|didn.t understand/i.test(String(captured))) understood=false;
+      } else if(realToast){
+        realToast(title,msg); // not our own response — don't swallow it
       }
     };
     window.cloudySpeak=()=>{};
-    const restore=()=>{ if(!settled){ settled=true; window.showToast=origToast; window.cloudySpeak=origSpeak; } };
+    const restore=()=>{ if(!settled){ settled=true; window.showToast=realToast; window.cloudySpeak=realSpeak; } };
     try{ handleCloudyTranscript('cloudy '+stripped); }
     catch(e){ restore(); resolve(null); return; }
     // the matched action (openChat/sendMsg/etc.) is async — give it a beat
     // to run and call showToast before we put the real one back.
     setTimeout(()=>{ restore(); resolve(understood?captured:null); },850);
   });
+  const result=_cloudyRouteQueue.then(run);
+  _cloudyRouteQueue=result.catch(()=>{});
+  return result;
 }
 
 // Local knowledge/small-talk layer — used when the command grammar above
@@ -21492,7 +21921,13 @@ function _renderCloudyChat(){
 // Override sendMsg for Cloudy convo
 (function(){
   const _origSend=sendMsg;
-  sendMsg=function(){
+  // This used to be a plain (non-async) function that called _origSend()
+  // without returning its promise — every `await sendMsg()` caller (Cloudy's
+  // voice-driven send/reminder flows included) resolved almost immediately,
+  // well before the real async work (spam check, encryption, push, debounced
+  // save) had actually run, so code that assumed "the message is sent" right
+  // after the await was racing the real send.
+  sendMsg=async function(){
     if(activeConvo&&activeConvo._isCloudy){
       const el=document.getElementById('msg-input');
       if(!el) return;
@@ -21500,10 +21935,9 @@ function _renderCloudyChat(){
       if(!text) return;
       el.value='';
       if(typeof autoResize==='function') autoResize(el);
-      _sendToCloudyChat(text);
-      return;
+      return _sendToCloudyChat(text);
     }
-    _origSend();
+    return _origSend.apply(this,arguments);
   };
 })();
 
