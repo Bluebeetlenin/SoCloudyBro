@@ -2111,17 +2111,17 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Message Sound</div><div class="settings-row-sub">Play a sound for new messages in an open chat</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="message-sound-toggle" onchange="savePrivacyPref('messageSound',this.checked)"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="previewMessageSound()">
-            <div class="settings-row-main"><div class="settings-row-label">Preview message sound</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">▶ Play</span></div>
+          <div class="settings-control-row">
+            <select id="message-sound-select" onchange="saveMessageSoundChoice(this.value)"></select>
+            <button class="btn btn-ghost btn-sm" onclick="previewMessageSound()">▶ Preview</button>
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Call Ringtone</div><div class="settings-row-sub">Ring for incoming voice calls</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="call-ringtone-toggle" onchange="savePrivacyPref('callRingtone',this.checked)"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="previewCallRingtone()">
-            <div class="settings-row-main"><div class="settings-row-label">Preview ringtone</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">▶ Play</span></div>
+          <div class="settings-control-row">
+            <select id="call-ringtone-select" onchange="saveCallRingtoneChoice(this.value)"></select>
+            <button class="btn btn-ghost btn-sm" onclick="previewCallRingtone()">▶ Preview</button>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="security">
@@ -11025,24 +11025,42 @@ function _scbTone(ctx,freq,startAt,dur,gainPeak){
   gain.gain.exponentialRampToValueAtTime(0.0001,startAt+dur);
   osc.start(startAt); osc.stop(startAt+dur+0.03);
 }
+// Each sound is a little melody: a list of [freqHz, startOffsetSec, durationSec, gainPeak]
+// notes played relative to "now" — _scbPlayPattern schedules them all at once.
+const MESSAGE_SOUNDS={
+  classic: {label:'Classic Ding', notes:[[880,0,0.09,0.16],[1318.5,0.08,0.15,0.13]]},
+  chime:   {label:'Chime',        notes:[[659.25,0,0.12,0.14],[830.61,0.10,0.12,0.13],[1046.5,0.20,0.18,0.12]]},
+  pop:     {label:'Pop',          notes:[[988,0,0.07,0.2]]},
+  marimba: {label:'Marimba',      notes:[[392,0,0.16,0.13],[523.25,0.06,0.18,0.11]]},
+  xylo:    {label:'Xylophone',    notes:[[523.25,0,0.07,0.15],[659.25,0.05,0.07,0.15],[783.99,0.10,0.07,0.15],[1046.5,0.15,0.12,0.13]]},
+};
+const CALL_RINGTONES={
+  classic: {label:'Classic Ring', notes:[[523.25,0,0.16,0.17],[659.25,0.18,0.18,0.17],[523.25,0.42,0.16,0.17],[659.25,0.60,0.18,0.17]]},
+  digital: {label:'Digital',      notes:[[1200,0,0.08,0.15],[1200,0.14,0.08,0.15],[1200,0.28,0.08,0.15]]},
+  marimba: {label:'Marimba',      notes:[[349.23,0,0.2,0.14],[440,0.22,0.2,0.14],[349.23,0.44,0.2,0.14],[440,0.66,0.2,0.14]]},
+  chimes:  {label:'Chimes',       notes:[[523.25,0,0.3,0.12],[659.25,0.15,0.3,0.11],[783.99,0.30,0.35,0.1]]},
+};
+function _scbPlayPattern(ctx,notes){
+  const t=ctx.currentTime;
+  notes.forEach(([freq,offset,dur,peak])=>_scbTone(ctx,freq,t+offset,dur,peak));
+}
 function playMessageSound(){
   if(!getPrivacyPref('messageSound',true)||shouldSuppressNotifications()) return;
   const ctx=_scbAudioCtx(); if(!ctx) return;
-  const t=ctx.currentTime;
-  _scbTone(ctx,880,t,0.09,0.16);
-  _scbTone(ctx,1318.5,t+0.08,0.15,0.13);
+  const id=getPrivacyPref('messageSoundId','classic');
+  _scbPlayPattern(ctx,(MESSAGE_SOUNDS[id]||MESSAGE_SOUNDS.classic).notes);
 }
-function previewMessageSound(){ const ctx=_scbAudioCtx(); if(!ctx) return; const t=ctx.currentTime; _scbTone(ctx,880,t,0.09,0.16); _scbTone(ctx,1318.5,t+0.08,0.15,0.13); }
+function previewMessageSound(id){
+  const ctx=_scbAudioCtx(); if(!ctx) return;
+  const useId=id||document.getElementById('message-sound-select')?.value||getPrivacyPref('messageSoundId','classic');
+  _scbPlayPattern(ctx,(MESSAGE_SOUNDS[useId]||MESSAGE_SOUNDS.classic).notes);
+}
+function saveMessageSoundChoice(id){ savePrivacyPref('messageSoundId',id); previewMessageSound(id); }
 let _scbRingTimer=null;
 function _scbRingBurst(){
   const ctx=_scbAudioCtx(); if(!ctx) return;
-  const t=ctx.currentTime;
-  // Two short "brring-brring" cycles, like a classic phone ring.
-  for(let cycle=0;cycle<2;cycle++){
-    const base=t+cycle*0.42;
-    _scbTone(ctx,523.25,base,0.16,0.17);
-    _scbTone(ctx,659.25,base+0.18,0.18,0.17);
-  }
+  const id=getPrivacyPref('callRingtoneId','classic');
+  _scbPlayPattern(ctx,(CALL_RINGTONES[id]||CALL_RINGTONES.classic).notes);
 }
 function startCallRingtone(){
   stopCallRingtone();
@@ -11053,7 +11071,24 @@ function startCallRingtone(){
 function stopCallRingtone(){
   if(_scbRingTimer){ clearInterval(_scbRingTimer); _scbRingTimer=null; }
 }
-function previewCallRingtone(){ _scbRingBurst(); }
+function previewCallRingtone(id){
+  const ctx=_scbAudioCtx(); if(!ctx) return;
+  const useId=id||document.getElementById('call-ringtone-select')?.value||getPrivacyPref('callRingtoneId','classic');
+  _scbPlayPattern(ctx,(CALL_RINGTONES[useId]||CALL_RINGTONES.classic).notes);
+}
+function saveCallRingtoneChoice(id){ savePrivacyPref('callRingtoneId',id); previewCallRingtone(id); }
+function _scbPopulateSoundSelects(){
+  const msgSel=document.getElementById('message-sound-select');
+  if(msgSel&&!msgSel.options.length){
+    Object.entries(MESSAGE_SOUNDS).forEach(([id,s])=>{ const o=document.createElement('option'); o.value=id; o.textContent=s.label; msgSel.appendChild(o); });
+  }
+  if(msgSel) msgSel.value=getPrivacyPref('messageSoundId','classic');
+  const callSel=document.getElementById('call-ringtone-select');
+  if(callSel&&!callSel.options.length){
+    Object.entries(CALL_RINGTONES).forEach(([id,s])=>{ const o=document.createElement('option'); o.value=id; o.textContent=s.label; callSel.appendChild(o); });
+  }
+  if(callSel) callSel.value=getPrivacyPref('callRingtoneId','classic');
+}
 
 function sendNotif(title,body){
   if(shouldSuppressNotifications()) return;
@@ -20145,6 +20180,7 @@ function _initPrivacyToggles(){
   // zero-retention
   const zr=document.getElementById('zero-retention-toggle');
   if(zr){ zr.checked=!!getPrivacyPref('zeroRetention',false); updateZeroRetentionUI(); }
+  _scbPopulateSoundSelects();
 }
 
 /* ===== PIN BRUTE FORCE LOCKOUT =====
