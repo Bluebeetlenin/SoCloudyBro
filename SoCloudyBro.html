@@ -2107,6 +2107,22 @@ body.device-tablet .msg-body{max-width:74%}
             <span class="settings-inline-sep">to</span>
             <input type="time" id="quiet-hours-end" onchange="saveQuietHours()"/>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Message Sound</div><div class="settings-row-sub">Play a sound for new messages in an open chat</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="message-sound-toggle" onchange="savePrivacyPref('messageSound',this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-row" style="cursor:pointer" onclick="previewMessageSound()">
+            <div class="settings-row-main"><div class="settings-row-label">Preview message sound</div></div>
+            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">▶ Play</span></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Call Ringtone</div><div class="settings-row-sub">Ring for incoming voice calls</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="call-ringtone-toggle" onchange="savePrivacyPref('callRingtone',this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-row" style="cursor:pointer" onclick="previewCallRingtone()">
+            <div class="settings-row-main"><div class="settings-row-label">Preview ringtone</div></div>
+            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">▶ Play</span></div>
+          </div>
         </div>
         <div class="settings-section" data-settings-tab="security">
           <h3>Security</h3>
@@ -9206,12 +9222,14 @@ function showIncomingCallModal(pairKey,c){
   _incomingCallPairKey=pairKey; _incomingCallFrom=c.from; _incomingCallFromName=c.fromName||('#'+c.from);
   document.getElementById('incoming-call-name').textContent=_incomingCallFromName;
   openModal('incoming-call-modal');
+  startCallRingtone();
   const ref=fbdb.ref('calls/'+pairKey);
   _incomingCallRef=ref;
   _incomingCallHandler=ref.on('value',snap=>{
     const v=snap.val();
     if(!v||v.status!=='ringing'){
       closeModal('incoming-call-modal');
+      stopCallRingtone();
       cleanupIncomingWatcher();
       // Reaching here means the call ended without acceptIncomingCall() having
       // run (that path detaches this watcher first) — so it's a real miss.
@@ -9229,6 +9247,7 @@ async function acceptIncomingCall(){
   if(!pairKey) return;
   cleanupIncomingWatcher();
   closeModal('incoming-call-modal');
+  stopCallRingtone();
   const cRef=fbdb.ref('calls/'+pairKey);
   await cRef.update({status:'active'});
   // Same stuck-"in a call" hazard as the caller side: the accepting side owns
@@ -9241,6 +9260,7 @@ function declineIncomingCall(){
   const pairKey=_incomingCallPairKey, fromNum=_incomingCallFrom, fromName=_incomingCallFromName;
   cleanupIncomingWatcher();
   closeModal('incoming-call-modal');
+  stopCallRingtone();
   if(pairKey) fbdb.ref('calls/'+pairKey).update({status:'declined'});
   _incomingCallPairKey=null;
   if(me&&fromNum){ logCallHistory({dir:'declined_in',number:fromNum,name:fromName||('#'+fromNum),time:Date.now(),duration:0,initiator:fromNum}); }
@@ -10975,6 +10995,66 @@ function shouldSuppressNotifications(){
   return dndEnabled || isQuietHoursActive();
 }
 
+/* ===== SOUNDS: message tone + call ringtone =====
+   Generated with WebAudio oscillators rather than shipping an audio file —
+   this is a single self-contained HTML file with no asset pipeline, so a
+   couple of short tones synthesized on the fly avoid adding a binary asset
+   (and its hosting/CORS concerns) for what's really just a beep. ===== */
+let _scbSoundCtx=null;
+function _scbAudioCtx(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC) return null;
+    if(!_scbSoundCtx) _scbSoundCtx=new AC();
+    if(_scbSoundCtx.state==='suspended') _scbSoundCtx.resume().catch(()=>{});
+    return _scbSoundCtx;
+  }catch(e){ return null; }
+}
+// Autoplay policies block audio (WebAudio included) until a real user
+// gesture — resume the (already-created-on-load) context on the first
+// click/keypress so the very first ring/tone after page load isn't silently
+// dropped while waiting for some later unrelated interaction.
+document.addEventListener('pointerdown',()=>{ _scbAudioCtx(); },{once:true,capture:true});
+document.addEventListener('keydown',()=>{ _scbAudioCtx(); },{once:true,capture:true});
+function _scbTone(ctx,freq,startAt,dur,gainPeak){
+  const osc=ctx.createOscillator(), gain=ctx.createGain();
+  osc.type='sine'; osc.frequency.value=freq;
+  osc.connect(gain); gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0,startAt);
+  gain.gain.linearRampToValueAtTime(gainPeak,startAt+0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001,startAt+dur);
+  osc.start(startAt); osc.stop(startAt+dur+0.03);
+}
+function playMessageSound(){
+  if(!getPrivacyPref('messageSound',true)||shouldSuppressNotifications()) return;
+  const ctx=_scbAudioCtx(); if(!ctx) return;
+  const t=ctx.currentTime;
+  _scbTone(ctx,880,t,0.09,0.16);
+  _scbTone(ctx,1318.5,t+0.08,0.15,0.13);
+}
+function previewMessageSound(){ const ctx=_scbAudioCtx(); if(!ctx) return; const t=ctx.currentTime; _scbTone(ctx,880,t,0.09,0.16); _scbTone(ctx,1318.5,t+0.08,0.15,0.13); }
+let _scbRingTimer=null;
+function _scbRingBurst(){
+  const ctx=_scbAudioCtx(); if(!ctx) return;
+  const t=ctx.currentTime;
+  // Two short "brring-brring" cycles, like a classic phone ring.
+  for(let cycle=0;cycle<2;cycle++){
+    const base=t+cycle*0.42;
+    _scbTone(ctx,523.25,base,0.16,0.17);
+    _scbTone(ctx,659.25,base+0.18,0.18,0.17);
+  }
+}
+function startCallRingtone(){
+  stopCallRingtone();
+  if(!getPrivacyPref('callRingtone',true)||shouldSuppressNotifications()) return;
+  _scbRingBurst();
+  _scbRingTimer=setInterval(_scbRingBurst,2600);
+}
+function stopCallRingtone(){
+  if(_scbRingTimer){ clearInterval(_scbRingTimer); _scbRingTimer=null; }
+}
+function previewCallRingtone(){ _scbRingBurst(); }
+
 function sendNotif(title,body){
   if(shouldSuppressNotifications()) return;
   if(!('Notification' in window)||Notification.permission!=='granted'||!document.hidden) return;
@@ -11148,6 +11228,7 @@ function startPoll(){
                 const isEveryone=mentioned&&/@(everyone|all)\b/i.test(txt);
                 const title=isEveryone?('📢 '+(dec(u.name)||'Someone')+' mentioned @everyone'):mentioned?('📢 '+(dec(u.name)||'Someone')+' mentioned you'):(dec(u.name)||'New message');
                 sendNotif(title,msgHasGif(last)?'Sent a GIF':txt);
+                playMessageSound();
               }
             }
             lastMsgHash=newHash; // BUG FIX: this was computed every tick but never
@@ -20056,7 +20137,7 @@ function getPrivacyPref(key, defaultVal=true){
   return key in prefs ? prefs[key] : defaultVal;
 }
 function _initPrivacyToggles(){
-  const ids={readReceipts:'read-receipts-toggle',typingIndicators:'typing-indicator-toggle',showOnline:'online-status-toggle',secureLinkWarning:'secure-links-toggle'};
+  const ids={readReceipts:'read-receipts-toggle',typingIndicators:'typing-indicator-toggle',showOnline:'online-status-toggle',secureLinkWarning:'secure-links-toggle',messageSound:'message-sound-toggle',callRingtone:'call-ringtone-toggle'};
   for(const [key,id] of Object.entries(ids)){
     const el=document.getElementById(id);
     if(el) el.checked=getPrivacyPref(key,true);
