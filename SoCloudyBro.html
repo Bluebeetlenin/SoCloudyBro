@@ -2071,7 +2071,7 @@ body.device-tablet .msg-body{max-width:74%}
         <button class="stab active" data-tab="profile" onclick="switchSettingsTab('profile')"><span class="stab-icon">👤</span>Profile</button>
         <button class="stab" data-tab="looks" onclick="switchSettingsTab('looks')"><span class="stab-icon">🎨</span>Looks</button>
         <button class="stab" data-tab="chats" onclick="switchSettingsTab('chats')"><span class="stab-icon">💬</span>Chats</button>
-        <button class="stab" data-tab="security" onclick="switchSettingsTab('security')"><span class="stab-icon">🔒</span>Security</button>
+        <button class="stab" data-tab="security" onclick="switchSettingsTab('security')"><span class="stab-icon">🔒</span>Privacy &amp; Security</button>
         <button class="stab" data-tab="business" onclick="switchSettingsTab('business')"><span class="stab-icon">💼</span>Business</button>
         <button class="stab" data-tab="more" onclick="switchSettingsTab('more')"><span class="stab-icon">⚙️</span>More</button>
       </div>
@@ -2140,6 +2140,10 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Compact Messages</div><div class="settings-row-sub" id="compact-mode-sub">Off — messages have a comfortable amount of spacing</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="compact-mode-btn" onchange="toggleCompactMode()"><span class="switch-slider"></span></label></div>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Compact chat list</div><div class="settings-row-sub">Smaller rows, no message preview — fit more chats on screen</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="compact-sidebar-toggle" onchange="toggleCompactSidebar(this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
         </div>
         <div class="settings-section" data-settings-tab="chats">
           <h3>Notifications</h3>
@@ -2181,6 +2185,10 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="settings-control-row">
             <select id="ping-sound-select" onchange="savePingSoundChoice(this.value)"></select>
             <button class="btn btn-ghost btn-sm" onclick="previewPingSound()">▶ Preview</button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Noise suppression</div><div class="settings-row-sub">Reduce background noise on calls (applies next time you join one)</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="noise-suppress-toggle" onchange="toggleNoiseSuppress(this.checked)"><span class="switch-slider"></span></label></div>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="security">
@@ -2229,6 +2237,9 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Security Log</div><div class="settings-row-sub" id="sec-log-sub">Recent logins, password changes, and 2FA events</div></div>
             <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
           </div>
+        </div>
+        <div class="settings-section" data-settings-tab="security">
+          <h3>Privacy</h3>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Read Receipts</div><div class="settings-row-sub">Let others see when you've read their messages</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="read-receipts-toggle" onchange="savePrivacyPref('readReceipts',this.checked)"><span class="switch-slider"></span></label></div>
@@ -2249,17 +2260,9 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Secure Link Warning</div><div class="settings-row-sub">Confirm before opening external links in messages</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="secure-links-toggle" onchange="savePrivacyPref('secureLinkWarning',this.checked)"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="settings-row">
-            <div class="settings-row-main"><div class="settings-row-label">Compact chat list</div><div class="settings-row-sub">Smaller rows, no message preview \u2014 fit more chats on screen</div></div>
-            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="compact-sidebar-toggle" onchange="toggleCompactSidebar(this.checked)"><span class="switch-slider"></span></label></div>
-          </div>
-          <div class="settings-row">
-            <div class="settings-row-main"><div class="settings-row-label">Noise suppression</div><div class="settings-row-sub">Reduce background noise on calls (applies next time you join one)</div></div>
-            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="noise-suppress-toggle" onchange="toggleNoiseSuppress(this.checked)"><span class="switch-slider"></span></label></div>
-          </div>
         </div>
-        <div class="settings-section" data-settings-tab="chats">
-          <h3>Home Dashboard</h3>
+        <div class="settings-section" data-settings-tab="looks">
+          <h3>Home Screen</h3>
           <div class="settings-row" style="cursor:pointer" onclick="openCustomizeUI()">
             <div class="settings-row-main"><div class="settings-row-label">Customize UI</div><div class="settings-row-sub">Add, remove, drag, and resize widgets on your home screen</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Open Editor</button></div>
@@ -2275,7 +2278,7 @@ body.device-tablet .msg-body{max-width:74%}
           </div>
         </div>
         <div class="settings-section" data-settings-tab="security">
-          <h3>Data &amp; Privacy</h3>
+          <h3>Export Data</h3>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Export My Data</div><div class="settings-row-sub">Download all your conversations, contacts, and settings as a JSON file</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="export-all-btn" onclick="exportAllData()">Export</button><button class="btn btn-ghost btn-sm" onclick="exportAllDataEncrypted()" title="Download encrypted with a password you set">🔒 Encrypted</button></div>
@@ -18784,7 +18787,7 @@ function injectFeatureSettings(){
       '<div class="settings-row-actions"><label class="switch"><input type="checkbox" id="scb-large-text-toggle"><span class="switch-slider"></span></label></div>'+
     '</div>'+
   '</div>'+
-  '<div class="settings-section" data-settings-tab="more">'+
+  '<div class="settings-section" data-settings-tab="security">'+
     '<h3>Game Status</h3>'+
     '<div class="settings-row">'+
       '<div class="settings-row-main"><div class="settings-row-label">Show what contacts are playing</div><div class="settings-row-sub">If a contact has linked a Syntax Account (Cube Leap, Jumpa, Ultimo Chess), show a "🎮 Playing…" pill on their profile. Read-only — nothing about you is shared by this setting.</div></div>'+
