@@ -1184,6 +1184,15 @@ body.device-tablet .msg-body{max-width:74%}
   /* Sidebar fills full width on mobile */
   #sidebar { width: 100% !important; }
 
+  /* The bottom icon row (#sb-bottom) was still clipping an icon at the
+     right edge on a real phone — whatever made that happen (an
+     unexpected device classification, a flex:1 rule not actually
+     resolving the way we expect on that device), guarantee scrollability
+     here with !important so it can never go back to silently cutting
+     icons off regardless of the cause. */
+  #sb-bottom { overflow-x: auto !important; scrollbar-width: thin !important; flex-wrap: nowrap !important; }
+  #sb-bottom .icon-btn { flex-shrink: 0 !important; flex-grow: 0 !important; width: 34px !important; height: 34px !important; }
+
   /* Single-pane view: show only sidebar OR chat, never both.
      Uses :has() to detect when a chat is open via the .visible class. */
   body:has(#chat-panel.visible) #sidebar { display: none !important; }
