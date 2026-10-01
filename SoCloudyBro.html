@@ -18865,6 +18865,52 @@ function initJumpToBottomBtn(){
   wrap.addEventListener('scroll',_updateJumpToBottomBtn,{passive:true});
 }
 
+// ===== CHANGELOG / "WHAT'S NEW" =====
+// Newest entry first. Bump CHANGELOG_VERSION whenever a new entry is added
+// so the modal auto-opens once for everyone, the first time they launch
+// after an update — same pattern as the tutorial-seen / cc_* one-time flags
+// already used elsewhere in this file.
+const CHANGELOG_VERSION='2026.10.1';
+const CHANGELOG=[
+  {version:'2026.10.1',items:[
+    'Jump-to-bottom button in chat — appears when you scroll up, one click back to the latest message',
+    'Group join/leave updates now show in the chat itself, collapsing into one summary when there are several in a row',
+    'Fixed the admin shield icon disappearing for delegated admins a second after it showed up',
+    'Cross-device message decryption now works for accounts that sign in with Google only, not just password logins',
+    'Reorganized Settings, the sidebar, the dashboard, and the admin panel for clarity',
+    'Removed the unfinished Stickers tab',
+  ]},
+];
+function renderChangelog(){
+  const body=document.getElementById('changelog-body');
+  if(!body) return;
+  body.innerHTML=CHANGELOG.map(entry=>
+    '<div style="margin-bottom:16px">'+
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px">'+esc(entry.version)+'</div>'+
+      '<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--text);line-height:1.6">'+
+        entry.items.map(i=>'<li>'+esc(i)+'</li>').join('')+
+      '</ul>'+
+    '</div>'
+  ).join('');
+}
+function openChangelog(){
+  renderChangelog();
+  openModal('changelog-modal');
+  try{ localStorage.setItem('cc_changelog_seen',CHANGELOG_VERSION); }catch(e){}
+}
+function _maybeAutoShowChangelog(){
+  try{
+    if(localStorage.getItem('cc_changelog_seen')===CHANGELOG_VERSION) return;
+    // Never interrupt a brand-new account's first launch with "what's new"
+    // — only show it to returning users who've been on an older version.
+    if(!localStorage.getItem('cc_changelog_seen')){
+      localStorage.setItem('cc_changelog_seen',CHANGELOG_VERSION);
+      return;
+    }
+    openChangelog();
+  }catch(e){}
+}
+
 function injectFeatureSettings(){
   const scroll=document.getElementById('settings-scroll');
   if(!scroll || document.getElementById('scb-settings-block')) return;
@@ -18999,6 +19045,13 @@ function injectFeatureSettings(){
     '</div>'+
   '</div>'+
   '<div class="settings-section" data-settings-tab="more">'+
+    '<h3>What\'s New</h3>'+
+    '<div class="settings-row" style="cursor:pointer" id="scb-changelog-row">'+
+      '<div class="settings-row-main"><div class="settings-row-label">Changelog</div><div class="settings-row-sub">See what\'s changed recently</div></div>'+
+      '<div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Open</button></div>'+
+    '</div>'+
+  '</div>'+
+  '<div class="settings-section" data-settings-tab="more">'+
     '<h3 data-i18n="meetings">Meetings</h3>'+
     '<div class="settings-row" style="cursor:pointer" id="scb-meetings-row">'+
       '<div class="settings-row-main"><div class="settings-row-label" data-i18n="start_meeting">Start Meeting</div><div class="settings-row-sub">Video, voice, screen share and chat — up to '+effectiveMaxParticipants()+' people per room</div></div>'+
@@ -19018,6 +19071,7 @@ function injectFeatureSettings(){
   document.getElementById('scb-colors-save').onclick=saveThemeColors;
   document.getElementById('scb-colors-reset').onclick=resetThemeColors;
   document.getElementById('scb-status-row').onclick=openSystemStatus;
+  document.getElementById('scb-changelog-row').onclick=openChangelog;
   document.getElementById('scb-meetings-row').onclick=openMeetingsPanel;
   document.getElementById('scb-rules-row').onclick=openRulesModal;
   document.getElementById('scb-child-accounts-row').onclick=openChildAccountsModal;
@@ -20026,6 +20080,9 @@ function featurePostLaunch(){
   step('promptSecurityQuestionsOnce', promptSecurityQuestionsOnce);
   step('startConvoRealtime', startConvoRealtime);
   checkParentLinkExpiry().catch(e=>console.warn('parent link check failed', e));
+  // Delayed so it never competes with a higher-priority first-paint dialog
+  // (email verification gate, tutorial, security-questions prompt).
+  setTimeout(()=>{ try{ _maybeAutoShowChangelog(); }catch(e){} },2000);
 }
 
 /* =============================================================================
@@ -22166,6 +22223,14 @@ window._sendToCloudyChat = _sendToCloudyChat;
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('shortcuts-modal')">Close</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="changelog-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header"><h2>🆕 What's New</h2></div>
+    <div class="modal-body" id="changelog-body" style="padding-bottom:10px;max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('changelog-modal')">Close</button></div>
   </div>
 </div>
 
