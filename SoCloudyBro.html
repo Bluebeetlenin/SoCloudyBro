@@ -5591,7 +5591,14 @@ function _normalizeConvo(c){
   // Same sparse-array-as-object quirk as messages/participants/members above —
   // reconstruct instead of discarding, or a round-trip silently wipes every channel.
   if(c.channels && !Array.isArray(c.channels)) c.channels=Object.values(c.channels).filter(Boolean);
-  if(!Array.isArray(c.channels)) c.channels=c.type==='group'?[]:c.channels;
+  // Only touch `channels` for groups below — for a DM it was just deleted
+  // above, and `c.channels=c.channels` on an already-undefined property
+  // explicitly SETS it to undefined (a real own property, not an absent
+  // one). Firebase's update()/set() throws on any undefined value anywhere
+  // in the payload, which broke saveConvos() for its WHOLE batched write —
+  // every conversation, not just the DM — the moment convosCache held even
+  // one DM. This is the bug behind "every message stuck pending".
+  if(c.type==='group' && !Array.isArray(c.channels)) c.channels=[];
   if(c.joinRequests && !Array.isArray(c.joinRequests)) c.joinRequests=Object.values(c.joinRequests).filter(Boolean);
   if(c.type==='group'){
     if(!c.admins||!c.admins.length){const m=c.participants||c.members||[];c.admins=m.length?[m[0]]:[];}
