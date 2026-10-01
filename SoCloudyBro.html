@@ -1079,8 +1079,8 @@ body.device-phone .compose-btn{width:40px;height:40px;font-size:17px;flex-shrink
 body.device-phone #msg-input{flex:1}
 body.device-phone #sb-restore-btn{display:none!important}
 body.device-phone #focus-mode-btn{display:none!important}
-body.device-phone #main-empty{padding-bottom:72px}
-body.device-phone #toast{bottom:calc(64px + env(safe-area-inset-bottom,0px));right:auto;left:50%;transform:translateX(-50%);max-width:calc(100vw - 32px)}
+body.device-phone #main-empty{padding-bottom:24px}
+body.device-phone #toast{bottom:calc(16px + env(safe-area-inset-bottom,0px));right:auto;left:50%;transform:translateX(-50%);max-width:calc(100vw - 32px)}
 body.device-phone .bubble.audio-bubble{min-width:0;width:100%}
 body.device-phone .bubble.audio-bubble audio{width:100%;max-width:100%}
 body.device-phone .poll-card{min-width:0;max-width:100%}
@@ -1139,34 +1139,10 @@ body.device-tablet .msg-body{max-width:74%}
    Rules use !important where needed to override base desktop styles that
    have no device-class qualifier. ===== */
 
-/* ---- Bottom Navigation Bar (shown only on mobile) ---- */
-#bottom-nav { display: none; }
-.bottom-nav-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  background: none;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  padding: 6px 4px;
-  min-height: 44px;
-  min-width: 44px;
-  font-size: 10px;
-  transition: color 0.2s;
-  border-radius: 0;
-}
-.bottom-nav-btn:hover, .bottom-nav-btn.active { color: var(--accent); }
-.bottom-nav-btn .bnav-icon { font-size: 20px; line-height: 1; display: block; }
-.bottom-nav-btn .bnav-label { display: block; font-size: 10px; line-height: 1.2; }
-
 /* ---- Mobile (< 640px) ---- */
 @media (max-width: 639px) {
   /* Full-screen shell */
-  #shell { max-width: 100% !important; box-shadow: none !important; border-radius: 0 !important; height: 100vh; height: 100dvh; padding-bottom: 56px !important; }
+  #shell { max-width: 100% !important; box-shadow: none !important; border-radius: 0 !important; height: 100vh; height: 100dvh; }
 
   /* Sidebar fills full width on mobile */
   #sidebar { width: 100% !important; }
@@ -1244,31 +1220,17 @@ body.device-tablet .msg-body{max-width:74%}
   #dashboard-grid { grid-template-columns: 1fr 1fr !important; grid-auto-rows: 150px !important; }
   .dash-widget { grid-column: auto !important; grid-row: auto !important; }
 
-  /* Call widget sits above bottom nav */
-  #call-widget { bottom: 64px !important; }
+  /* Call widget sits clear of the safe-area inset */
+  #call-widget { bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important; }
 
   /* Touch-friendly tap targets */
   .icon-btn { min-height: 36px; min-width: 36px; }
   .btn { min-height: 40px; }
   .sb-item { min-height: 52px; }
 
-  /* Bottom nav bar — shown on mobile */
-  #bottom-nav {
-    display: flex !important;
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: 56px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    z-index: 120;
-    align-items: center;
-    justify-content: space-around;
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-
-  /* Toast: above bottom nav and centered */
+  /* Toast: centered, clear of the safe-area inset */
   #toast {
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
     right: 50% !important;
     transform: translateX(50%);
     max-width: calc(100vw - 32px) !important;
@@ -1279,8 +1241,8 @@ body.device-tablet .msg-body{max-width:74%}
   #send-btn { width: 44px !important; height: 44px !important; font-size: 17px !important; }
   .compose-btn { width: 40px !important; height: 40px !important; font-size: 17px !important; }
 
-  /* Dashboard: clear bottom nav; single column below 400px */
-  #main-empty { padding-bottom: 72px !important; }
+  /* Dashboard: single column below 400px */
+  #main-empty { padding-bottom: 24px !important; }
   @media (max-width: 399px) {
     #dashboard-grid { grid-template-columns: 1fr !important; }
   }
@@ -1347,12 +1309,6 @@ body.device-tablet .msg-body{max-width:74%}
   body:not(.device-phone) #sidebar { width: 240px !important; min-width: 200px !important; }
   .msg-body { max-width: 74% !important; }
   .btn { min-height: 40px; }
-  #bottom-nav { display: none !important; }
-}
-
-/* ---- Desktop (≥ 1024px) — ensure bottom nav never shows ---- */
-@media (min-width: 1024px) {
-  #bottom-nav { display: none !important; }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -4666,42 +4622,63 @@ let _disappearRenderTimer=null; // setTimeout handle for disappearing-message re
 function _b64(buf){const b=new Uint8Array(buf);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
 function _unb64(str){const s=atob(str);const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b.buffer;}
 
-// Derive a wrapping AES-GCM key from the raw password + account number using PBKDF2.
+// Derive a wrapping AES-GCM key from a secret + account number using PBKDF2.
 // This key encrypts/decrypts the ECDH private key stored in Firebase so it
-// can be restored automatically on any new device after login.
-async function _deriveWrapKey(rawPassword, number){
-  const pwBytes=new TextEncoder().encode(rawPassword);
-  const salt=new TextEncoder().encode('scb-e2e-wrap-v1:'+String(number));
-  const baseKey=await crypto.subtle.importKey('raw',pwBytes,'PBKDF2',false,['deriveKey']);
+// can be restored automatically on any new device after login. `slot`
+// distinguishes which secret the key was derived from (see below) so the
+// two slots never share key material even if the underlying secrets ever
+// collided.
+async function _deriveWrapKey(rawSecret, number, slot){
+  const bytes=new TextEncoder().encode(rawSecret);
+  const salt=new TextEncoder().encode('scb-e2e-wrap-v1:'+(slot||'pwd')+':'+String(number));
+  const baseKey=await crypto.subtle.importKey('raw',bytes,'PBKDF2',false,['deriveKey']);
   return crypto.subtle.deriveKey(
     {name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},
     baseKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt']
   );
 }
 
-// Encrypt the ECDH private-key JWK and store it in Firebase at users/{number}/e2eEnc.
-// Called silently — never surfaces errors to the user.
-async function _syncE2EKeyToCloud(rawPassword, number, privJwk){
-  if(!rawPassword||!number||!privJwk) return;
+// Encrypt the ECDH private-key JWK and store it in Firebase at
+// users/{number}/<field>. Called silently — never surfaces errors to the
+// user. Two independent copies are kept so the key can be restored on a new
+// device regardless of which method that device signs in with:
+//  - e2eEnc  (slot 'pwd'):    wrapped with a key derived from the account
+//                             password — only a password login can unwrap it.
+//  - e2eEncG (slot 'google'): wrapped with a key derived from the linked
+//                             Google account's stable subject id — only a
+//                             Google sign-in (with that same account) can
+//                             unwrap it. Without this second copy, any device
+//                             that only ever signs in with Google has no
+//                             password to restore the password-wrapped copy
+//                             with, so it silently minted its own fresh
+//                             keypair instead — breaking decryption of every
+//                             past (and future, until manually rotated)
+//                             message with everyone, on every device,
+//                             exactly the "sent from another device — keys
+//                             don't match here" bug this fixes.
+async function _syncE2EKeyToCloudSlot(rawSecret, number, privJwk, slot, field){
+  if(!rawSecret||!number||!privJwk) return;
   try{
-    const wrapKey=await _deriveWrapKey(rawPassword,number);
+    const wrapKey=await _deriveWrapKey(rawSecret,number,slot);
     const iv=crypto.getRandomValues(new Uint8Array(12));
     const plain=new TextEncoder().encode(JSON.stringify(privJwk));
     const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},wrapKey,plain);
     const blob={iv:_b64(iv),ct:_b64(ct),v:1};
-    await fbdb.ref(USERS_BIN+'/'+number+'/e2eEnc').set(blob);
-  }catch(e){ console.warn('E2E cloud sync failed (non-fatal):',e.message); }
+    await fbdb.ref(USERS_BIN+'/'+number+'/'+field).set(blob);
+  }catch(e){ console.warn('E2E cloud sync ('+slot+') failed (non-fatal):',e.message); }
 }
+function _syncE2EKeyToCloud(rawPassword, number, privJwk){ return _syncE2EKeyToCloudSlot(rawPassword,number,privJwk,'pwd','e2eEnc'); }
+function _syncE2EKeyToCloudGoogle(googleSub, number, privJwk){ return _syncE2EKeyToCloudSlot(googleSub,number,privJwk,'google','e2eEncG'); }
 
 // Fetch the encrypted ECDH private key from Firebase and restore it to localStorage.
 // Returns true if successfully restored, false otherwise.
-async function _restoreE2EKeyFromCloud(rawPassword, number){
-  if(!rawPassword||!number) return false;
+async function _restoreE2EKeyFromCloudSlot(rawSecret, number, slot, field){
+  if(!rawSecret||!number) return false;
   try{
-    const snap=await fbdb.ref(USERS_BIN+'/'+number+'/e2eEnc').once('value');
+    const snap=await fbdb.ref(USERS_BIN+'/'+number+'/'+field).once('value');
     const blob=snap.val();
     if(!blob||!blob.iv||!blob.ct) return false;
-    const wrapKey=await _deriveWrapKey(rawPassword,number);
+    const wrapKey=await _deriveWrapKey(rawSecret,number,slot);
     const iv=new Uint8Array(_unb64(blob.iv));
     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},wrapKey,_unb64(blob.ct));
     const privJwk=JSON.parse(new TextDecoder().decode(plain));
@@ -4715,12 +4692,19 @@ async function _restoreE2EKeyFromCloud(rawPassword, number){
     localStorage.setItem('cc_e2e_priv_'+number,JSON.stringify(privJwk));
     localStorage.setItem('cc_e2e_pub_'+number,storedPubJwkStr);
     return true;
-  }catch(e){ console.warn('E2E cloud restore failed:',e.message); return false; }
+  }catch(e){ console.warn('E2E cloud restore ('+slot+') failed:',e.message); return false; }
 }
+function _restoreE2EKeyFromCloud(rawPassword, number){ return _restoreE2EKeyFromCloudSlot(rawPassword,number,'pwd','e2eEnc'); }
+function _restoreE2EKeyFromCloudGoogle(googleSub, number){ return _restoreE2EKeyFromCloudSlot(googleSub,number,'google','e2eEncG'); }
 
 // Raw password available at login time — stored temporarily so ensureE2EKeypair
 // can sync/restore the cloud-backed key.
 var _loginRawPwd=null;
+// Google account subject id available at login time (password-less Google
+// sign-in) — same purpose as _loginRawPwd, for devices that never have the
+// account password. Also set when linking Google to an already-logged-in
+// account, so that account's other Google-only devices can restore too.
+var _loginGoogleSub=null;
 
 async function ensureE2EKeypair(){
   if(_myKeyPair) return _myKeyPair;
@@ -4728,9 +4712,21 @@ async function ensureE2EKeypair(){
   try{
     let stored=localStorage.getItem('cc_e2e_priv_'+me.number);
     let storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
-    // If no local key, try to restore from cloud first (seamless cross-device)
+    const googleSub=_loginGoogleSub||me.googleSub||null;
+    // If no local key, try to restore from cloud first (seamless cross-device).
+    // Try whichever secret this login actually has — a password login only
+    // has _loginRawPwd, a Google sign-in only has googleSub, and either can
+    // unwrap the copy the OTHER login method originally wrapped, as long as
+    // both slots were ever synced (see the opportunistic sync below).
     if((!stored||!storedPub)&&_loginRawPwd){
       const restored=await _restoreE2EKeyFromCloud(_loginRawPwd,me.number);
+      if(restored){
+        stored=localStorage.getItem('cc_e2e_priv_'+me.number);
+        storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+      }
+    }
+    if((!stored||!storedPub)&&googleSub){
+      const restored=await _restoreE2EKeyFromCloudGoogle(googleSub,me.number);
       if(restored){
         stored=localStorage.getItem('cc_e2e_priv_'+me.number);
         storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
@@ -4742,10 +4738,13 @@ async function ensureE2EKeypair(){
       const publicKey=await crypto.subtle.importKey('jwk',pubJwk,{name:'ECDH',namedCurve:'P-256'},true,[]);
       _myKeyPair={privateKey,publicKey};
       _myPubJwk=storedPub;
-      // Opportunistically sync to cloud if not yet done and password is available
-      if(_loginRawPwd&&!sessionStorage.getItem('e2e_synced_'+me.number)){
+      // Opportunistically sync to cloud (both slots, whichever secrets are
+      // available) if not yet done this session — covers both a fresh key
+      // and backfilling the other slot for an account linked after the fact.
+      if((_loginRawPwd||googleSub)&&!sessionStorage.getItem('e2e_synced_'+me.number)){
         sessionStorage.setItem('e2e_synced_'+me.number,'1');
-        _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
+        if(_loginRawPwd) _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
+        if(googleSub) _syncE2EKeyToCloudGoogle(googleSub,me.number,privJwk);
       }
       return _myKeyPair;
     }
@@ -4756,10 +4755,11 @@ async function ensureE2EKeypair(){
     localStorage.setItem('cc_e2e_pub_'+me.number,JSON.stringify(pubJwk));
     _myKeyPair=kp;
     _myPubJwk=JSON.stringify(pubJwk);
-    // Sync new key to cloud for future devices
-    if(_loginRawPwd){
+    // Sync new key to cloud for future devices (both slots, whichever secrets are available)
+    if(_loginRawPwd||googleSub){
       sessionStorage.setItem('e2e_synced_'+me.number,'1');
-      _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
+      if(_loginRawPwd) _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
+      if(googleSub) _syncE2EKeyToCloudGoogle(googleSub,me.number,privJwk);
     }
     return _myKeyPair;
   }catch(e){ _myKeyPair=null; return null; }
@@ -8070,8 +8070,8 @@ function switchTab(tab,btn){
   document.querySelectorAll('.sb-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   // On phone, the sidebar is hidden (display:none) while a chat is open —
-  // tapping a tab (e.g. the bottom-nav's Chats/Groups while a DM is open)
-  // re-rendered it invisibly with no visible effect. Harmless no-op
+  // switching tabs (e.g. the sidebar's Chats/Groups tabs while a DM is
+  // open) re-rendered it invisibly with no visible effect. Harmless no-op
   // everywhere else (desktop/tablet never set chat-open).
   if(typeof closeChatToSidebar==='function') closeChatToSidebar();
   renderSidebar();
@@ -19440,6 +19440,11 @@ async function googleAuthenticate(identity){
       // Respect 2FA — Google sign-in is an alternative way in, not a bypass.
       // Route through the same TOTP / face-MFA gates as the password login path.
       const pwdToStore=user.pwd||'';
+      // No password is ever entered on this path — this is the only secret
+      // ensureE2EKeypair() has available to restore/sync this account's E2E
+      // keypair on a device that signs in with Google only (see
+      // _loginGoogleSub's definition for why that copy exists at all).
+      _loginGoogleSub=claims.sub;
       if(user.totpEnabled && user.totpSecret){
         pending2fa={user, pwdToStore};
         document.getElementById('login-2fa-code').value='';
@@ -19618,6 +19623,18 @@ async function linkGoogleToCurrentAccount(identity){
     const resolvedVerification=!me.emailVerified&&!!claims.emailVerified;
     if(claims.emailVerified) me.emailVerified=true;
     try{ saveStorage(); }catch(e){}
+    // Backfill the Google-slot E2E key copy right away — this session already
+    // holds the real keypair (from the password login that got us here), but
+    // the opportunistic sync in ensureE2EKeypair() only runs once per session
+    // and already fired before this link existed, so without this explicit
+    // call a device that later signs in with only this Google account would
+    // have nothing to restore and would silently mint a fresh, non-matching
+    // keypair (the exact bug this whole mechanism exists to prevent).
+    _loginGoogleSub=claims.sub;
+    try{
+      const privStored=localStorage.getItem('cc_e2e_priv_'+me.number);
+      if(privStored) await _syncE2EKeyToCloudGoogle(claims.sub,me.number,JSON.parse(privStored));
+    }catch(e){}
     // Saved through registerOrUpdate() rather than a direct write, so it goes
     // through the one save path every other per-account field uses and shows up
     // on this account's other devices — same as saveThemeColors() does.
@@ -20795,43 +20812,6 @@ init();
 <!-- REACTION PICKER -->
 <div id="reaction-picker" style="position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:30px;box-shadow:var(--shadow-lg);z-index:350;padding:6px 10px;display:none;gap:4px;font-size:22px">
 </div>
-
-<script>
-/* ===== BOTTOM NAVIGATION BAR (mobile only) =====
-   Injects a persistent bottom tab bar mirroring the sidebar's main actions.
-   The bar is hidden on tablet/desktop via CSS media queries.
-   Only created once; safe to call multiple times. ===== */
-(function injectBottomNav() {
-  if (document.getElementById('bottom-nav')) return;
-
-  var nav = document.createElement('div');
-  nav.id = 'bottom-nav';
-  nav.setAttribute('role', 'navigation');
-  nav.setAttribute('aria-label', 'Main navigation');
-
-  // Helper: create a bottom-nav button
-  function makeBtn(icon, label, action) {
-    return '<button class="bottom-nav-btn" onclick="' + action + '" aria-label="' + label + '">'
-      + '<span class="bnav-icon">' + icon + '</span>'
-      + '<span class="bnav-label">' + label + '</span>'
-      + '</button>';
-  }
-
-  // Mirror the main sidebar actions: Chats tab, Groups tab, Updates, Cloudy, Settings
-  nav.innerHTML = [
-    makeBtn('💬', 'Chats',   "switchTab('chats', this); this.closest('#bottom-nav').querySelectorAll('.bottom-nav-btn').forEach(function(b){b.classList.remove('active');}); this.classList.add('active');"),
-    makeBtn('👥', 'Groups',  "switchTab('groups', this); this.closest('#bottom-nav').querySelectorAll('.bottom-nav-btn').forEach(function(b){b.classList.remove('active');}); this.classList.add('active');"),
-    makeBtn('🎮', 'Updates', "showUpdates(); this.closest('#bottom-nav').querySelectorAll('.bottom-nav-btn').forEach(function(b){b.classList.remove('active');}); this.classList.add('active');"),
-    makeBtn('🎙', 'Cloudy',  "toggleCloudy(this);"),
-    makeBtn('⚙', 'Settings',"showSettings(); this.closest('#bottom-nav').querySelectorAll('.bottom-nav-btn').forEach(function(b){b.classList.remove('active');}); this.classList.add('active');"),
-  ].join('');
-
-  // Mark first button active initially
-  document.body.appendChild(nav);
-  var btns = nav.querySelectorAll('.bottom-nav-btn');
-  if (btns.length) btns[0].classList.add('active');
-})();
-</script>
 
 <script>
 /* ===== PRIVACY PREFERENCES =====
