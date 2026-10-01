@@ -14305,8 +14305,14 @@ function scrollToMessage(msgId){
 
 // -- ADMIN PANEL ----------------------------------------------------------
 function checkAdminPanel(){
+  // Was checking only the literal super-admin number, overwriting the
+  // correct hasAnyAdminAccess() check renderMyCard() had just set — a
+  // delegated admin (adminAccess.permissions, not the ADMIN_NUMBER account)
+  // would see the shield for a moment on launch, then this ran a second
+  // later and hid it again. The weekly-digest/URL-param admin actions below
+  // are genuinely super-admin-only, so that check stays separate.
   const btn=document.getElementById('admin-dash-btn');
-  if(btn) btn.style.display=(me&&me.number===ADMIN_NUMBER)?'flex':'none';
+  if(btn) btn.style.display=hasAnyAdminAccess()?'flex':'none';
   if(!me||me.number!==ADMIN_NUMBER) return;
   maybeAutoSendWeeklyDigest();
   const params=new URLSearchParams(window.location.search);
