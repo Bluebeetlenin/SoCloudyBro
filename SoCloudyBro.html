@@ -1770,10 +1770,25 @@ body.device-tablet .msg-body{max-width:74%}
   // ── Rotating tips ──────────────────────────────────────────────────────────
   const TIPS=[
     'Tip: type / in any chat for quick commands',
-    'Tip: Cloudy is pinned to your sidebar — ask it anything',
-    'Tip: use /remind 5m to set quick reminders',
-    'Tip: long-press a message to react or pin it',
-    'Tip: use /call to start a voice call instantly',
+    'Tip: Cloudy is pinned to your sidebar — ask it anything, in plain English',
+    'Tip: /remind 5m Call Alex sets a quick reminder',
+    'Tip: long-press a message to react, pin, or forward it',
+    'Tip: /call joins a group\'s voice channel, or rings a DM contact',
+    'Tip: /poll quickly creates a poll for the group',
+    'Tip: /whisper @user sends a private message in a group chat',
+    'Tip: lock any chat behind a PIN or Face ID from its header menu',
+    'Tip: set messages to disappear after a set time, per chat',
+    'Tip: Mutual Friends shows who you both know, right in a contact\'s profile',
+    'Tip: star a chat to pin it to your Favourites tab',
+    'Tip: archive a chat to tidy your sidebar without deleting it',
+    'Tip: create a Server to organize a community into channels',
+    'Tip: ping a contact for a quick nudge — it has its own cooldown',
+    'Tip: turn on Do Not Disturb to silence notifications without muting chats',
+    'Tip: pick your own ringtone and ping sound in Settings',
+    'Tip: two-factor authentication adds a second login step for your account',
+    'Tip: the search bar finds messages across every chat, not just the open one',
+    'Tip: swipe or use the sidebar tabs to jump between Chats, Groups, and Favourites',
+    'Tip: /gif searches and sends a GIF without leaving the keyboard',
   ];
   let _tipIdx=0;
   const tipEl=document.getElementById('scb-splash-tip');
@@ -13184,7 +13199,7 @@ async function openChat(c) {
       setTimeout(()=>{
         const h = new Date().getHours();
         const tod = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
-        if(typeof window._cloudyDeliverMsg==='function') window._cloudyDeliverMsg(`${tod}! ☁️ I'm Cloudy — your AI assistant. Ask me in plain English to message or call someone, open a chat, set a reminder, switch themes, do quick math, and more. Type /help or just ask me anything!`,['📞 Call someone','⏰ Set a reminder','🧮 12 * 7 + 5','🎲 Roll a dice','😄 Tell me a joke','💡 What can you do?']);
+        if(typeof window._cloudyDeliverMsg==='function') window._cloudyDeliverMsg(`${tod}! ☁️ Message or call someone, open a chat, set a reminder, switch themes, or do quick math — just ask.`,['📞 Call someone','⏰ Set a reminder','🧮 12 * 7 + 5','🎲 Roll a dice','😄 Tell me a joke','💡 What can you do?']);
       }, 400);
     }
     return;
@@ -21822,19 +21837,18 @@ function _cloudyChatReply(userText){
 
   // help
   if(/\bhelp\b|\bwhat can you do\b|\bcommands\b/.test(t)){
-    return {text:"☁️ I understand plain English, not just commands. Try things like:\n• \"message Alex saying I'm running late\"\n• \"call Sam\" / \"mute\" / \"hang up\"\n• \"open the group Weekend Trip\"\n• \"remind us in 10 minutes to stretch\"\n• \"dark mode\" / \"change my bio to ...\"\n• \"search pizza\"\n• quick math like \"12*7+5\", \"roll a dice\", \"flip a coin\"\n• or slash shortcuts like /call, /remind, /poll, /gif",
+    return {text:"Plain English works, not just commands:\n• \"message Alex saying I'm running late\"\n• \"call Sam\" / \"mute\" / \"hang up\"\n• \"open the group Weekend Trip\"\n• \"remind us in 10 minutes to stretch\"\n• \"dark mode\" / \"change my bio to ...\"\n• \"search pizza\"\n• quick math like \"12*7+5\", \"roll a dice\", \"flip a coin\"\n• or slash shortcuts like /call, /remind, /poll, /gif",
       chips:['📞 Call someone','✉️ Send a message','⏰ Set a reminder','🔎 Search']};
   }
 
   // fallback — contextual + name-aware, never the exact same line twice in a row
   const fallbacks=[
-    "Got it! Anything else you need?",
-    "I can act on plain-English requests — try \"message Jamie saying hi\" or \"call Sam\".",
-    "Sure thing! You can also use slash commands like /call, /remind, or /poll.",
-    "I'm Cloudy ☁️ — your always-on assistant. Ask me to do something, or type 'help' to see examples.",
+    "Not sure what you meant — try \"message Jamie saying hi\" or \"call Sam\".",
+    "You can also use slash commands like /call, /remind, or /poll.",
+    "Type 'help' to see what I can do.",
   ];
   const pick=fallbacks[Math.floor(Math.random()*fallbacks.length)];
-  return mem.name?`${pick.replace(/^(Got it!|Sure thing!)\s*/,'')} ${mem.name}, I'm here if you need me.`.trim():pick;
+  return mem.name?`${mem.name}, ${pick.charAt(0).toLowerCase()+pick.slice(1)}`:pick;
 }
 
 function _cloudyGreet(){
@@ -21842,7 +21856,7 @@ function _cloudyGreet(){
   const tod=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
   const mem=_cloudyMemGet();
   const who=mem.name?`, ${mem.name}`:'';
-  return `${tod}${who}! ☁️ I'm Cloudy. Ask me to message or call someone, open a chat, set a reminder, switch themes, do quick math, or just chat. What would you like to do?`;
+  return `${tod}${who}! ☁️ Message or call someone, open a chat, set a reminder, switch themes, or do quick math — what do you need?`;
 }
 
 async function _sendToCloudyChat(text){
