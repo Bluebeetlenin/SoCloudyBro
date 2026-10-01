@@ -547,15 +547,30 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 .sb-item-preview{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .unread-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;flex-shrink:0}
 .archived-label{font-size:10px;color:var(--muted2);background:var(--surface3);border-radius:4px;padding:1px 5px}
-/* overflow-x:auto matches the same pattern already used for
-   .header-actions/#compose-actions/#channel-bar — at a 240px sidebar width
-   (tablet — confirmed on a correctly-classified device-tablet, not just a
-   misclassification edge case) 10 icon buttons don't fit at their real size
-   and, without flex-shrink:0 below, compressed to ~18px wide — well under a
-   usable touch-target size — instead of scrolling. */
-#sb-bottom{padding:8px;border-top:1px solid var(--border);display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
-#sb-bottom::-webkit-scrollbar{display:none}
+/* 10 icon buttons at the general 36px .icon-btn size need ~400px — more
+   than #sidebar's own default 300px width gives them, not just the narrower
+   240px tablet case. Sized down specifically here so all 10 actually fit at
+   the sidebar's normal width with no scrolling needed in the common case.
+   overflow-x:auto + a real (not hidden) thin scrollbar is still the fallback
+   for anything narrower — a hidden scrollbar made the row look simply cut
+   off, with no way to tell there was more to see. */
+#sb-bottom{padding:4px;border-top:1px solid var(--border);display:flex;gap:1px;overflow-x:auto;scrollbar-width:thin}
+#sb-bottom::-webkit-scrollbar{height:5px}
+#sb-bottom::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 #sb-bottom .icon-btn{flex-shrink:0}
+/* On phone the existing body.device-phone #sb-bottom .icon-btn{flex:1} rule
+   (higher specificity, wins there) grows these to fill the full-width
+   sidebar instead — the rules below are for every other width.
+   #sb-bottom actually holds 11 buttons (a "Meetings" button is injected at
+   runtime, not present in the static HTML), needing real margin below the
+   sidebar's 300px default width rather than a size that only just fits 10.
+   Desktop (mouse, precise pointer) fits everything with no scroll at a
+   tight size; tablet (touch) keeps a real touch-target size instead and
+   relies on the scroll fallback above — 11 icons can't fit a 240-300px
+   sidebar at a genuine touch-target size no matter how tight the gaps. */
+body.device-desktop #sb-bottom .icon-btn{width:23px;height:23px}
+body.device-desktop #sb-bottom .icon-btn svg{width:14px;height:14px}
+body.device-tablet #sb-bottom .icon-btn{width:34px;height:34px}
 .icon-btn{width:36px;height:36px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;font-size:16px;background:transparent;border:none;color:var(--text2)}
 .icon-btn:hover{background:var(--surface2)}
 .icon-btn.active{color:var(--accent)}
