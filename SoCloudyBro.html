@@ -2110,7 +2110,7 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="bg-option bg-opt-custom" onclick="pickCustomBgPhoto(this)" id="bg-opt-custom-btn">📷 My Photo</div>
           </div>
         </div>
-        <div class="settings-section" data-settings-tab="looks">
+        <div class="settings-section" data-settings-tab="looks" id="appearance-section">
           <h3>Appearance</h3>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Theme</div><div class="settings-row-sub" id="theme-sub-text">Follows system</div></div>
@@ -18755,24 +18755,31 @@ function injectFeatureDom(){
 function injectFeatureSettings(){
   const scroll=document.getElementById('settings-scroll');
   if(!scroll || document.getElementById('scb-settings-block')) return;
+  // Theme Colours used to be its own standalone section — merged into the
+  // static Appearance section below instead, since both are "how the app
+  // looks" and showing them as two disconnected boxes was only an artifact
+  // of this content being built here rather than written in place.
+  const appearanceSection=document.getElementById('appearance-section');
+  if(appearanceSection && !document.getElementById('scb-primary-color')){
+    appearanceSection.insertAdjacentHTML('beforeend',
+      '<h3 data-i18n="theme_colors">Theme Colours</h3>'+
+      '<div class="settings-row">'+
+        '<div class="settings-row-main"><div class="settings-row-label" data-i18n="primary_color">Primary colour</div><div class="settings-row-sub">Used for buttons, your message bubbles, badges and highlights</div></div>'+
+        '<div class="settings-row-actions"><input type="color" class="scb-color-input" id="scb-primary-color" value="#5A52D5" aria-label="Primary colour"/></div>'+
+      '</div>'+
+      '<div class="settings-row">'+
+        '<div class="settings-row-main"><div class="settings-row-label" data-i18n="secondary_color">Secondary colour</div><div class="settings-row-sub">The far end of every gradient in the app\'s chrome</div></div>'+
+        '<div class="settings-row-actions"><input type="color" class="scb-color-input" id="scb-secondary-color" value="#7C5FD4" aria-label="Secondary colour"/></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;padding:8px 0 4px">'+
+        '<button class="btn btn-sm" id="scb-colors-save">Apply</button>'+
+        '<button class="btn btn-ghost btn-sm" id="scb-colors-reset" data-i18n="reset">Reset</button>'+
+      '</div>'
+    );
+  }
   const block=document.createElement('div');
   block.id='scb-settings-block';
   block.innerHTML=
-  '<div class="settings-section" data-settings-tab="looks">'+
-    '<h3 data-i18n="theme_colors">Theme Colours</h3>'+
-    '<div class="settings-row">'+
-      '<div class="settings-row-main"><div class="settings-row-label" data-i18n="primary_color">Primary colour</div><div class="settings-row-sub">Used for buttons, your message bubbles, badges and highlights</div></div>'+
-      '<div class="settings-row-actions"><input type="color" class="scb-color-input" id="scb-primary-color" value="#5A52D5" aria-label="Primary colour"/></div>'+
-    '</div>'+
-    '<div class="settings-row">'+
-      '<div class="settings-row-main"><div class="settings-row-label" data-i18n="secondary_color">Secondary colour</div><div class="settings-row-sub">The far end of every gradient in the app\'s chrome</div></div>'+
-      '<div class="settings-row-actions"><input type="color" class="scb-color-input" id="scb-secondary-color" value="#7C5FD4" aria-label="Secondary colour"/></div>'+
-    '</div>'+
-    '<div style="display:flex;gap:8px;padding:8px 0 4px">'+
-      '<button class="btn btn-sm" id="scb-colors-save">Apply</button>'+
-      '<button class="btn btn-ghost btn-sm" id="scb-colors-reset" data-i18n="reset">Reset</button>'+
-    '</div>'+
-  '</div>'+
   '<div class="settings-section" data-settings-tab="looks">'+
     '<h3 data-i18n="language">Language</h3>'+
     '<div class="settings-row">'+
