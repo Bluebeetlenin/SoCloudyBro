@@ -557,20 +557,14 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 #sb-bottom{padding:4px;border-top:1px solid var(--border);display:flex;gap:1px;overflow-x:auto;scrollbar-width:thin}
 #sb-bottom::-webkit-scrollbar{height:5px}
 #sb-bottom::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-#sb-bottom .icon-btn{flex-shrink:0}
 /* On phone the existing body.device-phone #sb-bottom .icon-btn{flex:1} rule
    (higher specificity, wins there) grows these to fill the full-width
-   sidebar instead — the rules below are for every other width.
-   #sb-bottom actually holds 11 buttons (a "Meetings" button is injected at
-   runtime, not present in the static HTML), needing real margin below the
-   sidebar's 300px default width rather than a size that only just fits 10.
-   Desktop (mouse, precise pointer) fits everything with no scroll at a
-   tight size; tablet (touch) keeps a real touch-target size instead and
-   relies on the scroll fallback above — 11 icons can't fit a 240-300px
-   sidebar at a genuine touch-target size no matter how tight the gaps. */
-body.device-desktop #sb-bottom .icon-btn{width:23px;height:23px}
-body.device-desktop #sb-bottom .icon-btn svg{width:14px;height:14px}
-body.device-tablet #sb-bottom .icon-btn{width:34px;height:34px}
+   sidebar instead. Everywhere else, keep icons at their normal size
+   (shrinking them to squeeze all 11 — a "Meetings" button is injected at
+   runtime, not in the static HTML — in with no scrolling made them too
+   small to read) and let the row scroll, with the real visible scrollbar
+   above as the discoverability fix instead of a hidden one. */
+#sb-bottom .icon-btn{flex-shrink:0}
 .icon-btn{width:36px;height:36px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;font-size:16px;background:transparent;border:none;color:var(--text2)}
 .icon-btn:hover{background:var(--surface2)}
 .icon-btn.active{color:var(--accent)}
