@@ -496,7 +496,12 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 #shell{position:relative;z-index:1;display:flex;height:100vh;width:100%;background:var(--bg2);box-shadow:var(--shadow-lg)}
 
 /* ── SIDEBAR ── */
-#sidebar{width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);backdrop-filter:blur(20px);color:var(--text)}
+/* 460px (not the original 300px) — #sb-bottom holds 11 icon buttons (a
+   "Meetings" button is injected at runtime, not present in the static
+   HTML) which need real room at a normal, readable size on one row.
+   Scroll/wrap-based fixes for the narrower old width were all fragile and
+   hard to discover; widening the sidebar itself is the direct fix. */
+#sidebar{width:460px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);backdrop-filter:blur(20px);color:var(--text)}
 #sb-titlebar{height:34px;display:flex;align-items:center;padding:0 14px;gap:8px;background:var(--bg3);border-bottom:1px solid var(--border);-webkit-app-region:drag;flex-shrink:0}
 #sb-titlebar span{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:0.3px}
 #sb-head{padding:12px 14px;border-bottom:1px solid var(--border)}
@@ -547,24 +552,13 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 .sb-item-preview{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .unread-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;flex-shrink:0}
 .archived-label{font-size:10px;color:var(--muted2);background:var(--surface3);border-radius:4px;padding:1px 5px}
-/* 10 icon buttons at the general 36px .icon-btn size need ~400px — more
-   than #sidebar's own default 300px width gives them, not just the narrower
-   240px tablet case. Sized down specifically here so all 10 actually fit at
-   the sidebar's normal width with no scrolling needed in the common case.
-   overflow-x:auto + a real (not hidden) thin scrollbar is still the fallback
-   for anything narrower — a hidden scrollbar made the row look simply cut
-   off, with no way to tell there was more to see. */
-#sb-bottom{padding:4px;border-top:1px solid var(--border);display:flex;gap:1px;overflow-x:auto;scrollbar-width:thin}
-#sb-bottom::-webkit-scrollbar{height:5px}
-#sb-bottom::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-/* On phone the existing body.device-phone #sb-bottom .icon-btn{flex:1} rule
-   (higher specificity, wins there) grows these to fill the full-width
-   sidebar instead. Everywhere else, keep icons at their normal size
-   (shrinking them to squeeze all 11 — a "Meetings" button is injected at
-   runtime, not in the static HTML — in with no scrolling made them too
-   small to read) and let the row scroll, with the real visible scrollbar
-   above as the discoverability fix instead of a hidden one. */
-#sb-bottom .icon-btn{flex-shrink:0}
+/* #sb-bottom holds 11 icon buttons (a "Meetings" button is injected at
+   runtime, not present in the static HTML) — #sidebar is widened above
+   specifically so these fit on one row at a normal, readable size with no
+   scrolling or wrapping needed. flex-wrap stays on as a safety net for any
+   narrower context (tablet/phone override #sidebar's width down again). */
+#sb-bottom{padding:8px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+#sb-bottom .icon-btn{flex-shrink:0;flex-grow:0}
 .icon-btn{width:36px;height:36px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;font-size:16px;background:transparent;border:none;color:var(--text2)}
 .icon-btn:hover{background:var(--surface2)}
 .icon-btn.active{color:var(--accent)}
@@ -1080,7 +1074,6 @@ body.device-phone #compose-row{flex-direction:column;gap:0;padding:0}
 body.device-phone #compose-actions{width:100%;padding:6px 12px;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);flex-wrap:nowrap}
 body.device-phone #compose-actions::-webkit-scrollbar{display:none}
 body.device-phone #compose-input-row{width:100%;padding:8px 12px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));gap:8px}
-body.device-phone #sb-bottom .icon-btn{flex:1}
 body.device-phone #send-btn{width:44px;height:44px;font-size:17px;flex-shrink:0}
 body.device-phone .compose-btn{width:40px;height:40px;font-size:17px;flex-shrink:0}
 body.device-phone #msg-input{flex:1}
@@ -1178,13 +1171,11 @@ body.device-tablet .msg-body{max-width:74%}
   /* Sidebar fills full width on mobile */
   #sidebar { width: 100% !important; }
 
-  /* The bottom icon row (#sb-bottom) was still clipping an icon at the
-     right edge on a real phone — whatever made that happen (an
-     unexpected device classification, a flex:1 rule not actually
-     resolving the way we expect on that device), guarantee scrollability
-     here with !important so it can never go back to silently cutting
-     icons off regardless of the cause. */
-  #sb-bottom { overflow-x: auto !important; scrollbar-width: thin !important; flex-wrap: nowrap !important; }
+  /* The bottom icon row (#sb-bottom) kept clipping/hiding icons under
+     various scroll-based approaches, on real devices, regardless of the
+     cause. Guarantee wrapping instead, with !important so it can't lose to
+     anything — every icon stays visible, nothing to scroll or discover. */
+  #sb-bottom { flex-wrap: wrap !important; justify-content: center !important; }
   #sb-bottom .icon-btn { flex-shrink: 0 !important; flex-grow: 0 !important; width: 34px !important; height: 34px !important; }
 
   /* Single-pane view: show only sidebar OR chat, never both.
@@ -1248,9 +1239,6 @@ body.device-tablet .msg-body{max-width:74%}
 
   /* Chat header safe-area (notch/Dynamic Island) */
   #chat-header, #settings-header { padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important; }
-
-  /* Sidebar bottom icon row — spread evenly */
-  #sb-bottom .icon-btn { flex: 1; }
 
   /* Dashboard grid — two columns */
   #dashboard-grid { grid-template-columns: 1fr 1fr !important; grid-auto-rows: 150px !important; }
