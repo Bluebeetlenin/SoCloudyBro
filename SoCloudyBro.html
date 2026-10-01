@@ -11121,7 +11121,7 @@ function renderUnreadWidget(body){
   contacts.forEach(c=>{
     const conv=convosCache.find(x=>x&&x.key===c.key);
     if(!conv||!conv.messages) return;
-    const unread=conv.messages.filter(m=>m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))).length;
+    const unread=conv.messages.filter(m=>m.type!=='system'&&m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))).length;
     if(unread>0) items.push({c,unread});
   });
   items.sort((a,b)=>b.unread-a.unread);
@@ -12479,6 +12479,15 @@ function toggleAddGroupMember(num,name,row){
     sel.appendChild(chip); if(theRow) theRow.style.background='var(--bg3)';
   }
 }
+// System messages: group-membership events ("X joined", "X left"), rendered
+// as small centered pills in renderMessages() (collapsed into one summary
+// when 3+ land in a row). Appended straight into conv.messages so they sync
+// to every member the same way a real message does.
+function _addSystemMessage(conv, text){
+  if(!conv||!text) return;
+  if(!Array.isArray(conv.messages)) conv.messages=[];
+  conv.messages.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:'system',time:Date.now(),text});
+}
 async function submitAddGroupMembers(){
   const conv=getActiveConvoObj();
   const err=document.getElementById('add-group-member-error'); err.textContent='';
@@ -12499,6 +12508,7 @@ async function submitAddGroupMembers(){
     added.forEach(n=>existing.add(n));
     const merged=[...existing];
     conv.participants=merged; conv.members=merged;
+    added.forEach(n=>{ const u=lookupUser(n); _addSystemMessage(conv,(dec(u&&u.name)||('#'+n))+' was added to the group'); });
     await saveConvos();
     closeModal('add-group-member-modal');
     if(failed.length&&added.length){
@@ -12518,6 +12528,7 @@ async function leaveGroup() {
   const conv = convosCache.find(x=>x&&x.key === activeConvo.key);
   if (conv) {
     conv.participants = (conv.participants || []).filter(n => n !== me.number);
+    _addSystemMessage(conv,(dec(me.name)||me.name||('#'+me.number))+' left the '+(conv.isServer?'server':'group'));
     await saveConvos();
   }
   contacts = contacts.filter(c=>c&&c.key !== activeConvo.key);
@@ -12589,6 +12600,8 @@ async function approveJoinRequest(num){
     const merged=[...existing];
     conv.participants=merged; conv.members=merged;
     conv.joinRequests=(conv.joinRequests||[]).filter(r=>r.number!==num);
+    const joinedUser=lookupUser(num);
+    _addSystemMessage(conv,(dec(joinedUser&&joinedUser.name)||('#'+num))+' joined the '+(conv.isServer?'server':'group'));
     await saveConvos();
     openGroupPanel();
     showToast('Member approved','');
@@ -12858,15 +12871,59 @@ function renderMessages(msgs) {
     return;
   }
   let lastDate = '';
-  msgs.forEach(m => {
+  // Group runs of 3+ consecutive system messages ("X joined the group",
+  // "Y left the group") so a busy group's join/leave churn doesn't flood
+  // the chat — only the run's first index renders anything; the rest are
+  // folded into that one collapsible summary.
+  const _sysRunInfo = {};
+  for (let i = 0; i < msgs.length; i++) {
+    if (msgs[i] && msgs[i].type === 'system' && !(msgs[i-1] && msgs[i-1].type === 'system')) {
+      let j = i; while (j < msgs.length && msgs[j] && msgs[j].type === 'system') j++;
+      _sysRunInfo[i] = j - i;
+    }
+  }
+  msgs.forEach((m, _msgIdx) => {
     try{
     if(!m) return; // skip null/undefined slots (Bug 3: prevents spurious SCB-MSG-15)
+    if (m.type === 'system' && !_sysRunInfo[_msgIdx]) return; // folded into an earlier collapsed run
     const isMe = m.from === me.number;
     const d = new Date(m.time);
     const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
     if (dateStr !== lastDate) {
       lastDate = dateStr;
       const div = document.createElement('div'); div.className = 'date-divider'; div.innerHTML = '<span class="date-divider-label">' + dateStr + '</span>'; wrap.appendChild(div);
+    }
+    // System message — group membership changes etc. Runs of 3+ collapse
+    // into one expandable summary (see _sysRunInfo above).
+    if (m.type === 'system') {
+      const runLen = _sysRunInfo[_msgIdx];
+      if (runLen < 3) {
+        const row = document.createElement('div'); row.className = 'call-event-row';
+        const pill = document.createElement('div'); pill.className = 'call-event-pill';
+        pill.style.cursor = 'default';
+        pill.textContent = m.text || '';
+        row.appendChild(pill); wrap.appendChild(row);
+        return;
+      }
+      const runMsgs = msgs.slice(_msgIdx, _msgIdx + runLen);
+      const summaryRow = document.createElement('div'); summaryRow.className = 'call-event-row';
+      const summaryPill = document.createElement('div'); summaryPill.className = 'call-event-pill';
+      summaryPill.innerHTML = '<span>' + runLen + ' group updates</span><span class="sys-collapse-caret">▾</span>';
+      summaryRow.appendChild(summaryPill); wrap.appendChild(summaryRow);
+      const detail = document.createElement('div'); detail.style.display = 'none';
+      runMsgs.forEach(rm => {
+        const r = document.createElement('div'); r.className = 'call-event-row';
+        const p = document.createElement('div'); p.className = 'call-event-pill'; p.style.cursor = 'default';
+        p.textContent = rm.text || '';
+        r.appendChild(p); detail.appendChild(r);
+      });
+      wrap.appendChild(detail);
+      summaryPill.onclick = () => {
+        const open = detail.style.display !== 'none';
+        detail.style.display = open ? 'none' : 'block';
+        summaryPill.querySelector('.sys-collapse-caret').textContent = open ? '▾' : '▴';
+      };
+      return;
     }
     // Ping — a lightweight "hey" nudge, rendered as its own centered pill
     if (m.type === 'ping') {
@@ -17007,7 +17064,7 @@ renderSidebar = function(){
       if(archivedContacts[key]) return;
       const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
       if(!conv||!conv.messages) return;
-      const unread=conv.messages.filter(m=>m&&m.from!==me.number&&m.type!=='call'&&(!m.seen||!m.seen.includes(me.number))).length;
+      const unread=conv.messages.filter(m=>m&&m.from!==me.number&&m.type!=='call'&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))).length;
       if(unread>0) unreadItems.push({c,unread,key,conv});
     });
     unreadItems.sort((a,b)=>b.unread-a.unread);
@@ -20078,7 +20135,7 @@ catch(e){ console.error('feature DOM injection failed', e); }
     let total=0;
     (window.convosCache||[]).forEach(c=>{
       if(!c||!c.messages) return;
-      total+=c.messages.filter(m=>m&&m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))).length;
+      total+=c.messages.filter(m=>m&&m.from!==me.number&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))).length;
     });
     document.title=total>0?'('+total+') '+_origTitle:_origTitle;
   }
