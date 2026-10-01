@@ -501,7 +501,7 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
    HTML) which need real room at a normal, readable size on one row.
    Scroll/wrap-based fixes for the narrower old width were all fragile and
    hard to discover; widening the sidebar itself is the direct fix. */
-#sidebar{width:460px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);backdrop-filter:blur(20px);color:var(--text)}
+#sidebar{width:490px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);backdrop-filter:blur(20px);color:var(--text)}
 #sb-titlebar{height:34px;display:flex;align-items:center;padding:0 14px;gap:8px;background:var(--bg3);border-bottom:1px solid var(--border);-webkit-app-region:drag;flex-shrink:0}
 #sb-titlebar span{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:0.3px}
 #sb-head{padding:12px 14px;border-bottom:1px solid var(--border)}
@@ -529,6 +529,7 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 .sb-tab.active{background:var(--accent);color:#fff}
 .admin-dash-tab{flex:0 1 auto;padding:6px 12px;border-radius:var(--r-xs);font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);border:1px solid var(--border);background:transparent;white-space:nowrap}
 .admin-dash-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.admin-dash-tab-sep{width:1px;align-self:stretch;min-height:18px;background:var(--border);margin:0 2px}
 .sb-tab:hover:not(.active){background:var(--surface2)}
 #sb-list{flex:1;overflow-y:auto;padding:4px 8px}
 #sb-list::-webkit-scrollbar{width:4px}
@@ -557,8 +558,9 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
    specifically so these fit on one row at a normal, readable size with no
    scrolling or wrapping needed. flex-wrap stays on as a safety net for any
    narrower context (tablet/phone override #sidebar's width down again). */
-#sb-bottom{padding:8px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+#sb-bottom{padding:8px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:center}
 #sb-bottom .icon-btn{flex-shrink:0;flex-grow:0}
+#sb-bottom .sb-bottom-sep{width:1px;align-self:stretch;min-height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
 .icon-btn{width:36px;height:36px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;font-size:16px;background:transparent;border:none;color:var(--text2)}
 .icon-btn:hover{background:var(--surface2)}
 .icon-btn.active{color:var(--accent)}
@@ -1925,22 +1927,30 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 <div id="search-results" style="display:none;flex-direction:column;max-height:300px;overflow-y:auto;border-bottom:1px solid var(--border);padding:4px 8px"></div>
     <div id="sb-tabs">
-      <button class="sb-tab active" onclick="switchTab('chats',this)">Chats</button>
-      <button class="sb-tab" onclick="switchTab('groups',this)">Groups</button>
+      <button class="sb-tab active" id="sb-tab-chats" onclick="switchTab('chats',this)">Chats</button>
+      <button class="sb-tab" id="sb-tab-groups" onclick="switchTab('groups',this)">Groups</button>
       <button class="sb-tab" onclick="switchTab('servers',this)">Servers</button>
       <button class="sb-tab" onclick="switchTab('archived',this)">Archived</button>
     </div>
     <div id="sb-list"></div>
     <div id="sb-bottom">
-      <button class="icon-btn" onclick="openShortcuts()" title="Keyboard shortcuts (?)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/></svg></button>
-      <button class="icon-btn" id="focus-mode-btn" onclick="toggleFocusMode()" title="Focus mode — hide sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
-      <button class="icon-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle dark/light mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+      <!-- Group 1: primary actions — start something new, most frequent, leftmost -->
       <button class="icon-btn" onclick="openAddContact()" title="New chat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></button>
       <button class="icon-btn" onclick="openNewGroup()" title="New group"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
       <button class="icon-btn" onclick="openNewGroup(null,true)" title="New server"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="7" rx="2"/><rect x="2" y="13" width="20" height="7" rx="2"/><line x1="6" y1="7.5" x2="6.01" y2="7.5"/><line x1="6" y1="16.5" x2="6.01" y2="16.5"/></svg></button>
       <button class="icon-btn" onclick="openJoinServer()" title="Join a server"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></button>
+      <span class="sb-bottom-sep"></span>
+      <!-- Group 2: feature panels (Meetings is inserted here at runtime, see injectFeatureDom()) -->
       <button class="icon-btn" onclick="showUpdates()" title="Game Updates"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="16" cy="10" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/></svg></button>
       <button class="icon-btn" id="cloudy-btn" onclick="toggleCloudy(this)" title="Cloudy voice assistant — say &quot;Hey Cloudy…&quot;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+      <span class="sb-bottom-sep"></span>
+      <!-- Group 3: view/display toggles — set apart from the primary actions since
+           Focus mode hides the entire sidebar with no confirmation -->
+      <button class="icon-btn" id="focus-mode-btn" onclick="toggleFocusMode()" title="Focus mode — hide sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
+      <button class="icon-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle dark/light mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+      <span class="sb-bottom-sep"></span>
+      <!-- Group 4: help / config — meta actions, rightmost -->
+      <button class="icon-btn" onclick="openShortcuts()" title="Keyboard shortcuts (?)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/></svg></button>
       <button class="icon-btn" onclick="showSettings()" title="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="18" r="2" fill="currentColor"/></svg></button>
     </div>
   </div>
@@ -10879,16 +10889,24 @@ function hideUpdates(){hideAll();showMainEmpty();}
 // -- HOME DASHBOARD (grid-based, drag-and-drop + resize, customizable in Settings) --
 const DASH_COLS=4;
 const DASH_ROW_PX=150;
+// Grouped by purpose, highest-value first, so the bin-packer in
+// defaultLayout() naturally clusters related widgets instead of scattering
+// them (it walks these keys in order and fills the grid greedily). This is
+// also the order the "add widget" tray lists them in.
 const DASHBOARD_WIDGETS={
-  pinned:{icon:'📌',label:'Pinned Messages',defaultW:2,defaultH:2},
-  online:{icon:'👥',label:'Contacts',defaultW:1,defaultH:2},
-  voice:{icon:'🔊',label:'Voice Channels',defaultW:2,defaultH:1},
+  // message activity — most people check this first, every time
+  unread:{icon:'✉️',label:'Unread Messages',defaultW:1,defaultH:2,hero:true},
   recent:{icon:'💬',label:'Recent Activity',defaultW:2,defaultH:2},
-  clock:{icon:'🕐',label:'Clock & Weather',defaultW:1,defaultH:2},
+  pinned:{icon:'📌',label:'Pinned Messages',defaultW:1,defaultH:2},
+  // people
+  online:{icon:'👥',label:'Contacts',defaultW:1,defaultH:2},
   groups:{icon:'👥',label:'Groups',defaultW:1,defaultH:2},
-  unread:{icon:'✉️',label:'Unread Messages',defaultW:1,defaultH:2},
+  // calls & voice
+  voice:{icon:'🔊',label:'Voice Channels',defaultW:2,defaultH:1},
   missedcalls:{icon:'📵',label:'Missed Calls',defaultW:1,defaultH:2},
-  cloudyvoice:{icon:'🎙️',label:"Cloudy's Voice",defaultW:2,defaultH:1}
+  cloudyvoice:{icon:'🎙️',label:'Cloudy Assistant',defaultW:2,defaultH:1},
+  // decorative/utility — last, not hero-styled
+  clock:{icon:'🕐',label:'Clock & Weather',defaultW:1,defaultH:2}
 };
 function cellsOverlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
 function findFreeSpot(layout,w,h){
@@ -10983,7 +11001,7 @@ function renderDashboard(){
   grid.innerHTML='';
   layout.forEach(w=>{
     const def=DASHBOARD_WIDGETS[w.id];
-    const card=document.createElement('div'); card.className='dash-widget'+(w.id==='clock'?' hero':'');
+    const card=document.createElement('div'); card.className='dash-widget'+(def.hero?' hero':'');
     card.style.gridColumn=(w.x+1)+' / span '+w.w;
     card.style.gridRow=(w.y+1)+' / span '+w.h;
     card.innerHTML='<div class="dash-widget-title">'+def.icon+' '+def.label+'</div><div class="dash-widget-body" id="dash-body-'+w.id+'"><div class="dash-widget-empty">Loading…</div></div>';
@@ -15199,6 +15217,8 @@ async function renderAdminOverviewTab(){
         <button class="btn btn-ghost btn-sm" onclick="exportModerationLogCsv()">⬇ Export moderation log (CSV)</button>
       </div>
       <div style="font-size:10px;color:var(--muted);margin-top:8px">Last digest sent: <span id="last-digest-sent-text">${localStorage.getItem('cc_last_digest_sent')?new Date(Number(localStorage.getItem('cc_last_digest_sent'))).toLocaleString():'never'}</span></div>
+      <details style="margin-top:20px">
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--danger);padding:8px 0;user-select:none">⚠️ Danger Zone — destructive database tools (click to expand)</summary>
       <div id="admin-rules-section" style="margin-top:16px;">
         <h4 style="margin:0 0 8px;font-size:13px;font-weight:600">Firebase Rules Manager</h4>
         <textarea id="admin-rules-input" placeholder="Paste Firebase Realtime Database rules JSON here..."
@@ -15220,6 +15240,7 @@ async function renderAdminOverviewTab(){
         <p style="margin:0 0 10px;font-size:12px;color:var(--muted)">Permanently wipes <b>everything</b> from Firebase: all users, messages, conversations, groups, feedback, reports. The app returns to a blank state. <b>This cannot be undone.</b></p>
         <button class="btn btn-danger btn-sm" onclick="adminNuclearReset()">☢️ Wipe Everything &amp; Start Fresh</button>
       </div>
+      </details>
       `}
     `;
   }catch(e){
@@ -18618,17 +18639,31 @@ document.head.appendChild(scbFeatureCSS);
    so the existing layout is left exactly as it was.
    ========================================================================== */
 function injectFeatureDom(){
-  // --- sidebar favourites tab -----------------------------------------------
+  // --- sidebar tabs: Chats (static, first, already .active), Unread, Favourites,
+  // Groups, Servers (both static), Calls, Archived (static, last) ------------
+  // Ordered by how often each view is actually used — triage views (Unread,
+  // Favourites) right next to the default Chats tab, structural containers
+  // (Groups/Servers) in the middle, the log-style Calls view and the
+  // intentionally-tucked-away Archived view at the end.
   const tabs=document.getElementById('sb-tabs');
+  const chatsTab=tabs ? tabs.querySelector('.sb-tab') : null; // first static tab = Chats
+  if(tabs && chatsTab && !document.getElementById('sb-tab-unread')){
+    const btn=document.createElement('button');
+    btn.className='sb-tab'; btn.id='sb-tab-unread';
+    btn.setAttribute('data-i18n','tab_unread');
+    btn.textContent=scbT('tab_unread');
+    btn.onclick=function(){ switchTab('unread',this); };
+    tabs.insertBefore(btn, chatsTab.nextSibling);
+  }
   if(tabs && !document.getElementById('sb-tab-fav')){
+    const unreadTab=document.getElementById('sb-tab-unread');
     const btn=document.createElement('button');
     btn.className='sb-tab'; btn.id='sb-tab-fav';
     btn.setAttribute('data-i18n','tab_favourites');
     btn.textContent=scbT('tab_favourites');
     btn.onclick=function(){ switchTab('favourites', this); };
-    tabs.insertBefore(btn, tabs.firstChild);
+    tabs.insertBefore(btn, unreadTab?unreadTab.nextSibling:tabs.firstChild.nextSibling);
   }
-  // --- sidebar calls tab (inserted after groups = 3rd original btn = 4th after fav) --
   if(tabs && !document.getElementById('sb-tab-calls')){
     const archived=tabs.querySelector('.sb-tab:last-child');
     const btn=document.createElement('button');
@@ -18636,16 +18671,6 @@ function injectFeatureDom(){
     btn.setAttribute('data-i18n','tab_calls');
     btn.textContent=scbT('tab_calls');
     btn.onclick=function(){ switchTab('calls',this); };
-    tabs.insertBefore(btn, archived);
-  }
-  // --- sidebar unread tab (inserted before archived) -------------------------
-  if(tabs && !document.getElementById('sb-tab-unread')){
-    const archived=tabs.querySelector('.sb-tab:last-child');
-    const btn=document.createElement('button');
-    btn.className='sb-tab'; btn.id='sb-tab-unread';
-    btn.setAttribute('data-i18n','tab_unread');
-    btn.textContent=scbT('tab_unread');
-    btn.onclick=function(){ switchTab('unread',this); };
     tabs.insertBefore(btn, archived);
   }
   // --- favourite entries in the two existing menus ---------------------------
@@ -18681,13 +18706,17 @@ function injectFeatureDom(){
     footer.insertBefore(bar, composeRow.parentNode===footer?composeRow:footer.firstChild);
   }
   // --- Meetings button in the sidebar's bottom nav ---------------------------
+  // Placed in the "feature panels" group, right after Cloudy — not just
+  // before whatever happens to be last, which used to land it next to
+  // Settings for no reason other than insertion order.
   const bottom=document.getElementById('sb-bottom');
   if(bottom && !document.getElementById('scb-meetings-nav-btn')){
     const b=document.createElement('button');
     b.className='icon-btn'; b.id='scb-meetings-nav-btn';
     b.title=scbT('meetings'); b.textContent='🎥';
     b.onclick=openMeetingsPanel;
-    bottom.insertBefore(b, bottom.lastChild);
+    const cloudyBtn=document.getElementById('cloudy-btn');
+    bottom.insertBefore(b, cloudyBtn?cloudyBtn.nextSibling:bottom.lastChild);
   }
   // --- "Start meeting" entry in the chat header menu (groups) ----------------
   if(headerMenu && !document.getElementById('scb-group-meeting-item')){
@@ -18702,8 +18731,8 @@ function injectFeatureDom(){
   // translating get tagged here by position/selector instead of being rewritten
   // in place.
   const tagged=[
-    ['#sb-tabs .sb-tab:nth-child(2)','tab_chats'],
-    ['#sb-tabs .sb-tab:nth-child(3)','tab_groups'],
+    ['#sb-tab-chats','tab_chats'],
+    ['#sb-tab-groups','tab_groups'],
     ['#sb-tabs .sb-tab:last-child','tab_archived'],
     ['#settings-header div','settings']
   ];
@@ -20756,14 +20785,17 @@ init();
 <!-- ADMIN DASHBOARD (only for admin #2015) -->
 <div class="overlay" id="admin-dashboard-modal">
   <div class="modal" style="max-width:720px">
-    <div class="modal-header"><h2>🛡️ Admin Dashboard</h2><p>Overview · Users · Groups · Reports · Spam · Feedback · Code</p></div>
-    <div style="display:flex;gap:6px;padding:0 20px 10px;flex-wrap:wrap">
+    <div class="modal-header"><h2>🛡️ Admin Dashboard</h2><p>Overview · Moderation · Feedback · Engineering</p></div>
+    <div style="display:flex;gap:6px;padding:0 20px 10px;flex-wrap:wrap;align-items:center">
       <button class="admin-dash-tab active" data-tab="overview" onclick="switchAdminTab('overview')">Overview</button>
+      <span class="admin-dash-tab-sep"></span>
       <button class="admin-dash-tab" data-tab="users" onclick="switchAdminTab('users')">Users</button>
-      <button class="admin-dash-tab" data-tab="groups" onclick="switchAdminTab('groups')">Groups</button>
       <button class="admin-dash-tab" data-tab="reports" onclick="switchAdminTab('reports')">Reports</button>
       <button class="admin-dash-tab" data-tab="spam" onclick="switchAdminTab('spam')">🤖 Spam</button>
+      <button class="admin-dash-tab" data-tab="groups" onclick="switchAdminTab('groups')">Groups</button>
+      <span class="admin-dash-tab-sep"></span>
       <button class="admin-dash-tab" data-tab="feedback" onclick="switchAdminTab('feedback')">💬 Feedback</button>
+      <span class="admin-dash-tab-sep"></span>
       <button class="admin-dash-tab" data-tab="code" onclick="switchAdminTab('code')">🚀 Code</button>
       <button class="admin-dash-tab" id="admin-err-tab" data-tab="errors" onclick="switchAdminTab('errors')">⚠️ Errors</button>
       <button class="admin-dash-tab" data-tab="diagnostics" onclick="switchAdminTab('diagnostics')">🔍 Diagnostics</button>
