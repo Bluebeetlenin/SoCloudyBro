@@ -801,6 +801,9 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 #chat-bg-wrapper{position:relative;flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;background-size:cover;background-position:center;}
 #messages-wrap{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:12px 16px;scroll-behavior:smooth;position:relative;z-index:1;background:transparent;}
 
+#jump-to-bottom-btn{position:absolute;right:18px;bottom:16px;z-index:5;width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);transition:opacity .15s,transform .15s}
+#jump-to-bottom-btn:hover{background:var(--surface3);transform:translateY(-2px)}
+
 /* bg preview swatches */
 .bg-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
 .bg-option{border-radius:10px;aspect-ratio:4/3;cursor:pointer;border:3px solid transparent;transition:all 0.2s;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);text-shadow:0 1px 3px rgba(0,0,0,0.8)}
@@ -2020,6 +2023,9 @@ body.device-tablet .msg-body{max-width:74%}
         <div id="group-desc-banner" style="display:none"></div>
         <div id="pinned-banner" onclick="scrollToPinned()" style="display:none"></div>
         <div id="messages-wrap"></div>
+        <button id="jump-to-bottom-btn" onclick="jumpToBottom()" title="Jump to latest message" style="display:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        </button>
       </div>
       <div id="chat-footer">
         <!-- GIF picker: floats above the footer as a popover panel -->
@@ -13068,6 +13074,7 @@ function renderMessages(msgs) {
   });
   if (atBottom) wrap.scrollTop = wrap.scrollHeight;
   if (activeConvo && convosCache) renderPinnedBanner(convosCache.find(x=>x&&x.key === activeConvo.key));
+  if (typeof _updateJumpToBottomBtn === 'function') _updateJumpToBottomBtn();
 }
 
 // ── PATCH sendMsg TO FILTER BAD WORDS ────────────────────────────────────────
@@ -18767,6 +18774,38 @@ function injectFeatureDom(){
   injectFeatureSettings();
   injectFeatureModals();
   applyLanguage();
+  initJumpToBottomBtn();
+}
+
+// ===== JUMP-TO-BOTTOM FLOATING BUTTON =====
+// Shows once you've scrolled up more than ~1 screen height in the open
+// chat; click (or new message while scrolled up) scrolls back to the
+// latest message. Wired once — #jump-to-bottom-btn and #messages-wrap are
+// both static markup, never re-created.
+function _isNearChatBottom(wrap){
+  if(!wrap) return true;
+  return wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 100;
+}
+function jumpToBottom(){
+  const wrap=document.getElementById('messages-wrap');
+  if(wrap) wrap.scrollTop=wrap.scrollHeight;
+  const btn=document.getElementById('jump-to-bottom-btn');
+  if(btn) btn.style.display='none';
+}
+function _updateJumpToBottomBtn(){
+  const wrap=document.getElementById('messages-wrap');
+  const btn=document.getElementById('jump-to-bottom-btn');
+  if(!wrap||!btn) return;
+  // Scrolled up far enough to be worth a shortcut, and there's actually
+  // something to scroll (a short chat that fits on screen never shows it).
+  const scrolledUp=wrap.scrollHeight-wrap.scrollTop-wrap.clientHeight>=400;
+  btn.style.display=scrolledUp?'flex':'none';
+}
+function initJumpToBottomBtn(){
+  const wrap=document.getElementById('messages-wrap');
+  if(!wrap||wrap._jumpBtnWired) return;
+  wrap._jumpBtnWired=true;
+  wrap.addEventListener('scroll',_updateJumpToBottomBtn,{passive:true});
 }
 
 function injectFeatureSettings(){
