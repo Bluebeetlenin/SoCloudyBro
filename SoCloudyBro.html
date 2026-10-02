@@ -2319,7 +2319,7 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="secq-btn-text">Set Up</button></div>
           </div>
           <div class="settings-row" style="cursor:pointer" onclick="rotateE2EKeys()">
-            <div class="settings-row-main"><div class="settings-row-label">Rotate Encryption Keys</div><div class="settings-row-sub">Generates a new E2E keypair — future messages use the new keys</div></div>
+            <div class="settings-row-main"><div class="settings-row-label">Rotate Encryption Keys</div><div class="settings-row-sub">Generates a new E2E keypair now — future messages use the new keys. Also happens automatically every 90 days.</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Rotate</button></div>
           </div>
           <div class="settings-row">
@@ -20806,6 +20806,7 @@ function featurePostLaunch(){
   // Delayed so it never competes with a higher-priority first-paint dialog
   // (email verification gate, tutorial, security-questions prompt).
   setTimeout(()=>{ try{ _maybeAutoShowChangelog(); }catch(e){} },2000);
+  setTimeout(()=>{ _maybeAutoRotateE2EKeys().catch(e=>console.warn('Auto key rotation failed',e)); },3000);
 }
 
 /* =============================================================================
@@ -22174,23 +22175,47 @@ function renderSecurityScore(){
 }
 
 /* ===== E2E KEY ROTATION ===== */
+// Core rotation logic shared by the manual "Rotate" button and the
+// periodic automatic rotation below (security feature 15/32 — forward-
+// secrecy key ratcheting: rotate the DM key periodically, not just
+// on-demand). Returns true on success.
+async function _doRotateE2EKeys(){
+  localStorage.removeItem('cc_e2e_priv_'+window.me.number);
+  localStorage.removeItem('cc_e2e_pub_'+window.me.number);
+  try{ sessionStorage.removeItem('e2e_synced_'+window.me.number); }catch(e){}
+  window._myKeyPair=null; window._myPubJwk=null;
+  Object.keys(window._dmAesCache||{}).forEach(k=>delete window._dmAesCache[k]);
+  Object.keys(window._groupAesCache||{}).forEach(k=>delete window._groupAesCache[k]);
+  const kp=await ensureE2EKeypair();
+  if(kp){
+    await registerOrUpdate();
+    await _logSecurityEvent('key_rotation','E2E keypair regenerated');
+    try{ localStorage.setItem('cc_e2e_last_rotation_'+window.me.number,String(Date.now())); }catch(e){}
+  }
+  return !!kp;
+}
 async function rotateE2EKeys(){
   if(!window.me){ showToast('Not logged in','Log in first.'); return; }
   if(!confirm('Rotate your E2E encryption keys?\n\nMessages sent before rotation can no longer be decrypted on new devices. Existing messages on THIS device are still readable.\n\nThis cannot be undone.')) return;
   try{
-    localStorage.removeItem('cc_e2e_priv_'+window.me.number);
-    localStorage.removeItem('cc_e2e_pub_'+window.me.number);
-    try{ sessionStorage.removeItem('e2e_synced_'+window.me.number); }catch(e){}
-    window._myKeyPair=null; window._myPubJwk=null;
-    Object.keys(window._dmAesCache||{}).forEach(k=>delete window._dmAesCache[k]);
-    Object.keys(window._groupAesCache||{}).forEach(k=>delete window._groupAesCache[k]);
-    const kp=await ensureE2EKeypair();
-    if(kp){
-      await registerOrUpdate();
-      await _logSecurityEvent('key_rotation','E2E keypair regenerated');
-      showToast('Keys rotated','Your E2E encryption keys have been regenerated and published.');
-    }
+    const ok=await _doRotateE2EKeys();
+    if(ok) showToast('Keys rotated','Your E2E encryption keys have been regenerated and published.');
   }catch(e){ showToast('Rotation failed',scbErr('SCB-SEC-22','Key rotation failed.',(e.message||''))); }
+}
+// Automatic periodic rotation, checked once per app launch. A brand-new
+// account (no recorded rotation yet) just starts the clock rather than
+// immediately rotating a key it only just created.
+const E2E_AUTO_ROTATE_DAYS=90;
+async function _maybeAutoRotateE2EKeys(){
+  if(!window.me) return;
+  try{
+    const storeKey='cc_e2e_last_rotation_'+window.me.number;
+    const last=Number(localStorage.getItem(storeKey)||0);
+    if(!last){ localStorage.setItem(storeKey,String(Date.now())); return; }
+    if(Date.now()-last < E2E_AUTO_ROTATE_DAYS*86400000) return;
+    const ok=await _doRotateE2EKeys();
+    if(ok) showToast('🔄 Encryption keys refreshed','Your messaging keys were automatically rotated for security (every '+E2E_AUTO_ROTATE_DAYS+' days). Older unsynced devices may need Settings → Export/Import Decryption Key.');
+  }catch(e){ console.warn('Auto key rotation check failed (non-fatal):',e.message); }
 }
 
 /* ===== E2E KEY EXPORT / IMPORT (cross-device) ===== */
