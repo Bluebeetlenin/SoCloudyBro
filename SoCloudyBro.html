@@ -821,6 +821,10 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 #jump-to-bottom-btn{position:absolute;right:18px;bottom:16px;z-index:5;width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);transition:opacity .15s,transform .15s}
 #jump-to-bottom-btn:hover{background:var(--surface3);transform:translateY(-2px)}
 
+#chat-drop-overlay{position:absolute;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(90,82,213,0.12);backdrop-filter:blur(2px);border:3px dashed var(--accent);pointer-events:none}
+#chat-drop-overlay.active{display:flex}
+#chat-drop-overlay-inner{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 28px;font-size:15px;font-weight:600;color:var(--text);box-shadow:var(--shadow-lg)}
+
 /* bg preview swatches */
 .bg-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
 .bg-option{border-radius:10px;aspect-ratio:4/3;cursor:pointer;border:3px solid transparent;transition:all 0.2s;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);text-shadow:0 1px 3px rgba(0,0,0,0.8)}
@@ -2045,6 +2049,7 @@ body.device-tablet .msg-body{max-width:74%}
         <button id="jump-to-bottom-btn" onclick="jumpToBottom()" title="Jump to latest message" style="display:none">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
         </button>
+        <div id="chat-drop-overlay"><div id="chat-drop-overlay-inner">📎 Drop to send</div></div>
       </div>
       <div id="chat-footer">
         <!-- GIF picker: floats above the footer as a popover panel -->
@@ -18941,6 +18946,7 @@ function injectFeatureDom(){
   injectFeatureModals();
   applyLanguage();
   initJumpToBottomBtn();
+  initChatDragDrop();
   initSidebarResize();
   _applyStoredSidebarWidth();
   _applyStoredTabOrder();
@@ -19068,6 +19074,43 @@ function initTabDragReorder(){
     if(draggedEl) draggedEl.classList.remove('dragging');
     draggedEl=null;
     _saveTabOrder();
+  });
+}
+
+// ===== DRAG-AND-DROP FILE SHARING =====
+// Dropping a file (or several) anywhere on the open chat uploads and sends
+// each one via the same uploadAndSendFile() the paperclip/attach button
+// already uses — same size limit, block check, and new-account cooldown.
+function initChatDragDrop(){
+  const zone=document.getElementById('chat-bg-wrapper');
+  const overlay=document.getElementById('chat-drop-overlay');
+  if(!zone||!overlay||zone._dropWired) return;
+  zone._dropWired=true;
+  let dragDepth=0; // tracks nested dragenter/dragleave on child elements so the overlay doesn't flicker off while still dragging over a child
+  const hasFiles=e=>e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');
+  zone.addEventListener('dragenter',e=>{
+    if(!hasFiles(e)||!activeConvo) return;
+    e.preventDefault();
+    dragDepth++;
+    overlay.classList.add('active');
+  });
+  zone.addEventListener('dragover',e=>{
+    if(!hasFiles(e)||!activeConvo) return;
+    e.preventDefault(); // required for drop to fire at all
+  });
+  zone.addEventListener('dragleave',e=>{
+    if(!hasFiles(e)) return;
+    dragDepth=Math.max(0,dragDepth-1);
+    if(dragDepth===0) overlay.classList.remove('active');
+  });
+  zone.addEventListener('drop',e=>{
+    if(!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth=0;
+    overlay.classList.remove('active');
+    if(!activeConvo) return;
+    const files=[...(e.dataTransfer.files||[])];
+    files.forEach(f=>uploadAndSendFile(f));
   });
 }
 
