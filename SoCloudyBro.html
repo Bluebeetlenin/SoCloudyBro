@@ -22502,6 +22502,36 @@ if(_origClipboardWrite){
   };
 }
 
+/* ===== SCREENSHOT DETECTION (security feature 14/32) =====
+   Best-effort, Snapchat-style: a web page can never see an OS-level
+   screenshot gesture (macOS Cmd+Shift+3/4, mobile power+volume, etc. never
+   reach the browser at all), but on Windows the PrintScreen key DOES fire a
+   normal keydown/keyup the focused page can observe — that's the one
+   reliable signal available here, so that's what this detects. Drops a
+   system message into the open DM so the other person knows, the same way
+   Snapchat notifies on a screenshot — there's deliberately no setting to
+   suppress this, since a self-disable would defeat the point of it. ===== */
+let _lastScreenshotNotifTime=0;
+function _maybeNotifyScreenshot(){
+  if(!me||!activeConvo||activeConvo.type==='group') return; // DMs only for now
+  const now=Date.now();
+  if(now-_lastScreenshotNotifTime<3000) return; // debounce the key's repeat/double-fire
+  _lastScreenshotNotifTime=now;
+  showToast('📸 Screenshot noted','The other person will see a note in this chat that you took a screenshot.');
+  (async()=>{
+    try{
+      if(!convosCache) await getConvos();
+      const conv=getActiveConvoObj();
+      if(!conv) return;
+      _addSystemMessage(conv,'📸 '+(me.name||('#'+me.number))+' took a screenshot of this chat');
+      await saveConvos();
+    }catch(e){ console.warn('Screenshot notice failed (non-fatal):',e.message); }
+  })();
+}
+document.addEventListener('keyup',function(e){
+  if(e.key==='PrintScreen') _maybeNotifyScreenshot();
+});
+
 /* ===== AUTO-LOCK / AUTO-LOGOUT ON INACTIVITY + SCREEN BLUR ON HIDE =====
    (security feature 4/32 — session timeout after inactivity)
    Auto-lock: if a PIN is set, lock the screen after 10 minutes of no
