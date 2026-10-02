@@ -14927,15 +14927,41 @@ const FEEDBACK_PATH='feedback';
 let _feedbackType='feedback'; // 'rate' | 'feedback' | 'bug'
 let _feedbackRating=0;
 
-const FEEDBACK_PERMS=[
-  {id:'overview',label:'Dashboard Overview'},
-  {id:'users_view',label:'View Users'},
-  {id:'users_ban',label:'Ban / Unban Users'},
-  {id:'groups_view',label:'View Groups'},
-  {id:'reports_view',label:'View Reports'},
-  {id:'feedback_view',label:'View Feedback'},
-  {id:'code_update',label:'Push Code Updates'},
+// Full grantable admin permission list, grouped for the permission editor.
+// Nuclear Reset, the Firebase Rules Manager, and Data Cleanup are
+// deliberately NOT on this list — they stay hardcoded to the primary admin
+// account (ADMIN_NUMBER) everywhere they're checked, so no combination of
+// granted permissions can ever unlock them for a delegated admin.
+const ADMIN_PERMS=[
+  {group:'Dashboard',perms:[
+    {id:'overview',label:'View Dashboard Overview'},
+  ]},
+  {group:'Users',perms:[
+    {id:'users_view',label:'View Users'},
+    {id:'users_ban',label:'Ban / Unban Users'},
+    {id:'users_delete',label:'Permanently Delete User Accounts'},
+  ]},
+  {group:'Groups',perms:[
+    {id:'groups_view',label:'View Groups'},
+    {id:'groups_delete',label:'Delete Groups'},
+  ]},
+  {group:'Reports & Spam',perms:[
+    {id:'reports_view',label:'View User Reports'},
+    {id:'reports_resolve',label:'Resolve Reports'},
+    {id:'spam_resolve',label:'Dismiss Spam Flags'},
+  ]},
+  {group:'Feedback',perms:[
+    {id:'feedback_view',label:'View Feedback & Bug Reports'},
+    {id:'feedback_manage',label:'Reply To / Resolve Feedback'},
+  ]},
+  {group:'Platform',perms:[
+    {id:'code_update',label:'Push Live Code Updates'},
+    {id:'moderation_export',label:'Export Moderation Logs'},
+    {id:'digest_send',label:'Send Weekly Admin Digest'},
+  ]},
 ];
+// Flat list kept for any older code still expecting the original shape.
+const FEEDBACK_PERMS=ADMIN_PERMS.reduce((a,g)=>a.concat(g.perms),[]);
 
 function openFeedbackModal(type){
   _feedbackType=type;
@@ -15042,11 +15068,11 @@ async function renderAdminFeedbackTab(){
             ${item.errorCode?`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Error: <code style="color:var(--text2)">${esc(item.errorCode)}</code></div>`:''}
             ${item.text?`<div style="font-size:13px;color:var(--text2);margin-bottom:8px;white-space:pre-wrap;word-break:break-word">${esc(item.text)}</div>`:''}
             ${item.adminReply?`<div style="font-size:12px;background:var(--surface2);border-left:3px solid var(--accent);padding:6px 8px;border-radius:0 var(--r-xs) var(--r-xs) 0;margin-bottom:8px;white-space:pre-wrap;word-break:break-word"><b style="color:var(--accent)">Admin replied:</b> ${esc(item.adminReply)}</div>`:''}
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${hasPermission('feedback_manage')?`<div style="display:flex;gap:6px;flex-wrap:wrap">
               ${item.status!=='reviewed'?`<button class="btn btn-ghost btn-sm" onclick="setFeedbackStatus('${item.id}','reviewed')">Mark Reviewed</button>`:''}
               ${item.status!=='resolved'?`<button class="btn btn-ghost btn-sm" style="color:var(--success)" onclick="setFeedbackStatus('${item.id}','resolved')">✓ Resolve</button>`:''}
               <button class="btn btn-ghost btn-sm" onclick="replyToFeedback('${item.id}',${esc(JSON.stringify(item.fromName||'User #'+item.from))})">↩ Reply</button>
-            </div>
+            </div>`:''}
           </div>
         `).join('')}
       </div>`;
@@ -15063,13 +15089,13 @@ function filterFeedbackAdmin(btn,filter){
 }
 
 async function setFeedbackStatus(id,status){
-  if(!hasPermission('feedback_view')) { showToast('Access denied',scbErr('SCB-ADMIN-01','Admin access required.')); return; }
+  if(!requirePermission('feedback_manage')) return;
   try{await fbdb.ref(FEEDBACK_PATH+'/'+id+'/status').set(status);renderAdminFeedbackTab();}
   catch(e){showToast('Error','Could not update status.');}
 }
 
 function replyToFeedback(id,name){
-  if(!hasPermission('feedback_view')) { showToast('Access denied',scbErr('SCB-ADMIN-01','Admin access required.')); return; }
+  if(!requirePermission('feedback_manage')) return;
   const reply=prompt('Reply to '+name+':');
   if(!reply) return;
   fbdb.ref(FEEDBACK_PATH+'/'+id).update({adminReply:reply,status:'reviewed'})
@@ -15080,15 +15106,18 @@ function replyToFeedback(id,name){
 // ── PERMISSION EDITOR (in admin Users tab) ───────────────────────────────────
 function openPermissionEditor(userNum,userName,currentPerms){
   const permsArr=Array.isArray(currentPerms)?currentPerms:[];
-  const rows=FEEDBACK_PERMS.map(p=>`
+  const rows=ADMIN_PERMS.map(g=>`
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 4px">${esc(g.group)}</div>
+    ${g.perms.map(p=>`
     <label style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer">
       <input type="checkbox" data-perm="${p.id}" ${permsArr.includes(p.id)?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)"/>
       <span style="font-size:13px">${p.label}</span>
-    </label>`).join('');
+    </label>`).join('')}`).join('');
   const html=`
     <div style="font-size:13px;color:var(--muted);margin-bottom:12px">
-      Granting admin panel access to <b style="color:var(--text)">${esc(userName)}</b> (#${userNum}). Full admin (you) always has all permissions.
+      Granting admin panel access to <b style="color:var(--text)">${esc(userName)}</b> (#${userNum}). Full admin (you) always has all permissions. This is the complete list of permissions that can be delegated.
     </div>
+    <div style="font-size:11px;color:var(--warn);background:var(--warn-soft);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px">⚠️ Nuclear Reset, the Firebase Rules Manager, and Data Cleanup can never be granted — those stay restricted to the primary admin account no matter what's checked below.</div>
     ${rows}
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="btn" onclick="savePermissions(${userNum})">Save Access</button>
@@ -15310,7 +15339,7 @@ function applySiteUpdate(){
 // happens to have the dashboard open — not a substitute for real automation,
 // but useful without needing a backend.
 async function sendAdminWeeklyDigest(btn){
-  if(!requireAdmin()) return;
+  if(!requirePermission('digest_send')) return;
   if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
   try{
     const [users,convData,reports]=await Promise.all([getUsers(),getBin(CONVOS_BIN),getReports().catch(()=>[])]);
@@ -15400,7 +15429,7 @@ async function sendAdminWeeklyDigestSilent(){
 }
 // CSV export of the full moderation log (all reports, resolved or not).
 function exportModerationLogCsv(){
-  if(!requireAdmin()) return;
+  if(!requirePermission('moderation_export')) return;
   (async()=>{
     try{
       const reports=await getReports();
@@ -15478,12 +15507,14 @@ async function renderAdminOverviewTab(){
         ${pendingDeletions?card('Pending deletions',pendingDeletions,'','var(--warn)'):''}
         ${pendingParental?card('Pending parental approval',pendingParental,'','var(--warn)'):''}
       </div>
-      ${me.number!==ADMIN_NUMBER?'':`
+      ${(hasPermission('digest_send')||hasPermission('moderation_export'))?`
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" onclick="sendAdminWeeklyDigest(this)">📧 Send weekly digest now</button>
-        <button class="btn btn-ghost btn-sm" onclick="exportModerationLogCsv()">⬇ Export moderation log (CSV)</button>
+        ${hasPermission('digest_send')?'<button class="btn btn-sm" onclick="sendAdminWeeklyDigest(this)">📧 Send weekly digest now</button>':''}
+        ${hasPermission('moderation_export')?'<button class="btn btn-ghost btn-sm" onclick="exportModerationLogCsv()">⬇ Export moderation log (CSV)</button>':''}
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:8px">Last digest sent: <span id="last-digest-sent-text">${localStorage.getItem('cc_last_digest_sent')?new Date(Number(localStorage.getItem('cc_last_digest_sent'))).toLocaleString():'never'}</span></div>
+      ${hasPermission('digest_send')?`<div style="font-size:10px;color:var(--muted);margin-top:8px">Last digest sent: <span id="last-digest-sent-text">${localStorage.getItem('cc_last_digest_sent')?new Date(Number(localStorage.getItem('cc_last_digest_sent'))).toLocaleString():'never'}</span></div>`:''}
+      `:''}
+      ${me.number!==ADMIN_NUMBER?'':`
       <details style="margin-top:20px">
         <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--danger);padding:8px 0;user-select:none">⚠️ Danger Zone — destructive database tools (click to expand)</summary>
       <div id="admin-rules-section" style="margin-top:16px;">
@@ -15547,7 +15578,7 @@ async function renderAdminUsersTab(){
           +(hasPermission('users_ban')?(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan('+u.number+')">🚫 Ban</button>'):'')
           +(!isAdmin&&me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',' + esc(JSON.stringify(rawName)) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[])) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>':'')
-          +((!isAdmin&&Number(u.number)!==ADMIN_NUMBER&&me.number===ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
+          +((!isAdmin&&Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete'))?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
           +'</div></div>';
       }).join('');
   }catch(e){
@@ -15569,7 +15600,7 @@ async function renderAdminGroupsTab(){
       return '<div class="sb-item" style="border-radius:var(--r-sm)">'
         +'<div class="avatar" style="width:36px;height:36px;background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff">👥</div>'
         +'<div class="sb-item-info"><div class="sb-item-name">'+name+'</div><div class="sb-item-preview">'+memberCount+' member(s) · '+(g.messages||[]).length+' messages</div></div>'
-        +(me.number===ADMIN_NUMBER?'<button class="btn btn-danger btn-sm" onclick="adminDeleteGroup(\''+g.key+'\')">🗑️ Delete</button>':'')
+        +(hasPermission('groups_delete')?'<button class="btn btn-danger btn-sm" onclick="adminDeleteGroup(\''+g.key+'\')">🗑️ Delete</button>':'')
         +'</div>';
     }).join('');
   }catch(e){
@@ -15578,7 +15609,7 @@ async function renderAdminGroupsTab(){
   }
 }
 async function adminDeleteUser(number,name){
-  if(!requireAdmin()) return;
+  if(!requirePermission('users_delete')) return;
   if(Number(number)===ADMIN_NUMBER){ showToast('Protected','The admin account (#2015) cannot be deleted.'); return; }
   if(!confirm('Permanently delete account for '+name+' (#'+number+')?\n\nThis removes their account from Firebase entirely — not a ban. If they\'re still signed in on a device, they\'ll be signed out the next time it checks in.\n\nThis cannot be undone.')) return;
   try{
@@ -15603,7 +15634,7 @@ async function adminDeleteUser(number,name){
   }catch(e){ showToast('Delete failed',scbErr('SCB-ADMIN-30','Could not delete that account.',(e&&e.message)||'')); }
 }
 async function adminDeleteGroup(key){
-  if(!requireAdmin()) return;
+  if(!requirePermission('groups_delete')) return;
   if(!confirm('Permanently delete this group and all its messages for everyone?')) return;
   try{
     if(!convosCache) await getConvos();
@@ -15631,7 +15662,7 @@ async function renderAdminReportsTab(){
         +'<div style="font-size:12px;margin:6px 0">'+esc(r.reason||'')+'</div>'
         +'<div style="display:flex;gap:6px">'
         +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="openAdminPanel('+r.reportedNumber+')">View user</button>':'')
-        +(me.number===ADMIN_NUMBER?(open?'<button class="btn btn-ghost btn-sm" onclick="resolveReport(\''+r.id+'\')">✅ Mark resolved</button>':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'):(open?'':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'))
+        +(hasPermission('reports_resolve')?(open?'<button class="btn btn-ghost btn-sm" onclick="resolveReport(\''+r.id+'\')">✅ Mark resolved</button>':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'):(open?'':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'))
         +'</div></div>';
     }).join('');
   }catch(e){
@@ -15640,7 +15671,7 @@ async function renderAdminReportsTab(){
   }
 }
 async function resolveReport(id){
-  if(!requireAdmin()) return;
+  if(!requirePermission('reports_resolve')) return;
   try{
     const reports=await getReports();
     const r=reports.find(x=>x.id===id);
@@ -16933,7 +16964,7 @@ async function renderAdminSpamTab(){
           <div style="font-size:12px;color:var(--muted);margin-top:2px">${typeLabel} · ${esc(detail)} · ${esc(when)}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          ${!f.resolved?`<button class="btn btn-ghost btn-sm" onclick="resolveSpamFlag('${esc(f._key)}',this)">Dismiss</button>`:''}
+          ${(!f.resolved&&hasPermission('spam_resolve'))?`<button class="btn btn-ghost btn-sm" onclick="resolveSpamFlag('${esc(f._key)}',this)">Dismiss</button>`:''}
           ${hasPermission('users_ban')?`<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan(${f.number})">Ban</button>`:''}
         </div>
       </div>`;
@@ -16945,7 +16976,7 @@ async function renderAdminSpamTab(){
 }
 
 async function resolveSpamFlag(key, btn){
-  if(!hasPermission('users_view')) return;
+  if(!requirePermission('spam_resolve')) return;
   if(btn) btn.disabled = true;
   try{
     await fbdb.ref('spam_flags/'+key+'/resolved').set(true);
