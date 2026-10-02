@@ -13643,6 +13643,20 @@ async function sendMsg(gifUrl) {
   if (!rawText && !gifUrl) return;
   if (!activeConvo || !me) return;
   if (activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)) { showToast('Cannot send', scbErr('SCB-MSG-16','This conversation is blocked.')); return; }
+  // Security feature 22/32: scan for risky links BEFORE sending, not just
+  // when the recipient later clicks one (linkifySegment's existing
+  // warning badge covers that side already).
+  if(rawText){
+    const _urlsInMsg=rawText.match(URL_RE)||[];
+    for(const _rawUrl of _urlsInMsg){
+      const _url=_rawUrl.replace(/[.,!?;:)\]}]+$/,'');
+      const _reasons=scanUrlRisk(_url);
+      if(_reasons.length){
+        if(!confirm('This message contains a link that looks suspicious:\n\n'+_url+'\n\n'+_reasons.map(r=>'• '+r).join('\n')+'\n\nSend it anyway?')) return;
+        break; // one confirmation covers the whole message
+      }
+    }
+  }
   const _originalText = rawText; // for undo-send toast
   input.value = ''; autoResize(input);
   if(typeof _saveDraft==='function') _saveDraft(); // clear saved draft immediately on send
