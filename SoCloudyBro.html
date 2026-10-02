@@ -3566,18 +3566,23 @@ body.device-tablet .msg-body{max-width:74%}
 <div id="msg-search-results" style="display:none;position:absolute;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:40;max-height:300px;overflow-y:auto;box-shadow:var(--shadow)"></div>
 
 <!-- CryptoJS 4.2.0 — AES-256 used for profile field obfuscation (enc/dec).
-     Was previously inlined; now loaded from CDN to keep file size small. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+     Was previously inlined; now loaded from CDN to keep file size small.
+     Pinned to an exact version with SRI (integrity=) so the browser refuses
+     to run the script if the CDN ever serves different content than what
+     was audited — see security item #50 (CDN integrity monitoring), which
+     also re-checks these hashes live from the admin diagnostics panel. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" integrity="sha384-mgWScxWVKP8F7PBbpNp7i/aSb17kN0LcifBpahAplF3Mn0GR4/u1oMpWIm2rD8yY" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js" integrity="sha384-1hBNr0agKHNFwbheHcAJzeLri4PPLTLbaXUH5d9CauwS3A/PrkIt2tzxBJK3bHjY" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js" integrity="sha384-fXPb0uemoXlFCqQMtM0MOAv7FM0LsMegbR6x22q7lfnohaCNmTQzgA8BTrR8WqGx" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js" integrity="sha384-I6aFwEp+2h4APt6+0RW32Ej4KnvuY3aO+maGRYNKNZtt2W2Hz/pEiyd+VJSm9QvQ" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js" integrity="sha384-QCZO5nLB2oUUv0yv01wZHylPt2CPzKdo0YnmSYCTIOo8XPPIlsIP3f1cikv2oiJ1" crossorigin="anonymous"></script>
 <!-- LiveKit browser client (UMD build). Used only when LIVEKIT_URL and
      LIVEKIT_TOKEN_ENDPOINT are configured further down; if this script fails to
      load, meetings fall back to the built-in small-mesh WebRTC path, so a
      missing/blocked CDN degrades rather than breaks. The UMD bundle exposes the
-     global `LivekitClient` (note the lowercase k). -->
-<script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+     global `LivekitClient` (note the lowercase k). Pinned to an exact version
+     (was a floating @2 tag) + SRI, same rationale as above. -->
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js" integrity="sha384-MveBYLjjZe2VXnKzvBbPfyh5MEbiqNDeta9nzIGbtqnXmC+CwX/mLE5+M9PDIcPy" crossorigin="anonymous"></script>
 <script>
 // -- CONFIG -------------------------------------------------------------------
 // Firebase project: SoCloudyBro (socloudybro-b8606)
@@ -4246,6 +4251,44 @@ async function _scbFetchSelfHeaders(){
   return _scbHeaderCache;
 }
 
+// ── CDN / DEPENDENCY INTEGRITY MONITORING (security item #50) ──────────────
+// Every externally-hosted script with a version-pinned URL also carries a
+// real SRI `integrity=` attribute in the HTML (see the <script> tags near
+// the top of this file) — the browser itself refuses to execute the script
+// if a CDN ever serves different bytes than what was audited. This section
+// re-verifies the SAME hashes live, from the admin diagnostics panel, by
+// re-fetching each pinned CDN resource and re-hashing it — catching a CDN
+// compromise or a stale pin even on a browser that ignores SRI mismatches
+// silently in some edge case, and giving admins visible proof the pins are
+// still correct. Google Sign-In's and Cloudflare Turnstile's scripts are
+// intentionally NOT hash-pinned — both are designed to update frequently
+// (security patches) at a fixed URL, so SRI would break them on any
+// legitimate update; those get a lighter reachability check instead.
+const SCB_SRI_PINS = [
+  { id:'cryptojs', label:'CryptoJS 4.2.0 (cdnjs)', url:'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js', hash:'sha384-mgWScxWVKP8F7PBbpNp7i/aSb17kN0LcifBpahAplF3Mn0GR4/u1oMpWIm2rD8yY' },
+  { id:'fb-app', label:'Firebase App 10.13.0', url:'https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js', hash:'sha384-1hBNr0agKHNFwbheHcAJzeLri4PPLTLbaXUH5d9CauwS3A/PrkIt2tzxBJK3bHjY' },
+  { id:'fb-db', label:'Firebase Database 10.13.0', url:'https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js', hash:'sha384-fXPb0uemoXlFCqQMtM0MOAv7FM0LsMegbR6x22q7lfnohaCNmTQzgA8BTrR8WqGx' },
+  { id:'fb-storage', label:'Firebase Storage 10.13.0', url:'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js', hash:'sha384-I6aFwEp+2h4APt6+0RW32Ej4KnvuY3aO+maGRYNKNZtt2W2Hz/pEiyd+VJSm9QvQ' },
+  { id:'fb-auth', label:'Firebase Auth 10.13.0', url:'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js', hash:'sha384-QCZO5nLB2oUUv0yv01wZHylPt2CPzKdo0YnmSYCTIOo8XPPIlsIP3f1cikv2oiJ1' },
+  { id:'livekit', label:'livekit-client 2.22.3 (jsdelivr)', url:'https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js', hash:'sha384-MveBYLjjZe2VXnKzvBbPfyh5MEbiqNDeta9nzIGbtqnXmC+CwX/mLE5+M9PDIcPy' },
+];
+async function _scbSha384Base64(buf){
+  const digest=await crypto.subtle.digest('SHA-384', buf);
+  const bytes=new Uint8Array(digest);
+  let bin=''; for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+async function _checkSriPin(pin){
+  try{
+    const res=await fetch(pin.url,{cache:'no-store'});
+    if(!res.ok) return {pass:false,detail:'HTTP '+res.status+' fetching '+pin.url};
+    const buf=await res.arrayBuffer();
+    const actual='sha384-'+await _scbSha384Base64(buf);
+    const match=actual===pin.hash;
+    return {pass:match,detail:match?'Live hash matches the pinned SRI value':'MISMATCH — the CDN is serving different content than what was audited! expected '+pin.hash.slice(0,20)+'… got '+actual.slice(0,20)+'…'};
+  }catch(e){return {pass:false,detail:'Fetch failed: '+e.message};}
+}
+
 const SCB_CHECKS = [
 
   // ── CONFIG ─────────────────────────────────────────────────────────────────
@@ -4387,6 +4430,34 @@ const SCB_CHECKS = [
         const v=h.get('permissions-policy');
         return {pass:true,warn:!v,detail:v||'MISSING (optional but recommended)'};
       }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+
+  // ── CDN / DEPENDENCY INTEGRITY ─────────────────────────────────────────────
+  { id:'cdn.tags_match_pins', cat:'CDN Integrity', name:'Script tags carry the expected SRI hashes',
+    run:()=>{
+      const scripts=[...document.querySelectorAll('script[src]')];
+      const mismatches=SCB_SRI_PINS.filter(pin=>{
+        const tag=scripts.find(s=>s.src===pin.url);
+        return !tag || tag.getAttribute('integrity')!==pin.hash;
+      });
+      return {pass:mismatches.length===0, detail:mismatches.length? mismatches.map(p=>p.label).join(', ')+' — missing or mismatched integrity attribute in the HTML' : 'All '+SCB_SRI_PINS.length+' pinned script tags carry the correct integrity attribute'};
+    }
+  },
+  ...SCB_SRI_PINS.map(pin=>({
+    id:'cdn.'+pin.id, cat:'CDN Integrity', name:pin.label+' — live CDN content matches pinned hash', async:true,
+    run:()=>_checkSriPin(pin),
+  })),
+  { id:'cdn.gsi_reachable', cat:'CDN Integrity', name:'Google Sign-In script reachable (not hash-pinned — updates frequently)', async:true, warn:true,
+    run:async()=>{
+      try{ await fetch('https://accounts.google.com/gsi/client',{method:'HEAD',mode:'no-cors',cache:'no-store'}); return {pass:true,detail:'Reachable'}; }
+      catch(e){ return {pass:true,warn:true,detail:'Could not verify reachability (non-critical — Google Sign-In degrades gracefully if blocked): '+e.message}; }
+    }
+  },
+  { id:'cdn.turnstile_reachable', cat:'CDN Integrity', name:'Cloudflare Turnstile script reachable (not hash-pinned — updates frequently)', async:true, warn:true,
+    run:async()=>{
+      try{ await fetch('https://challenges.cloudflare.com/turnstile/v0/api.js',{method:'HEAD',mode:'no-cors',cache:'no-store'}); return {pass:true,detail:'Reachable'}; }
+      catch(e){ return {pass:true,warn:true,detail:'Could not verify reachability (non-critical — Turnstile degrades gracefully if blocked): '+e.message}; }
     }
   },
 
