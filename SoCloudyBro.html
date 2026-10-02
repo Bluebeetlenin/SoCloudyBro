@@ -7136,9 +7136,12 @@ async function finishLogin(user, pwdToStore){
   // Handle post-switch restore
   try{ localStorage.removeItem('cc_switch_to'); localStorage.removeItem('cc_after_login_switch'); }catch(e){}
   await launch();
-  // Record login history and show last-login notification
-  await _recordLogin().catch(()=>{});
-  _showLastLoginNotif();
+  // Record login history and show last-login notification. A brand-new
+  // device already gets its own, more urgent toast + email from inside
+  // _recordLogin() — skip the plain "Welcome back" one so this login
+  // doesn't show two toasts.
+  const isNewDevice=await _recordLogin().catch(()=>false);
+  if(!isNewDevice) _showLastLoginNotif();
   await _logSecurityEvent('login','Successful login').catch(()=>{});
 }
 
@@ -21871,16 +21874,47 @@ function _clearPinLock(){ try{ localStorage.removeItem(_pinLockKey()); }catch{} 
 /* ===== LOGIN HISTORY =====
    Last 5 logins stored in user record under loginHistory[]. ===== */
 async function _recordLogin(){
-  if(!window.me) return;
+  if(!window.me) return false;
   try{
     const users=await getUsers();
     const u=users.find(x=>x.number===window.me.number);
-    if(!u) return;
+    if(!u) return false;
     if(!Array.isArray(u.loginHistory)) u.loginHistory=[];
-    u.loginHistory.unshift({time:Date.now(),device:getDeviceLabel(),os:getDeviceOS()});
+    const label=getDeviceLabel(), os=getDeviceOS();
+    // Only a device label genuinely never seen before counts as "new" — not
+    // the user's very first-ever login (nothing to compare against yet).
+    const isNewDevice=u.loginHistory.length>0 && !u.loginHistory.some(h=>h&&h.device===label);
+    u.loginHistory.unshift({time:Date.now(),device:label,os});
     if(u.loginHistory.length>5) u.loginHistory=u.loginHistory.slice(0,5);
     await saveUsers(users);
-  }catch(e){ console.warn('Login history record failed',e); }
+    if(isNewDevice) _alertNewDeviceLogin(u,label,os).catch(()=>{});
+    return isNewDevice;
+  }catch(e){ console.warn('Login history record failed',e); return false; }
+}
+// Security feature 2/32: alert on sign-in from a device never seen before.
+// Shown in-app immediately (always works), and best-effort emailed via the
+// same Web3Forms key used for reports/digests. Honest limitation: that key
+// is configured to deliver to the admin's own inbox (see WEB3FORMS_ACCESS_KEY
+// above) — Web3Forms only forwards to the account holder's own email address
+// too if an autoresponder is set up for this key in the Web3Forms dashboard,
+// which this code can't configure or verify. The admin copy always arrives
+// either way, which on its own is still a real security-monitoring signal.
+async function _alertNewDeviceLogin(u,label,os){
+  showToast('🆕 New device signed in',(label||'A device')+(os?' ('+os+')':'')+' just signed in. If this wasn\'t you, change your password immediately.');
+  await _logSecurityEvent('new_device_login','New device: '+(label||'Unknown')+(os?' · '+os:'')).catch(()=>{});
+  if(!u||!u.email) return;
+  try{
+    await sendWeb3Form({
+      subject:'New device signed in to your SoCloudyBro account',
+      email:u.email,
+      account_number:u.number,
+      account_name:dec(u.name||''),
+      device:label||'Unknown device',
+      os:os||'Unknown OS',
+      time:new Date().toLocaleString(),
+      message:'A new device just signed in to your SoCloudyBro account (#'+u.number+'). If this was you, no action is needed. If you don\'t recognize this device, change your password right away from Settings → Security.',
+    });
+  }catch(e){ console.warn('New-device alert email failed (non-fatal):',e.message); }
 }
 function openLoginHistory(){
   if(!window.me) return;
@@ -21921,7 +21955,7 @@ function openSecurityLog(){
   const users=window.usersCache||[];
   const u=window.me?users.find(x=>x.number===window.me.number):null;
   const log=(u&&u.securityLog)||[];
-  const icons={login:'🔑',password_change:'🔒',mfa_enabled:'🛡',mfa_disabled:'⚠️',key_rotation:'🔄',logout:'🚪',pin_set:'📌',pin_removed:'📌',face_mfa:'📷',recovery_set:'❓'};
+  const icons={login:'🔑',password_change:'🔒',mfa_enabled:'🛡',mfa_disabled:'⚠️',key_rotation:'🔄',logout:'🚪',pin_set:'📌',pin_removed:'📌',face_mfa:'📷',recovery_set:'❓',new_device_login:'🆕',passkey_added:'🔑'};
   const rows=log.length
     ? log.map(e=>`<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-size:18px;min-width:24px">${icons[e.type]||'📋'}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(e.type.replace(/_/g,' '))}</div><div style="font-size:11px;color:var(--muted)">${esc(e.detail||'')} · ${esc(e.device||'')}</div></div><div style="font-size:11px;color:var(--muted);white-space:nowrap">${new Date(e.time).toLocaleString()}</div></div>`).join('')
     : '<div style="color:var(--muted);font-size:13px;padding:12px 0">No security events recorded yet.</div>';
