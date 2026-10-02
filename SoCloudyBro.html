@@ -825,6 +825,17 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 #chat-drop-overlay.active{display:flex}
 #chat-drop-overlay-inner{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 28px;font-size:15px;font-weight:600;color:var(--text);box-shadow:var(--shadow-lg)}
 
+#msg-select-bar{display:none;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
+#msg-select-count{font-size:13px;font-weight:600;color:var(--text)}
+#msg-select-actions{display:flex;gap:8px}
+#messages-wrap.select-mode .msg-row{cursor:pointer;position:relative}
+#messages-wrap.select-mode .bubble{pointer-events:none} /* clicks go to the row, not link/button handlers inside the bubble, while selecting */
+.msg-row.selected .bubble{outline:2px solid var(--accent);outline-offset:2px;background:rgba(90,82,213,0.1);border-radius:14px}
+#messages-wrap.select-mode .msg-row::before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;border:2px solid var(--border2);background:var(--surface);top:4px}
+.msg-row.me::before{right:4px}
+.msg-row:not(.me)::before{left:4px}
+.msg-row.selected::before{content:'✓';background:var(--accent);border-color:var(--accent);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;line-height:1}
+
 /* bg preview swatches */
 .bg-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
 .bg-option{border-radius:10px;aspect-ratio:4/3;cursor:pointer;border:3px solid transparent;transition:all 0.2s;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);text-shadow:0 1px 3px rgba(0,0,0,0.8)}
@@ -2051,6 +2062,14 @@ body.device-tablet .msg-body{max-width:74%}
         </button>
         <div id="chat-drop-overlay"><div id="chat-drop-overlay-inner">📎 Drop to send</div></div>
       </div>
+      <div id="msg-select-bar" style="display:none">
+        <span id="msg-select-count">0 selected</span>
+        <div id="msg-select-actions">
+          <button class="btn btn-ghost btn-sm" onclick="msgSelectForward()">↪ Forward</button>
+          <button class="btn btn-sm" style="background:var(--danger)" onclick="msgSelectDelete()">🗑 Delete</button>
+          <button class="btn btn-ghost btn-sm" onclick="exitMsgSelectMode()">Cancel</button>
+        </div>
+      </div>
       <div id="chat-footer">
         <!-- GIF picker: floats above the footer as a popover panel -->
         <div id="gif-picker">
@@ -2469,6 +2488,7 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="ctx-item" id="ctx-edit-btn" onclick="ctxAction('edit')">✏️ Edit</div>
   <div class="ctx-item" id="ctx-pin-btn" onclick="ctxAction('pin')">📌 Pin</div>
   <div class="ctx-item" id="ctx-translate-btn" onclick="ctxAction('translate')">🌐 Translate</div>
+  <div class="ctx-item" onclick="ctxAction('select')">☑️ Select</div>
   <div class="ctx-sep"></div>
   <div class="ctx-item danger" onclick="ctxAction('delete')">🗑 Delete</div>
 </div>
@@ -8244,6 +8264,7 @@ async function _origOpenChat(c){
   activeConvo={...c,key};
   lastMsgHash='';
   if(typeof loadChatBg==='function') loadChatBg(key);
+  if(typeof exitMsgSelectMode==='function') exitMsgSelectMode();
   hideAll();
   const searchBar=document.getElementById('msg-search-bar');
   if(searchBar&&searchBar.style.display!=='none'){searchBar.style.display='none';clearMsgSearchHighlights();msgSearchResults=[];msgSearchIdx=-1;}
@@ -9961,6 +9982,9 @@ function ctxAction(action){
     const c=convosCache.find(x=>x&&x.key===activeConvo.key);
     if(c){c.messages=c.messages.filter(m=>m.id!==ctxMsg.id);saveConvos().then(()=>renderMessages(c.messages)).catch(()=>{});}
   }
+  else if(action==='select'){
+    enterMsgSelectMode(ctxMsg.id);
+  }
   ctxMsg=null;
 }
 function startReply(msg){
@@ -10059,9 +10083,15 @@ function scrollToPinned(){
 }
 
 // -- FORWARD MESSAGE -------------------------------------------------------------
-let forwardMsg=null;
+// forwardMsgs is always an array internally — openForwardModal() accepts
+// either a single message (every existing call site: ctx menu, swipe
+// action) or an array (the multi-select bulk-forward bar), normalizing
+// either way, so forwardToTarget() has one code path regardless of how
+// many messages are being forwarded.
+let forwardMsgs=[];
 function openForwardModal(m){
-  forwardMsg=m;
+  forwardMsgs=Array.isArray(m)?m.filter(Boolean):(m?[m]:[]);
+  if(!forwardMsgs.length) return;
   const list=document.getElementById('forward-list');
   list.innerHTML='';
   if(!contacts||!contacts.length){
@@ -10088,42 +10118,45 @@ function openForwardModal(m){
   openModal('forward-modal');
 }
 async function forwardToTarget(c){
-  if(!forwardMsg||!me) return;
+  if(!forwardMsgs.length||!me) return;
   const key=c.key||dmKey(me.number,c.number);
   if(lockedChats[key]){
     closeModal('forward-modal');
     showToast('Chat locked',scbErr('SCB-MSG-23','Open and unlock that chat first, then forward the message.'));
-    forwardMsg=null;
+    forwardMsgs=[];
     return;
   }
   closeModal('forward-modal');
   try{
     const conv=await getOrMakeConvo(key,c.type==='group'?c.members:[me.number,c.number]);
-    const msg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),from:me.number,time:Date.now(),seen:[],forwarded:true};
     const destAesKey=await getConvoAesKey(conv);
-    if(msgHasGif(forwardMsg)){
-      const gifUrl=msgGifUrl(forwardMsg);
-      const wrapped=destAesKey?await aesEnc(destAesKey,gifUrl):null;
-      if(wrapped){ msg.cgif=wrapped; _decCache[msg.id]={gif:gifUrl}; }
-      else msg.gif=gifUrl;
-    }else if(forwardMsg.poll){
-      const clean='📊 '+(dec(forwardMsg.poll.question)||'Poll');
-      const wrapped=destAesKey?await aesEnc(destAesKey,clean):null;
-      if(wrapped){ msg.ctext=wrapped; _decCache[msg.id]={text:clean}; }
-      else msg.text=enc(clean);
-    }else{
-      const clean=msgText(forwardMsg);
-      const wrapped=destAesKey?await aesEnc(destAesKey,clean):null;
-      if(wrapped){ msg.ctext=wrapped; _decCache[msg.id]={text:clean}; }
-      else msg.text=enc(clean);
+    for(const fm of forwardMsgs){
+      const msg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),from:me.number,time:Date.now(),seen:[],forwarded:true};
+      if(msgHasGif(fm)){
+        const gifUrl=msgGifUrl(fm);
+        const wrapped=destAesKey?await aesEnc(destAesKey,gifUrl):null;
+        if(wrapped){ msg.cgif=wrapped; _decCache[msg.id]={gif:gifUrl}; }
+        else msg.gif=gifUrl;
+      }else if(fm.poll){
+        const clean='📊 '+(dec(fm.poll.question)||'Poll');
+        const wrapped=destAesKey?await aesEnc(destAesKey,clean):null;
+        if(wrapped){ msg.ctext=wrapped; _decCache[msg.id]={text:clean}; }
+        else msg.text=enc(clean);
+      }else{
+        const clean=msgText(fm);
+        const wrapped=destAesKey?await aesEnc(destAesKey,clean):null;
+        if(wrapped){ msg.ctext=wrapped; _decCache[msg.id]={text:clean}; }
+        else msg.text=enc(clean);
+      }
+      conv.messages.push(msg);
     }
-    conv.messages.push(msg);
     if(conv.messages.length>500) conv.messages.splice(0,conv.messages.length-500);
     await saveConvos();
-    showToast('Forwarded',dec(c.name)?('Sent to '+dec(c.name)):'Message forwarded');
+    showToast('Forwarded',dec(c.name)?((forwardMsgs.length>1?forwardMsgs.length+' messages sent to ':'Sent to ')+dec(c.name)):'Message forwarded');
     if(activeConvo&&activeConvo.key===key){renderMessages(conv.messages);lastMsgHash=JSON.stringify(conv.messages);}
   }catch(e){showToast('Forward failed',scbErr('SCB-MSG-07','That message couldn\'t be forwarded — the server rejected the write.',(e.message||'')));}
-  forwardMsg=null;
+  forwardMsgs=[];
+  exitMsgSelectMode();
 }
 
 // -- IN-CHAT MESSAGE SEARCH -----------------------------------------------------
@@ -18947,6 +18980,7 @@ function injectFeatureDom(){
   applyLanguage();
   initJumpToBottomBtn();
   initChatDragDrop();
+  initMsgSelectMode();
   initSidebarResize();
   _applyStoredSidebarWidth();
   _applyStoredTabOrder();
@@ -19075,6 +19109,88 @@ function initTabDragReorder(){
     draggedEl=null;
     _saveTabOrder();
   });
+}
+
+// ===== MESSAGE MULTI-SELECT (bulk delete/forward) =====
+// Entered via the per-message context menu's "☑️ Select" action (works on
+// both right-click and long-press, since the browser fires 'contextmenu'
+// for a long-press on touch devices the same as a right-click on desktop).
+let msgSelectMode=false;
+const selectedMsgIds=new Set();
+function enterMsgSelectMode(firstId){
+  msgSelectMode=true;
+  selectedMsgIds.clear();
+  if(firstId) selectedMsgIds.add(firstId);
+  const wrap=document.getElementById('messages-wrap');
+  if(wrap) wrap.classList.add('select-mode');
+  const row=firstId&&wrap?wrap.querySelector('[data-msg-id="'+CSS.escape(firstId)+'"]'):null;
+  if(row) row.classList.add('selected');
+  updateMsgSelectBar();
+}
+function exitMsgSelectMode(){
+  if(!msgSelectMode) return;
+  msgSelectMode=false;
+  selectedMsgIds.clear();
+  const wrap=document.getElementById('messages-wrap');
+  if(wrap) wrap.classList.remove('select-mode');
+  document.querySelectorAll('.msg-row.selected').forEach(r=>r.classList.remove('selected'));
+  updateMsgSelectBar();
+}
+function toggleMsgSelected(id){
+  if(selectedMsgIds.has(id)) selectedMsgIds.delete(id);
+  else selectedMsgIds.add(id);
+  const row=document.querySelector('[data-msg-id="'+CSS.escape(id)+'"]');
+  if(row) row.classList.toggle('selected',selectedMsgIds.has(id));
+  if(selectedMsgIds.size===0){ exitMsgSelectMode(); return; }
+  updateMsgSelectBar();
+}
+function updateMsgSelectBar(){
+  const bar=document.getElementById('msg-select-bar');
+  if(!bar) return;
+  bar.style.display=msgSelectMode?'flex':'none';
+  const countEl=document.getElementById('msg-select-count');
+  if(countEl) countEl.textContent=selectedMsgIds.size+(selectedMsgIds.size===1?' selected':' selected');
+}
+function _getSelectedConvoAndMessages(){
+  if(!activeConvo||!convosCache) return {c:null,msgs:[]};
+  const c=convosCache.find(x=>x&&x.key===activeConvo.key);
+  if(!c||!c.messages) return {c:null,msgs:[]};
+  return {c,msgs:c.messages.filter(m=>m&&selectedMsgIds.has(m.id))};
+}
+function msgSelectForward(){
+  const {msgs}=_getSelectedConvoAndMessages();
+  if(!msgs.length) return;
+  openForwardModal(msgs); // exitMsgSelectMode() runs once the forward completes, see forwardToTarget()
+}
+async function msgSelectDelete(){
+  const {c,msgs}=_getSelectedConvoAndMessages();
+  if(!c||!msgs.length) return;
+  if(!confirm('Delete '+msgs.length+' message'+(msgs.length===1?'':'s')+'? This can\'t be undone.')) return;
+  const idsToDelete=new Set(msgs.map(m=>m.id));
+  c.messages=c.messages.filter(m=>!idsToDelete.has(m.id));
+  exitMsgSelectMode();
+  try{
+    await saveConvos();
+  }catch(e){
+    showToast('Delete failed',scbErr('SCB-MSG-26','Those messages couldn\'t be deleted — the server rejected the write.',(e.message||'')));
+  }
+  lastMsgHash='';
+  renderMessages(c.messages);
+}
+function initMsgSelectMode(){
+  const wrap=document.getElementById('messages-wrap');
+  if(!wrap||wrap._selectWired) return;
+  wrap._selectWired=true;
+  // Capture phase: intercepts the click before it reaches any onclick handler
+  // inside the bubble (links, poll options, etc.) while selecting is active.
+  wrap.addEventListener('click',e=>{
+    if(!msgSelectMode) return;
+    const row=e.target.closest('.msg-row');
+    const id=row&&row.getAttribute('data-msg-id');
+    if(!id) return;
+    e.preventDefault(); e.stopPropagation();
+    toggleMsgSelected(id);
+  },true);
 }
 
 // ===== DRAG-AND-DROP FILE SHARING =====
