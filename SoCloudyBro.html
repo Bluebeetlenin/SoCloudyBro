@@ -3271,7 +3271,18 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="modal">
     <div class="modal-header"><h2>Report User</h2><p>This will send an email report for review.</p></div>
     <div class="modal-body" style="padding-bottom:14px">
+      <div class="field"><label>Category</label>
+        <select id="report-category">
+          <option value="spam">Spam</option>
+          <option value="harassment">Harassment or bullying</option>
+          <option value="scam">Scam or phishing</option>
+          <option value="inappropriate">Inappropriate content</option>
+          <option value="impersonation">Impersonation</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
       <div class="field"><label>Reason</label><textarea id="report-reason" rows="3" placeholder="Describe the issue…" maxlength="300"></textarea></div>
+      <div class="field-hint" style="font-size:11px;color:var(--muted);margin-top:4px">The last few messages in this chat will be attached as evidence for the reviewer.</div>
       <div class="error-text" id="report-error"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-danger" onclick="submitReport()">Send Report</button><button class="btn btn-ghost" onclick="closeModal('report-modal')">Cancel</button></div>
@@ -10739,8 +10750,30 @@ async function exportAllData(){
 function openReport(){
   if(!activeConvo||activeConvo.type==='group'){showToast('Select a DM to report',scbErr('SCB-MSG-11','Reports can only be sent about a direct message — open a DM first.'));return;}
   document.getElementById('report-reason').value='';
+  document.getElementById('report-category').value='spam';
   document.getElementById('report-error').textContent='';
   openModal('report-modal');
+}
+// Security feature 30/32: snapshot the last few messages in the reported
+// conversation as evidence, decrypted to plain readable text for the
+// reviewer — a report is otherwise just the reporter's own unverifiable
+// claim with nothing for a moderator to actually look at.
+const REPORT_EVIDENCE_COUNT=10;
+function _buildReportEvidence(convoKey){
+  try{
+    const conv=(convosCache||[]).find(c=>c&&c.key===convoKey);
+    if(!conv||!Array.isArray(conv.messages)) return [];
+    return conv.messages.slice(-REPORT_EVIDENCE_COUNT).map(m=>{
+      let text='';
+      if(m.type==='system') text='[system] '+(m.text||'');
+      else if(_decCache[m.id]&&_decCache[m.id].text!=null) text=_decCache[m.id].text;
+      else if(m.text) text=dec(m.text)||'[could not decrypt]';
+      else if(m.gif||m.cgif) text='[GIF]';
+      else if(m.file||m.cfile) text='[file attachment]';
+      else text='[unreadable]';
+      return { from:m.from, time:m.time, text };
+    });
+  }catch(e){ return []; }
 }
 // -- WEB3FORMS (report emails to the admin's inbox) -----------------------------
 // Table-based, all-inline-style HTML fragment for the emails Web3Forms sends —
@@ -10779,14 +10812,19 @@ async function sendWeb3Form(fields){
   if(!res.ok||!data.success) throw new Error(data.message||'Failed to send.');
   return data;
 }
+const REPORT_CATEGORY_LABELS={spam:'Spam',harassment:'Harassment or bullying',scam:'Scam or phishing',inappropriate:'Inappropriate content',impersonation:'Impersonation',other:'Other'};
 async function submitReport(){
   const reason=document.getElementById('report-reason').value.trim();
+  const category=document.getElementById('report-category').value||'other';
   const err=document.getElementById('report-error');err.textContent='';
   if(!reason){err.textContent=scbErr('SCB-MSG-12','Please describe the issue.');return;}
   const btn=document.querySelector('#report-modal .btn-danger');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
   try{
     const reported=contacts.find(c=>c&&c.key===activeConvo.key);
     const adminLink=`${SITE_URL}?admin=1&user=${reported?reported.number:'?'}`;
+    // Security feature 30/32: snapshot the last few messages as evidence —
+    // a report is otherwise just the reporter's own unverifiable claim.
+    const evidence=_buildReportEvidence(activeConvo.key);
     try{
       const reports=await getReports();
       reports.push({
@@ -10795,13 +10833,18 @@ async function submitReport(){
         reportedName:reported?reported.name:'Unknown',
         reporterNumber:me.number,
         reporterName:me.name,
+        category,
         reason,
+        evidence,
         time:Date.now(),
         status:'open'
       });
       await saveReports(reports);
       if(reported) await _checkMassReportSpike(reported.number,reported.name,reports);
     }catch(e){ /* report email below still goes out even if this fails */ }
+    const evidenceText=evidence.length
+      ? evidence.map(m=>'#'+m.from+' ('+new Date(m.time).toLocaleString()+'): '+m.text).join('\n')
+      : '(no message history available)';
     await sendWeb3Form({
       subject:'SoCloudyBro report: '+(reported?reported.name:'Unknown user'),
       reported_name:reported?reported.name:'Unknown',
@@ -10809,7 +10852,9 @@ async function submitReport(){
       admin_link:adminLink,
       reporter_name:me.name,
       reporter_number:me.number,
+      category:REPORT_CATEGORY_LABELS[category]||category,
       reason,
+      evidence:evidenceText,
       time:new Date().toLocaleString(),
       // Extra field, additive only — doesn't touch the existing merge-tag
       // fields above so any custom template already configured on the
@@ -10821,7 +10866,9 @@ async function submitReport(){
         rows:[
           {label:'Reported',value:(reported?reported.name:'Unknown')+' (#'+(reported?reported.number:'?')+')'},
           {label:'Reported by',value:me.name+' (#'+me.number+')'},
+          {label:'Category',value:REPORT_CATEGORY_LABELS[category]||category},
           {label:'Reason',value:reason},
+          {label:'Evidence',value:esc(evidenceText).replace(/\n/g,'<br>'),html:true},
           {label:'Time',value:new Date().toLocaleString()},
           {label:'Review',value:`<a href="${esc(adminLink)}" style="color:#4C46C4">Open admin panel →</a>`,html:true},
         ],
@@ -16134,10 +16181,18 @@ async function renderAdminReportsTab(){
     const sorted=[...reports].sort((a,b)=>b.time-a.time);
     body.innerHTML=sorted.map(r=>{
       const open=r.status!=='resolved';
+      const categoryLabel=REPORT_CATEGORY_LABELS[r.category]||r.category;
+      const evidence=Array.isArray(r.evidence)?r.evidence:[];
       return '<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;'+(open?'':'opacity:.55')+'">'
-        +'<div style="font-size:12px;font-weight:600">Reported: '+esc(r.reportedName||'Unknown')+' (#'+r.reportedNumber+')</div>'
+        +'<div style="font-size:12px;font-weight:600">Reported: '+esc(r.reportedName||'Unknown')+' (#'+r.reportedNumber+')'
+        +(categoryLabel?' <span style="font-size:10px;font-weight:600;background:var(--surface2);color:var(--text2);border-radius:999px;padding:1px 8px;margin-left:4px">'+esc(categoryLabel)+'</span>':'')
+        +'</div>'
         +'<div style="font-size:11px;color:var(--muted);margin:2px 0">By '+esc(r.reporterName||'')+' (#'+r.reporterNumber+') · '+new Date(r.time).toLocaleString()+'</div>'
         +'<div style="font-size:12px;margin:6px 0">'+esc(r.reason||'')+'</div>'
+        +(evidence.length?('<details style="margin:6px 0"><summary style="cursor:pointer;font-size:11px;color:var(--accent)">📎 '+evidence.length+' message(s) attached as evidence</summary>'
+          +'<div style="margin-top:6px;font-size:11px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:8px;max-height:160px;overflow-y:auto">'
+          +evidence.map(m=>'<div style="margin-bottom:4px"><b>#'+m.from+'</b> · '+new Date(m.time).toLocaleTimeString()+': '+esc(m.text)+'</div>').join('')
+          +'</div></details>'):'')
         +'<div style="display:flex;gap:6px">'
         +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="openAdminPanel('+r.reportedNumber+')">View user</button>':'')
         +(hasPermission('reports_resolve')?(open?'<button class="btn btn-ghost btn-sm" onclick="resolveReport(\''+r.id+'\')">✅ Mark resolved</button>':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'):(open?'':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'))
