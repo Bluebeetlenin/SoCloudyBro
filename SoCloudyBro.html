@@ -2443,6 +2443,10 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">📞 Contact Us</div><div class="settings-row-sub">Get help directly from an SCB admin</div></div>
             <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
           </div>
+          <div class="settings-row" style="cursor:pointer" onclick="openSecurityDisclosure()">
+            <div class="settings-row-main"><div class="settings-row-label">🛡 Report a Security Vulnerability</div><div class="settings-row-sub">Found a security issue? Report it responsibly — not as a public bug report</div></div>
+            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+          </div>
         </div>
         <!-- BUSINESS ACCOUNT SETTINGS -->
         <div class="settings-section" id="biz-settings-section" data-settings-tab="business">
@@ -2849,6 +2853,35 @@ body.device-tablet .msg-body{max-width:74%}
       <div id="contact-us-list"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('contact-us-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- SECURITY VULNERABILITY DISCLOSURE MODAL -->
+<div class="overlay" id="security-disclosure-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2>🛡 Report a Security Vulnerability</h2>
+      <button class="modal-close" onclick="closeModal('security-disclosure-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding-bottom:8px">
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px">Found a genuine security issue — a way to bypass auth, read someone else's messages, escalate admin access, or similar? Please report it privately here rather than as a public bug report or on social media, so it can be fixed before anyone else finds it.</p>
+      <ul style="font-size:13px;color:var(--text2);margin:0 0 14px;padding-left:20px;line-height:1.6">
+        <li>Give us a reasonable chance to fix it before any public disclosure.</li>
+        <li>Don't access, modify, or delete data beyond what's needed to demonstrate the issue.</li>
+        <li>Never test against other users' real accounts — use test accounts only.</li>
+        <li>Include steps to reproduce, impact, and affected version/URL if known.</li>
+      </ul>
+      <div style="background:var(--surface2,rgba(127,127,127,.07));border:1px solid var(--border);border-radius:var(--r-sm,10px);padding:12px 14px;margin-bottom:10px">
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px">Security Contact</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span style="font-size:12px;color:var(--text2)" id="security-disclosure-email">security@socloudybro.vercel.app</span>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" onclick="navigator.clipboard.writeText('security@socloudybro.vercel.app').then(()=>showToast('Copied','Security contact email copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: security@socloudybro.vercel.app'))">Copy</button>
+        </div>
+        <button class="btn btn-sm" style="font-size:12px;padding:4px 12px" onclick="closeModal('security-disclosure-modal');_openDmWithAdmin(2015)">💬 Message #2015 (Head Admin)</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:0">We don't currently run a paid bug bounty program, but we credit researchers (with permission) once a reported issue is fixed, and take every genuine report seriously.</p>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('security-disclosure-modal')">Close</button></div>
   </div>
 </div>
 
@@ -12687,6 +12720,10 @@ function openContactUs(){
     `).join('');
   }
   openModal('contact-us-modal');
+}
+const SECURITY_DISCLOSURE_EMAIL = 'security@socloudybro.vercel.app';
+function openSecurityDisclosure(){
+  openModal('security-disclosure-modal');
 }
 function _openDmWithAdmin(num){
   if(!me){ showToast('Sign in required','You need to be signed in to send a message.'); return; }
