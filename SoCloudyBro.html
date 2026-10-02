@@ -5628,6 +5628,11 @@ async function registerOrUpdate(blockedOverride){
     // so a permission an admin granted via the permission editor would never
     // actually take effect on the grantee's own session.
     me.adminAccess=u.adminAccess||null;
+    // Same reasoning as adminAccess above: shadow-mute is an admin-applied
+    // restriction, not something this device should keep a stale cached
+    // copy of — an admin lifting it must take effect on the very next poll,
+    // same as applying it in the first place.
+    me.shadowMuted=!!u.shadowMuted;
     try{ saveStorage(); }catch(e){}
   }
   // `blocked` can't use the simple "prefer me.* over server" rule every other
@@ -7229,7 +7234,7 @@ async function submit2faCode(){
 }
 async function finishLogin(user, pwdToStore){
   resetLocalSessionState();
-  me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], totpEnabled: !!user.totpEnabled,
+  me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], totpEnabled: !!user.totpEnabled, shadowMuted: !!user.shadowMuted,
     // createdAt + emailVerified drive the email-verification gate in launch()
     // (needsEmailVerification()) — without copying them onto `me` here, that
     // check would only ever work right after signUp() (which sets them
@@ -13315,6 +13320,14 @@ function toggleMsgExpand(toggleEl){
   toggleEl.textContent=expanded?'Show more':'Show less';
 }
 function renderMessages(msgs) {
+  // Security feature 25/32: shadow-mute. A shadow-muted sender's messages
+  // are still shown to THEM (so they get no indication anything is wrong —
+  // no ban notice, nothing), but never rendered for anyone else. The
+  // message is still technically saved (msg.shadowMuted, set in sendMsg()),
+  // just filtered out of every OTHER participant's render.
+  if (me) {
+    msgs = (msgs || []).filter(m => !m || !m.shadowMuted || m.from === me.number);
+  }
   if (activeConvo && activeConvo.type === 'group') {
     const chId = activeChannelId || 'general';
     msgs = (msgs || []).filter(m => (m.channelId || 'general') === chId);
@@ -13695,6 +13708,7 @@ async function sendMsg(gifUrl) {
       return;
     }
     const msg = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), from: me.number, time: Date.now(), seen: [] };
+    if (me.shadowMuted) msg.shadowMuted = true; // security feature 25/32 — silently never delivered, no notice to the sender
     if (activeConvo.type === 'group') msg.channelId = activeChannelId || 'general';
     if (replyingTo) { msg.replyTo = replyingTo; }
     const aesKey = await getConvoAesKey(c);
@@ -14944,6 +14958,45 @@ async function adminUnban(num){
   closeModal('admin-panel-modal');
   if(document.getElementById('admin-dashboard-modal').classList.contains('visible')) renderAdminUsersTab();
 }
+/* ===== SHADOW-MUTE (security feature 25/32) =====
+   Unlike a ban, a shadow-muted account is given no indication anything is
+   wrong at all: sendMsg() still lets them "send" normally and renderMessages()
+   still shows it in THEIR OWN view (set in me.shadowMuted at login/poll —
+   see finishLogin()/registerOrUpdate()), it's just never rendered for
+   anyone else. Meant for a repeat offender where an immediate ban would
+   just prompt them to make a new account and keep going. ===== */
+async function adminShadowMute(num){
+  if(!requirePermission('users_ban')) return;
+  if(!confirm('Shadow-mute user #'+num+'?\n\nTheir messages will appear to send normally to them, but will never actually be delivered to anyone else. They are given no notice of this.')) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===num);
+    if(!u){showToast('User not found',scbErr('SCB-ADMIN-27','No user with that account number was found.'));return;}
+    u.shadowMuted=true;
+    await saveUsers(users);
+    await _logSecurityEvent('shadow_mute','Shadow-muted #'+num).catch(()=>{});
+    showToast('User shadow-muted','#'+num+'\'s messages will no longer be delivered to anyone else.');
+  }catch(e){
+    selfHeal('SCB-ADMIN-27', e, { context: 'adminShadowMute' });
+    showToast('Failed',scbErr('SCB-ADMIN-27','That user couldn\'t be shadow-muted — the server rejected the write.',(e.message||'')));return;
+  }
+  if(document.getElementById('admin-dashboard-modal').classList.contains('visible')) renderAdminUsersTab();
+}
+async function adminUnshadowMute(num){
+  if(!requirePermission('users_ban')) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===num);
+    if(u) u.shadowMuted=false;
+    await saveUsers(users);
+    await _logSecurityEvent('shadow_mute','Un-shadow-muted #'+num).catch(()=>{});
+    showToast('Shadow-mute lifted','#'+num+'\'s messages deliver normally again.');
+  }catch(e){
+    selfHeal('SCB-ADMIN-28', e, { context: 'adminUnshadowMute' });
+    showToast('Failed',scbErr('SCB-ADMIN-28','That couldn\'t be undone — the server rejected the write.',(e.message||'')));return;
+  }
+  if(document.getElementById('admin-dashboard-modal').classList.contains('visible')) renderAdminUsersTab();
+}
 // Verified-identity tier: a lightweight admin-granted badge (not document/ID
 // verification) so people can tell real, admin-confirmed community members
 // apart from randoms — shown as a ✓ next to their name everywhere.
@@ -15869,6 +15922,7 @@ async function renderAdminUsersTab(){
         const name=esc(rawName);
         const banned=!!u.banned;
         const verified=!!u.verified;
+        const shadowMuted=!!u.shadowMuted;
         const isAdmin=String(u.number)===String(ADMIN_NUMBER);
         const joinDate=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
         return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px">'
@@ -15879,6 +15933,7 @@ async function renderAdminUsersTab(){
           +(verified?' <span class="verified-badge" title="Verified">✓</span>':'')
           +(isAdmin?' <span style="font-size:10px;background:var(--accent);color:#fff;border-radius:4px;padding:1px 5px">Admin</span>':'')
           +(banned?' <span style="font-size:10px;background:var(--danger);color:#fff;border-radius:4px;padding:1px 5px">Banned</span>':'')
+          +(shadowMuted?' <span style="font-size:10px;background:var(--warn);color:#fff;border-radius:4px;padding:1px 5px" title="Their messages silently never deliver — they are not told">🔇 Shadow-muted</span>':'')
           +'</div>'
           +'<div style="font-size:11px;color:var(--muted);margin-top:1px">#'+u.number+(joinDate?' · joined '+joinDate:'')+'</div>'
           +'</div></div>'
@@ -15886,6 +15941,7 @@ async function renderAdminUsersTab(){
           +'<button class="btn btn-ghost btn-sm" onclick="adminMessage('+u.number+')" title="Open DM">💬 Message</button>'
           +(me.number===ADMIN_NUMBER?(verified?'<button class="btn btn-ghost btn-sm" onclick="adminUnverify('+u.number+')">✓ Unverify</button>':'<button class="btn btn-ghost btn-sm" onclick="adminVerify('+u.number+')">☑️ Verify</button>'):'')
           +(hasPermission('users_ban')?(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan('+u.number+')">🚫 Ban</button>'):'')
+          +(hasPermission('users_ban')&&!isAdmin?(shadowMuted?'<button class="btn btn-ghost btn-sm" onclick="adminUnshadowMute('+u.number+')">🔈 Un-shadow-mute</button>':'<button class="btn btn-ghost btn-sm" onclick="adminShadowMute('+u.number+')" title="Their messages will silently never deliver — no ban notice shown to them">🔇 Shadow-mute</button>'):'')
           +(!isAdmin&&me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',' + esc(JSON.stringify(rawName)) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[])) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>':'')
           +((!isAdmin&&Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete'))?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
@@ -22211,7 +22267,7 @@ function openSecurityLog(){
   const users=window.usersCache||[];
   const u=window.me?users.find(x=>x.number===window.me.number):null;
   const log=(u&&u.securityLog)||[];
-  const icons={login:'🔑',password_change:'🔒',mfa_enabled:'🛡',mfa_disabled:'⚠️',key_rotation:'🔄',logout:'🚪',pin_set:'📌',pin_removed:'📌',face_mfa:'📷',recovery_set:'❓',new_device_login:'🆕',passkey_added:'🔑',remote_wipe:'🗑️'};
+  const icons={login:'🔑',password_change:'🔒',mfa_enabled:'🛡',mfa_disabled:'⚠️',key_rotation:'🔄',logout:'🚪',pin_set:'📌',pin_removed:'📌',face_mfa:'📷',recovery_set:'❓',new_device_login:'🆕',passkey_added:'🔑',remote_wipe:'🗑️',shadow_mute:'🔇'};
   const rows=log.length
     ? log.map(e=>`<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-size:18px;min-width:24px">${icons[e.type]||'📋'}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(e.type.replace(/_/g,' '))}</div><div style="font-size:11px;color:var(--muted)">${esc(e.detail||'')} · ${esc(e.device||'')}</div></div><div style="font-size:11px;color:var(--muted);white-space:nowrap">${new Date(e.time).toLocaleString()}</div></div>`).join('')
     : '<div style="color:var(--muted);font-size:13px;padding:12px 0">No security events recorded yet.</div>';
