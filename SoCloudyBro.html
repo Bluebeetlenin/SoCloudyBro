@@ -502,6 +502,9 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
    Scroll/wrap-based fixes for the narrower old width were all fragile and
    hard to discover; widening the sidebar itself is the direct fix. */
 #sidebar{width:490px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);backdrop-filter:blur(20px);color:var(--text)}
+#sb-resize-handle{width:5px;flex-shrink:0;cursor:col-resize;position:relative;margin-left:-5px;z-index:2}
+#sb-resize-handle:hover,#sb-resize-handle.dragging{background:var(--accent)}
+body.device-phone #sb-resize-handle,body.device-tablet #sb-resize-handle{display:none}
 #sb-titlebar{height:34px;display:flex;align-items:center;padding:0 14px;gap:8px;background:var(--bg3);border-bottom:1px solid var(--border);-webkit-app-region:drag;flex-shrink:0}
 #sb-titlebar span{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:0.3px}
 #sb-head{padding:12px 14px;border-bottom:1px solid var(--border)}
@@ -1971,6 +1974,7 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="icon-btn" onclick="showSettings()" title="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="18" r="2" fill="currentColor"/></svg></button>
     </div>
   </div>
+  <div id="sb-resize-handle" title="Drag to resize"></div>
 
   <div id="main">
     <div id="main-empty">
@@ -18832,6 +18836,8 @@ function injectFeatureDom(){
   injectFeatureModals();
   applyLanguage();
   initJumpToBottomBtn();
+  initSidebarResize();
+  _applyStoredSidebarWidth();
 }
 
 // ===== JUMP-TO-BOTTOM FLOATING BUTTON =====
@@ -18863,6 +18869,49 @@ function initJumpToBottomBtn(){
   if(!wrap||wrap._jumpBtnWired) return;
   wrap._jumpBtnWired=true;
   wrap.addEventListener('scroll',_updateJumpToBottomBtn,{passive:true});
+}
+
+// ===== RESIZABLE SIDEBAR =====
+// Desktop only (hidden on phone/tablet via CSS — those already force their
+// own width with !important media queries, so a stored desktop width would
+// have no visible effect there anyway, and dragging makes no sense on a
+// single-pane phone layout). Width persists in localStorage and reapplies
+// on every launch.
+const SB_MIN_WIDTH=320, SB_MAX_WIDTH=720;
+function _applyStoredSidebarWidth(){
+  try{
+    const saved=parseInt(localStorage.getItem('cc_sidebar_width'));
+    if(saved && saved>=SB_MIN_WIDTH && saved<=SB_MAX_WIDTH){
+      const sb=document.getElementById('sidebar');
+      if(sb) sb.style.width=saved+'px';
+    }
+  }catch(e){}
+}
+function initSidebarResize(){
+  const handle=document.getElementById('sb-resize-handle');
+  const sidebar=document.getElementById('sidebar');
+  if(!handle||!sidebar||handle._wired) return;
+  handle._wired=true;
+  let dragging=false, startX=0, startW=0;
+  handle.addEventListener('mousedown',e=>{
+    if(document.body.classList.contains('device-phone')||document.body.classList.contains('device-tablet')) return;
+    dragging=true; startX=e.clientX; startW=sidebar.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.userSelect='none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    const w=Math.max(SB_MIN_WIDTH,Math.min(SB_MAX_WIDTH,startW+(e.clientX-startX)));
+    sidebar.style.width=w+'px';
+  });
+  document.addEventListener('mouseup',()=>{
+    if(!dragging) return;
+    dragging=false;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect='';
+    try{ localStorage.setItem('cc_sidebar_width',Math.round(sidebar.getBoundingClientRect().width)); }catch(e){}
+  });
 }
 
 // ===== CHANGELOG / "WHAT'S NEW" =====
