@@ -7099,6 +7099,16 @@ async function submitLogin() {
     let pwdToStore = user.pwd;
     if(user.pwd.indexOf('$')===-1){ pwdToStore = await hashPassword(pwd); }
 
+    // Risk-based login challenge: an unfamiliar country for an account with
+    // established history requires explicit confirmation before continuing,
+    // and forces 2FA even on an otherwise-trusted device (see below).
+    const loginRisk = await _checkLoginRisk(user).catch(()=>({risky:false,country:null}));
+    if(loginRisk.risky){
+      const confirmed = await showRiskyLoginChallenge(loginRisk.country);
+      if(!confirmed) return;
+      await _logSecurityEvent('risky_login_challenge','Confirmed sign-in from '+(loginRisk.country||'an unfamiliar location')).catch(()=>{});
+    }
+
     // Accounts created before email/password login existed may have no email
     // on file — require one now so future logins work the normal way.
     if(!user.email){
@@ -7111,7 +7121,7 @@ async function submitLogin() {
       return;
     }
 
-    if(user.totpEnabled && user.totpSecret && !(await isThisDeviceTrusted(user))){
+    if(user.totpEnabled && user.totpSecret && (loginRisk.risky || !(await isThisDeviceTrusted(user)))){
       pending2fa = { user, pwdToStore };
       document.getElementById('login-2fa-code').value = '';
       document.getElementById('login-2fa-error').textContent = '';
@@ -21949,6 +21959,55 @@ function _clearPinLock(){ try{ localStorage.removeItem(_pinLockKey()); }catch{} 
 
 /* ===== LOGIN HISTORY =====
    Last 5 logins stored in user record under loginHistory[]. ===== */
+/* ===== RISK-BASED LOGIN CHALLENGE (security feature 7/32) =====
+   There's no backend here to see the real client IP, so "location" is a
+   best-effort client-side IP geolocation lookup (ipapi.co, free, no key —
+   same spirit as the other no-key services already used in this app).
+   Fails open: if the lookup fails or is rate-limited, the login is never
+   blocked over it — this is a risk SIGNAL, not a hard gate on its own. ===== */
+async function _getApproxCountry(){
+  try{
+    const res=await fetch('https://ipapi.co/json/');
+    if(!res.ok) return null;
+    const data=await res.json();
+    return (data&&data.country_code)?String(data.country_code).toUpperCase():null;
+  }catch(e){ return null; }
+}
+function _recentLoginCountries(user){
+  return (Array.isArray(user.loginHistory)?user.loginHistory:[]).map(h=>h&&h.country).filter(Boolean);
+}
+// Only flags a login as risky when the country is actually known AND there's
+// prior history with a known country to compare against — a brand-new
+// account or a lookup failure is never treated as risky.
+async function _checkLoginRisk(user){
+  const country=await _getApproxCountry();
+  if(!country) return {risky:false,country:null};
+  const known=_recentLoginCountries(user);
+  if(!known.length) return {risky:false,country};
+  return {risky:!known.includes(country),country};
+}
+// Blocking interstitial shown only when _checkLoginRisk() flags the sign-in.
+// Resolves true if the user explicitly confirms it was them, false if they
+// cancel (login must not proceed in that case).
+function showRiskyLoginChallenge(country){
+  return new Promise(resolve=>{
+    const dlg=document.createElement('div');
+    dlg.id='risky-login-modal';
+    dlg.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px';
+    dlg.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;width:100%;max-width:380px;box-shadow:var(--shadow-lg)">
+      <div style="font-size:28px;margin-bottom:8px">🌍</div>
+      <h3 style="margin:0 0 6px;font-size:15px">New sign-in location</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 16px">This sign-in looks like it's coming from ${country?esc(country):'an unfamiliar location'} — somewhere this account hasn't signed in from recently. If this is you, continue below. If it isn't, cancel and change your password.</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" id="risky-login-cancel">Cancel</button>
+        <button class="btn btn-sm" style="flex:1" id="risky-login-continue">Yes, continue</button>
+      </div>
+    </div>`;
+    document.body.appendChild(dlg);
+    document.getElementById('risky-login-cancel').onclick=()=>{dlg.remove();resolve(false);};
+    document.getElementById('risky-login-continue').onclick=()=>{dlg.remove();resolve(true);};
+  });
+}
 async function _recordLogin(){
   if(!window.me) return false;
   try{
@@ -21957,10 +22016,11 @@ async function _recordLogin(){
     if(!u) return false;
     if(!Array.isArray(u.loginHistory)) u.loginHistory=[];
     const label=getDeviceLabel(), os=getDeviceOS();
+    const country=await _getApproxCountry();
     // Only a device label genuinely never seen before counts as "new" — not
     // the user's very first-ever login (nothing to compare against yet).
     const isNewDevice=u.loginHistory.length>0 && !u.loginHistory.some(h=>h&&h.device===label);
-    u.loginHistory.unshift({time:Date.now(),device:label,os});
+    u.loginHistory.unshift({time:Date.now(),device:label,os,country});
     if(u.loginHistory.length>5) u.loginHistory=u.loginHistory.slice(0,5);
     await saveUsers(users);
     if(isNewDevice) _alertNewDeviceLogin(u,label,os).catch(()=>{});
