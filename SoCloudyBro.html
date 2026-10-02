@@ -15548,6 +15548,7 @@ async function openAdminDashboard(){
       (t==='groups'&&hasPermission('groups_view'))||
       (t==='reports'&&hasPermission('reports_view'))||
       (t==='spam'&&hasPermission('users_view'))||
+      (t==='sla'&&hasPermission('reports_view'))||
       (t==='feedback'&&hasPermission('feedback_view'))||
       (t==='code'&&hasPermission('code_update'))||
       (t==='errors'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()))||
@@ -15563,7 +15564,7 @@ async function openAdminDashboard(){
 function switchAdminTab(tab){
   adminDashTab=tab;
   document.querySelectorAll('.admin-dash-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  const perm={overview:'overview',users:'users_view',groups:'groups_view',reports:'reports_view',spam:'users_view',feedback:'feedback_view',code:'code_update'};
+  const perm={overview:'overview',users:'users_view',groups:'groups_view',reports:'reports_view',spam:'users_view',sla:'reports_view',feedback:'feedback_view',code:'code_update'};
   if(!hasPermission(perm[tab]||tab)&&me&&me.number!==ADMIN_NUMBER){
     const body=document.getElementById('admin-dashboard-body');
     if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">You don\'t have permission to view this section.</div>';
@@ -15574,6 +15575,7 @@ function switchAdminTab(tab){
   else if(tab==='groups') renderAdminGroupsTab();
   else if(tab==='reports') renderAdminReportsTab();
   else if(tab==='spam') renderAdminSpamTab();
+  else if(tab==='sla') renderAdminModerationSlaTab();
   else if(tab==='feedback') renderAdminFeedbackTab();
   else if(tab==='code') renderAdminCodeTab();
   else if(tab==='errors') renderAdminErrorsTab();
@@ -16467,7 +16469,7 @@ async function resolveReport(id){
   try{
     const reports=await getReports();
     const r=reports.find(x=>x.id===id);
-    if(r) r.status='resolved';
+    if(r){ r.status='resolved'; r.resolvedAt=Date.now(); }
     await saveReports(reports);
     renderAdminReportsTab();
   }catch(e){ showToast('Failed',scbErr('SCB-ADMIN-17','That report change couldn\'t be saved — the server rejected the write.',(e.message||''))); }
@@ -17807,11 +17809,82 @@ async function resolveSpamFlag(key, btn){
   if(btn) btn.disabled = true;
   try{
     await fbdb.ref('spam_flags/'+key+'/resolved').set(true);
+    await fbdb.ref('spam_flags/'+key+'/resolvedAt').set(Date.now());
     showToast('Dismissed','');
     renderAdminSpamTab();
   }catch(e){
     if(btn) btn.disabled = false;
     showToast('Failed', e.message||'');
+  }
+}
+
+// ── MODERATION SLA DASHBOARD ─────────────────────────────────────────────────
+const MODERATION_SLA_TARGET_MS = 24*60*60*1000; // 24h response target
+function _moderationSlaStats(items){
+  // items: [{time, resolvedAt, status/resolved}]
+  const now=Date.now();
+  const open=items.filter(i=>!i._isResolved);
+  const resolved=items.filter(i=>i._isResolved && i.resolvedAt && i.time);
+  const resolveTimes=resolved.map(i=>i.resolvedAt-i.time).filter(ms=>ms>=0);
+  const avgMs=resolveTimes.length?resolveTimes.reduce((a,b)=>a+b,0)/resolveTimes.length:null;
+  const withinSla=resolveTimes.filter(ms=>ms<=MODERATION_SLA_TARGET_MS).length;
+  const slaPct=resolveTimes.length?Math.round(withinSla/resolveTimes.length*100):null;
+  const oldestOpenMs=open.length?Math.max(...open.map(i=>now-(i.time||now))):0;
+  const overdueOpen=open.filter(i=>i.time&&(now-i.time)>MODERATION_SLA_TARGET_MS).length;
+  return { openCount:open.length, resolvedCount:resolved.length, avgMs, slaPct, oldestOpenMs, overdueOpen };
+}
+function _fmtDuration(ms){
+  if(ms==null) return '—';
+  const h=ms/3600000;
+  if(h<1) return Math.round(ms/60000)+'m';
+  if(h<48) return h.toFixed(1)+'h';
+  return (h/24).toFixed(1)+'d';
+}
+async function renderAdminModerationSlaTab(){
+  if(!hasPermission('reports_view')){ const b=document.getElementById('admin-dashboard-body'); if(b) b.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Access denied.</div>'; return; }
+  const body=document.getElementById('admin-dashboard-body');
+  body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading moderation SLA stats…</div>';
+  try{
+    const [reports, spamSnap]=await Promise.all([
+      getReports().catch(()=>[]),
+      fbdb.ref('spam_flags').orderByChild('at').limitToLast(200).get().catch(()=>({exists:()=>false})),
+    ]);
+    const reportItems=(reports||[]).map(r=>({ time:r.time, resolvedAt:r.resolvedAt, _isResolved:r.status==='resolved' }));
+    const spamItems=[];
+    if(spamSnap && spamSnap.exists && spamSnap.exists()) spamSnap.forEach(child=>{ const v=child.val(); spamItems.push({ time:v.at, resolvedAt:v.resolvedAt, _isResolved:!!v.resolved }); });
+
+    const reportStats=_moderationSlaStats(reportItems);
+    const spamStats=_moderationSlaStats(spamItems);
+    const combinedStats=_moderationSlaStats(reportItems.concat(spamItems));
+
+    const card=(label,value,sub,color)=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px">
+      <div style="font-size:22px;font-weight:700;${color?`color:${color}`:''}">${value}</div>
+      <div style="font-size:11px;color:var(--text2);font-weight:600">${label}</div>
+      ${sub?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${sub}</div>`:''}
+    </div>`;
+
+    const section=(title,stats)=>`
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px">${title}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+        ${card('Open now',stats.openCount,stats.overdueOpen?stats.overdueOpen+' overdue (>24h)':'',stats.overdueOpen?'var(--danger)':undefined)}
+        ${card('Avg. time to resolve',_fmtDuration(stats.avgMs),stats.resolvedCount+' resolved on record')}
+        ${card('Resolved within 24h',stats.slaPct==null?'—':stats.slaPct+'%','SLA target: 24h')}
+        ${card('Oldest open item',stats.openCount?_fmtDuration(stats.oldestOpenMs):'—','age of the longest-waiting open item')}
+      </div>`;
+
+    body.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--muted)">Response-time health for reports &amp; spam flags — refreshes each time you open this tab</div>
+        <button class="btn btn-ghost btn-sm" onclick="renderAdminModerationSlaTab()">↻ Refresh</button>
+      </div>
+      ${section('Combined (reports + spam flags)',combinedStats)}
+      ${section('User reports',reportStats)}
+      ${section('Automated spam flags',spamStats)}
+      ${combinedStats.overdueOpen?`<div style="padding:10px 12px;border:1px solid var(--danger);border-radius:var(--r-sm);background:rgba(220,50,50,0.07);font-size:12px;color:var(--danger)">⚠️ ${combinedStats.overdueOpen} item(s) have been open for more than 24 hours and need attention.</div>`:''}
+    `;
+  }catch(e){
+    selfHeal('SCB-ADMIN-23', e, { context: 'renderAdminModerationSlaTab' });
+    body.innerHTML='<div style="padding:10px;color:var(--danger)">'+esc(scbErr('SCB-ADMIN-23','The moderation SLA stats couldn\'t be loaded.',(e&&e.message)||''))+'</div>';
   }
 }
 
@@ -22262,6 +22335,7 @@ init();
       <button class="admin-dash-tab" data-tab="users" onclick="switchAdminTab('users')">Users</button>
       <button class="admin-dash-tab" data-tab="reports" onclick="switchAdminTab('reports')">Reports</button>
       <button class="admin-dash-tab" data-tab="spam" onclick="switchAdminTab('spam')">🤖 Spam</button>
+      <button class="admin-dash-tab" data-tab="sla" onclick="switchAdminTab('sla')">📊 SLA</button>
       <button class="admin-dash-tab" data-tab="groups" onclick="switchAdminTab('groups')">Groups</button>
       <span class="admin-dash-tab-sep"></span>
       <button class="admin-dash-tab" data-tab="feedback" onclick="switchAdminTab('feedback')">💬 Feedback</button>
