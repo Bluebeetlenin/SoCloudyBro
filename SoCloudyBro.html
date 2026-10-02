@@ -569,6 +569,7 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 .sb-item-time{font-size:10px;color:var(--muted);flex-shrink:0}
 .sb-item-preview{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .unread-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;flex-shrink:0}
+.unread-badge-dot{display:inline-block;width:8px;height:8px;padding:0;border-radius:50%}
 .archived-label{font-size:10px;color:var(--muted2);background:var(--surface3);border-radius:4px;padding:1px 5px}
 /* #sb-bottom holds 11 icon buttons (a "Meetings" button is injected at
    runtime, not present in the static HTML) — #sidebar is widened above
@@ -2265,6 +2266,16 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Noise suppression</div><div class="settings-row-sub">Reduce background noise on calls (applies next time you join one)</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="noise-suppress-toggle" onchange="toggleNoiseSuppress(this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Unread badge style</div><div class="settings-row-sub">How unread counts show in the Unread tab and dashboard</div></div>
+            <div class="settings-row-actions">
+              <select id="badge-style-select" onchange="savePrivacyPref('badgeStyle',this.value)">
+                <option value="count">Count</option>
+                <option value="dot">Dot</option>
+                <option value="off">Off</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="security">
@@ -9896,6 +9907,10 @@ function showIncomingCallModal(pairKey,c){
   document.getElementById('incoming-call-name').textContent=_incomingCallFromName;
   openModal('incoming-call-modal');
   startCallRingtone();
+  // The ringtone alone is easy to miss with the tab backgrounded/muted —
+  // sendNotif() already no-ops unless the tab is actually hidden and
+  // notification permission was granted, so this is safe to call always.
+  sendNotif('📞 Incoming call',_incomingCallFromName+' is calling you');
   const ref=fbdb.ref('calls/'+pairKey);
   _incomingCallRef=ref;
   _incomingCallHandler=ref.on('value',snap=>{
@@ -11293,7 +11308,7 @@ function renderUnreadWidget(body){
   });
   items.sort((a,b)=>b.unread-a.unread);
   if(!items.length){ body.innerHTML='<div class="dash-widget-empty">You\'re all caught up! ✅</div>'; return; }
-  body.innerHTML=items.slice(0,8).map(it=>'<div class="dash-list-item" onclick="dashOpenChat(\''+it.c.key+'\')">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.c.name)+'</span><span class="unread-badge" style="margin-left:auto">'+it.unread+'</span></div>').join('');
+  body.innerHTML=items.slice(0,8).map(it=>'<div class="dash-list-item" onclick="dashOpenChat(\''+it.c.key+'\')">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.c.name)+'</span>'+renderUnreadBadgeHtml(it.unread,'margin-left:auto')+'</div>').join('');
 }
 function logCallHistory(entry){
   try{
@@ -17253,7 +17268,7 @@ renderSidebar = function(){
         :'<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv0)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
       div.innerHTML=avDiv+'<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+'</span><span class="sb-item-time">'+esc(timeStr)+'</span></div>'
         +'<div class="sb-item-preview">'+esc(preview)+'</div></div>'
-        +'<span class="unread-badge">'+unread+'</span>';
+        +renderUnreadBadgeHtml(unread);
       list.appendChild(div);
     });
     return;
@@ -17804,10 +17819,28 @@ function notifyAdminByEmail(subject, details){
   }
 }
 // -- "Needs attention" banner: written now, shown on the next login, dismissible
+// Unread badge style: count (default, the actual number), dot (a plain
+// colored dot — the count without the number), or off (no badge at all).
+// Shared by every place an unread count renders so the setting is
+// consistent everywhere rather than needing per-call-site wiring.
+function renderUnreadBadgeHtml(count,extraStyle){
+  if(!count||count<=0) return '';
+  const style=getPrivacyPref('badgeStyle','count');
+  const styleAttr=extraStyle?' style="'+extraStyle+'"':'';
+  if(style==='off') return '';
+  if(style==='dot') return '<span class="unread-badge unread-badge-dot"'+styleAttr+'></span>';
+  return '<span class="unread-badge"'+styleAttr+'>'+count+'</span>';
+}
 function flagNeedsAttention(message){
   const existing=scbLoad('cc_needs_attention', null);
   if(existing && existing.message===message) return;
   scbSave('cc_needs_attention', {message, time:Date.now()});
+  // Single chokepoint for "something genuinely critical that self-healing
+  // couldn't fix" — every call site (selfHeal's exhausted-retries path,
+  // Firebase permission failures, the weekly-digest failure handler, etc.)
+  // gets a background notification for free, deduplicated the same way the
+  // in-app banner already is (identical message = no repeat).
+  if(typeof sendNotif==='function') sendNotif('⚠️ SoCloudyBro needs attention',message);
 }
 function showNeedsAttentionBanner(){
   const info=scbLoad('cc_needs_attention', null);
@@ -21637,6 +21670,8 @@ function _initPrivacyToggles(){
   // zero-retention
   const zr=document.getElementById('zero-retention-toggle');
   if(zr){ zr.checked=!!getPrivacyPref('zeroRetention',false); updateZeroRetentionUI(); }
+  const badgeSel=document.getElementById('badge-style-select');
+  if(badgeSel) badgeSel.value=getPrivacyPref('badgeStyle','count');
   _scbPopulateSoundSelects();
 }
 
