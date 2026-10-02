@@ -2044,6 +2044,7 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
       </div>
       <div id="channel-bar" style="display:none"></div>
+      <div id="key-change-banner" style="display:none;align-items:center;gap:8px;padding:8px 12px;background:var(--warn-soft,rgba(230,159,0,0.16));color:var(--warn-text,#8a5d00);font-size:12px;flex-shrink:0"></div>
       <div id="cross-channel-typing" style="display:none"></div>
       <div id="voice-bar" style="display:none"></div>
       <div id="msg-search-bar" style="display:none;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
@@ -4920,6 +4921,9 @@ async function getDmAesKey(otherNumber){
   if(_dmAesCache[otherNumber]) return _dmAesCache[otherNumber];
   const jwkStr=_userPubKeyStr(otherNumber);
   if(!jwkStr) return null;
+  // Security feature 12/32: don't just silently re-derive and move on if
+  // this contact's key changed since we last saw it — flag it loudly.
+  if(await _checkContactKeyChange(otherNumber,jwkStr)) _flagContactKeyChanged(otherNumber);
   const theirPub=await _importPubKey(jwkStr);
   const key=await _deriveAesFromPub(theirPub);
   if(key) _dmAesCache[otherNumber]=key;
@@ -8532,6 +8536,8 @@ async function _origOpenChat(c){
   lastMsgHash='';
   if(typeof loadChatBg==='function') loadChatBg(key);
   if(typeof exitMsgSelectMode==='function') exitMsgSelectMode();
+  if(typeof _restoreKeyChangeBannerIfAny==='function'&&c.type!=='group'&&c.number) _restoreKeyChangeBannerIfAny(c.number);
+  else { const kcb=document.getElementById('key-change-banner'); if(kcb) kcb.style.display='none'; }
   hideAll();
   const searchBar=document.getElementById('msg-search-bar');
   if(searchBar&&searchBar.style.display!=='none'){searchBar.style.display='none';clearMsgSearchHighlights();msgSearchResults=[];msgSearchIdx=-1;}
@@ -22415,6 +22421,53 @@ async function _computeSafetyNumbers(otherNum){
     // Format as 5 groups of 8: easier to read aloud
     return hex.slice(0,40).match(/.{8}/g).join(' ');
   }catch{ return null; }
+}
+/* ===== KEY-CHANGE WARNING BANNER (security feature 12/32) =====
+   Signal-style: if a contact's public key changes from the one we last saw
+   and trusted, that's flagged loudly instead of silently re-deriving a new
+   shared key and moving on — it's exactly what a MITM key-swap looks like,
+   even though it's far more often just the other person reinstalling the
+   app or using rotateE2EKeys(). The last-seen key is remembered in
+   localStorage (per contact, forever) so this survives a reload. ===== */
+async function _checkContactKeyChange(number,pubkeyStr){
+  if(!pubkeyStr) return false;
+  try{
+    const hash=await _sha256Hex(pubkeyStr);
+    const storageKey='cc_known_pubkey_'+number;
+    const prev=localStorage.getItem(storageKey);
+    localStorage.setItem(storageKey,hash);
+    if(prev&&prev!==hash){
+      delete _dmAesCache[number]; // force re-derivation with the new key rather than keep using a stale cached session key
+      return true;
+    }
+    return false;
+  }catch(e){ return false; }
+}
+function _flagContactKeyChanged(number){
+  try{ sessionStorage.setItem('cc_key_changed_'+number,'1'); }catch(e){}
+  if(typeof showToast==='function') showToast('⚠️ Encryption key changed','A contact\'s security key changed — verify their safety number before trusting new messages.');
+  if(typeof _logSecurityEvent==='function') _logSecurityEvent('key_change_warning','Key changed for contact #'+number).catch(()=>{});
+  renderKeyChangeBanner(number);
+}
+function renderKeyChangeBanner(number){
+  const el=document.getElementById('key-change-banner');
+  if(!el) return;
+  if(!activeConvo||activeConvo.type==='group'||activeConvo.number!==number){ el.style.display='none'; return; }
+  el.style.display='flex';
+  el.innerHTML='⚠️ This contact\'s encryption key changed. <button onclick="hideHeaderMenu();openSafetyNumbers()" style="margin-left:6px;text-decoration:underline;background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0">Verify now</button><button onclick="dismissKeyChangeBanner('+number+')" style="margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;font-size:14px;padding:0">✕</button>';
+}
+function dismissKeyChangeBanner(number){
+  try{ sessionStorage.removeItem('cc_key_changed_'+number); }catch(e){}
+  const el=document.getElementById('key-change-banner');
+  if(el) el.style.display='none';
+}
+// Called from _origOpenChat() when switching into a DM, so a previously
+// flagged-but-not-yet-dismissed warning for THIS contact still shows after
+// navigating away and back, instead of only ever appearing once.
+function _restoreKeyChangeBannerIfAny(number){
+  try{ if(sessionStorage.getItem('cc_key_changed_'+number)){ renderKeyChangeBanner(number); return; } }catch(e){}
+  const el=document.getElementById('key-change-banner');
+  if(el) el.style.display='none';
 }
 async function openSafetyNumbers(){
   if(!activeConvo||activeConvo.type==='group'){ showToast('DM only','Safety numbers are only available in 1-on-1 chats.'); return; }
