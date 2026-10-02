@@ -22359,26 +22359,57 @@ if(_origClipboardWrite){
   };
 }
 
-/* ===== AUTO-LOCK ON INACTIVITY + SCREEN BLUR ON HIDE =====
+/* ===== AUTO-LOCK / AUTO-LOGOUT ON INACTIVITY + SCREEN BLUR ON HIDE =====
+   (security feature 4/32 — session timeout after inactivity)
    Auto-lock: if a PIN is set, lock the screen after 10 minutes of no
    keyboard/mouse/touch activity. The timer resets on every interaction.
+   Auto-logout: a session with NO PIN set has no quick-unlock screen to show,
+   so instead it gets signed all the way out after a longer 30-minute idle
+   period — still a real session timeout, just higher-friction since it
+   requires a full password re-entry, which is why it gets a longer grace
+   period than the PIN-protected lock screen.
    Screen blur: blur the app content when the tab is hidden or the window
    loses focus, so the OS task-switcher / screen recorder can't read it. ===== */
 (function scbSecurityHooks(){
-  const AUTO_LOCK_MS = 10 * 60 * 1000; // 10 minutes idle → lock
+  const AUTO_LOCK_MS = 10 * 60 * 1000; // 10 minutes idle → lock (PIN set)
+  const AUTO_LOGOUT_NO_PIN_MS = 30 * 60 * 1000; // 30 minutes idle → full sign-out (no PIN)
   let _idleTimer = null;
 
+  // One-time notice after a reload caused by the idle auto-logout below.
+  try{
+    if(localStorage.getItem('cc_auto_logout_reason')){
+      localStorage.removeItem('cc_auto_logout_reason');
+      setTimeout(function(){ if(typeof showToast==='function') showToast('Signed out','You were signed out after being inactive for a while.'); },1500);
+    }
+  }catch(e){}
+
+  function _autoLogoutOnIdle(){
+    try{
+      if(typeof leaveVoiceChannel==='function') leaveVoiceChannel();
+      if(typeof leaveMeeting==='function') leaveMeeting();
+      if(typeof stopConvoRealtime==='function') stopConvoRealtime();
+    }catch(e){}
+    try{ localStorage.setItem('cc_auto_logout_reason','inactivity'); }catch(e){}
+    clearLocalSessionPreservingE2EKeys();
+    location.reload();
+  }
+
   function _resetIdleTimer(){
-    if(!window.me || !localStorage.getItem('cc_pin')) return; // no session or no PIN → nothing to lock
+    if(!window.me) return; // no session → nothing to lock or log out
     clearTimeout(_idleTimer);
+    const hasPin=!!localStorage.getItem('cc_pin');
     _idleTimer = setTimeout(function(){
-      // Don't lock if the lock screen is already showing
-      const ls = document.getElementById('lock-screen');
-      if(ls && ls.classList.contains('visible')) return;
-      if(window.me && localStorage.getItem('cc_pin')){
-        if(typeof showLockScreen === 'function') showLockScreen();
+      if(hasPin){
+        // Don't lock if the lock screen is already showing
+        const ls = document.getElementById('lock-screen');
+        if(ls && ls.classList.contains('visible')) return;
+        if(window.me && localStorage.getItem('cc_pin')){
+          if(typeof showLockScreen === 'function') showLockScreen();
+        }
+      } else if(window.me){
+        _autoLogoutOnIdle();
       }
-    }, AUTO_LOCK_MS);
+    }, hasPin?AUTO_LOCK_MS:AUTO_LOGOUT_NO_PIN_MS);
   }
 
   // Reset the idle timer on any real user activity
