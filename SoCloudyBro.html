@@ -12117,7 +12117,7 @@ function renderUnreadWidget(body){
   contacts.forEach(c=>{
     const conv=convosCache.find(x=>x&&x.key===c.key);
     if(!conv||!conv.messages) return;
-    const unread=conv.messages.filter(m=>m.type!=='system'&&m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))).length;
+    const unread=conv.messages.filter(m=>m.type!=='system'&&m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length;
     if(unread>0) items.push({c,unread});
   });
   items.sort((a,b)=>b.unread-a.unread);
@@ -14264,6 +14264,13 @@ function renderMessages(msgs) {
         try{ await saveConvos(); if(activeConvo&&activeConvo.key===sourceConvoKey){ lastMsgHash=''; renderMessages(conv.messages); } }catch{}
       }, 3000);
     }
+    // Local-only "I've looked at this" tracking (for your own unread
+    // badges) happens unconditionally — unlike the `seen` array below,
+    // which is what shows a read receipt to the OTHER person and is
+    // deliberately skipped when they've turned that off. Those are two
+    // different things; disabling read receipts should never also break
+    // your own unread count.
+    if (!isMe && typeof _markLocallySeen === 'function') _markLocallySeen(m.id);
     if (!isMe && (!m.seen || !m.seen.includes(me.number)) && getPrivacyPref('readReceipts',true) && !m.selfDestruct) {
       if (!m.seen) m.seen = [];
       m.seen.push(me.number);
@@ -17603,6 +17610,27 @@ function scbSave(key, value){
   catch(e){ console.warn('scbSave failed for '+key, e); return false; }
 }
 
+// Purely local "have I personally looked at this message" tracking, kept
+// separate from the `seen` array pushed into the shared Firebase message
+// record. `seen` is also what powers read receipts shown to the OTHER
+// person, and gets skipped entirely when the Read Receipts privacy toggle
+// is off — which used to mean turning that toggle off also broke your own
+// unread badges (sidebar previews, the browser tab title) forever, since
+// they all counted off that same shared field. This set is local-only,
+// never synced, and always updated regardless of that privacy setting.
+const LOCALLY_SEEN_CAP=1000;
+function _isLocallySeen(msgId){
+  return scbLoad('cc_locally_seen',[]).includes(msgId);
+}
+function _markLocallySeen(msgId){
+  if(!msgId) return;
+  const seen=scbLoad('cc_locally_seen',[]);
+  if(seen.includes(msgId)) return;
+  seen.push(msgId);
+  if(seen.length>LOCALLY_SEEN_CAP) seen.splice(0,seen.length-LOCALLY_SEEN_CAP);
+  scbSave('cc_locally_seen',seen);
+}
+
 /* =============================================================================
    NOW PLAYING — read-only, best-effort cross-game status
    -----------------------------------------------------------------------------
@@ -18473,7 +18501,7 @@ renderSidebar = function(){
       if(archivedContacts[key]) return;
       const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
       if(!conv||!conv.messages) return;
-      const unread=conv.messages.filter(m=>m&&m.from!==me.number&&m.type!=='call'&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))).length;
+      const unread=conv.messages.filter(m=>m&&m.from!==me.number&&m.type!=='call'&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length;
       if(unread>0) unreadItems.push({c,unread,key,conv});
     });
     unreadItems.sort((a,b)=>b.unread-a.unread);
@@ -21851,7 +21879,7 @@ catch(e){ console.error('feature DOM injection failed', e); }
     let total=0;
     (window.convosCache||[]).forEach(c=>{
       if(!c||!c.messages) return;
-      total+=c.messages.filter(m=>m&&m.from!==me.number&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))).length;
+      total+=c.messages.filter(m=>m&&m.from!==me.number&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length;
     });
     document.title=total>0?'('+total+') '+_origTitle:_origTitle;
   }
