@@ -10775,6 +10775,7 @@ async function submitReport(){
         status:'open'
       });
       await saveReports(reports);
+      if(reported) await _checkMassReportSpike(reported.number,reported.name,reports);
     }catch(e){ /* report email below still goes out even if this fails */ }
     await sendWeb3Form({
       subject:'SoCloudyBro report: '+(reported?reported.name:'Unknown user'),
@@ -17216,6 +17217,39 @@ function checkSpamRate(text){
   return true;
 }
 
+/* ===== MASS-REPORT SPIKE DETECTION (security feature 24/32) =====
+   If the same account gets reported by several DIFFERENT people within a
+   short window, that's flagged into the same spam_flags admin queue as
+   the message-rate spam detector above — reusing its existing Spam tab UI
+   and Ban action rather than building a separate surface for it. Counts
+   distinct reporters, not raw report rows, so one person can't fake a
+   "spike" by filing the same report repeatedly; debounced so a single
+   spike doesn't push a new flag for every report past the threshold. ===== */
+const MASS_REPORT_WINDOW_MS=60*60*1000; // 1 hour
+const MASS_REPORT_THRESHOLD=3; // distinct reporters within the window
+async function _checkMassReportSpike(reportedNumber,reportedName,allReports){
+  if(!reportedNumber) return;
+  try{
+    const cutoff=Date.now()-MASS_REPORT_WINDOW_MS;
+    const recent=(allReports||[]).filter(r=>r&&r.reportedNumber===reportedNumber&&r.time>cutoff);
+    const distinctReporters=new Set(recent.map(r=>r.reporterNumber)).size;
+    if(distinctReporters<MASS_REPORT_THRESHOLD) return;
+    // Debounce: don't push another flag if an unresolved one for this
+    // account already exists from within the current window.
+    const snap=await fbdb.ref('spam_flags').orderByChild('number').equalTo(reportedNumber).get();
+    let alreadyFlagged=false;
+    snap.forEach(child=>{ const v=child.val(); if(v&&v.type==='mass_reported'&&!v.resolved&&v.at>cutoff) alreadyFlagged=true; });
+    if(alreadyFlagged) return;
+    await fbdb.ref('spam_flags').push({
+      number:reportedNumber,
+      name:reportedName||'',
+      type:'mass_reported',
+      reportCount:distinctReporters,
+      at:Date.now(),
+      resolved:false
+    });
+  }catch(e){ console.warn('Mass-report spike check failed (non-fatal):',e.message); }
+}
 async function _reportSpam(type, msgCount, identicalRun){
   if(!me) return;
   try{
@@ -17262,9 +17296,11 @@ async function renderAdminSpamTab(){
     }
     const rows = flags.map(f=>{
       const when = f.at ? new Date(f.at).toLocaleString() : '—';
-      const typeLabel = f.type==='identical_messages' ? '🔁 Repeated messages' : '⚡ Rate limit';
+      const typeLabel = f.type==='identical_messages' ? '🔁 Repeated messages' : f.type==='mass_reported' ? '🚩 Mass-reported' : '⚡ Rate limit';
       const detail = f.type==='identical_messages'
         ? f.identicalRun+' identical in a row'
+        : f.type==='mass_reported'
+        ? 'reported by '+f.reportCount+' different people within an hour'
         : f.msgCount+' msgs / 30s';
       const resolvedBadge = f.resolved ? '<span style="font-size:10px;background:var(--success-soft);color:var(--success);padding:2px 6px;border-radius:999px;margin-left:6px">Resolved</span>' : '';
       return `<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
