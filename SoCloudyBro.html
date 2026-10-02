@@ -1862,6 +1862,15 @@ body.device-tablet .msg-body{max-width:74%}
     'Tip: report a message or user straight from the chat — it goes to moderators',
     'Tip: Cloudy can do quick math, roll a dice, or flip a coin — just ask',
     'Tip: schedule dark mode to switch on automatically at sunset',
+    'Tip: sign in with a passkey instead of a password — Face ID, Touch ID, or your device PIN',
+    'Tip: trust a device for 30 days so you\'re not asked for a 2FA code every time',
+    'Tip: block someone\'s calls or messages separately — you don\'t have to block both',
+    'Tip: set your account to self-destruct after months of inactivity, right in Settings',
+    'Tip: control who can see your SCB number and who can add you to groups in Privacy settings',
+    'Tip: a key-change banner warns you if a contact\'s encryption key suddenly changes',
+    'Tip: export an encrypted backup of all your data any time — only you hold the password',
+    'Tip: found a security bug? Report it privately from Settings instead of posting about it',
+    'Tip: links that look suspicious get flagged before you send or open them',
   ];
   let _tipIdx=0;
   const tipEl=document.getElementById('scb-splash-tip');
@@ -5461,6 +5470,18 @@ function applyDeviceType(){
 // On phones, only one pane (sidebar OR chat) is shown at a time; this returns to the sidebar
 function closeChatToSidebar(){
   document.body.classList.remove('chat-open');
+  // The <640px media query has its own CSS-only fallback for single-pane
+  // layout (`body:has(#chat-panel.visible)`, with !important) for a
+  // desktop browser resized narrow without ever getting JS-reclassified
+  // as device-phone. That fallback only looks at #chat-panel's .visible
+  // class, not the chat-open body class above — so on any real phone
+  // (which DOES carry chat-open) leaving .visible in place meant the
+  // !important fallback rule kept forcing the chat panel back open right
+  // after this function removed chat-open, making the back button look
+  // broken and the sidebar/chat panel fight over the same space. Clear
+  // both so neither mechanism can disagree with the other.
+  const chatPanel=document.getElementById('chat-panel');
+  if(chatPanel) chatPanel.classList.remove('visible');
 }
 window.addEventListener('resize', () => { applyDeviceType(); });
 if (window.matchMedia) {
