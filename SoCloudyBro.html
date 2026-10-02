@@ -7383,6 +7383,34 @@ function openChangePassword(){
   document.getElementById('chpwd-error').textContent='';
   openModal('change-password-modal');
 }
+/* ===== PASSWORD BREACH CHECK (security feature 8/32) =====
+   Uses the Pwned Passwords k-anonymity range API (api.pwnedpasswords.com,
+   free, no key): only the first 5 hex characters of the password's SHA-1
+   hash are ever sent, never the password itself or the full hash — the
+   matching is done locally against the ~hundreds of candidate suffixes the
+   API returns for that prefix. Fails open: any network/API failure is
+   treated as "not found in a breach" rather than blocking the user. ===== */
+async function checkPasswordBreach(password){
+  try{
+    const buf=await crypto.subtle.digest('SHA-1',new TextEncoder().encode(password));
+    const hex=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
+    const prefix=hex.slice(0,5), suffix=hex.slice(5);
+    const res=await fetch('https://api.pwnedpasswords.com/range/'+prefix);
+    if(!res.ok) return 0;
+    const text=await res.text();
+    const line=text.split('\n').find(l=>l.trim().toUpperCase().startsWith(suffix+':'));
+    if(!line) return 0;
+    const count=parseInt(line.split(':')[1]||'',10);
+    return isNaN(count)?0:count;
+  }catch(e){ return 0; }
+}
+// Shared confirm-or-cancel prompt used at both signup and password change.
+// Returns true if the user should be allowed to proceed with this password.
+async function _warnIfBreachedPassword(password){
+  const count=await checkPasswordBreach(password).catch(()=>0);
+  if(!count) return true;
+  return confirm('This password has appeared in '+count.toLocaleString()+' known data breaches. We strongly recommend choosing a different one.\n\nUse it anyway?');
+}
 async function submitChangePassword(){
   const err=document.getElementById('chpwd-error'); err.textContent='';
   const cur=document.getElementById('chpwd-current').value;
@@ -7391,6 +7419,7 @@ async function submitChangePassword(){
   if(!cur){ err.textContent='Enter your current password.'; return; }
   if(nw.length<8){ err.textContent='New password must be at least 8 characters.'; return; }
   if(nw!==cf){ err.textContent='Passwords do not match.'; return; }
+  if(!(await _warnIfBreachedPassword(nw))) return;
   // Verify current password against this app's own hashed-password system —
   // NOT Firebase Auth reauthentication. firebase.auth() here is only ever an
   // anonymous session (see init()'s signInAnonymously()); this app's real
@@ -8238,6 +8267,7 @@ async function submitSetup(){
   if(!num||num<1000||num>99999){err.textContent=scbErr('SCB-SIGNUP-04','Number must be 1000–99999.');return;}
   if(!pwd){err.textContent=scbErr('SCB-SIGNUP-05','Create a password.');return;}
   if(pwd.length<8){err.textContent=scbErr('SCB-SIGNUP-06','Password must be at least 8 characters.');return;}
+  if(!(await _warnIfBreachedPassword(pwd))) return;
   if(!birthdate){err.textContent=scbErr('SCB-SIGNUP-07','Enter your date of birth.');return;}
   const age=calcAge(birthdate);
   if(age===null){err.textContent=scbErr('SCB-SIGNUP-08','Enter a valid date of birth.');return;}
