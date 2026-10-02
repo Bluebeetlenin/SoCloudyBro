@@ -2328,6 +2328,17 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Cross-Device Encryption</div><div class="settings-row-sub">Your decryption key syncs automatically — just log in on any device to read your messages</div></div>
             <div class="settings-row-actions"><span style="color:var(--success,#4caf50);font-size:13px">Auto ✓</span></div>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Self-Destruct Account</div><div class="settings-row-sub">Automatically delete this account after a period of inactivity. Logging in at all resets the clock.</div></div>
+            <div class="settings-row-actions">
+              <select id="self-destruct-select" onchange="saveSelfDestructMonths(this.value)">
+                <option value="0">Off</option>
+                <option value="3">After 3 months inactive</option>
+                <option value="6">After 6 months inactive</option>
+                <option value="12">After 12 months inactive</option>
+              </select>
+            </div>
+          </div>
           <div class="settings-row" style="cursor:pointer" onclick="openLoginHistory()">
             <div class="settings-row-main"><div class="settings-row-label">Login History</div><div class="settings-row-sub">See your last 5 logins and the device used</div></div>
             <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
@@ -5703,6 +5714,10 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
   payload.linkedParent  = (u&&u.linkedParent!==undefined&&u.linkedParent!==null) ? u.linkedParent : ((me.linkedParent!==undefined&&me.linkedParent!==null)?me.linkedParent:null);
   payload.restrictions  = (u&&u.restrictions) || me.restrictions || null; // server wins
   payload.language      = me.language || (u&&u.language) || (typeof getLanguage==='function'?getLanguage():'en');
+  // Security feature 37/32: self-destruct after inactivity. Self-controlled,
+  // same fallback rule as language above — never blanked by a device that
+  // hasn't loaded it yet.
+  payload.selfDestructMonths = (typeof me.selfDestructMonths==='number') ? me.selfDestructMonths : ((u&&u.selfDestructMonths)||0);
   // Connected Accounts (Settings → Connected Accounts, and the Google sign-in
   // flow on the login screen). Same "fall back to whatever the server already
   // has" rule as every field above, for the same reason: a device that hasn't
@@ -7275,7 +7290,7 @@ async function submit2faCode(){
 }
 async function finishLogin(user, pwdToStore){
   resetLocalSessionState();
-  me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], blockedCalls: user.blockedCalls||[], blockedMessages: user.blockedMessages||[], totpEnabled: !!user.totpEnabled, shadowMuted: !!user.shadowMuted,
+  me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], blockedCalls: user.blockedCalls||[], blockedMessages: user.blockedMessages||[], totpEnabled: !!user.totpEnabled, shadowMuted: !!user.shadowMuted, selfDestructMonths: user.selfDestructMonths||0,
     // createdAt + emailVerified drive the email-verification gate in launch()
     // (needsEmailVerification()) — without copying them onto `me` here, that
     // check would only ever work right after signUp() (which sets them
@@ -16155,6 +16170,7 @@ async function renderAdminOverviewTab(){
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${hasPermission('digest_send')?'<button class="btn btn-sm" onclick="sendAdminWeeklyDigest(this)">📧 Send weekly digest now</button>':''}
         ${hasPermission('moderation_export')?'<button class="btn btn-ghost btn-sm" onclick="exportModerationLogCsv()">⬇ Export moderation log (CSV)</button>':''}
+        ${me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="openSelfDestructedLog()">💀 Self-destructed accounts</button>':''}
       </div>
       ${hasPermission('digest_send')?`<div style="font-size:10px;color:var(--muted);margin-top:8px">Last digest sent: <span id="last-digest-sent-text">${localStorage.getItem('cc_last_digest_sent')?new Date(Number(localStorage.getItem('cc_last_digest_sent'))).toLocaleString():'never'}</span></div>`:''}
       `:''}
@@ -21235,6 +21251,7 @@ function featurePostLaunch(){
   // (email verification gate, tutorial, security-questions prompt).
   setTimeout(()=>{ try{ _maybeAutoShowChangelog(); }catch(e){} },2000);
   setTimeout(()=>{ _maybeAutoRotateE2EKeys().catch(e=>console.warn('Auto key rotation failed',e)); },3000);
+  setTimeout(()=>{ _sweepSelfDestructAccounts().catch(e=>console.warn('Self-destruct sweep failed',e)); },4000);
 }
 
 /* =============================================================================
@@ -22396,6 +22413,8 @@ function _initPrivacyToggles(){
   if(badgeSel) badgeSel.value=getPrivacyPref('badgeStyle','count');
   const groupAddSel=document.getElementById('group-add-permission-select');
   if(groupAddSel) groupAddSel.value=getPrivacyPref('groupAddPermission','anyone');
+  const selfDestructSel=document.getElementById('self-destruct-select');
+  if(selfDestructSel&&me) selfDestructSel.value=String(me.selfDestructMonths||0);
   _scbPopulateSoundSelects();
 }
 
@@ -22518,6 +22537,95 @@ async function _alertNewDeviceLogin(u,label,os){
       message:'A new device just signed in to your SoCloudyBro account (#'+u.number+'). If this was you, no action is needed. If you don\'t recognize this device, change your password right away from Settings → Security.',
     });
   }catch(e){ console.warn('New-device alert email failed (non-fatal):',e.message); }
+}
+/* ===== SELF-DESTRUCT ACCOUNT ON INACTIVITY (security feature 37/32) =====
+   A dormant account's own client isn't running to check its own clock, so
+   the sweep runs on the ADMIN's session instead (featurePostLaunch(),
+   gated to ADMIN_NUMBER, debounced to once/day) — the one account that's
+   actually guaranteed to log in periodically. Each self-destruct is logged
+   to admin_site/self_destructed_log via push() with no corresponding
+   delete UI anywhere in this app, so that log is append-only in practice.
+   Honest limitation: this app has no backend, so it has never recorded
+   anyone's real IP address anywhere — "ban that IP" isn't something this
+   architecture can do. What IS tracked (and what the admin can act on from
+   that log) is the account number and its device labels/history. ===== */
+async function saveSelfDestructMonths(months){
+  if(!me) return;
+  me.selfDestructMonths=parseInt(months)||0;
+  saveStorage();
+  try{ await registerOrUpdate(); }catch(e){ showToast('Failed to save',scbErr('SCB-SEC-30','That setting couldn\'t be saved — the server rejected the write.',(e.message||''))); }
+}
+const SELF_DESTRUCT_SWEEP_INTERVAL_MS=24*60*60*1000; // run the sweep at most once/day
+async function _sweepSelfDestructAccounts(){
+  if(!me||me.number!==ADMIN_NUMBER) return;
+  try{
+    const lastSwept=Number(localStorage.getItem('cc_last_self_destruct_sweep')||0);
+    if(Date.now()-lastSwept<SELF_DESTRUCT_SWEEP_INTERVAL_MS) return;
+    localStorage.setItem('cc_last_self_destruct_sweep',String(Date.now()));
+    const users=await getUsers();
+    const now=Date.now();
+    let anyDestroyed=false;
+    for(const u of users){
+      if(!u||!u.selfDestructMonths||u.deleted||u.number===ADMIN_NUMBER) continue;
+      const thresholdMs=u.selfDestructMonths*30*86400000;
+      const lastActive=u.lastSeen||u.createdAt||0;
+      if(!lastActive||now-lastActive<thresholdMs) continue;
+      // Immutable log entry BEFORE anonymizing — this is the only remaining
+      // record of who this account was, so it has to be written first.
+      try{
+        await fbdb.ref('admin_site/self_destructed_log').push({
+          number:u.number, name:dec(u.name)||('#'+u.number), lastSeen:lastActive,
+          selfDestructMonths:u.selfDestructMonths, destroyedAt:now,
+          devices:u.devices?Object.values(u.devices).map(d=>d&&d.label).filter(Boolean):[],
+        });
+      }catch(e){ console.warn('Self-destruct log write failed (non-fatal):',e.message); }
+      u.name=enc('Deleted User'); u.bio=''; u.customStatus=''; u.avatar=''; u.pwd=''; u.email=''; u.birthdate='';
+      u.blocked=[]; u.blockedCalls=[]; u.blockedMessages=[]; u.deleted=true; u.devices={};
+      u.totpEnabled=false; u.totpSecret=''; u.faceMfaEnabled=false; u.faceDescriptor=null;
+      u.googleSub=null; u.googleEmail=''; u.linkedSyntaxAccount=null; u.linkedSyntaxAccountName='';
+      u.selfDestructMonths=0;
+      anyDestroyed=true;
+    }
+    if(anyDestroyed) await saveUsers(users);
+  }catch(e){ console.warn('Self-destruct sweep failed (non-fatal):',e.message); }
+}
+function openSelfDestructedLog(){
+  if(me.number!==ADMIN_NUMBER){ showToast('Admins only',''); return; }
+  (async()=>{
+    const snap=await fbdb.ref('admin_site/self_destructed_log').orderByChild('destroyedAt').limitToLast(100).get().catch(()=>null);
+    const entries=[];
+    if(snap&&snap.exists()) snap.forEach(child=>entries.unshift({_key:child.key,...child.val()}));
+    const rows=entries.length
+      ? entries.map(e=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">${esc(e.name||'Unknown')} <span style="color:var(--muted);font-size:11px">#${e.number}</span></div>
+          <div style="font-size:11px;color:var(--muted)">Destroyed ${new Date(e.destroyedAt).toLocaleString()} · inactive ${e.selfDestructMonths}mo · last seen ${e.lastSeen?new Date(e.lastSeen).toLocaleDateString():'?'}</div>
+          ${(e.devices||[]).length?'<div style="font-size:10px;color:var(--muted)">Devices: '+esc(e.devices.join(', '))+'</div>':''}</div>
+          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBanDestroyedAccount(${e.number})">🚫 Ban #${e.number}</button>
+        </div>`).join('')
+      : '<div style="color:var(--muted);font-size:13px;padding:12px 0">No accounts have self-destructed yet.</div>';
+    const dlg=document.createElement('div');
+    dlg.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+    dlg.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="margin:0;font-size:15px">💀 Self-Destructed Accounts</h3>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('div[style*=fixed]').remove()">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">This log is permanent and cannot be edited or erased. This app has no backend and has never recorded real IP addresses — banning here blocks the account number, the only identity this log actually has.</div>
+      ${rows}
+    </div>`;
+    document.body.appendChild(dlg);
+  })();
+}
+async function adminBanDestroyedAccount(num){
+  if(!requirePermission('users_ban')) return;
+  if(!confirm('Reserve account #'+num+' so it can never be used again?')) return;
+  try{
+    const rsnap=await fbdb.ref('admin_site/reserved_numbers').get();
+    const reserved=rsnap.exists()?(rsnap.val()||[]):[];
+    const updated=[...new Set([...(Array.isArray(reserved)?reserved:[]).map(Number),Number(num)])];
+    await fbdb.ref('admin_site/reserved_numbers').set(updated);
+    showToast('Account number banned','#'+num+' can never sign up again.');
+  }catch(e){ showToast('Failed',scbErr('SCB-ADMIN-29','Could not reserve that number.',(e.message||''))); }
 }
 function openLoginHistory(){
   if(!window.me) return;
