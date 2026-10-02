@@ -3390,6 +3390,17 @@ body.device-tablet .msg-body{max-width:74%}
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Pending Join Requests</div>
         <div id="gp-join-requests-list"></div>
       </div>
+      <!-- Quarantine new members (security feature 29/32), admin only -->
+      <div id="gp-quarantine-section" style="display:none;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:8px">
+          <input type="checkbox" id="gp-quarantine-toggle" onchange="toggleGroupQuarantine(this.checked)" style="width:15px;height:15px;cursor:pointer"/>
+          🚦 Quarantine new members' messages until a mod approves them
+        </label>
+        <div id="gp-quarantine-pending-wrap" style="display:none">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Awaiting Approval</div>
+          <div id="gp-quarantine-pending-list"></div>
+        </div>
+      </div>
       <!-- Roles section (admin only) -->
       <div id="gp-roles-section" style="display:none;margin-bottom:12px">
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Roles</div>
@@ -12857,6 +12868,25 @@ function openGroupPanel() {
         +'</div>';
     }).join('');
   }
+  // Quarantine new members (security feature 29/32) — admin-only toggle + pending-approval list
+  const quarantineSection=document.getElementById('gp-quarantine-section');
+  quarantineSection.style.display=isAdmin?'block':'none';
+  if(isAdmin){
+    document.getElementById('gp-quarantine-toggle').checked=!!conv.quarantineNewMembers;
+    const pending=(conv.pendingApproval||[]).filter(n=>members.includes(n));
+    const pendingWrap=document.getElementById('gp-quarantine-pending-wrap');
+    pendingWrap.style.display=pending.length?'block':'none';
+    if(pending.length){
+      document.getElementById('gp-quarantine-pending-list').innerHTML=pending.map(n=>{
+        const u=lookupUser(n)||{};
+        const name=dec(u.name||'')||'#'+n;
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px">'
+          +'<div style="flex:1;font-size:13px">'+esc(name)+' <span style="color:var(--muted);font-size:11px">#'+n+'</span></div>'
+          +'<button class="btn btn-sm" onclick="approveQuarantinedMember('+n+')">✓ Approve</button>'
+          +'</div>';
+      }).join('');
+    }
+  }
   // Group/Server avatar
   const gpAv = document.getElementById('gp-avatar');
   if (typeof activeConvo.avatar==='string' && activeConvo.avatar.startsWith('data:image/')) {
@@ -13022,6 +13052,7 @@ async function submitAddGroupMembers(){
     for(const n of nums){ if(!await addMemberToGroupKey(conv,n)) failed.push(n); }
     const added=nums.filter(n=>!failed.includes(n));
     if(added.length) _recordGroupInvites(added.length);
+    added.forEach(n=>_maybeQuarantineNewMember(conv,n));
     const existing=new Set((conv.participants||conv.members||[]).map(Number));
     added.forEach(n=>existing.add(n));
     const merged=[...existing];
@@ -13118,12 +13149,49 @@ async function approveJoinRequest(num){
     const merged=[...existing];
     conv.participants=merged; conv.members=merged;
     conv.joinRequests=(conv.joinRequests||[]).filter(r=>r.number!==num);
+    _maybeQuarantineNewMember(conv,num);
     const joinedUser=lookupUser(num);
     _addSystemMessage(conv,(dec(joinedUser&&joinedUser.name)||('#'+num))+' joined the '+(conv.isServer?'server':'group'));
     await saveConvos();
     openGroupPanel();
     showToast('Member approved','');
   }catch(e){ showToast('Failed',scbErr('SCB-GRP-41','That request couldn\'t be approved — the server rejected the write.',(e.message||''))); }
+}
+/* ===== QUARANTINE NEW MEMBERS (security feature 29/32) =====
+   When enabled for a group, a member added while it's on has their
+   messages tagged quarantined:true (in sendMsg()) until an admin/mod
+   explicitly approves them — renderMessages() hides a quarantined
+   message from everyone except its own sender and the group's admins
+   (who need to see it to review), so it reads as a real, if unreviewed,
+   message to a mod rather than a silent deception like shadow-mute. ===== */
+async function toggleGroupQuarantine(on){
+  const conv=getActiveConvoObj();
+  if(!conv||!isGroupAdmin()) return;
+  conv.quarantineNewMembers=!!on;
+  try{ await saveConvos(); showToast(on?'Quarantine enabled':'Quarantine disabled',on?'New members\' messages will be held for mod approval.':''); }
+  catch(e){ showToast('Failed',scbErr('SCB-GRP-47','Couldn\'t save that setting — the server rejected the write.',(e.message||''))); }
+}
+// Called wherever a member is actually admitted to a group — adds them to
+// the pending-approval list only if quarantine is currently on.
+function _maybeQuarantineNewMember(conv,num){
+  if(!conv||!conv.quarantineNewMembers||num===me.number) return;
+  if(!Array.isArray(conv.pendingApproval)) conv.pendingApproval=[];
+  if(!conv.pendingApproval.includes(num)) conv.pendingApproval.push(num);
+}
+async function approveQuarantinedMember(num){
+  const conv=getActiveConvoObj();
+  if(!conv||!isGroupAdmin()) return;
+  conv.pendingApproval=(conv.pendingApproval||[]).filter(n=>n!==num);
+  // Retroactively un-hide everything they already sent while quarantined —
+  // approval means their backlog becomes visible too, not just future messages.
+  (conv.messages||[]).forEach(m=>{ if(m&&m.from===num&&m.quarantined) delete m.quarantined; });
+  try{
+    await saveConvos();
+    lastMsgHash='';
+    if(activeConvo&&activeConvo.key===conv.key) renderMessages(conv.messages);
+    openGroupPanel();
+    showToast('Member approved','Their messages are now visible to everyone.');
+  }catch(e){ showToast('Failed',scbErr('SCB-GRP-48','Couldn\'t save that approval — the server rejected the write.',(e.message||''))); }
 }
 async function denyJoinRequest(num){
   const conv=getActiveConvoObj();
@@ -13366,6 +13434,10 @@ function renderMessages(msgs) {
   if (activeConvo && activeConvo.type === 'group') {
     const chId = activeChannelId || 'general';
     msgs = (msgs || []).filter(m => (m.channelId || 'general') === chId);
+    // Security feature 29/32: a quarantined message stays visible to its
+    // own sender and to the group's admins/mods (who need to see it to
+    // approve), but hidden from everyone else until approved.
+    if (me) msgs = (msgs || []).filter(m => !m || !m.quarantined || m.from === me.number || isGroupAdmin());
   }
   // Disappearing messages: hide expired ones; they'll be pruned on next save
   if (activeConvo && convosCache) {
@@ -13744,7 +13816,12 @@ async function sendMsg(gifUrl) {
     }
     const msg = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), from: me.number, time: Date.now(), seen: [] };
     if (me.shadowMuted) msg.shadowMuted = true; // security feature 25/32 — silently never delivered, no notice to the sender
-    if (activeConvo.type === 'group') msg.channelId = activeChannelId || 'general';
+    if (activeConvo.type === 'group') {
+      msg.channelId = activeChannelId || 'general';
+      // Security feature 29/32: held for mod approval if this group has
+      // quarantine on and this sender hasn't been approved yet.
+      if (Array.isArray(c.pendingApproval) && c.pendingApproval.includes(me.number)) msg.quarantined = true;
+    }
     if (replyingTo) { msg.replyTo = replyingTo; }
     const aesKey = await getConvoAesKey(c);
     if (gifUrl) {
