@@ -8881,6 +8881,15 @@ async function submitNewGroup(){
   const chips=document.getElementById('selected-members').querySelectorAll('.chip');
   const memberNums=Array.from(chips).map(c=>parseInt(c.dataset.num));
   if(!memberNums.length){err.textContent=scbErr('SCB-GRP-03','Add at least one member.');return;}
+  // Security feature 28/32 — same hourly invite throttle submitAddGroupMembers() uses.
+  if(me.number!==ADMIN_NUMBER){
+    const soFar=_groupInviteHourlyCount();
+    if(soFar+memberNums.length>GROUP_INVITE_HOURLY_LIMIT){
+      err.textContent=scbErr('SCB-GRP-46','You\'ve added/invited too many people recently ('+soFar+'/'+GROUP_INVITE_HOURLY_LIMIT+' this hour) — try again later.');
+      return;
+    }
+  }
+  _recordGroupInvites(memberNums.length);
   const allMembers=[me.number,...memberNums];
   const key='grp_'+Date.now();
   const g={type:'group',key,name,info,avatar:tempGroupAvatar||'',members:allMembers,isServer};
@@ -12971,6 +12980,24 @@ function _addSystemMessage(conv, text){
   if(!Array.isArray(conv.messages)) conv.messages=[];
   conv.messages.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:'system',time:Date.now(),text});
 }
+// Security feature 28/32: throttle how many group adds/invites one account
+// can send per hour, regardless of how many different groups it spreads
+// them across — localStorage-backed rolling window, same spirit as the
+// existing message-rate spam detector's sliding window.
+const GROUP_INVITE_HOURLY_LIMIT=20;
+function _groupInviteTimestamps(){
+  try{ return JSON.parse(localStorage.getItem('cc_group_invite_times')||'[]'); }catch(e){ return []; }
+}
+function _groupInviteHourlyCount(){
+  const now=Date.now();
+  return _groupInviteTimestamps().filter(t=>now-t<3600000).length;
+}
+function _recordGroupInvites(count){
+  const now=Date.now();
+  const times=_groupInviteTimestamps().filter(t=>now-t<3600000);
+  for(let i=0;i<count;i++) times.push(now);
+  try{ localStorage.setItem('cc_group_invite_times',JSON.stringify(times)); }catch(e){}
+}
 async function submitAddGroupMembers(){
   const conv=getActiveConvoObj();
   const err=document.getElementById('add-group-member-error'); err.textContent='';
@@ -12983,10 +13010,18 @@ async function submitAddGroupMembers(){
   const bannedMembers=new Set((conv.banned||[]).map(Number));
   const nums=Array.from(chips).map(c=>parseInt(c.dataset.num)).filter(n=>!bannedMembers.has(n));
   if(!nums.length){ err.textContent=scbErr('SCB-GRP-15','Select at least one contact.'); return; }
+  if(me.number!==ADMIN_NUMBER){
+    const soFar=_groupInviteHourlyCount();
+    if(soFar+nums.length>GROUP_INVITE_HOURLY_LIMIT){
+      err.textContent=scbErr('SCB-GRP-46','You\'ve added/invited too many people recently ('+soFar+'/'+GROUP_INVITE_HOURLY_LIMIT+' this hour) — try again later.');
+      return;
+    }
+  }
   try{
     const failed=[];
     for(const n of nums){ if(!await addMemberToGroupKey(conv,n)) failed.push(n); }
     const added=nums.filter(n=>!failed.includes(n));
+    if(added.length) _recordGroupInvites(added.length);
     const existing=new Set((conv.participants||conv.members||[]).map(Number));
     added.forEach(n=>existing.add(n));
     const merged=[...existing];
