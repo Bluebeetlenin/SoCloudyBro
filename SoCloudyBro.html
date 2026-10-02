@@ -1872,10 +1872,16 @@ body.device-tablet .msg-body{max-width:74%}
     'Tip: found a security bug? Report it privately from Settings instead of posting about it',
     'Tip: links that look suspicious get flagged before you send or open them',
   ];
-  let _tipIdx=0;
+  // The splash is only up for a couple of seconds on a normal load — far
+  // less than the ~2 minutes it'd take to rotate through all of these at
+  // one every 2.8s starting from index 0. Starting at a random tip each
+  // time means every tip (including ones added later, which would
+  // otherwise sit unreachable at the end of the list) gets a real chance
+  // of being seen, not just the first handful.
+  let _tipIdx=Math.floor(Math.random()*TIPS.length);
   const tipEl=document.getElementById('scb-splash-tip');
   if(tipEl){
-    tipEl.textContent=TIPS[0];
+    tipEl.textContent=TIPS[_tipIdx];
     setInterval(()=>{
       tipEl.style.opacity='0';
       setTimeout(()=>{
