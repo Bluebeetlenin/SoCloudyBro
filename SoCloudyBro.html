@@ -5278,7 +5278,8 @@ async function makeGroupKeyBundle(memberNums){
   for(const num of memberNums){
     let payload=null;
     if(num===me.number){
-      // wrap for ourselves using our own derived "self" key (store raw, protected only by transport E2E of others; for self we just keep plaintext-ish via our own pubkey loopback not possible with ECDH, so store using a key derived from our own keypair material is not directly possible -- instead store wrapped using AES with a key derived from DM with self is impossible, so just keep our copy unwrapped but base64)
+      // ECDH can't derive a key with ourselves, so our own copy of the
+      // group key is stored as plain base64 rather than AES-wrapped.
       payload={self:true,raw:rawB64};
     }else{
       const aes=await getDmAesKey(num);
