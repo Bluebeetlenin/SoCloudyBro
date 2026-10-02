@@ -3873,6 +3873,8 @@ const SCB_ERROR_CODES = {
   'SCB-MSG-23': {area:'Messaging', meaning:'Forward blocked: the destination chat is locked'},
   'SCB-MSG-24': {area:'Messaging', meaning:'Sending a ping threw'},
   'SCB-MSG-25': {area:'Messaging', meaning:'Outbox flush: a queued message\'s content was gone (never persisted before an app restart)'},
+  'SCB-MSG-26': {area:'Messaging', meaning:'Deleting a message/thread failed: the server rejected the write'},
+  'SCB-MSG-27': {area:'Messaging', meaning:'A scheduled message could not be delivered (target chat gone, or the send itself failed)'},
   'SCB-RECOV-01': {area:'Account recovery / security questions', meaning:'Security questions: both slots use the same question'},
   'SCB-RECOV-02': {area:'Account recovery / security questions', meaning:'Security questions: one or both answers left blank'},
   'SCB-RECOV-03': {area:'Account recovery / security questions', meaning:'Security questions threw while saving'},
@@ -8808,6 +8810,22 @@ function removeContact(){
 
 // -- OPEN CHAT -----------------------------------------------------------------
 async function _origOpenChat(c){
+  // Flush any unsaved draft for the chat we're LEAVING under its own key
+  // BEFORE cancelEdit() runs below — cancelEdit() unconditionally blanks
+  // #msg-input (even when there was no edit in progress), so doing this
+  // after it would always flush an empty string. This also has to happen
+  // before activeConvo flips to the new chat's key further down: without
+  // it, a keystroke landing during the async load a few lines down
+  // (onMsgInput -> _saveDraft()) would save using the NEW chat's key while
+  // the input still held the OLD chat's leftover text, leaking one chat's
+  // draft into another's.
+  if(activeConvo&&activeConvo.key){
+    const _oldInp=document.getElementById('msg-input');
+    if(_oldInp){
+      try{ const k='cc_draft_'+activeConvo.key; if(_oldInp.value) localStorage.setItem(k,_oldInp.value); else localStorage.removeItem(k); }catch{}
+      _oldInp.value='';
+    }
+  }
   if(typeof cancelEdit==='function') cancelEdit();
   if(typeof cleanupRaceListeners==='function') cleanupRaceListeners();
   const key=c.key||dmKey(me.number,c.number);
@@ -9378,8 +9396,13 @@ function scanUrlRisk(rawUrl){
   if(RISKY_TLDS.includes(tld)) reasons.push('uses a ".'+tld+'" domain often abused for scam links');
   if(URL_SHORTENERS.includes(host)) reasons.push('shortened link — the real destination is hidden');
   for(const b of IMPERSONATION_BRANDS){
-    const official=[b+'.com','www.'+b+'.com',b+'.co'];
-    if(host.includes(b)&&!official.includes(host)){ reasons.push('mentions "'+b+'" but is not '+b+'.com'); break; }
+    // A real subdomain of the brand's actual domain (accounts.google.com,
+    // checkout.paypal.com, www.chase.com, ...) is legitimate, not an
+    // impersonation attempt — only an exact match or "...co" TLD counted
+    // before, which false-flagged every real subdomain of every brand.
+    const officialDomains=[b+'.com', b+'.co'];
+    const isOfficial=officialDomains.some(d=>host===d||host.endsWith('.'+d));
+    if(host.includes(b)&&!isOfficial){ reasons.push('mentions "'+b+'" but is not '+b+'.com'); break; }
   }
   if((host.match(/-/g)||[]).length>=3) reasons.push('unusually many hyphens in the domain');
   if(u.username||u.password) reasons.push('embeds credentials in the link itself');
@@ -22661,14 +22684,36 @@ function confirmScheduleMsg(){
   closeModal('schedule-msg-modal');
   showToast('Scheduled','Sends at '+new Date(sendAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
 }
-function _deliverScheduledMsg(id){
+async function _deliverScheduledMsg(id){
   const k='cc_scheduled_msgs';
   let list=[]; try{ list=JSON.parse(localStorage.getItem(k)||'[]'); }catch{}
   const item=list.find(m=>m.id===id); if(!item) return;
   list=list.filter(m=>m.id!==id); try{ localStorage.setItem(k,JSON.stringify(list)); }catch{}
-  if(!item.convo||!item.text) return;
-  if(activeConvo&&String(activeConvo.key)===String(item.convo)){
-    const el=document.getElementById('msg-input'); if(el){ el.value=item.text; sendMsg&&sendMsg(); }
+  if(!item.convo||!item.text||!me) return;
+  const alreadyOpen=activeConvo&&String(activeConvo.key)===String(item.convo);
+  const previousConvo=activeConvo;
+  try{
+    if(!alreadyOpen){
+      // Previously, a scheduled message only actually sent if the user
+      // happened to still have THAT EXACT chat open when the timer fired —
+      // any other chat, or the app sitting on the sidebar/a different
+      // screen, meant this just silently dropped the message with the
+      // user never finding out. Instead, briefly switch to the target
+      // chat to deliver it for real, then switch back to whatever the
+      // user was actually looking at.
+      if(!convosCache) await getConvos();
+      const conv=convosCache&&convosCache.find(x=>x&&x.key===String(item.convo));
+      if(!conv){ showToast('Scheduled message not sent',scbErr('SCB-MSG-27','That chat no longer exists.')); return; }
+      const contactLike=(contacts&&contacts.find(x=>x.key===conv.key))||{key:conv.key,type:conv.type,number:conv.number,name:conv.name,members:conv.members};
+      await openChat(contactLike);
+    }
+    const el=document.getElementById('msg-input');
+    if(el){ el.value=item.text; await sendMsg(); }
+  }catch(e){
+    console.error('_deliverScheduledMsg failed:',e);
+    showToast('Scheduled message not sent',scbErr('SCB-MSG-27','That message couldn\'t be delivered.',(e&&e.message)||''));
+  }finally{
+    if(!alreadyOpen&&previousConvo) await openChat(previousConvo);
   }
 }
 function _initScheduledMsgs(){
