@@ -15261,6 +15261,7 @@ async function adminBan(num){
     if(!u){showToast('User not found',scbErr('SCB-ADMIN-03','No user with that account number was found.'));return;}
     u.banned=true;
     await saveUsers(users);
+    _logAdminAction('ban','#'+num).catch(()=>{});
     showToast('User banned','#'+num+' has been banned.');
   }catch(e){
     selfHeal('SCB-ADMIN-04', e, { context: 'adminBan' });
@@ -15276,6 +15277,7 @@ async function adminUnban(num){
     const u=users.find(x=>x.number===num);
     if(u) u.banned=false;
     await saveUsers(users);
+    _logAdminAction('unban','#'+num).catch(()=>{});
     showToast('User unbanned','#'+num+' can use the app again.');
   }catch(e){
     selfHeal('SCB-ADMIN-05', e, { context: 'adminUnban' });
@@ -15301,6 +15303,7 @@ async function adminShadowMute(num){
     u.shadowMuted=true;
     await saveUsers(users);
     await _logSecurityEvent('shadow_mute','Shadow-muted #'+num).catch(()=>{});
+    _logAdminAction('shadow_mute','#'+num).catch(()=>{});
     showToast('User shadow-muted','#'+num+'\'s messages will no longer be delivered to anyone else.');
   }catch(e){
     selfHeal('SCB-ADMIN-27', e, { context: 'adminShadowMute' });
@@ -15316,6 +15319,7 @@ async function adminUnshadowMute(num){
     if(u) u.shadowMuted=false;
     await saveUsers(users);
     await _logSecurityEvent('shadow_mute','Un-shadow-muted #'+num).catch(()=>{});
+    _logAdminAction('un_shadow_mute','#'+num).catch(()=>{});
     showToast('Shadow-mute lifted','#'+num+'\'s messages deliver normally again.');
   }catch(e){
     selfHeal('SCB-ADMIN-28', e, { context: 'adminUnshadowMute' });
@@ -15832,6 +15836,7 @@ async function savePermissions(userNum){
     let uid=null;usersSnap.forEach(c=>{uid=c.key;});
     if(!uid){showToast('Error','User not found.');return;}
     await fbdb.ref('users/'+uid+'/adminAccess').set(checked.length?{permissions:checked}:null);
+    _logAdminAction('set_permissions','#'+userNum+': '+(checked.length?checked.join(', '):'(none)')).catch(()=>{});
     closeModal('perm-editor-modal');
     showToast('Saved','Admin access updated for user #'+userNum+'.');
     renderAdminUsersTab();
@@ -15846,6 +15851,7 @@ async function revokeAllPermissions(userNum){
     let uid=null;usersSnap.forEach(c=>{uid=c.key;});
     if(!uid){showToast('Error','User not found.');return;}
     await fbdb.ref('users/'+uid+'/adminAccess').remove();
+    _logAdminAction('revoke_permissions','#'+userNum).catch(()=>{});
     closeModal('perm-editor-modal');
     showToast('Done','Admin access revoked.');
     renderAdminUsersTab();
@@ -16117,6 +16123,51 @@ async function sendAdminWeeklyDigestSilent(){
   localStorage.setItem('cc_last_digest_sent',String(Date.now()));
 }
 // CSV export of the full moderation log (all reports, resolved or not).
+/* ===== ADMIN ACTION AUDIT LOG + ENCRYPTED EXPORT (security feature 45/32) =====
+   A centralized, append-only log of admin actions (who, what, on whom,
+   when) — admin_site/audit_log, written via push() with no delete UI
+   anywhere, same append-only-in-practice pattern as self_destructed_log.
+   exportEncryptedAuditLog() seals a point-in-time snapshot of it with a
+   password the exporter chooses, using the exact same PBKDF2+AES-GCM
+   .scbenc packing exportAllDataEncrypted() already uses — once exported,
+   that sealed copy can't be quietly edited without the password, which is
+   the actual protection this delivers. It does not make the LIVE Firebase
+   log tamper-proof on its own (this app has no backend to enforce that);
+   what it gives is a verifiable sealed snapshot an admin can hand to
+   someone else for review. ===== */
+async function _logAdminAction(action,detail){
+  if(!me) return;
+  try{
+    await fbdb.ref('admin_site/audit_log').push({
+      admin:me.number, adminName:me.name||'', action, detail:detail||'', at:Date.now(),
+    });
+  }catch(e){ console.warn('Admin audit log write failed (non-fatal):',e.message); }
+}
+async function exportEncryptedAuditLog(){
+  if(me.number!==ADMIN_NUMBER){ showToast('Admins only',''); return; }
+  const pwd=prompt('Enter a password to encrypt this audit log export:\n(You will need this to decrypt it later — there is no recovery.)');
+  if(!pwd||!pwd.trim()) return;
+  if(pwd.length<6){ showToast('Too short','Use at least 6 characters.'); return; }
+  try{
+    const snap=await fbdb.ref('admin_site/audit_log').orderByChild('at').limitToLast(1000).get();
+    const entries=[];
+    if(snap.exists()) snap.forEach(child=>entries.push({_key:child.key,...child.val()}));
+    entries.sort((a,b)=>a.at-b.at);
+    const data={exportedAt:new Date().toISOString(),exportedBy:me.number,app:'SoCloudyBro',type:'admin_audit_log',entries};
+    const plaintext=new TextEncoder().encode(JSON.stringify(data,null,2));
+    const salt=crypto.getRandomValues(new Uint8Array(16));
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const keyMat=await crypto.subtle.importKey('raw',new TextEncoder().encode(pwd),{name:'PBKDF2'},false,['deriveKey']);
+    const aesKey=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},keyMat,{name:'AES-GCM',length:256},false,['encrypt']);
+    const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},aesKey,plaintext);
+    const magic=new Uint8Array([0x53,0x43,0x42,0x01]);
+    const out=new Uint8Array(magic.length+salt.length+iv.length+ct.byteLength);
+    let off=0;out.set(magic,off);off+=magic.length;out.set(salt,off);off+=salt.length;out.set(iv,off);off+=iv.length;out.set(new Uint8Array(ct),off);
+    const blob=new Blob([out],{type:'application/octet-stream'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='scb-audit-log-'+Date.now()+'.scbenc';document.body.appendChild(a);a.click();a.remove();
+    showToast('Encrypted audit log ready','Saved as .scbenc — keep your password safe, there is no recovery.');
+  }catch(e){ showToast('Export failed',scbErr('SCB-SEC-31','Encrypted audit log export failed.',(e.message||''))); }
+}
 function exportModerationLogCsv(){
   if(!requirePermission('moderation_export')) return;
   (async()=>{
@@ -16201,6 +16252,7 @@ async function renderAdminOverviewTab(){
         ${hasPermission('digest_send')?'<button class="btn btn-sm" onclick="sendAdminWeeklyDigest(this)">📧 Send weekly digest now</button>':''}
         ${hasPermission('moderation_export')?'<button class="btn btn-ghost btn-sm" onclick="exportModerationLogCsv()">⬇ Export moderation log (CSV)</button>':''}
         ${me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="openSelfDestructedLog()">💀 Self-destructed accounts</button>':''}
+        ${me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="exportEncryptedAuditLog()">🔒 Export encrypted audit log</button>':''}
       </div>
       ${hasPermission('digest_send')?`<div style="font-size:10px;color:var(--muted);margin-top:8px">Last digest sent: <span id="last-digest-sent-text">${localStorage.getItem('cc_last_digest_sent')?new Date(Number(localStorage.getItem('cc_last_digest_sent'))).toLocaleString():'never'}</span></div>`:''}
       `:''}
@@ -16322,6 +16374,7 @@ async function adminDeleteUser(number,name){
     }catch(e){ console.error('Could not reserve deleted number',e); }
     // Remove from local users cache
     usersCache=usersCache.filter(u=>String(u.number)!==String(number));
+    _logAdminAction('delete_user','#'+number+' ('+(name||'?')+')').catch(()=>{});
     showToast('Account deleted','User #'+number+' has been permanently deleted.');
     renderAdminUsersTab();
   }catch(e){ showToast('Delete failed',scbErr('SCB-ADMIN-30','Could not delete that account.',(e&&e.message)||'')); }
@@ -16335,6 +16388,7 @@ async function adminDeleteGroup(key){
     // Delete the specific conversation key — using Firebase remove() so only
     // that one record is touched, not the entire conversations path.
     await fbdb.ref(CONVOS_BIN+'/'+key).remove();
+    _logAdminAction('delete_group',key).catch(()=>{});
     showToast('Group deleted','');
     renderAdminGroupsTab();
   }catch(e){ showToast('Delete failed',scbErr('SCB-GRP-29','That group couldn\'t be deleted — the server rejected the write.',(e.message||''))); }
