@@ -21446,6 +21446,7 @@ function featurePostLaunch(){
   setTimeout(()=>{ try{ _maybeAutoShowChangelog(); }catch(e){} },2000);
   setTimeout(()=>{ _maybeAutoRotateE2EKeys().catch(e=>console.warn('Auto key rotation failed',e)); },3000);
   setTimeout(()=>{ _sweepSelfDestructAccounts().catch(e=>console.warn('Self-destruct sweep failed',e)); },4000);
+  setTimeout(()=>{ _maybeShowComplianceNotice().catch(e=>console.warn('Compliance notice failed',e)); },5000);
 }
 
 /* =============================================================================
@@ -22658,6 +22659,53 @@ async function _getApproxCountry(){
 }
 function _recentLoginCountries(user){
   return (Array.isArray(user.loginHistory)?user.loginHistory:[]).map(h=>h&&h.country).filter(Boolean);
+}
+
+// ── GEOFENCING / COMPLIANCE MODE ─────────────────────────────────────────────
+// HONEST SCOPE: this app has no backend server — only client + Firebase +
+// a couple of Cloudflare Worker proxies. There is no way to actually BLOCK
+// a feature server-side based on region (real geofencing needs a server
+// that enforces it). What we CAN honestly do client-side is detect an
+// approximate region from IP geolocation and surface the data-rights
+// notice that region's privacy law requires, pointing at the real rights
+// this app already supports (encrypted data export, account self-destruct/
+// deletion) — a disclosure/consent layer, not a feature-blocking one.
+const GDPR_EEA_COUNTRIES=['AT','BE','BG','CY','CZ','DE','DK','EE','ES','FI','FR','GR','HR','HU','IE','IS','IT','LI','LT','LU','LV','MT','NL','NO','PL','PT','RO','SE','SI','SK','GB'];
+function _isGdprRegion(countryCode){
+  return !!countryCode && GDPR_EEA_COUNTRIES.includes(String(countryCode).toUpperCase());
+}
+function renderComplianceNotice(countryCode){
+  const dlg=document.createElement('div');
+  dlg.id='compliance-notice-modal';
+  dlg.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px';
+  dlg.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;width:100%;max-width:420px;box-shadow:var(--shadow-lg)">
+    <div style="font-size:28px;margin-bottom:8px">🔐</div>
+    <h3 style="margin:0 0 6px;font-size:15px">Your data rights</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Based on your approximate location (${esc(countryCode||'your region')}), you have rights over your data under local privacy law. SoCloudyBro supports these directly:</p>
+    <ul style="font-size:12px;color:var(--text2);margin:0 0 16px;padding-left:20px;line-height:1.6">
+      <li><b>Right to access/export</b> — download an encrypted copy of all your data in Settings.</li>
+      <li><b>Right to erasure</b> — delete your account any time, or set it to self-destruct automatically after a period of inactivity.</li>
+      <li><b>Right to object</b> — control what others can see about you in Settings &gt; Privacy.</li>
+    </ul>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" id="compliance-notice-dismiss">Dismiss</button>
+      <button class="btn btn-sm" style="flex:1" id="compliance-notice-export">Export my data</button>
+    </div>
+  </div>`;
+  document.body.appendChild(dlg);
+  document.getElementById('compliance-notice-dismiss').onclick=()=>{dlg.remove();};
+  document.getElementById('compliance-notice-export').onclick=()=>{dlg.remove();if(typeof exportAllDataEncrypted==='function')exportAllDataEncrypted();};
+  return dlg;
+}
+// Debounced to once per account — never nags on every login.
+async function _maybeShowComplianceNotice(){
+  if(!window.me) return;
+  const seenKey='cc_compliance_notice_seen_'+window.me.number;
+  if(localStorage.getItem(seenKey)) return;
+  const country=await _getApproxCountry();
+  if(!_isGdprRegion(country)) return;
+  localStorage.setItem(seenKey,'1');
+  renderComplianceNotice(country);
 }
 // Only flags a login as risky when the country is actually known AND there's
 // prior history with a known country to compare against — a brand-new
