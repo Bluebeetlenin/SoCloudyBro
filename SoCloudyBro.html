@@ -2292,6 +2292,11 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Change Password</div><div class="settings-row-sub">Update your account password</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Change</button></div>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Passkeys</div><div class="settings-row-sub">Sign in on this device without a password, using Face/Touch ID or a security key</div></div>
+            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="registerPasskey()">+ Add</button></div>
+          </div>
+          <div id="scb-passkeys-list" style="padding:0 16px 8px"></div>
           <div class="settings-row" style="cursor:pointer" onclick="openPinSetup()">
             <div class="settings-row-main"><div class="settings-row-label">PIN Lock</div><div class="settings-row-sub" id="pin-status-text">Not set</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="pin-btn-text">Set PIN</button></div>
@@ -2981,6 +2986,7 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="btn btn-full" id="login-btn" onclick="submitLogin()">Log In ↗</button>
       <div style="text-align:center;margin-top:10px"><a href="#" id="login-forgot-password-link" onclick="openRecoverAccount();return false;" style="font-size:12px;color:var(--accent)">Forgot password?</a></div>
       <div style="text-align:center;margin-top:6px"><a href="#" id="login-mode-toggle" onclick="toggleLoginMode();return false;" style="font-size:12px;color:var(--accent)">Signed up before email was added? Log in with your number</a></div>
+      <div style="text-align:center;margin-top:6px"><a href="#" id="login-passkey-link" onclick="loginWithPasskey();return false;" style="font-size:12px;color:var(--accent)">🔑 Sign in with a passkey</a></div>
       <div class="google-auth-block" id="google-auth-block-login" style="margin-top:14px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:11px;color:var(--muted)">or</span><div style="flex:1;height:1px;background:var(--border)"></div></div>
         <div class="google-btn-holder" id="google-btn-login" style="display:flex;justify-content:center"></div>
@@ -7136,6 +7142,137 @@ async function finishLogin(user, pwdToStore){
   await _logSecurityEvent('login','Successful login').catch(()=>{});
 }
 
+/* ===== PASSKEYS (WebAuthn) — security feature 1/32 =====
+   Passwordless sign-in using the platform/roaming authenticator's own
+   public-key credential. There is no server to verify the assertion
+   signature against, so verification happens entirely client-side with
+   WebCrypto — honest about the tradeoff: this is a convenience login for a
+   device that already has (or can restore) this account's local E2E key,
+   not a way to read messages from a brand-new device that has never signed
+   in with the password or Google. ===== */
+function _b64url(buf){
+  return _b64(buf).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function _unb64url(str){
+  const pad=str.length%4===0?'':'='.repeat(4-(str.length%4));
+  return _unb64((str+pad).replace(/-/g,'+').replace(/_/g,'/'));
+}
+// WebAuthn assertion signatures are DER-encoded ECDSA (SEQUENCE of two
+// INTEGERs); WebCrypto's verify() wants the raw r||s (64 bytes for P-256).
+function _derToRawEcdsaSig(der){
+  const b=new Uint8Array(der);
+  let p=0;
+  function readLen(){ let len=b[p++]; if(len&0x80){ const n=len&0x7f; len=0; for(let i=0;i<n;i++) len=(len<<8)|b[p++]; } return len; }
+  function readInt(){
+    if(b[p++]!==0x02) throw new Error('bad DER signature');
+    let len=readLen();
+    let bytes=Array.from(b.slice(p,p+len)); p+=len;
+    while(bytes.length>32&&bytes[0]===0) bytes.shift(); // strip ASN.1 sign-padding byte(s)
+    if(bytes.length<32){ const pad=new Array(32-bytes.length).fill(0); bytes=pad.concat(bytes); }
+    return bytes;
+  }
+  if(b[p++]!==0x30) throw new Error('bad DER signature');
+  readLen();
+  const r=readInt(), s=readInt();
+  return new Uint8Array(r.concat(s)).buffer;
+}
+function passkeysSupported(){
+  return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && navigator.credentials.get);
+}
+async function registerPasskey(){
+  if(!me){ showToast('Not logged in','Log in first.'); return; }
+  if(!passkeysSupported()){ showToast('Not supported','Passkeys aren\'t supported in this browser or device.'); return; }
+  try{
+    const challenge=crypto.getRandomValues(new Uint8Array(32));
+    const cred=await navigator.credentials.create({publicKey:{
+      challenge,
+      rp:{name:'SoCloudyBro'},
+      user:{id:new TextEncoder().encode(String(me.number)), name: me.email||('#'+me.number), displayName: me.name||('#'+me.number)},
+      pubKeyCredParams:[{type:'public-key',alg:-7}], // ES256
+      authenticatorSelection:{userVerification:'preferred'},
+      timeout:60000,
+    }});
+    if(!cred) return;
+    const spki=cred.response.getPublicKey&&cred.response.getPublicKey();
+    if(!spki){ showToast('Not supported','This device didn\'t return a usable public key — passkey not added.'); return; }
+    const entry={ id:_b64url(cred.rawId), publicKeySpki:_b64(spki), name:(navigator.platform||'Device'), createdAt:Date.now() };
+    const snap=await fbdb.ref(USERS_BIN+'/'+me.number+'/passkeys').once('value');
+    const list=Array.isArray(snap.val())?snap.val():[];
+    list.push(entry);
+    await fbdb.ref(USERS_BIN+'/'+me.number+'/passkeys').set(list);
+    await _logSecurityEvent('passkey_added','New passkey registered on this device').catch(()=>{});
+    showToast('Passkey added','You can now sign in with this device\'s passkey.');
+    renderSecurityPasskeysList();
+  }catch(e){ showToast('Couldn\'t add passkey', e.message||'Try again.'); }
+}
+async function removePasskey(credId){
+  if(!me) return;
+  if(!confirm('Remove this passkey? You\'ll need to sign in another way on that device from now on.')) return;
+  try{
+    const snap=await fbdb.ref(USERS_BIN+'/'+me.number+'/passkeys').once('value');
+    const list=(Array.isArray(snap.val())?snap.val():[]).filter(p=>p.id!==credId);
+    await fbdb.ref(USERS_BIN+'/'+me.number+'/passkeys').set(list);
+    showToast('Passkey removed','');
+    renderSecurityPasskeysList();
+  }catch(e){ showToast('Failed','Could not remove that passkey.'); }
+}
+function renderSecurityPasskeysList(){
+  const el=document.getElementById('scb-passkeys-list');
+  if(!el||!me) return;
+  const u=(usersCache||[]).find(x=>x.number===me.number);
+  const list=Array.isArray(u&&u.passkeys)?u.passkeys:[];
+  el.innerHTML=list.length
+    ? list.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12px"><span>🔑 ${esc(p.name||'Device')} · added ${new Date(p.createdAt||0).toLocaleDateString()}</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="removePasskey('${esc(p.id)}')">Remove</button></div>`).join('')
+    : '<div style="font-size:12px;color:var(--muted)">No passkeys added yet.</div>';
+}
+// Verify a WebAuthn assertion entirely client-side against a stored SPKI
+// public key — there is no server to do this, so this IS the verification.
+async function _verifyPasskeyAssertion(assertion, storedEntry, expectedChallenge){
+  const resp=assertion.response;
+  const clientDataJSON=JSON.parse(new TextDecoder().decode(resp.clientDataJSON));
+  if(clientDataJSON.type!=='webauthn.get') return false;
+  if(clientDataJSON.challenge!==_b64url(expectedChallenge)) return false;
+  if(clientDataJSON.origin!==location.origin) return false;
+  const pubKey=await crypto.subtle.importKey('spki',_unb64(storedEntry.publicKeySpki),{name:'ECDSA',namedCurve:'P-256'},true,['verify']);
+  const clientDataHash=await crypto.subtle.digest('SHA-256',resp.clientDataJSON);
+  const signedData=new Uint8Array(resp.authenticatorData.byteLength+clientDataHash.byteLength);
+  signedData.set(new Uint8Array(resp.authenticatorData),0);
+  signedData.set(new Uint8Array(clientDataHash),resp.authenticatorData.byteLength);
+  const rawSig=_derToRawEcdsaSig(resp.signature);
+  return crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},pubKey,rawSig,signedData.buffer);
+}
+async function loginWithPasskey(){
+  if(!passkeysSupported()){ showToast('Not supported','Passkeys aren\'t supported in this browser or device.'); return; }
+  const identity=(document.getElementById('login-email')||{}).value||'';
+  if(!identity.trim()){ showToast('Enter your account first','Type your email or number above, then tap "Sign in with a passkey" again.'); return; }
+  const err=document.getElementById('login-error'); if(err) err.textContent='';
+  try{
+    const users=await getUsers();
+    const user=loginByNumber ? users.find(u=>u.number===parseInt(identity)) : users.find(u=>(u.email||'').toLowerCase()===identity.trim().toLowerCase());
+    if(!user){ if(err) err.textContent=scbErr('SCB-AUTH-18','No account found for that login.'); return; }
+    const passkeys=Array.isArray(user.passkeys)?user.passkeys:[];
+    if(!passkeys.length){ if(err) err.textContent=scbErr('SCB-AUTH-19','This account has no passkeys set up yet. Log in normally, then add one in Settings → Security.'); return; }
+    const challenge=crypto.getRandomValues(new Uint8Array(32));
+    const assertion=await navigator.credentials.get({publicKey:{
+      challenge,
+      allowCredentials:passkeys.map(p=>({type:'public-key',id:_unb64url(p.id)})),
+      userVerification:'preferred',
+      timeout:60000,
+    }});
+    if(!assertion){ if(err) err.textContent=scbErr('SCB-AUTH-20','Passkey sign-in was cancelled.'); return; }
+    const matched=passkeys.find(p=>p.id===_b64url(assertion.rawId));
+    if(!matched||!(await _verifyPasskeyAssertion(assertion,matched,challenge))){
+      if(err) err.textContent=scbErr('SCB-AUTH-21','That passkey could not be verified.');
+      return;
+    }
+    if(user.banned){ if(err) err.textContent=scbErr('SCB-AUTH-12','This account has been suspended.'); return; }
+    if(user.deleted){ if(err) err.textContent=scbErr('SCB-AUTH-13','This account has been deleted.'); return; }
+    await finishLogin(user, user.pwd);
+  }catch(e){
+    if(err) err.textContent=scbErr('SCB-AUTH-22','Passkey sign-in failed.',e.message||'');
+  }
+}
+
 // -- LOCK SCREEN ---------------------------------------------------------------
 function showLockScreen(){
   document.getElementById('lock-screen').classList.add('visible');
@@ -11021,7 +11158,7 @@ async function confirmDeleteAccount(){
 }
 
 // -- SETTINGS / UPDATES --------------------------------------------------------
-function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();try{const t=localStorage.getItem('cc_settings_tab')||'profile';switchSettingsTab(t);}catch(e){}}
+function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();renderSecurityPasskeysList();try{const t=localStorage.getItem('cc_settings_tab')||'profile';switchSettingsTab(t);}catch(e){}}
 function switchSettingsTab(tab){
   const all=document.querySelectorAll('[data-settings-tab]');
   all.forEach(s=>{s.style.display=s.getAttribute('data-settings-tab')===tab?'':'none';});
