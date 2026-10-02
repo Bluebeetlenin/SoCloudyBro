@@ -2022,6 +2022,7 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="ctx-item" onclick="hideHeaderMenu();muteToggle()" id="mute-menu-item">🔔 Mute notifications</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openDisappearingMenu()" id="disappear-menu-item">⏱ Disappearing messages</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item" style="display:none">🔐 Verify security</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();openChatWallpaperPicker()">🖼️ Wallpaper for this chat</div>
           <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockUser()" id="block-menu-item" style="display:none">⛔ Block</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openReport()" style="color:var(--danger)">🚩 Report</div>
         </div>
@@ -8237,6 +8238,7 @@ async function _origOpenChat(c){
   }
   activeConvo={...c,key};
   lastMsgHash='';
+  if(typeof loadChatBg==='function') loadChatBg(key);
   hideAll();
   const searchBar=document.getElementById('msg-search-bar');
   if(searchBar&&searchBar.style.display!=='none'){searchBar.style.display='none';clearMsgSearchHighlights();msgSearchResults=[];msgSearchIdx=-1;}
@@ -10543,8 +10545,8 @@ function _initCssRain(ov){
   }
 }
 
-function _applyBgToEl(el, name){
-  const customUrl = localStorage.getItem('cc_bg_custom_url');
+function _applyBgToEl(el, name, customUrlOverride){
+  const customUrl = customUrlOverride!==undefined ? customUrlOverride : localStorage.getItem('cc_bg_custom_url');
   if(!el) return;
   if(name==='none'){ el.classList.remove('bg-active'); el.style.background=''; el.style.backgroundImage=''; }
   else if(name==='custom'&&customUrl){ el.classList.add('bg-active'); el.style.backgroundImage=`url('${customUrl}')`; el.style.backgroundSize='cover'; el.style.backgroundPosition='center'; }
@@ -10557,20 +10559,65 @@ function _applyBgToEl(el, name){
   else { el.classList.remove('bg-active'); el.style.background=''; el.style.backgroundImage=''; }
 }
 
-function setChatBg(name,el){
+// `convoKey` is optional: omitted (or called from the global Settings >
+// Chat Background picker), it sets the app-wide default background used
+// by any chat that has no override of its own. Passed (from the
+// per-chat wallpaper picker, see openChatWallpaperPicker()), it sets an
+// override for just that one conversation, stored separately so it
+// doesn't touch the global default.
+function setChatBg(name,el,convoKey){
   const wrap=document.getElementById('chat-bg-wrapper');
   const dash=document.getElementById('main-empty');
   if(!wrap) return;
-  localStorage.setItem('cc_bg',name);
+  if(convoKey) localStorage.setItem('cc_chat_bg_'+convoKey,name);
+  else localStorage.setItem('cc_bg',name);
   document.querySelectorAll('.bg-option').forEach(o=>o.classList.remove('selected'));
   if(el) el.classList.add('selected');
-  clearAnimBg();
-  _applyBgToEl(wrap, name);
-  _applyBgToEl(dash, name);
-  if(ANIM_BG_TYPES.has(name)) initAnimBg(name);
+  // Only re-render the live chat panel if this change actually affects
+  // what's currently showing (the open chat, when setting its override;
+  // always, when changing the global default and no override is active).
+  if(!convoKey || (activeConvo&&activeConvo.key===convoKey)){
+    clearAnimBg();
+    _applyBgToEl(wrap, name);
+    _applyBgToEl(dash, name);
+    if(ANIM_BG_TYPES.has(name)) initAnimBg(name);
+  }
 }
-function loadChatBg(){
-  const saved=localStorage.getItem('cc_bg')||'none';
+const CHAT_BG_OPTIONS=[
+  {name:'none',cls:'bg-opt-none',label:'None'},
+  {name:'bubbles',cls:'bg-opt-bubbles',label:'✦ Bubbles'},
+  {name:'aurora',cls:'bg-opt-aurora',label:'🌌 Aurora'},
+  {name:'sunset',cls:'bg-opt-sunset',label:'🌅 Sunset'},
+  {name:'textures',cls:'bg-opt-textures',label:'◈ Creative Textures'},
+  {name:'abstract',cls:'bg-opt-abstract',label:'◆ Abstract'},
+  {name:'pastel',cls:'bg-opt-pastel',label:'❀ Pastel Gradients'},
+  {name:'rain',cls:'bg-opt-rain',label:'🌧 Rain'},
+  {name:'snow',cls:'bg-opt-snow',label:'❄️ Snow'},
+  {name:'stars',cls:'bg-opt-stars',label:'✨ Starfield'},
+  {name:'leaves',cls:'bg-opt-leaves',label:'🍂 Falling Leaves'},
+];
+// Per-chat wallpaper picker, reached from the chat header's "..." menu.
+// Shares setChatBg()/CHAT_BG_OPTIONS with the global Settings > Chat
+// Background picker, just always passes activeConvo.key as the 3rd arg so
+// the choice only affects this one conversation.
+function openChatWallpaperPicker(){
+  if(!activeConvo) return;
+  const key=activeConvo.key;
+  const current=localStorage.getItem('cc_chat_bg_'+key)||localStorage.getItem('cc_bg')||'none';
+  const wrap=document.getElementById('chat-wallpaper-options');
+  const keyJs="'"+String(key).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
+  wrap.innerHTML=CHAT_BG_OPTIONS.map(o=>
+    '<div class="bg-option '+o.cls+(o.name===current?' selected':'')+'" onclick="setChatBg(\''+o.name+'\',this,'+keyJs+')">'+esc(o.label)+'</div>'
+  ).join('');
+  openModal('chat-wallpaper-modal');
+}
+
+// Resolves and applies the effective background for a given chat: its own
+// per-chat override if it has one, else the app-wide default. Called
+// whenever a chat opens (see _origOpenChat) and once at launch for the
+// dashboard/empty state (no convoKey — global default only).
+function loadChatBg(convoKey){
+  const saved=(convoKey&&localStorage.getItem('cc_chat_bg_'+convoKey))||localStorage.getItem('cc_bg')||'none';
   const wrap=document.getElementById('chat-bg-wrapper');
   const dash=document.getElementById('main-empty');
   if(!wrap) return;
@@ -22383,6 +22430,16 @@ window._sendToCloudyChat = _sendToCloudyChat;
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('shortcuts-modal')">Close</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="chat-wallpaper-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header"><h2>🖼️ Wallpaper for this chat</h2></div>
+    <div class="modal-body" style="padding-bottom:10px">
+      <div class="bg-options" id="chat-wallpaper-options"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('chat-wallpaper-modal')">Close</button></div>
   </div>
 </div>
 
