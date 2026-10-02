@@ -4235,6 +4235,17 @@ async function renderAdminErrorsTab(){
 // -- SCB DIAGNOSTICS ENGINE --------------------------------------------------
 // Self-test suite: each check returns {pass, warn, detail}.
 // pass=false → red FAIL; warn=true && pass=true → yellow WARN; else green PASS.
+// Fetches this page's own response headers, cached briefly so multiple
+// header checks in one diagnostics run don't each re-fetch the page.
+let _scbHeaderCache=null, _scbHeaderCacheAt=0;
+async function _scbFetchSelfHeaders(){
+  if(_scbHeaderCache && (Date.now()-_scbHeaderCacheAt)<5000) return _scbHeaderCache;
+  const res=await fetch(window.location.href,{method:'GET',cache:'no-store'});
+  _scbHeaderCache=res.headers;
+  _scbHeaderCacheAt=Date.now();
+  return _scbHeaderCache;
+}
+
 const SCB_CHECKS = [
 
   // ── CONFIG ─────────────────────────────────────────────────────────────────
@@ -4307,6 +4318,75 @@ const SCB_CHECKS = [
         await ref.remove();
         return {pass:true,detail:'Write+delete succeeded'};
       }catch(e){return {pass:true,detail:'errors/ path not writable (optional) — '+e.message};}
+    }
+  },
+
+  // ── SECURITY HEADERS ───────────────────────────────────────────────────────
+  // Self-checks the actual HTTP response headers this page was served with
+  // (configured in vercel.json) — catches a misconfigured/missing CSP or
+  // other security header directly from the live deployment, not just the
+  // source file. Skipped (pass, with a note) when run from file:// since
+  // headers only exist once the page is actually served over HTTP(S).
+  { id:'hdr.csp', cat:'Security Headers', name:'Content-Security-Policy header present', async:true,
+    run:async()=>{
+      if(window.location.protocol==='file:') return {pass:true,warn:true,detail:'Skipped — running from file://; headers only exist when served over HTTP(S)'};
+      try{
+        const h=await _scbFetchSelfHeaders();
+        const csp=h.get('content-security-policy');
+        return {pass:!!csp,detail:csp?csp.slice(0,100)+(csp.length>100?'…':''):'MISSING — add via vercel.json headers config'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'hdr.xcto', cat:'Security Headers', name:'X-Content-Type-Options: nosniff present', async:true,
+    run:async()=>{
+      if(window.location.protocol==='file:') return {pass:true,warn:true,detail:'Skipped — file://'};
+      try{
+        const h=await _scbFetchSelfHeaders();
+        const v=h.get('x-content-type-options');
+        return {pass:/nosniff/i.test(v||''),detail:v||'MISSING'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'hdr.xfo', cat:'Security Headers', name:'Clickjacking protection (X-Frame-Options or frame-ancestors)', async:true,
+    run:async()=>{
+      if(window.location.protocol==='file:') return {pass:true,warn:true,detail:'Skipped — file://'};
+      try{
+        const h=await _scbFetchSelfHeaders();
+        const xfo=h.get('x-frame-options');
+        const csp=h.get('content-security-policy')||'';
+        const hasFrameAncestors=/frame-ancestors/i.test(csp);
+        return {pass:!!xfo||hasFrameAncestors,detail:xfo?('X-Frame-Options: '+xfo):hasFrameAncestors?'via CSP frame-ancestors':'MISSING'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'hdr.hsts', cat:'Security Headers', name:'Strict-Transport-Security present', async:true,
+    run:async()=>{
+      if(window.location.protocol==='file:') return {pass:true,warn:true,detail:'Skipped — file://'};
+      try{
+        const h=await _scbFetchSelfHeaders();
+        const v=h.get('strict-transport-security');
+        return {pass:!!v,detail:v||'MISSING'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'hdr.referrer', cat:'Security Headers', name:'Referrer-Policy present', async:true, warn:true,
+    run:async()=>{
+      if(window.location.protocol==='file:') return {pass:true,warn:true,detail:'Skipped — file://'};
+      try{
+        const h=await _scbFetchSelfHeaders();
+        const v=h.get('referrer-policy');
+        return {pass:true,warn:!v,detail:v||'MISSING (optional but recommended)'};
+      }catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+  { id:'hdr.permissions', cat:'Security Headers', name:'Permissions-Policy present', async:true, warn:true,
+    run:async()=>{
+      if(window.location.protocol==='file:') return {pass:true,warn:true,detail:'Skipped — file://'};
+      try{
+        const h=await _scbFetchSelfHeaders();
+        const v=h.get('permissions-policy');
+        return {pass:true,warn:!v,detail:v||'MISSING (optional but recommended)'};
+      }catch(e){return {pass:false,detail:e.message};}
     }
   },
 
