@@ -2359,6 +2359,16 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Secure Link Warning</div><div class="settings-row-sub">Confirm before opening external links in messages</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="secure-links-toggle" onchange="savePrivacyPref('secureLinkWarning',this.checked)"><span class="switch-slider"></span></label></div>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Who Can Add Me to Groups</div><div class="settings-row-sub">Controls who can add you to a group or server without asking first</div></div>
+            <div class="settings-row-actions">
+              <select id="group-add-permission-select" onchange="savePrivacyPref('groupAddPermission',this.value)">
+                <option value="anyone">Anyone</option>
+                <option value="mutuals">Mutuals only</option>
+                <option value="nobody">Nobody</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="settings-section" data-settings-tab="looks">
           <h3>Home Screen</h3>
@@ -8924,16 +8934,22 @@ async function submitNewGroup(){
   const chips=document.getElementById('selected-members').querySelectorAll('.chip');
   const memberNums=Array.from(chips).map(c=>parseInt(c.dataset.num));
   if(!memberNums.length){err.textContent=scbErr('SCB-GRP-03','Add at least one member.');return;}
+  // Security feature 32/32: skip anyone whose own privacy setting doesn't
+  // allow being added to a group, same as submitAddGroupMembers().
+  const _privacyBlockedNew=memberNums.filter(n=>!canAddToGroup(n));
+  const allowedMemberNums=memberNums.filter(n=>canAddToGroup(n));
+  if(!allowedMemberNums.length){err.textContent=scbErr('SCB-GRP-49','None of those contacts can be added — their privacy settings don\'t allow it.');return;}
   // Security feature 28/32 — same hourly invite throttle submitAddGroupMembers() uses.
   if(me.number!==ADMIN_NUMBER){
     const soFar=_groupInviteHourlyCount();
-    if(soFar+memberNums.length>GROUP_INVITE_HOURLY_LIMIT){
+    if(soFar+allowedMemberNums.length>GROUP_INVITE_HOURLY_LIMIT){
       err.textContent=scbErr('SCB-GRP-46','You\'ve added/invited too many people recently ('+soFar+'/'+GROUP_INVITE_HOURLY_LIMIT+' this hour) — try again later.');
       return;
     }
   }
-  _recordGroupInvites(memberNums.length);
-  const allMembers=[me.number,...memberNums];
+  _recordGroupInvites(allowedMemberNums.length);
+  if(_privacyBlockedNew.length) showToast('Some contacts skipped',_privacyBlockedNew.length+' contact'+(_privacyBlockedNew.length===1?'':'s')+' couldn\'t be added — their privacy settings don\'t allow it.');
+  const allMembers=[me.number,...allowedMemberNums];
   const key='grp_'+Date.now();
   const g={type:'group',key,name,info,avatar:tempGroupAvatar||'',members:allMembers,isServer};
   contacts.push(g);saveStorage();
@@ -12790,6 +12806,27 @@ function openContactPanel() {
 // their own users/{number}/prefs.contacts, which getUsers() already pulls
 // into usersCache for every user — the same data every existing lookupUser()
 // call already relies on), so no new sync path or storage is needed.
+/* ===== "WHO CAN ADD ME TO GROUPS" (security feature 32/32) =====
+   A privacy pref (anyone / mutuals / nobody) stored like every other
+   privacy pref — users/{number}/prefs.privacy.groupAddPermission — so
+   anyone attempting to add someone can read their current setting the
+   same way getMutualFriends() below already reads another user's contact
+   list. Default 'anyone' preserves existing behavior for anyone who's
+   never touched this setting. ===== */
+function _isMutualWithMe(targetNum){
+  if(!me) return false;
+  const iHaveThem=(contacts||[]).some(c=>c&&c.type==='dm'&&c.number===targetNum);
+  const target=(usersCache||[]).find(x=>x&&x.number===targetNum);
+  const theyHaveMe=((target&&target.prefs&&target.prefs.contacts)||[]).some(c=>c&&c.type==='dm'&&c.number===me.number);
+  return iHaveThem&&theyHaveMe;
+}
+function canAddToGroup(targetNum){
+  const target=(usersCache||[]).find(x=>x&&x.number===targetNum);
+  const pref=(target&&target.prefs&&target.prefs.privacy&&target.prefs.privacy.groupAddPermission)||'anyone';
+  if(pref==='nobody') return false;
+  if(pref==='mutuals') return _isMutualWithMe(targetNum);
+  return true; // 'anyone', or an unrecognized value — fail open to the pre-existing behavior
+}
 function getMutualFriends(otherNumber){
   if(!me||!contacts) return [];
   const myFriendNums=new Set(
@@ -13171,6 +13208,13 @@ async function submitAddGroupMembers(){
       return;
     }
   }
+  // Security feature 32/32: "who can add me to groups" — skip (don't add
+  // and don't fail the rest of the batch over) anyone whose own privacy
+  // setting doesn't permit it.
+  const privacyBlocked=nums.filter(n=>!canAddToGroup(n));
+  const privacyAllowedNums=nums.filter(n=>canAddToGroup(n));
+  nums.length=0; nums.push(...privacyAllowedNums);
+  if(!nums.length){ err.textContent=scbErr('SCB-GRP-49','None of those contacts can be added — their privacy settings don\'t allow it.'); return; }
   try{
     const failed=[];
     for(const n of nums){ if(!await addMemberToGroupKey(conv,n)) failed.push(n); }
@@ -13184,13 +13228,14 @@ async function submitAddGroupMembers(){
     added.forEach(n=>{ const u=lookupUser(n); _addSystemMessage(conv,(dec(u&&u.name)||('#'+n))+' was added to the group'); });
     await saveConvos();
     closeModal('add-group-member-modal');
+    const privacyNote=privacyBlocked.length?(' ('+privacyBlocked.length+' other contact'+(privacyBlocked.length===1?'':'s')+' couldn\'t be added — their privacy settings don\'t allow it.)'):'';
     if(failed.length&&added.length){
-      showToast('Some members added',scbErr('SCB-GRP-44','Added '+added.length+', but couldn\'t securely add '+failed.length+' (no key exchange with them yet) — ask them to message you first, then retry.'));
+      showToast('Some members added',scbErr('SCB-GRP-44','Added '+added.length+', but couldn\'t securely add '+failed.length+' (no key exchange with them yet) — ask them to message you first, then retry.'+privacyNote));
     } else if(failed.length){
-      err.textContent=scbErr('SCB-GRP-44','Couldn\'t securely add those contacts — no key exchange with them yet. Ask them to message you first, then retry.');
+      err.textContent=scbErr('SCB-GRP-44','Couldn\'t securely add those contacts — no key exchange with them yet. Ask them to message you first, then retry.'+privacyNote);
       return;
     } else {
-      showToast('Members added','');
+      showToast('Members added',privacyNote.trim());
     }
     openGroupPanel();
   }catch(e){ err.textContent=scbErr('SCB-GRP-16','Those members couldn\'t be added — the server rejected the write.',e.message); }
@@ -22349,6 +22394,8 @@ function _initPrivacyToggles(){
   if(zr){ zr.checked=!!getPrivacyPref('zeroRetention',false); updateZeroRetentionUI(); }
   const badgeSel=document.getElementById('badge-style-select');
   if(badgeSel) badgeSel.value=getPrivacyPref('badgeStyle','count');
+  const groupAddSel=document.getElementById('group-add-permission-select');
+  if(groupAddSel) groupAddSel.value=getPrivacyPref('groupAddPermission','anyone');
   _scbPopulateSoundSelects();
 }
 
