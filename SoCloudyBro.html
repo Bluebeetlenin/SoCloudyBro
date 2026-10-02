@@ -494,8 +494,8 @@ button,.icon-btn,.compose-btn,#send-btn,.btn,.sb-item,.sb-tab,#my-card,.ctx-item
 .icon-btn,.compose-btn,#send-btn,.btn,.preset-av{transition-property:background,color,box-shadow,transform,border-color;transition-duration:0.18s}
 .icon-btn:hover,.compose-btn:hover{transform:translateY(-1px) scale(1.04)}
 .icon-btn:active,.compose-btn:active,#send-btn:active,.btn:active{transform:scale(0.92);transition-duration:0.08s}
-#send-btn:hover{transform:translateY(-1px) scale(1.06);box-shadow:0 6px 18px rgba(107,93,232,0.35)}
-.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(90,82,213,0.28)}
+#send-btn:hover{transform:translateY(-1px) scale(1.06);box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 35%,transparent)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 28%,transparent)}
 .sb-item:hover,.search-result-item:hover,.settings-row:hover,.ctx-item:hover{transform:translateX(2px)}
 .sb-item,.search-result-item,.settings-row,.ctx-item,#my-card{transition-property:background,transform;transition-duration:0.2s;transition-timing-function:var(--ease-fluent-soft)}
 .reaction-chip:hover{transform:translateY(-1px) scale(1.05)}
@@ -512,7 +512,7 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
    wash), nothing here changes layout/structure so it can't affect where
    anything sits or how big it is. */
 :focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 35%,transparent)}
-.btn{box-shadow:0 2px 10px rgba(90,82,213,0.18)}
+.btn{box-shadow:0 2px 10px color-mix(in srgb,var(--accent) 18%,transparent)}
 .btn-ghost,.btn-danger{box-shadow:none}
 #chat-header,#settings-header{position:relative}
 #chat-header::after,#settings-header::after,#sidebar::after{content:'';position:absolute;pointer-events:none}
@@ -522,7 +522,7 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 #my-card .avatar,.sb-item .avatar{box-shadow:0 0 0 1px var(--border)}
 #my-card:hover .avatar{box-shadow:0 0 0 2px var(--accent)}
 .msg-row .bubble{box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.msg-row.me .bubble{box-shadow:0 4px 14px -4px rgba(90,82,213,.45)}
+.msg-row.me .bubble{box-shadow:0 4px 14px -4px color-mix(in srgb,var(--accent) 45%,transparent)}
 .modal{position:relative}
 .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent-grad);z-index:2}
 
