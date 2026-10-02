@@ -2297,6 +2297,10 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="registerPasskey()">+ Add</button></div>
           </div>
           <div id="scb-passkeys-list" style="padding:0 16px 8px"></div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Trusted Devices</div><div class="settings-row-sub">Devices that skip the 2FA code for 30 days after you check "Trust this device"</div></div>
+          </div>
+          <div id="scb-trusted-devices-list" style="padding:0 16px 8px"></div>
           <div class="settings-row" style="cursor:pointer" onclick="openPinSetup()">
             <div class="settings-row-main"><div class="settings-row-label">PIN Lock</div><div class="settings-row-sub" id="pin-status-text">Not set</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="pin-btn-text">Set PIN</button></div>
@@ -3008,6 +3012,7 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="modal-body" id="login-2fa-view" style="display:none;padding-bottom:14px;padding-top:14px;">
       <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Enter the 6-digit code from your authenticator app.</p>
       <div class="field"><label>Verification code</label><input type="text" id="login-2fa-code" maxlength="6" inputmode="numeric" placeholder="123456" onkeydown="if(event.key==='Enter')submit2faCode()"/></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:2px 0 10px;cursor:pointer"><input type="checkbox" id="login-2fa-trust-device" style="width:15px;height:15px;cursor:pointer"/> Trust this device for 30 days — skip this step next time</label>
       <div class="error-text" id="login-2fa-error"></div>
       <button class="btn btn-full" id="login-2fa-btn" onclick="submit2faCode()">Verify ↗</button>
     </div>
@@ -6354,6 +6359,75 @@ async function verifyTotpCode(secretB32,code){
   }
   return false;
 }
+
+/* ===== TRUSTED DEVICES — skip 2FA on a device already approved
+   (security feature 3/32) =====
+   A random token lives only in this browser's localStorage (never sent
+   anywhere as-is); only its SHA-256 hash is stored server-side next to an
+   expiry, so a leaked user record can't be replayed as a login bypass
+   without also having had access to this exact browser's local storage. ===== */
+async function _sha256Hex(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function _trustedDeviceTokenKey(number){ return 'cc_trusted_device_'+number; }
+function _getOrCreateTrustedDeviceToken(number){
+  const key=_trustedDeviceTokenKey(number);
+  let tok=localStorage.getItem(key);
+  if(!tok){ tok=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36)); localStorage.setItem(key,tok); }
+  return tok;
+}
+const TRUSTED_DEVICE_DAYS=30;
+// Called right after a successful 2FA code entry, only if the user checked
+// "Trust this device". Stores {hash, expiresAt, label} server-side.
+async function trustThisDevice(user){
+  try{
+    const token=_getOrCreateTrustedDeviceToken(user.number);
+    const hash=await _sha256Hex(token);
+    const users=await getUsers();
+    const u=users.find(x=>x.number===user.number);
+    if(!u) return;
+    if(!Array.isArray(u.trustedDevices)) u.trustedDevices=[];
+    u.trustedDevices=u.trustedDevices.filter(d=>d&&d.expiresAt>Date.now()&&d.hash!==hash); // drop expired + replace any existing entry for this device
+    u.trustedDevices.push({hash,label:getDeviceLabel(),expiresAt:Date.now()+TRUSTED_DEVICE_DAYS*86400000});
+    await saveUsers(users);
+  }catch(e){ console.warn('Trust device failed (non-fatal):',e.message); }
+}
+// Called before showing the 2FA screen — true if THIS device already holds
+// an unexpired trusted token for this account.
+async function isThisDeviceTrusted(user){
+  try{
+    const key=_trustedDeviceTokenKey(user.number);
+    const tok=localStorage.getItem(key);
+    if(!tok) return false;
+    const hash=await _sha256Hex(tok);
+    const list=Array.isArray(user.trustedDevices)?user.trustedDevices:[];
+    return list.some(d=>d&&d.hash===hash&&d.expiresAt>Date.now());
+  }catch(e){ return false; }
+}
+async function revokeTrustedDevice(hashPrefix){
+  if(!me) return;
+  if(!confirm('Revoke this trusted device? It will need to enter a 2FA code again next time.')) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===me.number);
+    if(!u) return;
+    u.trustedDevices=(u.trustedDevices||[]).filter(d=>!d||!d.hash.startsWith(hashPrefix));
+    await saveUsers(users);
+    showToast('Device revoked','');
+    renderTrustedDevicesList();
+  }catch(e){ showToast('Failed','Could not revoke that device.'); }
+}
+function renderTrustedDevicesList(){
+  const el=document.getElementById('scb-trusted-devices-list');
+  if(!el||!me) return;
+  const u=(usersCache||[]).find(x=>x.number===me.number);
+  const list=(Array.isArray(u&&u.trustedDevices)?u.trustedDevices:[]).filter(d=>d&&d.expiresAt>Date.now());
+  el.innerHTML=list.length
+    ? list.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12px"><span>💻 ${esc(d.label||'Device')} · expires ${new Date(d.expiresAt).toLocaleDateString()}</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="revokeTrustedDevice('${esc(d.hash.slice(0,12))}')">Revoke</button></div>`).join('')
+    : '<div style="font-size:12px;color:var(--muted)">No trusted devices.</div>';
+}
+
 // -- FIRST-RUN TUTORIAL ------------------------------------------------------
 const TUTORIAL_STEPS=[
   {icon:'💬',title:'Welcome to SoCloudyBro!',body:'This quick tour covers the basics — feel free to skip if you\'d rather explore on your own.'},
@@ -7037,7 +7111,7 @@ async function submitLogin() {
       return;
     }
 
-    if(user.totpEnabled && user.totpSecret){
+    if(user.totpEnabled && user.totpSecret && !(await isThisDeviceTrusted(user))){
       pending2fa = { user, pwdToStore };
       document.getElementById('login-2fa-code').value = '';
       document.getElementById('login-2fa-error').textContent = '';
@@ -7074,7 +7148,7 @@ async function submitLoginSetEmail(){
     const user={..._pendingEmailSetup.user, email};
     const pwdToStore=_pendingEmailSetup.pwdToStore;
     _pendingEmailSetup=null;
-    if(user.totpEnabled && user.totpSecret){
+    if(user.totpEnabled && user.totpSecret && !(await isThisDeviceTrusted(user))){
       pending2fa = { user, pwdToStore };
       document.getElementById('login-2fa-code').value = '';
       document.getElementById('login-2fa-error').textContent = '';
@@ -7099,6 +7173,8 @@ async function submit2faCode(){
   try{
     const ok=await verifyTotpCode(pending2fa.user.totpSecret,entered);
     if(!ok){ err.textContent=scbErr('SCB-AUTH-22','Incorrect code.'); return; }
+    const trustEl=document.getElementById('login-2fa-trust-device');
+    if(trustEl&&trustEl.checked) await trustThisDevice(pending2fa.user).catch(()=>{});
     await finishLogin(pending2fa.user, pending2fa.pwdToStore);
     pending2fa=null;
   }catch(e){ err.textContent=scbErr('SCB-AUTH-23','Your two-factor code couldn\'t be checked — the server request failed.',e.message); }
@@ -11161,7 +11237,7 @@ async function confirmDeleteAccount(){
 }
 
 // -- SETTINGS / UPDATES --------------------------------------------------------
-function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();renderSecurityPasskeysList();try{const t=localStorage.getItem('cc_settings_tab')||'profile';switchSettingsTab(t);}catch(e){}}
+function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();renderSecurityPasskeysList();renderTrustedDevicesList();try{const t=localStorage.getItem('cc_settings_tab')||'profile';switchSettingsTab(t);}catch(e){}}
 function switchSettingsTab(tab){
   const all=document.querySelectorAll('[data-settings-tab]');
   all.forEach(s=>{s.style.display=s.getAttribute('data-settings-tab')===tab?'':'none';});
@@ -20266,7 +20342,7 @@ async function googleAuthenticate(identity){
       // keypair on a device that signs in with Google only (see
       // _loginGoogleSub's definition for why that copy exists at all).
       _loginGoogleSub=claims.sub;
-      if(user.totpEnabled && user.totpSecret){
+      if(user.totpEnabled && user.totpSecret && !(await isThisDeviceTrusted(user))){
         pending2fa={user, pwdToStore};
         document.getElementById('login-2fa-code').value='';
         document.getElementById('login-2fa-error').textContent='';
