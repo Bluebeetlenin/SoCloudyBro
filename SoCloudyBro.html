@@ -2184,6 +2184,17 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Compact chat list</div><div class="settings-row-sub">Smaller rows, no message preview — fit more chats on screen</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="compact-sidebar-toggle" onchange="toggleCompactSidebar(this.checked)"><span class="switch-slider"></span></label></div>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Swipe gesture (mobile)</div><div class="settings-row-sub">What swiping a message does</div></div>
+            <div class="settings-row-actions">
+              <select id="swipe-action-select" onchange="scbSave('cc_swipe_action',this.value)">
+                <option value="reply">Reply</option>
+                <option value="pin">Pin / unpin</option>
+                <option value="forward">Forward</option>
+                <option value="react">Quick react 👍</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="settings-section" data-settings-tab="chats">
           <h3>Notifications</h3>
@@ -8061,6 +8072,8 @@ function updateSettingsPanel(){
   renderSessionsList();
   updateDNDUI();
   updateQuietHoursUI();
+  const swipeSel=document.getElementById('swipe-action-select');
+  if(swipeSel) swipeSel.value=getSwipeAction();
   document.getElementById('settings-name-disp').textContent=me.name;
   document.getElementById('settings-num-disp').textContent='#'+me.number;
   document.getElementById('settings-bio-disp').textContent=me.bio||'No bio set';
@@ -9955,6 +9968,22 @@ function startReply(msg){
 function cancelReply(){
   replyingTo=null;
   document.getElementById('reply-preview-row').style.display='none';
+}
+
+// Swipe action is configurable (Settings > Messaging > "Swipe gesture").
+// Keep the set of valid values here in sync with the <select> options.
+const SWIPE_ACTIONS={
+  reply:   m=>startReply(m),
+  pin:     m=>togglePinMessage(m),
+  forward: m=>openForwardModal(m),
+  react:   m=>addReaction(m,'👍'),
+};
+function getSwipeAction(){
+  const v=scbLoad('cc_swipe_action','reply');
+  return SWIPE_ACTIONS[v]?v:'reply';
+}
+function runSwipeAction(m){
+  (SWIPE_ACTIONS[getSwipeAction()]||SWIPE_ACTIONS.reply)(m);
 }
 
 // -- PINNED MESSAGES -----------------------------------------------------------
@@ -13104,7 +13133,8 @@ function renderMessages(msgs) {
     meta.innerHTML = '<span>' + fmtTime(m.time) + '</span>' + (m.pending ? '<span class="msg-seen" title="Will send once you\'re back online">\u23f3 pending</span>' : (isMe && m.seen && m.seen.length ? '<span class="msg-seen">\u2713 seen by ' + m.seen.length + '</span>' : ''));
     body.appendChild(meta);
     row.appendChild(body); wrap.appendChild(row);
-    // Swipe-to-reply on mobile
+    // Swipe on mobile — action is user-configurable (Settings > Messaging),
+    // defaults to reply (same as before this was made customizable).
     (function(row,m,isMe){
       let tx0=0,ty0=0,swiping=false,triggered=false;
       row.addEventListener('touchstart',function(e){
@@ -13119,7 +13149,7 @@ function renderMessages(msgs) {
         const dir=isMe?-1:1; // me swipes left, them swipes right
         const dist=dx*dir;
         if(dist>8) row.style.transform='translateX('+(dx*0.4)+'px)';
-        if(dist>60&&!triggered){ triggered=true; startReply(m); }
+        if(dist>60&&!triggered){ triggered=true; runSwipeAction(m); }
       },{passive:true});
       row.addEventListener('touchend',function(){
         swiping=false;
