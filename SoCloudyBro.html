@@ -2380,6 +2380,16 @@ body.device-tablet .msg-body{max-width:74%}
               </select>
             </div>
           </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Who Can See My Number</div><div class="settings-row-sub">Controls who sees your account number in shared group member lists</div></div>
+            <div class="settings-row-actions">
+              <select id="number-visibility-select" onchange="savePrivacyPref('numberVisibility',this.value)">
+                <option value="anyone">Anyone</option>
+                <option value="mutuals">Mutuals only</option>
+                <option value="nobody">Nobody</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="settings-section" data-settings-tab="looks">
           <h3>Home Screen</h3>
@@ -12835,6 +12845,22 @@ function _isMutualWithMe(targetNum){
   const theyHaveMe=((target&&target.prefs&&target.prefs.contacts)||[]).some(c=>c&&c.type==='dm'&&c.number===me.number);
   return iHaveThem&&theyHaveMe;
 }
+/* ===== "WHO CAN SEE MY NUMBER" (security feature 39/32) =====
+   This app has no phone-number field — the account number IS its "phone
+   number" equivalent (the thing people use to find/add each other), so
+   that's the closest real mapping of this item. Same pref storage pattern
+   as groupAddPermission above. Deliberately scoped to group member lists
+   (where a number shows up next to someone you may not actually know) —
+   your own number always shows to you, and a group's admins/mods always
+   see every member's number regardless, since moderation needs it. ===== */
+function canSeeNumber(targetNum){
+  if(!me||targetNum===me.number) return true;
+  const target=(usersCache||[]).find(x=>x&&x.number===targetNum);
+  const pref=(target&&target.prefs&&target.prefs.privacy&&target.prefs.privacy.numberVisibility)||'anyone';
+  if(pref==='nobody') return false;
+  if(pref==='mutuals') return _isMutualWithMe(targetNum);
+  return true;
+}
 function canAddToGroup(targetNum){
   const target=(usersCache||[]).find(x=>x&&x.number===targetNum);
   const pref=(target&&target.prefs&&target.prefs.privacy&&target.prefs.privacy.groupAddPermission)||'anyone';
@@ -13100,8 +13126,12 @@ function openGroupPanel() {
     renderAvatar(avDiv, { name: enc(name), avatar: u.avatar || '' }, 32);
     row.appendChild(avDiv);
     const info = document.createElement('div'); info.style.flex = '1';
+    // Security feature 39/32: "who can see my number" \u2014 a non-mutual,
+    // non-admin viewer doesn't get this member's bare #number at all;
+    // admins still see it (moderation needs it), and you always see your own.
+    const numVisible = num===me.number || isAdmin || canSeeNumber(num);
     info.innerHTML = '<div style="font-size:13px;font-weight:500">' + esc(name) + (num === me.number ? ' <span style="color:var(--muted)">(you)</span>' : '') + '</div>' +
-      '<div style="font-size:11px;color:var(--muted)">#' + num + (isAdminMember ? ' \u2022 \uD83D\uDC51 Admin' : '') + (roleObj ? ' \u2022 ' + roleObj.icon + ' ' + roleObj.name : '') + '</div>';
+      '<div style="font-size:11px;color:var(--muted)">' + (numVisible?('#' + num):'') + (isAdminMember ? ' \u2022 \uD83D\uDC51 Admin' : '') + (roleObj ? ' \u2022 ' + roleObj.icon + ' ' + roleObj.name : '') + '</div>';
     row.appendChild(info);
     membersEl.appendChild(row);
   });
@@ -22413,6 +22443,8 @@ function _initPrivacyToggles(){
   if(badgeSel) badgeSel.value=getPrivacyPref('badgeStyle','count');
   const groupAddSel=document.getElementById('group-add-permission-select');
   if(groupAddSel) groupAddSel.value=getPrivacyPref('groupAddPermission','anyone');
+  const numVisSel=document.getElementById('number-visibility-select');
+  if(numVisSel) numVisSel.value=getPrivacyPref('numberVisibility','anyone');
   const selfDestructSel=document.getElementById('self-destruct-select');
   if(selfDestructSel&&me) selfDestructSel.value=String(me.selfDestructMonths||0);
   _scbPopulateSoundSelects();
