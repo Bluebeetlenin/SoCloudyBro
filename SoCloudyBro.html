@@ -2558,34 +2558,48 @@ body.device-tablet .msg-body{max-width:74%}
 <!-- PUBLIC LANDING PAGE — visible before login, satisfies Google OAuth verification -->
 <div id="landing-page" style="display:none;position:fixed;inset:0;z-index:500;overflow-y:auto;background:var(--bg);color:var(--text);font-family:inherit">
   <style>
-    .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;gap:12px}
-    .lp-brand{font-size:18px;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
-    .lp-btn-main{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;transition:opacity .15s,transform .12s}
-    .lp-btn-main:hover{opacity:.88;transform:translateY(-1px)}
-    .lp-hero{text-align:center;padding:60px 24px 48px;max-width:660px;margin:0 auto}
-    .lp-hero h1{font-size:clamp(28px,7vw,52px);font-weight:900;margin:0 0 18px;line-height:1.1;letter-spacing:-.5px}
+    .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid transparent;position:sticky;top:0;background:var(--bg);background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);z-index:10;gap:12px;transition:background .25s,border-color .25s,box-shadow .25s}
+    .lp-nav.lp-nav-scrolled{border-bottom-color:var(--border);box-shadow:0 4px 24px rgba(0,0,0,.08)}
+    .lp-brand{font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--accent),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
+    .lp-btn-main{background:var(--accent-grad);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;transition:opacity .15s,transform .12s,box-shadow .2s;box-shadow:0 2px 12px rgba(90,82,213,.25)}
+    .lp-btn-main:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 6px 18px rgba(90,82,213,.38)}
+    .lp-hero{position:relative;text-align:center;padding:72px 24px 48px;max-width:660px;margin:0 auto;overflow:visible}
+    .lp-hero-glow{position:absolute;inset:-60px 0 auto;height:420px;z-index:-1;overflow:hidden;pointer-events:none}
+    .lp-orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:.45;animation:lpOrbFloat 14s ease-in-out infinite}
+    .lp-orb-1{width:280px;height:280px;left:8%;top:10px;background:radial-gradient(circle,var(--accent-bright),transparent 70%);animation-delay:0s}
+    .lp-orb-2{width:240px;height:240px;right:6%;top:40px;background:radial-gradient(circle,#a78bfa,transparent 70%);animation-delay:-5s}
+    .lp-orb-3{width:200px;height:200px;left:38%;top:120px;background:radial-gradient(circle,#7c5fd4,transparent 70%);animation-delay:-9s}
+    @keyframes lpOrbFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(18px,-14px) scale(1.08)}}
+    .lp-grid-fade{position:absolute;inset:0;background-image:linear-gradient(to right,var(--border) 1px,transparent 1px),linear-gradient(to bottom,var(--border) 1px,transparent 1px);background-size:36px 36px;opacity:.35;-webkit-mask-image:radial-gradient(ellipse 60% 60% at 50% 20%,#000 0%,transparent 75%);mask-image:radial-gradient(ellipse 60% 60% at 50% 20%,#000 0%,transparent 75%)}
+    .lp-hero h1{position:relative;font-size:clamp(28px,7vw,52px);font-weight:900;margin:0 0 18px;line-height:1.1;letter-spacing:-.5px}
     .lp-hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-    .lp-hero p{font-size:clamp(14px,2.5vw,18px);color:var(--muted);margin:0 0 32px;line-height:1.65;max-width:520px;margin-left:auto;margin-right:auto}
-    .lp-cta-group{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-    .lp-btn-lg{border:none;border-radius:12px;padding:13px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
-    .lp-btn-lg.primary{background:var(--accent);color:#fff}
-    .lp-btn-lg.primary:hover{opacity:.88}
-    .lp-btn-lg.ghost{background:transparent;border:1.5px solid var(--border);color:var(--text)}
-    .lp-btn-lg.ghost:hover{border-color:var(--accent);color:var(--accent)}
-    .lp-badge-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-    .lp-badge{background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+    .lp-hero p{position:relative;font-size:clamp(14px,2.5vw,18px);color:var(--muted);margin:0 0 32px;line-height:1.65;max-width:520px;margin-left:auto;margin-right:auto}
+    .lp-cta-group{position:relative;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .lp-btn-lg{border:none;border-radius:12px;padding:13px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .15s,box-shadow .2s,opacity .15s,border-color .15s,color .15s}
+    .lp-btn-lg:active{transform:translateY(1px) scale(.98)}
+    .lp-btn-lg.primary{background:var(--accent-grad);color:#fff;box-shadow:0 4px 20px rgba(90,82,213,.32)}
+    .lp-btn-lg.primary:hover{opacity:.94;transform:translateY(-2px);box-shadow:0 10px 28px rgba(90,82,213,.42)}
+    .lp-btn-lg.ghost{background:var(--surface);background:color-mix(in srgb,var(--surface) 70%,transparent);border:1.5px solid var(--border);color:var(--text);backdrop-filter:blur(6px)}
+    .lp-btn-lg.ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+    .lp-badge-row{position:relative;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+    .lp-badge{background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:5px;transition:border-color .2s,color .2s}
+    .lp-badge:hover{border-color:var(--accent);color:var(--accent)}
     .lp-section{max-width:860px;margin:0 auto;padding:0 24px 64px}
     .lp-section-label{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
     .lp-section h2{font-size:clamp(22px,4vw,32px);font-weight:800;margin:0 0 12px;letter-spacing:-.3px;line-height:1.2}
     .lp-section p.lead{font-size:15px;color:var(--muted);line-height:1.65;margin:0 0 28px}
+    .lp-reveal{opacity:0;transform:translateY(22px);transition:opacity .6s var(--ease-fluent,cubic-bezier(.16,1,.3,1)),transform .6s var(--ease-fluent,cubic-bezier(.16,1,.3,1))}
+    .lp-reveal.lp-in{opacity:1;transform:translateY(0)}
+    @media(prefers-reduced-motion:reduce){.lp-reveal{opacity:1;transform:none;transition:none}.lp-orb{animation:none}}
     .lp-feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
-    .lp-feat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;transition:.15s}
-    .lp-feat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
-    .lp-feat-icon{font-size:28px;margin-bottom:10px}
+    .lp-feat-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s,border-color .2s;overflow:hidden}
+    .lp-feat-card:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.14)}
+    .lp-feat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:12px;background:var(--surface2);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 18%,transparent),color-mix(in srgb,#a78bfa 18%,transparent));border:1px solid var(--border)}
     .lp-feat-title{font-size:14px;font-weight:700;margin:0 0 5px}
     .lp-feat-desc{font-size:12.5px;color:var(--muted);line-height:1.55;margin:0}
     /* mock chat UI */
-    .lp-mock{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+    .lp-mock{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;max-width:420px;box-shadow:0 20px 48px -12px rgba(90,82,213,.28),0 8px 24px rgba(0,0,0,.1);transition:transform .3s,box-shadow .3s}
+    .lp-mock:hover{transform:translateY(-3px);box-shadow:0 28px 56px -12px rgba(90,82,213,.36),0 8px 24px rgba(0,0,0,.12)}
     .lp-mock-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface)}
     .lp-mock-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6b5de8,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:#fff;font-weight:700}
     .lp-mock-name{font-size:13px;font-weight:600}
@@ -2615,13 +2629,19 @@ body.device-tablet .msg-body{max-width:74%}
   </style>
 
   <!-- NAV -->
-  <nav class="lp-nav">
+  <nav class="lp-nav" id="lp-nav">
     <div class="lp-brand">☁️ SoCloudyBro</div>
     <button class="lp-btn-main" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Sign In / Sign Up</button>
   </nav>
 
   <!-- HERO -->
   <div class="lp-hero">
+    <div class="lp-hero-glow" aria-hidden="true">
+      <span class="lp-orb lp-orb-1"></span>
+      <span class="lp-orb lp-orb-2"></span>
+      <span class="lp-orb lp-orb-3"></span>
+      <span class="lp-grid-fade"></span>
+    </div>
     <div class="lp-badge-row">
       <span class="lp-badge">🔒 End-to-end encrypted</span>
       <span class="lp-badge">📞 Free voice &amp; video calls</span>
@@ -2631,12 +2651,12 @@ body.device-tablet .msg-body{max-width:74%}
     <p>SoCloudyBro is the messaging app for friends, families, and communities. Encrypted chats, voice and video calls, group spaces, and more — right in your browser, totally free.</p>
     <div class="lp-cta-group">
       <button class="lp-btn-lg primary" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Get Started — it's free</button>
-      <button class="lp-btn-lg ghost" onclick="document.getElementById('lp-features').scrollIntoView({behavior:'smooth'})">See what's inside ↓</button>
+      <button class="lp-btn-lg ghost" onclick="scrollToLpSection('lp-features')">See what's inside ↓</button>
     </div>
   </div>
 
   <!-- FEATURE HIGHLIGHT: MESSAGING -->
-  <div class="lp-section" id="lp-features">
+  <div class="lp-section lp-reveal" id="lp-features">
     <div class="lp-split">
       <div>
         <div class="lp-section-label">Private Messaging</div>
@@ -2672,7 +2692,7 @@ body.device-tablet .msg-body{max-width:74%}
   <hr class="lp-divider">
 
   <!-- FEATURE HIGHLIGHT: CALLS -->
-  <div class="lp-section">
+  <div class="lp-section lp-reveal">
     <div class="lp-split">
       <div class="lp-mock" style="order:1">
         <div class="lp-mock-header" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:none">
@@ -2711,7 +2731,7 @@ body.device-tablet .msg-body{max-width:74%}
   <hr class="lp-divider">
 
   <!-- FEATURE HIGHLIGHT: GROUPS -->
-  <div class="lp-section">
+  <div class="lp-section lp-reveal">
     <div class="lp-split">
       <div>
         <div class="lp-section-label">Groups &amp; Communities</div>
@@ -2743,7 +2763,7 @@ body.device-tablet .msg-body{max-width:74%}
   <hr class="lp-divider">
 
   <!-- ALL FEATURES GRID -->
-  <div class="lp-section">
+  <div class="lp-section lp-reveal">
     <div style="text-align:center;margin-bottom:32px">
       <div class="lp-section-label" style="justify-content:center;display:flex">Everything included</div>
       <h2 style="margin-bottom:8px">Packed with features. Zero cost.</h2>
@@ -2765,7 +2785,7 @@ body.device-tablet .msg-body{max-width:74%}
   <hr class="lp-divider">
 
   <!-- HOW IT WORKS -->
-  <div class="lp-section">
+  <div class="lp-section lp-reveal">
     <div style="text-align:center;margin-bottom:32px">
       <div class="lp-section-label" style="justify-content:center;display:flex">Getting started</div>
       <h2>Ready in under a minute.</h2>
@@ -2804,6 +2824,27 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
   </div>
 </div>
+<script>
+// Landing-page polish: sticky-nav scroll shadow + scroll-reveal for sections.
+// Scoped entirely to #landing-page elements; harmless no-op once it's hidden.
+(function(){
+  const scroller=document.getElementById('landing-page');
+  const nav=document.getElementById('lp-nav');
+  if(!scroller||!nav) return;
+  scroller.addEventListener('scroll',()=>{
+    nav.classList.toggle('lp-nav-scrolled',scroller.scrollTop>4);
+  },{passive:true});
+  const revealEls=scroller.querySelectorAll('.lp-reveal');
+  if('IntersectionObserver' in window && revealEls.length){
+    const io=new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('lp-in'); io.unobserve(e.target); } });
+    },{root:scroller,threshold:0.15,rootMargin:'0px 0px -40px 0px'});
+    revealEls.forEach(el=>io.observe(el));
+  }else{
+    revealEls.forEach(el=>el.classList.add('lp-in'));
+  }
+})();
+</script>
 
 <!-- PRIVACY POLICY MODAL -->
 <div class="overlay" id="privacy-modal" style="display:none">
@@ -10711,6 +10752,24 @@ async function unpinFromBanner(){
   await saveConvos();
   renderPinnedBanner(c);
   showToast('Message unpinned','');
+}
+function scrollToLpSection(id){
+  // #landing-page itself is the scrolling container (position:fixed +
+  // overflow-y:auto), not the window — so scrollIntoView's default
+  // block:'start' lands the section's top edge exactly at the TOP of
+  // #landing-page's viewport. But .lp-nav is `position:sticky;top:0`
+  // inside that same container, so it then sits on top of (hides) the
+  // section's own heading/label — visually it looks like the scroll
+  // went further than it should have. Scroll to an explicit position
+  // offset by the sticky nav's real height instead, within the actual
+  // scrolling element.
+  const scroller=document.getElementById('landing-page');
+  const target=document.getElementById(id);
+  if(!scroller||!target) return;
+  const nav=scroller.querySelector('.lp-nav');
+  const navH=nav?nav.getBoundingClientRect().height:0;
+  const top=target.getBoundingClientRect().top-scroller.getBoundingClientRect().top+scroller.scrollTop-navH-16;
+  scroller.scrollTo({top:Math.max(0,top),behavior:'smooth'});
 }
 function scrollToPinned(){
   if(!activeConvo||!convosCache) return;
