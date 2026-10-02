@@ -450,6 +450,19 @@
   --shadow:0 2px 8px rgba(0,0,0,0.12),0 0 1px rgba(0,0,0,0.08);
   --shadow-lg:0 8px 32px rgba(0,0,0,0.18),0 0 1px rgba(0,0,0,0.1);
 }
+/* Colour-blind friendly palette: the default success/danger pairing
+   (green/red) is the single hardest combination for red-green colour
+   blindness (deuteranopia/protanopia, ~8% of men) to tell apart. Swaps to
+   the Okabe-Ito colour-blind-safe set — blue for success, vermillion for
+   danger, amber for warning — which stays distinguishable under red-green
+   AND blue-yellow (tritanopia) colour blindness. Applies on top of
+   whichever light/dark theme is active (higher specificity than the
+   [data-theme] blocks above), so it's an independent toggle, not a theme. */
+body.theme-colorblind{
+  --success:#0072B2;--danger:#D55E00;--warn:#E69F00;
+  --success-soft:rgba(0,114,178,0.14);--danger-soft:rgba(213,94,0,0.14);--warn-soft:rgba(230,159,0,0.16);
+  --warn-text:#8a5d00;
+}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;overflow:hidden}
 
 /* ── ACRYLIC BACKGROUND ── */
@@ -2155,6 +2168,10 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="settings-row" id="fullscreen-row" style="display:none">
             <div class="settings-row-main"><div class="settings-row-label">Fullscreen</div><div class="settings-row-sub">More screen space, fewer browser distractions</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="toggleFullscreen()" id="fullscreen-toggle-btn">⛶ Toggle</button></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Colour-blind friendly palette</div><div class="settings-row-sub">Swaps status colours (success/warning/danger) for a set that stays distinct under red-green and blue-yellow colour blindness</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="scb-colorblind-toggle" onchange="toggleColorblindMode(this.checked)"><span class="switch-slider"></span></label></div>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="chats">
@@ -17826,6 +17843,16 @@ function initLargeTextMode(){
   const cb=document.getElementById('scb-large-text-toggle');
   if(cb) cb.checked=val;
 }
+function toggleColorblindMode(on){
+  document.body.classList.toggle('theme-colorblind',!!on);
+  scbSave('cc_colorblind_mode',!!on);
+}
+function initColorblindMode(){
+  const on=!!scbLoad('cc_colorblind_mode',false);
+  document.body.classList.toggle('theme-colorblind',on);
+  const cb=document.getElementById('scb-colorblind-toggle');
+  if(cb) cb.checked=on;
+}
 // -- Restriction flags -------------------------------------------------------
 const RESTRICTION_DEFS = [
   {id:'noDm',     label:'Block direct messages and chats'},
@@ -20175,6 +20202,7 @@ function featurePostLaunch(){
   step('initThemeColors', initThemeColors);
   step('applyLanguage', applyLanguage);
   step('initLargeTextMode', initLargeTextMode);
+  step('initColorblindMode', initColorblindMode);
   step('renderTabBar', renderTabBar);
   step('showNeedsAttentionBanner', showNeedsAttentionBanner);
   step('hydrateConnectedAccountsFromRecord', hydrateConnectedAccountsFromRecord);
