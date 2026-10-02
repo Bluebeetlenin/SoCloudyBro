@@ -2040,6 +2040,8 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="ctx-item" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item" style="display:none">🔐 Verify security</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openChatWallpaperPicker()">🖼️ Wallpaper for this chat</div>
           <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockUser()" id="block-menu-item" style="display:none">⛔ Block</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockCallsOnly()" id="block-calls-menu-item" style="display:none">📵 Block calls only</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockMessagesOnly()" id="block-messages-menu-item" style="display:none">🔇 Block messages only</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openReport()" style="color:var(--danger)">🚩 Report</div>
         </div>
       </div>
@@ -5602,7 +5604,7 @@ async function logOutOtherSessions(){
     showToast('Other devices signed out','They will be logged out automatically on their next check-in.');
   }catch(e){ showToast('Error', scbErr('SCB-SEC-02','Your other devices couldn\'t be signed out — the server rejected the change.',e.message)); }
 }
-async function registerOrUpdate(blockedOverride){
+async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMessagesOverride){
   if(!me||!me.number) return;
   if(_savePrefsPending){
     // A prefs write is queued (see _debounceSavePrefs) but hasn't landed yet.
@@ -5668,8 +5670,15 @@ async function registerOrUpdate(blockedOverride){
   // (toggleBlockUser/cloudyBlockToggle) passes its new list explicitly instead
   // of relying on ambient `me.blocked`, so its own change is never lost either.
   const blocked = blockedOverride!==undefined ? blockedOverride : ((u&&u.blocked)||me.blocked||[]);
-  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked,lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
-  me.blocked = blocked; // keep the in-memory copy consistent with what was actually just persisted
+  // Security feature 31/32 — granular blocklist: block-everything (`blocked`
+  // above) still blocks both, but these let someone block just one or the
+  // other. Same override pattern as `blocked`: the one device actually
+  // toggling it passes its new list explicitly, everyone else falls back to
+  // the server's copy.
+  const blockedCalls = blockedCallsOverride!==undefined ? blockedCallsOverride : ((u&&u.blockedCalls)||me.blockedCalls||[]);
+  const blockedMessages = blockedMessagesOverride!==undefined ? blockedMessagesOverride : ((u&&u.blockedMessages)||me.blockedMessages||[]);
+  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked,blockedCalls,blockedMessages,lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
+  me.blocked = blocked; me.blockedCalls = blockedCalls; me.blockedMessages = blockedMessages; // keep the in-memory copy consistent with what was actually just persisted
   if(_myPubJwk) payload.pubkey=_myPubJwk;
   // Per-account settings added by the feature pack. Each falls back to whatever
   // the server already has, so a device that hasn't loaded them yet can never
@@ -7256,7 +7265,7 @@ async function submit2faCode(){
 }
 async function finishLogin(user, pwdToStore){
   resetLocalSessionState();
-  me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], totpEnabled: !!user.totpEnabled, shadowMuted: !!user.shadowMuted,
+  me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], blockedCalls: user.blockedCalls||[], blockedMessages: user.blockedMessages||[], totpEnabled: !!user.totpEnabled, shadowMuted: !!user.shadowMuted,
     // createdAt + emailVerified drive the email-verification gate in launch()
     // (needsEmailVerification()) — without copying them onto `me` here, that
     // check would only ever work right after signUp() (which sets them
@@ -8617,6 +8626,18 @@ async function _origOpenChat(c){
     blockBtn.style.display=c.type==='group'?'none':'flex';
     const isBlocked=!!(me&&me.blocked&&me.blocked.includes(c.number));
     blockBtn.innerHTML=isBlocked?'✅ Unblock':'⛔ Block';
+  }
+  const blockCallsBtn=document.getElementById('block-calls-menu-item');
+  if(blockCallsBtn){
+    blockCallsBtn.style.display=c.type==='group'?'none':'flex';
+    const callsBlocked=!!(me&&Array.isArray(me.blockedCalls)&&me.blockedCalls.includes(c.number));
+    blockCallsBtn.innerHTML=callsBlocked?'✅ Unblock calls':'📵 Block calls only';
+  }
+  const blockMsgsBtn=document.getElementById('block-messages-menu-item');
+  if(blockMsgsBtn){
+    blockMsgsBtn.style.display=c.type==='group'?'none':'flex';
+    const msgsBlocked=!!(me&&Array.isArray(me.blockedMessages)&&me.blockedMessages.includes(c.number));
+    blockMsgsBtn.innerHTML=msgsBlocked?'✅ Unblock messages':'🔇 Block messages only';
   }
   const callBtn=document.getElementById('call-btn');if(callBtn) callBtn.style.display=c.type==='group'?'none':'flex';
   const quickGroupBtn=document.getElementById('quick-group-btn');if(quickGroupBtn) quickGroupBtn.style.display=c.type==='group'?'none':'flex';
@@ -10137,7 +10158,7 @@ const _seenIncomingCalls={};
 async function startDirectCall(contact){
   if(!me||!contact||contact.type==='group'||!contact.number) return;
   if(voiceChannelActive){ showToast('Already in a call',scbErr('SCB-CALL-05','Hang up first.')); return; }
-  if(isBlockedEitherWay(contact.number)){ showToast('Cannot call',scbErr('SCB-CALL-06','This conversation is blocked.')); return; }
+  if(isBlockedForCalls(contact.number)){ showToast('Cannot call',scbErr('SCB-CALL-06','Calls with this contact are blocked.')); return; }
   const pairKey=[me.number,contact.number].sort((a,b)=>a-b).join('_');
   const cRef=fbdb.ref('calls/'+pairKey);
   try{
@@ -10674,11 +10695,67 @@ async function toggleBlockUser(){
   if(blockBtn){ blockBtn.innerHTML=willBlock?'✅ Unblock':'⛔ Block'; }
   showToast(willBlock?'User blocked':'User unblocked','');
 }
+// Messaging block check: a full block (`blocked`) always counts, as does
+// a messages-only block (`blockedMessages`) — security feature 31/32.
 function isBlockedEitherWay(otherNum){
   if(me&&me.blocked&&me.blocked.includes(otherNum)) return true;
+  if(me&&Array.isArray(me.blockedMessages)&&me.blockedMessages.includes(otherNum)) return true;
   const other=lookupUser(otherNum);
-  if(other&&Array.isArray(other.blocked)&&me&&other.blocked.includes(me.number)) return true;
+  if(other&&me){
+    if(Array.isArray(other.blocked)&&other.blocked.includes(me.number)) return true;
+    if(Array.isArray(other.blockedMessages)&&other.blockedMessages.includes(me.number)) return true;
+  }
   return false;
+}
+// Calls block check: a full block always counts, as does a calls-only
+// block (`blockedCalls`) — independent of whether messages are blocked.
+function isBlockedForCalls(otherNum){
+  if(me&&me.blocked&&me.blocked.includes(otherNum)) return true;
+  if(me&&Array.isArray(me.blockedCalls)&&me.blockedCalls.includes(otherNum)) return true;
+  const other=lookupUser(otherNum);
+  if(other&&me){
+    if(Array.isArray(other.blocked)&&other.blocked.includes(me.number)) return true;
+    if(Array.isArray(other.blockedCalls)&&other.blockedCalls.includes(me.number)) return true;
+  }
+  return false;
+}
+async function toggleBlockCallsOnly(){
+  if(!activeConvo||activeConvo.type==='group'||!me) return;
+  if(!Array.isArray(me.blockedCalls)) me.blockedCalls=[];
+  const num=activeConvo.number;
+  const idx=me.blockedCalls.indexOf(num);
+  const willBlock=idx===-1;
+  if(willBlock){
+    if(!confirm('Block calls from '+activeConvo.name+'? Messages will still work normally.')) return;
+    me.blockedCalls.push(num);
+  }else{
+    me.blockedCalls.splice(idx,1);
+  }
+  saveStorage();
+  try{ await registerOrUpdate(me.blocked,me.blockedCalls,me.blockedMessages); }
+  catch(e){ showToast('Failed to sync',scbErr('SCB-CONT-10','Your call-block change couldn\'t be saved to the server.',(e.message||''))); }
+  const btn=document.getElementById('block-calls-menu-item');
+  if(btn) btn.innerHTML=willBlock?'✅ Unblock calls':'📵 Block calls only';
+  showToast(willBlock?'Calls blocked':'Calls unblocked','');
+}
+async function toggleBlockMessagesOnly(){
+  if(!activeConvo||activeConvo.type==='group'||!me) return;
+  if(!Array.isArray(me.blockedMessages)) me.blockedMessages=[];
+  const num=activeConvo.number;
+  const idx=me.blockedMessages.indexOf(num);
+  const willBlock=idx===-1;
+  if(willBlock){
+    if(!confirm('Block messages from '+activeConvo.name+'? Calls will still work normally.')) return;
+    me.blockedMessages.push(num);
+  }else{
+    me.blockedMessages.splice(idx,1);
+  }
+  saveStorage();
+  try{ await registerOrUpdate(me.blocked,me.blockedCalls,me.blockedMessages); }
+  catch(e){ showToast('Failed to sync',scbErr('SCB-CONT-11','Your message-block change couldn\'t be saved to the server.',(e.message||''))); }
+  const btn=document.getElementById('block-messages-menu-item');
+  if(btn) btn.innerHTML=willBlock?'✅ Unblock messages':'🔇 Block messages only';
+  showToast(willBlock?'Messages blocked':'Messages unblocked','');
 }
 
 // -- EXPORT --------------------------------------------------------------------
