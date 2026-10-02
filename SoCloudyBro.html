@@ -8608,37 +8608,64 @@ function showMsgInfo(m){
 }
 
 // -- TYPING INDICATOR ----------------------------------------------------------
+// Each entry is {t: timestamp, activity: 'typing'|'recording'} so the
+// indicator can say what someone's actually doing, not just a generic
+// "typing…" — e.g. while they're recording a voice message. Reads stay
+// backward-compatible with the old raw-timestamp-number shape (in case a
+// stale cached snapshot or an in-flight write from just before this change
+// still has one), treating a bare number as {t:number, activity:'typing'}.
 let lastTypingBroadcast=0;
-async function broadcastTyping(){
+function _normTypingEntry(entry){
+  return typeof entry==='number' ? {t:entry,activity:'typing'} : entry;
+}
+async function broadcastTyping(activity){
   if(!activeConvo||!convosCache||!me) return;
   if(!getPrivacyPref('typingIndicators',true)) return;
+  activity=activity||'typing';
   const now=Date.now();
-  if(now-lastTypingBroadcast<2500) return; // throttle to avoid hammering the bin
-  lastTypingBroadcast=now;
+  // The throttle only applies to plain typing — a recording-state change
+  // is a one-off, meaningful event (not a per-keystroke spam risk), and
+  // waiting up to 2.5s to broadcast "recording" would make the indicator
+  // lag noticeably behind someone actually starting a voice message.
+  if(activity==='typing'){
+    if(now-lastTypingBroadcast<2500) return; // throttle to avoid hammering the bin
+    lastTypingBroadcast=now;
+  }
   try{
     const c=convosCache.find(x=>x&&x.key===activeConvo.key);
     if(!c) return;
     if(!c.typingByChannel) c.typingByChannel={};
     const chKey=activeConvo.type==='group'?(activeChannelId||'general'):'_dm';
     if(!c.typingByChannel[chKey]) c.typingByChannel[chKey]={};
-    c.typingByChannel[chKey][me.number]=now;
+    c.typingByChannel[chKey][me.number]={t:now,activity};
     await saveConvos();
   }catch{}
 }
+const TYPING_ACTIVITY_LABELS={typing:'typing…',recording:'recording a voice message…'};
 function showTypingIndicator(c){
   const sub=document.getElementById('chat-header-sub');
   if(!sub||!activeConvo||!c) return false;
   const now=Date.now();
   const chKey=activeConvo.type==='group'?(activeChannelId||'general'):'_dm';
   const typingHere=(c.typingByChannel&&c.typingByChannel[chKey])||{};
-  const others=Object.keys(typingHere).map(Number).filter(n=>n!==me.number&&(now-typingHere[n])<6000);
+  const others=Object.keys(typingHere).map(Number).filter(n=>{
+    const e=_normTypingEntry(typingHere[n]);
+    return n!==me.number&&e&&(now-e.t)<6000;
+  });
   if(!others.length) return false;
   let label;
   if(activeConvo.type==='group'){
     const names=others.slice(0,2).map(n=>{const u=lookupUser(n)||{};return dec(u.name)||'Someone';});
-    label=names.join(', ')+(others.length>2?' and others':'')+' typing…';
+    // Only call out a specific activity (e.g. "recording a voice message")
+    // when every currently-active person is doing that same thing —
+    // otherwise (a mix, or more than 2 people) the generic "typing…" stays
+    // accurate without implying something that isn't true for everyone.
+    const activities=new Set(others.map(n=>_normTypingEntry(typingHere[n]).activity||'typing'));
+    const activityLabel=(activities.size===1)?TYPING_ACTIVITY_LABELS[[...activities][0]]:null;
+    label=names.join(', ')+(others.length>2?' and others':'')+' '+(activityLabel||'typing…');
   }else{
-    label='typing…';
+    const activity=_normTypingEntry(typingHere[others[0]]).activity||'typing';
+    label=TYPING_ACTIVITY_LABELS[activity]||'typing…';
   }
   sub.textContent=label;
   sub.className='';
@@ -8656,7 +8683,10 @@ function renderCrossChannelTyping(c){
   const notices=[];
   Object.entries(c.typingByChannel).forEach(([chId,typers])=>{
     if(chId===activeCh) return;
-    const whoNums=Object.keys(typers).map(Number).filter(n=>n!==me.number&&(now-typers[n])<6000);
+    const whoNums=Object.keys(typers).map(Number).filter(n=>{
+      const e=_normTypingEntry(typers[n]);
+      return n!==me.number&&e&&(now-e.t)<6000;
+    });
     if(!whoNums.length) return;
     const ch=(c.channels||[]).find(x=>x.id===chId);
     const chName=ch?ch.name:chId;
@@ -9157,6 +9187,7 @@ async function toggleVoiceMsgRecording(){
   };
   voiceMsgRecorder.start();
   _showVoiceBar(true);
+  broadcastTyping('recording');
 }
 function stopAndSendVoice(){
   voiceRecordCancelled=false;
