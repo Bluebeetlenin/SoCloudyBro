@@ -11856,14 +11856,27 @@ function getDashboardLayout(){
       // Sanitize every entry — guards against NaN/undefined/out-of-range values
       // (e.g. from an interrupted drag) silently making a widget disappear.
       const clean=saved.filter(w=>w&&w.id&&DASHBOARD_WIDGETS[w.id]).map(w=>sanitizeWidgetEntry(w,DASHBOARD_WIDGETS[w.id]));
+      // Clamping each entry independently (above) can still leave two
+      // widgets genuinely overlapping — e.g. a layout saved on a wider
+      // screen's column count, then clamped down for a narrower one, can
+      // clamp two different widgets' x into the same slot. Resolve that
+      // here: keep each widget in its saved spot unless it collides with
+      // one already placed, in which case bump it to the next free spot
+      // instead of silently rendering stacked/overlapping cards.
+      const resolved=[];
+      for(const w of clean){
+        const collides=resolved.some(r=>r.enabled&&w.enabled&&cellsOverlap(w,r));
+        if(collides){ const spot=findFreeSpot(resolved,w.w,w.h); resolved.push({...w,x:spot.x,y:spot.y}); }
+        else resolved.push(w);
+      }
       Object.keys(DASHBOARD_WIDGETS).forEach(id=>{
-        if(!clean.find(w=>w.id===id)){
+        if(!resolved.find(w=>w.id===id)){
           const def=DASHBOARD_WIDGETS[id];
-          const spot=findFreeSpot(clean,def.defaultW,def.defaultH);
-          clean.push({id,enabled:true,x:spot.x,y:spot.y,w:def.defaultW,h:def.defaultH});
+          const spot=findFreeSpot(resolved,def.defaultW,def.defaultH);
+          resolved.push({id,enabled:true,x:spot.x,y:spot.y,w:def.defaultW,h:def.defaultH});
         }
       });
-      return clean;
+      return resolved;
     }
   }catch(e){}
   localStorage.setItem('cc_dashboard_size_migrated_v1','1');
