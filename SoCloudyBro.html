@@ -5446,7 +5446,12 @@ function upsertSession(u){
   const cutoff=Date.now()-24*60*60*1000;
   u.revokedDeviceMeta=u.revokedDeviceMeta.filter(m=>m.at>cutoff);
   u.revokedDeviceIds=u.revokedDeviceMeta.map(m=>m.id);
-  if(u.revokedDeviceIds.includes(deviceId)) return true; // this device was force-logged-out
+  if(u.revokedDeviceIds.includes(deviceId)){
+    // 'wipe' (security feature 19/32 — remote wipe) vs plain true (ordinary
+    // remote sign-out) tells the caller whether to also clear local data.
+    const meta=u.revokedDeviceMeta.find(m=>m.id===deviceId);
+    return (meta&&meta.wipe)?'wipe':true;
+  }
   const now=Date.now();
   if(!u.devices[deviceId]){
     u.devices[deviceId]={label:getDeviceLabel(),os:getDeviceOS(),firstSeen:now,lastSeen:now,sessions:{}};
@@ -5495,6 +5500,33 @@ function forceLocalLogout(reason){
   clearLocalSessionPreservingE2EKeys();
   location.reload();
 }
+// Security feature 19/32: remote wipe. Unlike forceLocalLogout() above,
+// this deliberately does NOT preserve the local E2E keys — the whole point
+// of remotely wiping a lost/stolen device is that nothing usable is left
+// behind on it, not even its message-decryption keys.
+function forceRemoteWipeLocal(){
+  try{ if(typeof leaveVoiceChannel==='function') leaveVoiceChannel(); }catch{}
+  alert(scbErr('SCB-AUTH-24','This device was remotely wiped from your account — its local data, including cached messages and encryption keys, has been cleared.'));
+  localStorage.clear();
+  location.reload();
+}
+async function remoteWipeSessionEntry(id,label){
+  if(!confirm('Remotely wipe "'+(label||'this device')+'"?\n\nIt will be signed out AND have its local data fully cleared — including cached messages and encryption keys — the next time it checks in (usually within a minute). Meant for a lost or stolen device.\n\nThis cannot be undone.')) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===me.number);
+    if(u){
+      if(u.devices&&u.devices[id]) delete u.devices[id];
+      if(!Array.isArray(u.revokedDeviceMeta)) u.revokedDeviceMeta=[];
+      u.revokedDeviceMeta=u.revokedDeviceMeta.filter(m=>m.id!==id);
+      u.revokedDeviceMeta.push({id,at:Date.now(),wipe:true});
+      await fbdb.ref(USERS_BIN+'/'+me.number).set(u);
+    }
+    renderSessionsList();
+    showToast('Wipe scheduled','That device will be signed out and wiped the next time it checks in.');
+    await _logSecurityEvent('remote_wipe','Remote wipe requested for a device').catch(()=>{});
+  }catch(e){ showToast('Error',scbErr('SCB-SEC-23','That device couldn\'t be scheduled for wipe — the server rejected the change.',e.message)); }
+}
 function renderSessionsList(){
   const wrap = document.getElementById('sessions-list');
   if(!wrap||!me) return;
@@ -5510,7 +5542,7 @@ function renderSessionsList(){
     return `<div class="settings-row">
       <div class="settings-row-main"><div class="settings-row-label">${esc(d.label||'Unknown device')}${isThis?' <span style="color:var(--accent,#0078d4);font-weight:500">&#9679; this device</span>':''}${isNew?' <span style="font-size:10px;font-weight:700;color:#fff;background:var(--warn);border-radius:8px;padding:1px 6px;margin-left:4px">New</span>':''}</div>
       <div class="settings-row-sub">${d.os?esc(d.os)+' · ':''}First seen ${esc(fmtTime(d.firstSeen))} · Last active ${esc(ago)}${sessionCount?' · '+sessionCount+' login'+(sessionCount===1?'':'s'):''}</div></div>
-      ${isThis?'':`<div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="removeSessionEntry('${esc(id)}')">Remove</button></div>`}
+      ${isThis?'':`<div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="removeSessionEntry('${esc(id)}')">Remove</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="remoteWipeSessionEntry('${esc(id)}',${esc(JSON.stringify(d.label||'that device'))})">🗑️ Wipe</button></div>`}
     </div>`;
   }).join('') || '<div class="settings-row"><div class="settings-row-main settings-row-sub">No devices found</div></div>';
   localStorage.setItem('cc_sessions_last_checked',String(Date.now()));
@@ -5684,7 +5716,8 @@ async function heartbeat(){
       u.lastSeen=Date.now();
       const revoked=upsertSession(u);
       if(revoked){
-        forceLocalLogout('This device was signed out remotely from your account settings.');
+        if(revoked==='wipe') forceRemoteWipeLocal();
+        else forceLocalLogout('This device was signed out remotely from your account settings.');
         return;
       }
       // Write only our own record — no full-array write needed
@@ -22128,7 +22161,7 @@ function openSecurityLog(){
   const users=window.usersCache||[];
   const u=window.me?users.find(x=>x.number===window.me.number):null;
   const log=(u&&u.securityLog)||[];
-  const icons={login:'🔑',password_change:'🔒',mfa_enabled:'🛡',mfa_disabled:'⚠️',key_rotation:'🔄',logout:'🚪',pin_set:'📌',pin_removed:'📌',face_mfa:'📷',recovery_set:'❓',new_device_login:'🆕',passkey_added:'🔑'};
+  const icons={login:'🔑',password_change:'🔒',mfa_enabled:'🛡',mfa_disabled:'⚠️',key_rotation:'🔄',logout:'🚪',pin_set:'📌',pin_removed:'📌',face_mfa:'📷',recovery_set:'❓',new_device_login:'🆕',passkey_added:'🔑',remote_wipe:'🗑️'};
   const rows=log.length
     ? log.map(e=>`<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-size:18px;min-width:24px">${icons[e.type]||'📋'}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(e.type.replace(/_/g,' '))}</div><div style="font-size:11px;color:var(--muted)">${esc(e.detail||'')} · ${esc(e.device||'')}</div></div><div style="font-size:11px;color:var(--muted);white-space:nowrap">${new Date(e.time).toLocaleString()}</div></div>`).join('')
     : '<div style="color:var(--muted);font-size:13px;padding:12px 0">No security events recorded yet.</div>';
