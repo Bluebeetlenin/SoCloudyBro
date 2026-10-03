@@ -6010,6 +6010,15 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
     if(!me.avatar&&u.avatar) me.avatar=u.avatar;
     if(!me.bio&&u.bio) me.bio=dec(u.bio)||u.bio;
     if(!me.birthdate&&u.birthdate) me.birthdate=u.birthdate;
+    // Self-heals sessions still carrying the old broken `me` shape from
+    // before finishLogin() copied these fields at all (see the comment
+    // there) — only fills in a field that's genuinely missing (undefined,
+    // meaning this session never had it), never overwrites one a user
+    // deliberately just changed this session (even to false/null).
+    if(typeof me.secQuestions==='undefined') me.secQuestions=u.secQuestions||null;
+    if(typeof me.faceMfaEnabled==='undefined') me.faceMfaEnabled=!!u.faceMfaEnabled;
+    if(typeof me.faceDescriptor==='undefined') me.faceDescriptor=u.faceDescriptor||null;
+    if(typeof me.backupPinHash==='undefined') me.backupPinHash=u.backupPinHash||null;
     // Security-sensitive, admin-controlled — always take the server's current
     // value (never fall back to a locally-cached one, and never write it back
     // in `payload` below). Without this, hasPermission()/requirePermission()
@@ -7674,6 +7683,14 @@ async function submit2faCode(){
 async function finishLogin(user, pwdToStore){
   resetLocalSessionState();
   me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], blockedCalls: user.blockedCalls||[], blockedMessages: user.blockedMessages||[], totpEnabled: !!user.totpEnabled, shadowMuted: !!user.shadowMuted, selfDestructMonths: user.selfDestructMonths||0,
+    // Account-recovery/alternate-sign-in state: secQuestions/faceMfaEnabled/
+    // faceDescriptor/backupPinHash all live on the server record and were
+    // never copied onto `me` here (only totpEnabled was) — so the Settings
+    // panel, which reads these straight off `me.*`, showed "Not set" for
+    // all of them on every fresh login, even with real data saved server-
+    // side the whole time. Same fix pattern as totpEnabled right above.
+    secQuestions: user.secQuestions||null, faceMfaEnabled: !!user.faceMfaEnabled,
+    faceDescriptor: user.faceDescriptor||null, backupPinHash: user.backupPinHash||null,
     // createdAt + emailVerified drive the email-verification gate in launch()
     // (needsEmailVerification()) — without copying them onto `me` here, that
     // check would only ever work right after signUp() (which sets them
