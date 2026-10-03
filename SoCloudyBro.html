@@ -4612,7 +4612,7 @@ const SCB_CHECKS = [
   { id:'contacts.phantom', cat:'Contacts', name:'No phantom contacts (unknown users)',
     run:()=>{
       if(!Array.isArray(contacts)||!Array.isArray(usersCache)) return {pass:false,detail:'Arrays not ready'};
-      const phantoms=contacts.filter(c=>c.type!=='group'&&c.number&&!lookupUser(c.number));
+      const phantoms=contacts.filter(c=>c.type!=='group'&&c.number&&String(c.number)!==CLOUDY_NUMBER&&!lookupUser(c.number));
       return {pass:phantoms.length===0,warn:phantoms.length>0,detail:phantoms.length>0?phantoms.length+' phantom(s): '+phantoms.map(c=>'#'+c.number).join(', '):'All contacts verified'};
     }
   },
