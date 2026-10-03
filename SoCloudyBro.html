@@ -695,7 +695,8 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .msg-row.me .bubble .msg-link{color:#fff;text-decoration-color:rgba(255,255,255,0.6)}
 .msg-row.me .bubble .mention-chip{color:#fff;background:rgba(255,255,255,0.25)}
 .verified-badge{color:#4f8ef7;font-size:11px;margin-left:2px}
-#channel-bar{display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;flex-shrink:0}
+#channel-bar{display:flex;align-items:center;gap:14px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;flex-shrink:0}
+.channel-group{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .channel-pill{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:16px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;border:1px solid transparent;flex-shrink:0}
 .channel-pill:hover{background:var(--surface2)}
 .channel-pill.active{background:var(--accent);color:#fff}
@@ -704,7 +705,10 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 /* renderChannelBar() actually builds each channel's mini-buttons as SIBLINGS
    of .channel-pill, not children, so the descendant rule above never
    matches them — they were falling back to full body font-size at full
-   opacity, one #channel-bar gap apart, reading as a wall of oversized icons. */
+   opacity, one #channel-bar gap apart, reading as a wall of oversized icons.
+   They're now wrapped together with their pill in a .channel-group, with a
+   wider gap between groups than within one, so each channel's own controls
+   read as a unit instead of blurring into the next channel's. */
 #channel-bar .ch-mini-btn{font-size:10px;opacity:.7;padding:0 2px;cursor:pointer}
 #channel-bar .ch-mini-btn:hover{opacity:1}
 .channel-add-btn{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);border:1px dashed var(--border2);font-size:14px}
@@ -4527,18 +4531,10 @@ const SCB_CHECKS = [
     id:'cdn.'+pin.id, cat:'CDN Integrity', name:pin.label+' — live CDN content matches pinned hash', async:true,
     run:()=>_checkSriPin(pin),
   })),
-  { id:'cdn.gsi_reachable', cat:'CDN Integrity', name:'Google Sign-In script reachable (not hash-pinned — updates frequently)', async:true, warn:true,
-    run:async()=>{
-      try{ await fetch('https://accounts.google.com/gsi/client',{method:'HEAD',mode:'no-cors',cache:'no-store'}); return {pass:true,detail:'Reachable'}; }
-      catch(e){ return {pass:true,warn:true,detail:'Could not verify reachability (non-critical — Google Sign-In degrades gracefully if blocked): '+e.message}; }
-    }
-  },
-  { id:'cdn.turnstile_reachable', cat:'CDN Integrity', name:'Cloudflare Turnstile script reachable (not hash-pinned — updates frequently)', async:true, warn:true,
-    run:async()=>{
-      try{ await fetch('https://challenges.cloudflare.com/turnstile/v0/api.js',{method:'HEAD',mode:'no-cors',cache:'no-store'}); return {pass:true,detail:'Reachable'}; }
-      catch(e){ return {pass:true,warn:true,detail:'Could not verify reachability (non-critical — Turnstile degrades gracefully if blocked): '+e.message}; }
-    }
-  },
+  // Google Sign-In's and Cloudflare Turnstile's scripts are intentionally
+  // not SRI-pinned (see the note above SCB_SRI_PINS) and their reachability
+  // checks only ever produced a non-actionable informational warning, so
+  // they're not surfaced as diagnostic checks here.
 
   // ── AUTH / SESSION ─────────────────────────────────────────────────────────
   { id:'auth.firebase', cat:'Auth', name:'Firebase Auth session active',
@@ -9992,7 +9988,7 @@ function renderChannelBar(c){
         +(chans.length>1?'<span class="ch-mini-btn" onclick="event.stopPropagation();deleteChannelConfirm(\''+ch.id+'\')" title="Delete">🗑️</span>':'');
     }
     const clickFn=ch.type==='voice'?'joinVoiceChannel(\''+ch.id+'\')':'switchChannel(\''+ch.id+'\')';
-    return '<span class="channel-pill'+(active?' active':'')+'" data-ch-id="'+ch.id+'" onclick="'+clickFn+'">'+icon+' '+esc(ch.name)+'</span>'+adminBtns;
+    return '<span class="channel-group"><span class="channel-pill'+(active?' active':'')+'" data-ch-id="'+ch.id+'" onclick="'+clickFn+'">'+icon+' '+esc(ch.name)+countBadge+'</span>'+adminBtns+'</span>';
   }).join('')
   + (admin?'<span class="channel-add-btn" onclick="openAddChannelModal()" title="Add channel">+</span>':'');
 }
