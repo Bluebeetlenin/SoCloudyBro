@@ -706,11 +706,22 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
    of .channel-pill, not children, so the descendant rule above never
    matches them — they were falling back to full body font-size at full
    opacity, one #channel-bar gap apart, reading as a wall of oversized icons.
-   They're now wrapped together with their pill in a .channel-group, with a
-   wider gap between groups than within one, so each channel's own controls
-   read as a unit instead of blurring into the next channel's. */
+   They're now wrapped together with their pill in a .channel-group. Tighter
+   spacing alone still left 4-5 raw icons sitting next to every channel name
+   at all times — readable once you know what each glyph means, but a wall
+   of cryptic icons to anyone else. On a mouse/trackpad, a channel's admin
+   controls now stay hidden until you actually hover or focus that channel,
+   so the default view is just channel names; touch devices keep them
+   always visible since there's no hover state to reveal them with. */
 #channel-bar .ch-mini-btn{font-size:10px;opacity:.7;padding:0 2px;cursor:pointer}
 #channel-bar .ch-mini-btn:hover{opacity:1}
+@media (hover:hover) and (pointer:fine){
+  /* #channel-bar .ch-mini-btn above carries an ID in its selector, so
+     matching/beating that specificity here is required for this to win. */
+  #channel-bar .channel-group .ch-mini-btn{opacity:0;transition:opacity .12s}
+  #channel-bar .channel-group:hover .ch-mini-btn,#channel-bar .channel-group:focus-within .ch-mini-btn{opacity:.7}
+  #channel-bar .channel-group .ch-mini-btn:hover{opacity:1}
+}
 .channel-add-btn{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);border:1px dashed var(--border2);font-size:14px}
 .channel-add-btn:hover{background:var(--surface2)}
 #voice-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);background:rgba(79,142,247,0.08);flex-shrink:0;flex-wrap:wrap}
