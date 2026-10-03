@@ -2086,7 +2086,7 @@ body.device-tablet .msg-body{max-width:74%}
         <div id="chat-header-menu" class="header-menu">
           <div class="ctx-item" onclick="hideHeaderMenu();exportChat()">📤 Export chat</div>
           <div class="ctx-item" onclick="hideHeaderMenu();archiveToggle()" id="archive-menu-item">📁 Archive</div>
-          <div class="ctx-item" onclick="hideHeaderMenu();muteToggle()" id="mute-menu-item">🔔 Mute notifications</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();muteToggle()" id="mute-menu-item">🔕 Mute notifications</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openDisappearingMenu()" id="disappear-menu-item">⏱ Disappearing messages</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item" style="display:none">🔐 Verify security</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openChatWallpaperPicker()">🖼️ Wallpaper for this chat</div>
@@ -8067,11 +8067,11 @@ function muteToggle(){
   const btn=document.getElementById('mute-menu-item');
   if(mutedChats[key]){
     delete mutedChats[key];
-    if(btn){btn.innerHTML='🔔 Mute notifications';btn.classList.remove('active');}
+    if(btn){btn.innerHTML='🔕 Mute notifications';btn.classList.remove('active');}
     showToast('Unmuted','You\'ll get notifications for this chat again.');
   }else{
     mutedChats[key]=true;
-    if(btn){btn.innerHTML='🔕 Unmute notifications';btn.classList.add('active');}
+    if(btn){btn.innerHTML='🔔 Unmute notifications';btn.classList.add('active');}
     showToast('Muted','You won\'t be notified about new messages here.');
   }
   saveStorage();
@@ -8982,7 +8982,7 @@ async function _origOpenChat(c){
   if(archiveBtn) archiveBtn.innerHTML=archivedContacts[key]?'📁 Unarchive':'📁 Archive';
   const muteBtn=document.getElementById('mute-menu-item');
   if(muteBtn){
-    muteBtn.innerHTML=mutedChats[key]?'🔕 Unmute notifications':'🔔 Mute notifications';
+    muteBtn.innerHTML=mutedChats[key]?'🔔 Unmute notifications':'🔕 Mute notifications';
     muteBtn.classList.toggle('active',!!mutedChats[key]);
   }
   // Avatar
@@ -10375,7 +10375,7 @@ function renderVoiceBar(participants){
     return '<span class="voice-participant'+(isMe&&voiceMuted?' muted':'')+'">'+(isMe?'🎙️ You'+(voiceMuted?' (muted)':''):'🔊 '+esc(p.name||('#'+n)))+'</span>';
   }).join('');
   bar.innerHTML='<b style="font-size:12px">'+esc(voiceChannelActive.label||'Voice')+'</b>'+names
-    +'<button class="btn btn-ghost btn-sm" onclick="toggleVoiceMute()">'+(voiceMuted?'🔇 Unmute':'🎙️ Mute')+'</button>'
+    +'<button class="btn btn-ghost btn-sm" onclick="toggleVoiceMute()">'+(voiceMuted?'🎙️ Unmute':'🔇 Mute')+'</button>'
     +'<button class="btn btn-ghost btn-sm" onclick="toggleScreenShare()">'+(localScreenStream?'🛑 Stop sharing':'🖥️ Share screen')+'</button>'
     +'<button class="btn btn-danger btn-sm" onclick="leaveVoiceChannel()">'+(voiceChannelActive.isDm?'Hang up':'Leave')+'</button>'
     +'<div id="screen-share-grid"></div>';
@@ -19952,7 +19952,7 @@ function updateMeetingControls(){
   const mic=document.getElementById('scb-meet-mic-btn');
   const cam=document.getElementById('scb-meet-cam-btn');
   const scr=document.getElementById('scb-meet-screen-btn');
-  if(mic) mic.textContent = meetingState.micOn ? '🎙 '+scbT('mute') : '🔇 '+scbT('unmute');
+  if(mic) mic.textContent = meetingState.micOn ? '🔇 '+scbT('mute') : '🎙 '+scbT('unmute');
   if(cam) cam.textContent = meetingState.camOn ? '📹 '+scbT('camera') : '🚫 '+scbT('camera');
   const sharing = !!(meetingState.screenStream || meetingState.screenOn);
   if(scr) scr.textContent = sharing ? '🛑 '+scbT('stop_sharing') : '🖥 '+scbT('share_screen');
@@ -22352,7 +22352,7 @@ function _cwRender(force){
     if(ex) ex.style.display = (_cwSys === 'meeting') ? '' : 'none';
     const mb = document.getElementById('cw-mute-btn');
     if(mb){
-      mb.textContent = muted ? '🔇 Unmute' : '🎙️ Mute';
+      mb.textContent = muted ? '🎙️ Unmute' : '🔇 Mute';
       mb.classList.toggle('cw-on', muted);
     }
     const list = document.getElementById('cw-people');
