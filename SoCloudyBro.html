@@ -527,7 +527,21 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent-grad);z-index:2}
 
 /* ── SHELL ── */
-#shell{position:relative;z-index:1;display:flex;height:100vh;width:100%;background:var(--bg2);background-image:radial-gradient(ellipse 900px 500px at 15% -10%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 60%),radial-gradient(ellipse 700px 500px at 100% 0%,color-mix(in srgb,#a78bfa 6%,transparent),transparent 55%);box-shadow:var(--shadow-lg)}
+#shell{position:relative;z-index:1;display:flex;height:100vh;width:100%;background:var(--bg2);background-image:radial-gradient(ellipse 900px 500px at 15% -10%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 60%),radial-gradient(ellipse 700px 500px at 100% 0%,color-mix(in srgb,#a78bfa 6%,transparent),transparent 55%);box-shadow:var(--shadow-lg);padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
+
+/* ── TOP BANNER STACK ──
+   One shared fixed container for every transient top-of-screen notice
+   (see _ensureBannerStack() / _bannerRow()). Rows stack vertically instead
+   of overlapping, stay to a single compact line via horizontal scroll
+   rather than wrapping to a second line, and #shell/#landing-page/
+   #lock-screen reserve exactly --banner-stack-h of space for the stack's
+   current real height instead of letting it float over their content. */
+#top-banner-stack{position:fixed;top:0;left:0;right:0;z-index:9000;display:flex;flex-direction:column;pointer-events:none}
+.top-banner-row{pointer-events:auto;display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow-x:auto;scrollbar-width:none;box-shadow:0 1px 4px rgba(0,0,0,0.15)}
+.top-banner-row::-webkit-scrollbar{display:none}
+.top-banner-row .tbr-text{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.top-banner-row button{flex-shrink:0}
+#landing-page{padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
 
 /* ── SIDEBAR ── */
 /* 460px (not the original 300px) — #sb-bottom holds 11 icon buttons (a
@@ -1084,7 +1098,7 @@ select{cursor:pointer}
 #toast-body{font-size:12px;color:var(--muted)}
 
 /* ── LOCK SCREEN ── */
-#lock-screen{position:fixed;inset:0;z-index:1000;background:var(--bg);display:none;flex-direction:row;}
+#lock-screen{position:fixed;inset:0;z-index:1000;background:var(--bg);display:none;flex-direction:row;padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
 #lock-screen.visible{display:flex}
 #lock-left, #lock-right { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
 #lock-left { background: linear-gradient(135deg, rgba(0,120,212,0.1), transparent); border-right: 1px solid var(--border); }
@@ -6247,6 +6261,52 @@ function saveConvos(){
   return _saveConvosPending;
 }
 
+// -- TOP BANNER STACK --------------------------------------------------------
+// Every transient top-of-screen notice (offline/queued messages, a
+// connection issue, someone's birthday, a site update, a security-setup
+// nudge) used to be its own independent position:fixed;top:0 bar with no
+// coordination between them — if more than one was showing at once they
+// fully overlapped instead of stacking, and none of them reserved any
+// space for themselves: they floated OVER the real header/content rather
+// than pushing it down, visually eating into the top of the app. They're
+// now compact single-line rows inside one shared stack that measures its
+// own height and feeds it back via a CSS custom property, so the app
+// shell reserves exactly as much space as is actually in use — zero when
+// nothing is showing, and each banner stacks below the last instead of
+// hiding it.
+function _ensureBannerStack(){
+  let stack=document.getElementById('top-banner-stack');
+  if(!stack){
+    stack=document.createElement('div');
+    stack.id='top-banner-stack';
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+function _updateBannerStackHeight(){
+  const stack=document.getElementById('top-banner-stack');
+  const h=stack?stack.offsetHeight:0;
+  document.documentElement.style.setProperty('--banner-stack-h',h+'px');
+}
+// Returns the (creating if needed) compact row for a given banner id,
+// appended into the shared stack — callers just set its background/content.
+function _bannerRow(id){
+  const stack=_ensureBannerStack();
+  let row=document.getElementById(id);
+  if(!row){
+    row=document.createElement('div');
+    row.id=id;
+    row.className='top-banner-row';
+    stack.appendChild(row);
+  }
+  return row;
+}
+function _removeBannerRow(id){
+  const row=document.getElementById(id);
+  if(row) row.remove();
+  _updateBannerStackHeight();
+}
+
 // -- OFFLINE OUTBOX --------------------------------------------------------
 // When the network/Firebase is unreachable, queued messages are kept (per-conversation)
 // in localStorage and rendered locally with a "pending" clock icon; they're flushed
@@ -6269,51 +6329,42 @@ function outboxCount(){
   return Object.values(ob).reduce((s,arr)=>s+(arr?arr.length:0),0);
 }
 function updateOfflineBanner(){
-  let bar=document.getElementById('offline-banner');
   const pending=outboxCount();
   if(!netOnline||pending){
-    if(!bar){
-      bar=document.createElement('div');
-      bar.id='offline-banner';
-      bar.style.cssText='position:fixed;left:0;right:0;top:0;z-index:600;text-align:center;font-size:12px;padding:6px 10px;color:#fff;background:linear-gradient(90deg,#ca5010,#6264a0);box-shadow:var(--shadow-lg)';
-      document.body.appendChild(bar);
-    }
-    bar.textContent = !netOnline
-      ? '📡 You\'re offline — messages will send automatically once you\'re back online' + (pending?' ('+pending+' queued)':'')
-      : '⏳ Sending '+pending+' queued message'+(pending!==1?'s':'')+'…';
-    bar.style.display='block';
-  } else if(bar){
-    bar.style.display='none';
+    const bar=_bannerRow('offline-banner');
+    bar.style.background='linear-gradient(90deg,#ca5010,#6264a0)';
+    bar.innerHTML='<span class="tbr-text">'+(!netOnline
+      ? '📡 Offline — will send once you\'re back online'+(pending?' ('+pending+' queued)':'')
+      : '⏳ Sending '+pending+' queued message'+(pending!==1?'s':'')+'…')+'</span>';
+    _updateBannerStackHeight();
+  } else {
+    _removeBannerRow('offline-banner');
   }
 }
 // -- BIRTHDAY REMINDERS --------------------------------------------------------
-function dismissBirthdayBanner(){
-  const bar=document.getElementById('birthday-banner');
-  if(bar) bar.style.display='none';
-}
+function dismissBirthdayBanner(){ _removeBannerRow('birthday-banner'); }
 function showBirthdayBanner(u){
-  let bar=document.getElementById('birthday-banner');
-  if(!bar){
-    bar=document.createElement('div');
-    bar.id='birthday-banner';
-    bar.style.cssText='position:fixed;left:0;right:0;top:0;z-index:601;text-align:center;font-size:13px;padding:8px 12px;color:#fff;background:linear-gradient(90deg,#d83b86,#ca5010);box-shadow:var(--shadow-lg);display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap';
-    document.body.appendChild(bar);
-  }
+  const bar=_bannerRow('birthday-banner');
+  bar.style.background='linear-gradient(90deg,#d83b86,#ca5010)';
   const name=dec(u.name)||'Someone';
-  bar.innerHTML=`<span>🎂 It's <b>${esc(name)}</b>'s birthday today!</span>`;
+  bar.innerHTML='';
+  const span=document.createElement('span');
+  span.className='tbr-text';
+  span.innerHTML=`🎂 <b>${esc(name)}</b>'s birthday today!`;
   const sayBtn=document.createElement('button');
   sayBtn.className='btn btn-sm';
-  sayBtn.style.cssText='background:#fff;color:#d83b86;border:none';
+  sayBtn.style.cssText='background:#fff;color:#d83b86;border:none;padding:3px 10px;font-size:11px';
   sayBtn.textContent='Say Happy Birthday 🎉';
   sayBtn.onclick=()=>postBirthdayToChannel(u);
   const closeBtn=document.createElement('button');
   closeBtn.className='btn btn-ghost btn-sm';
-  closeBtn.style.cssText='color:#fff;border-color:rgba(255,255,255,0.5)';
+  closeBtn.style.cssText='color:#fff;border-color:rgba(255,255,255,0.5);padding:3px 8px;font-size:11px';
   closeBtn.textContent='✕';
   closeBtn.onclick=dismissBirthdayBanner;
+  bar.appendChild(span);
   bar.appendChild(sayBtn);
   bar.appendChild(closeBtn);
-  bar.style.display='flex';
+  _updateBannerStackHeight();
 }
 function postBirthdayToChannel(u){
   const name=dec(u.name)||('#'+u.number);
@@ -6688,6 +6739,7 @@ async function launch(){
   step('renderSidebar (after load)', renderSidebar);
   step('updateOfflineBanner', updateOfflineBanner);
   step('checkBirthdaysToday', checkBirthdaysToday);
+  step('checkSecuritySetupNudge', checkSecuritySetupNudge);
   step('flushOutbox', flushOutbox);
   step('requestNotifPerm', requestNotifPerm);
   step('initVoiceInput', initVoiceInput);
@@ -6958,6 +7010,7 @@ async function saveSecurityQuestions(){
     me.secQuestions=secQuestions; saveStorage();
     closeModal('secq-setup-modal');
     updateSecQStatusUI();
+    if(typeof checkSecuritySetupNudge==='function') checkSecuritySetupNudge();
     showToast('Security questions saved','You can use these to recover your account.');
   }catch(e){ err.textContent=scbErr('SCB-RECOV-03','Your security questions couldn\'t be saved — the server rejected the update.',e.message); }
 }
@@ -8167,6 +8220,7 @@ async function handleSetBackupPin(pin,inputs){
     me.backupPinHash=hash; saveStorage();
     closeModal('backup-pin-modal');
     renderBackupPinStatus();
+    if(typeof checkSecuritySetupNudge==='function') checkSecuritySetupNudge();
     showToast('Backup PIN set','You can use this to sign in if your camera or passkey aren\'t available.');
     await _logSecurityEvent('backup_pin_set','A backup sign-in PIN was set').catch(()=>{});
   }catch(e){
@@ -8182,6 +8236,7 @@ async function removeBackupPin(){
     me.backupPinHash=null; saveStorage();
     closeModal('backup-pin-modal');
     renderBackupPinStatus();
+    if(typeof checkSecuritySetupNudge==='function') checkSecuritySetupNudge();
     showToast('Backup PIN removed','');
     await _logSecurityEvent('backup_pin_removed','The backup sign-in PIN was removed').catch(()=>{});
   }catch(e){ showToast('Failed','Could not remove the backup PIN.'); }
@@ -8246,6 +8301,31 @@ function recoverFromFaceView(){
   pending2fa=null;
   closeModal('setup-modal');
   openRecoverAccount();
+}
+// A backup PIN or security questions are the only two ways back into an
+// account if face MFA is ever the only thing standing in the way on a
+// camera-less device with no passkey enrolled — so nudge accounts that
+// have NEITHER set up, without hard-blocking anything: a dismissible
+// banner (reusing the same compact top-banner-stack as everything else),
+// not a modal wall. Dismissing it only lasts the session — like the
+// forced-password-change prompt, it comes back next launch until it's
+// actually resolved.
+function checkSecuritySetupNudge(){
+  if(!me) return;
+  const hasBackupPin=!!me.backupPinHash;
+  const hasSecQuestions=Array.isArray(me.secQuestions)&&me.secQuestions.length===2;
+  if(hasBackupPin||hasSecQuestions){ _removeBannerRow('security-setup-banner'); return; }
+  try{ if(sessionStorage.getItem('cc_security_nudge_dismissed')==='1') return; }catch{}
+  const bar=_bannerRow('security-setup-banner');
+  bar.style.background='linear-gradient(90deg,#6264a0,#4C46C4)';
+  bar.innerHTML='<span class="tbr-text">🔐 Add a backup PIN or security questions so you can never get locked out</span>'+
+    '<button class="btn btn-sm" style="background:#fff;color:#4C46C4;border:none;padding:3px 10px;font-size:11px" onclick="showSettings();switchSettingsTab(\'security\');">Set up</button>'+
+    '<button style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.7);font-size:16px;line-height:1" onclick="dismissSecuritySetupNudge()">✕</button>';
+  _updateBannerStackHeight();
+}
+function dismissSecuritySetupNudge(){
+  try{ sessionStorage.setItem('cc_security_nudge_dismissed','1'); }catch{}
+  _removeBannerRow('security-setup-banner');
 }
 
 // -- MUTE NOTIFICATIONS --------------------------------------------------------
@@ -13161,19 +13241,12 @@ function setConnectionStatus(ok,err){
     : scbErr('SCB-SYS-02','Connection issue — messages may be delayed until this clears up.'));
 }
 function showConnectionBanner(text){
-  let banner=document.getElementById('conn-issue-banner');
-  if(!banner){
-    banner=document.createElement('div');
-    banner.id='conn-issue-banner';
-    banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:500;background:var(--danger);color:#fff;font-size:12px;font-weight:600;text-align:center;padding:6px;';
-    document.body.appendChild(banner);
-  }
-  banner.textContent='⚠ '+text;
+  const banner=_bannerRow('conn-issue-banner');
+  banner.style.background='var(--danger)';
+  banner.innerHTML='<span class="tbr-text">⚠ '+esc(text)+'</span>';
+  _updateBannerStackHeight();
 }
-function hideConnectionBanner(){
-  const banner=document.getElementById('conn-issue-banner');
-  if(banner) banner.remove();
-}
+function hideConnectionBanner(){ _removeBannerRow('conn-issue-banner'); }
 function startHB(){if(hbTimer)clearInterval(hbTimer);hbTimer=setInterval(heartbeat,HB_MS);heartbeat();}
 
 // -- UTILS ---------------------------------------------------------------------
@@ -16542,13 +16615,12 @@ async function checkForSiteUpdate(){
 
 function showSiteUpdateBanner(ver,note){
   if(document.getElementById('site-update-banner')) return;
-  const bar=document.createElement('div');
-  bar.id='site-update-banner';
-  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:10000;background:var(--accent-grad);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 16px;flex-wrap:wrap';
-  bar.innerHTML='🚀 Site update v'+ver+(note?' — '+esc(note):'')+'&nbsp;'+
-    '<button onclick="applySiteUpdate()" style="background:rgba(255,255,255,0.25);border:none;border-radius:6px;padding:4px 12px;cursor:pointer;color:#fff;font-weight:700;font-size:11px">Reload now</button>'+
-    '<button onclick="this.closest(\'#site-update-banner\').remove()" style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.7);font-size:16px;line-height:1;margin-left:4px">✕</button>';
-  document.body.appendChild(bar);
+  const bar=_bannerRow('site-update-banner');
+  bar.style.background='var(--accent-grad)';
+  bar.innerHTML='<span class="tbr-text">🚀 Site update v'+ver+(note?' — '+esc(note):'')+'</span>'+
+    '<button onclick="applySiteUpdate()" style="background:rgba(255,255,255,0.25);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#fff;font-weight:700;font-size:11px">Reload now</button>'+
+    '<button onclick="_removeBannerRow(\'site-update-banner\')" style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.7);font-size:16px;line-height:1;margin-left:4px">✕</button>';
+  _updateBannerStackHeight();
 }
 
 function applySiteUpdate(){
