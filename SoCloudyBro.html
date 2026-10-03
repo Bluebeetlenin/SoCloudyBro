@@ -2351,6 +2351,10 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="registerPasskey()">+ Add</button></div>
           </div>
           <div id="scb-passkeys-list" style="padding:0 16px 8px"></div>
+          <div class="settings-row" style="cursor:pointer" onclick="openBackupPinSetup()">
+            <div class="settings-row-main"><div class="settings-row-label">Backup PIN</div><div class="settings-row-sub" id="backup-pin-status-text">Not set</div></div>
+            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="backup-pin-btn-text">Set PIN</button></div>
+          </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Trusted Devices</div><div class="settings-row-sub">Devices that skip the 2FA code for 30 days after you check "Trust this device"</div></div>
           </div>
@@ -3184,6 +3188,19 @@ body.device-tablet .msg-body{max-width:74%}
       <div class="error-text" id="login-face-error" style="text-align:center"></div>
       <button class="btn btn-full" id="login-face-btn" onclick="submitFaceLogin()">Verify with Face ↗</button>
       <div style="text-align:center;margin-top:10px"><a href="#" onclick="useFaceViewPasskeyFallback();return false;" style="font-size:12px;color:var(--accent)">🔑 No camera? Use a passkey instead</a></div>
+      <div style="text-align:center;margin-top:6px"><a href="#" onclick="showLoginBackupPinView();return false;" style="font-size:12px;color:var(--accent)">🔢 Use your backup PIN instead</a></div>
+      <div style="text-align:center;margin-top:6px"><a href="#" onclick="recoverFromFaceView();return false;" style="font-size:12px;color:var(--accent)">Can't verify any other way? Recover your account</a></div>
+      <button class="btn btn-ghost btn-full" onclick="cancelFaceLoginView()" style="margin-top:8px">Cancel</button>
+    </div>
+    <div class="modal-body" id="login-backup-pin-view" style="display:none;padding-bottom:14px;padding-top:14px;">
+      <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Enter your 4-digit backup PIN.</p>
+      <div class="pin-row" id="login-backup-pin-row">
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'backuplogin')"/>
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'backuplogin')"/>
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'backuplogin')"/>
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'backuplogin')"/>
+      </div>
+      <div class="error-text" id="login-backup-pin-error" style="text-align:center"></div>
       <button class="btn btn-ghost btn-full" onclick="cancelFaceLoginView()" style="margin-top:8px">Cancel</button>
     </div>
   </div>
@@ -3336,6 +3353,25 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="btn" id="pin-confirm-btn" onclick="confirmPin()">Confirm PIN</button>
       <button class="btn btn-ghost" onclick="closeModal('pin-modal')">Cancel</button>
       <button class="btn btn-danger" id="pin-remove-btn" onclick="removePin()" style="display:none">Remove PIN</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="backup-pin-modal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="backup-pin-modal-title">Set Backup PIN</h2><p id="backup-pin-modal-desc">Choose a 4-digit PIN you can use to sign in if your camera or passkey aren't available.</p></div>
+    <div class="modal-body" style="padding-bottom:14px">
+      <div class="pin-row" id="backup-pin-input-row">
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'backupset')"/>
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'backupset')"/>
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'backupset')"/>
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'backupset')"/>
+      </div>
+      <div class="error-text" id="backup-pin-error" style="text-align:center"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('backup-pin-modal')">Cancel</button>
+      <button class="btn btn-danger" id="backup-pin-remove-btn" onclick="removeBackupPin()" style="display:none">Remove Backup PIN</button>
     </div>
   </div>
 </div>
@@ -7975,7 +8011,7 @@ function logOut(){
 }
 function pinNav(el,idx,ctx){
   if(!/^\d$/.test(el.value)){el.value='';return;}
-  const rows={lock:'lock-pin-row',set:'pin-input-row',chat:'chat-lock-overlay',delete:'delete-pin-row'};
+  const rows={lock:'lock-pin-row',set:'pin-input-row',chat:'chat-lock-overlay',delete:'delete-pin-row',backupset:'backup-pin-input-row',backuplogin:'login-backup-pin-row'};
   const row=document.getElementById(rows[ctx]);
   const inputs=row?row.querySelectorAll('.pin-digit'):[];
   if(idx<3&&inputs[idx+1]) inputs[idx+1].focus();
@@ -7985,6 +8021,8 @@ function pinNav(el,idx,ctx){
     else if(ctx==='set') handleSetPin(pin,inputs);
     else if(ctx==='chat') checkChatLockPin(pin,inputs);
     else if(ctx==='delete') confirmAccountDeletion(pin,inputs);
+    else if(ctx==='backupset') handleSetBackupPin(pin,inputs);
+    else if(ctx==='backuplogin') checkLoginBackupPin(pin,inputs);
   }
 }
 function checkLockPin(pin,inputs){
@@ -8087,6 +8125,128 @@ function handleSetPin(pin,inputs){
 }
 function confirmPin(){const r=document.getElementById('pin-input-row');const inputs=r.querySelectorAll('.pin-digit');const pin=Array.from(inputs).map(i=>i.value).join('');if(pin.length<4){document.getElementById('pin-error').textContent=scbErr('SCB-SEC-18','Enter all 4 digits.');return;}handleSetPin(pin,inputs);}
 function removePin(){if(confirm('Remove PIN protection?')){localStorage.removeItem('cc_pin');closeModal('pin-modal');document.getElementById('pin-status-text').textContent='Not set';document.getElementById('pin-btn-text').textContent='Set PIN';showToast('PIN removed','Your account is no longer PIN-protected.');}}
+
+// -- BACKUP PIN ------------------------------------------------------------
+// A server-stored (hashed) account-level PIN, distinct from the local-only
+// "PIN Lock" above: that one lives in localStorage and only re-gates an
+// already-signed-in session on THIS device, so it can't help someone stuck
+// at face verification on a different device, or this one with storage
+// cleared. This PIN is a real alternative sign-in method alongside
+// TOTP/face/passkey — specifically so face-only MFA can never be a true
+// dead end for someone without a camera or a passkey on hand.
+let _backupPinPhase=null,_backupPinTemp=null;
+function openBackupPinSetup(){
+  if(!me) return;
+  const has=!!me.backupPinHash;
+  document.getElementById('backup-pin-modal-title').textContent=has?'Change Backup PIN':'Set Backup PIN';
+  document.getElementById('backup-pin-modal-desc').textContent=has?'Enter your new 4-digit backup PIN.':'Choose a 4-digit PIN you can use to sign in if your camera or passkey aren\'t available.';
+  document.getElementById('backup-pin-remove-btn').style.display=has?'inline-flex':'none';
+  document.getElementById('backup-pin-error').textContent='';
+  _backupPinPhase='set1';_backupPinTemp=null;
+  clearPinInputs(document.getElementById('backup-pin-input-row').querySelectorAll('.pin-digit'));
+  openModal('backup-pin-modal');
+}
+async function handleSetBackupPin(pin,inputs){
+  if(_backupPinPhase==='set1'){
+    _backupPinTemp=pin;_backupPinPhase='set2';
+    document.getElementById('backup-pin-modal-desc').textContent='Confirm your backup PIN.';
+    clearPinInputs(inputs);inputs[0].focus();
+    return;
+  }
+  if(pin!==_backupPinTemp){
+    document.getElementById('backup-pin-error').textContent=scbErr('SCB-SEC-19','PINs do not match. Try again.');
+    _backupPinPhase='set1';_backupPinTemp=null;
+    clearPinInputs(inputs);inputs[0].focus();
+    return;
+  }
+  try{
+    const hash=await hashPassword(pin);
+    const users=await getUsers();
+    const u=users.find(x=>x.number===me.number);
+    if(u){ u.backupPinHash=hash; await saveUsers(users); }
+    me.backupPinHash=hash; saveStorage();
+    closeModal('backup-pin-modal');
+    renderBackupPinStatus();
+    showToast('Backup PIN set','You can use this to sign in if your camera or passkey aren\'t available.');
+    await _logSecurityEvent('backup_pin_set','A backup sign-in PIN was set').catch(()=>{});
+  }catch(e){
+    document.getElementById('backup-pin-error').textContent=scbErr('SCB-SEC-20','Backup PIN couldn\'t be saved.',e.message);
+  }
+}
+async function removeBackupPin(){
+  if(!me||!confirm('Remove your backup PIN? You won\'t be able to use it to sign in anymore.')) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===me.number);
+    if(u){ u.backupPinHash=null; await saveUsers(users); }
+    me.backupPinHash=null; saveStorage();
+    closeModal('backup-pin-modal');
+    renderBackupPinStatus();
+    showToast('Backup PIN removed','');
+    await _logSecurityEvent('backup_pin_removed','The backup sign-in PIN was removed').catch(()=>{});
+  }catch(e){ showToast('Failed','Could not remove the backup PIN.'); }
+}
+function renderBackupPinStatus(){
+  const statusEl=document.getElementById('backup-pin-status-text');
+  const btnEl=document.getElementById('backup-pin-btn-text');
+  if(!statusEl||!btnEl||!me) return;
+  const has=!!me.backupPinHash;
+  statusEl.textContent=has?'Backup PIN is set':'Not set';
+  btnEl.textContent=has?'Change':'Set PIN';
+}
+// Login-time entry, reached from the face-login screen's fallback link.
+function showLoginBackupPinView(){
+  if(!pending2fa) return;
+  if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
+  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
+  document.getElementById('login-face-view').style.display='none';
+  document.getElementById('login-backup-pin-view').style.display='block';
+  document.getElementById('login-backup-pin-error').textContent='';
+  clearPinInputs(document.getElementById('login-backup-pin-row').querySelectorAll('.pin-digit'));
+}
+async function checkLoginBackupPin(pin,inputs){
+  const err=document.getElementById('login-backup-pin-error'); err.textContent='';
+  if(!pending2fa){ err.textContent=scbErr('SCB-AUTH-23','Session expired — log in again.'); return; }
+  const user=pending2fa.user;
+  if(!user.backupPinHash){
+    err.textContent=scbErr('SCB-AUTH-24','This account has no backup PIN set up. Log in normally, then add one in Settings → Security.');
+    clearPinInputs(inputs);
+    return;
+  }
+  const rlKey='backuppin_'+user.number;
+  const rl=_checkLoginRateLimit(rlKey);
+  if(rl&&rl.until>Date.now()){
+    err.textContent=scbErr('SCB-AUTH-25','Too many incorrect attempts. Try again in '+Math.ceil((rl.until-Date.now())/60000)+' minute(s).');
+    clearPinInputs(inputs);
+    return;
+  }
+  try{
+    const ok=await verifyPassword(pin,user.backupPinHash);
+    if(!ok){
+      _recordLoginFailure(rlKey);
+      err.textContent=scbErr('SCB-AUTH-26','Incorrect PIN.');
+      clearPinInputs(inputs);
+      return;
+    }
+    _clearLoginRateLimit(rlKey);
+    const u=pending2fa.user,p=pending2fa.pwdToStore;
+    pending2fa=null;
+    await finishLogin(u,p);
+  }catch(e){
+    err.textContent=scbErr('SCB-AUTH-27','Backup PIN sign-in couldn\'t be completed.',e.message);
+    clearPinInputs(inputs);
+  }
+}
+// "Recover your account" from the face-login screen — same security-
+// questions reset flow as the main login screen's "Forgot password?",
+// just reachable without first backing all the way out to a blank form.
+function recoverFromFaceView(){
+  if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
+  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
+  pending2fa=null;
+  closeModal('setup-modal');
+  openRecoverAccount();
+}
 
 // -- MUTE NOTIFICATIONS --------------------------------------------------------
 function muteToggle(){
@@ -11857,7 +12017,7 @@ async function confirmDeleteAccount(){
 }
 
 // -- SETTINGS / UPDATES --------------------------------------------------------
-function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();renderSecurityPasskeysList();renderTrustedDevicesList();try{const t=localStorage.getItem('cc_settings_tab')||'profile';switchSettingsTab(t);}catch(e){}}
+function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();renderSecurityPasskeysList();renderTrustedDevicesList();renderBackupPinStatus();try{const t=localStorage.getItem('cc_settings_tab')||'profile';switchSettingsTab(t);}catch(e){}}
 function switchSettingsTab(tab){
   const all=document.querySelectorAll('[data-settings-tab]');
   all.forEach(s=>{s.style.display=s.getAttribute('data-settings-tab')===tab?'':'none';});
