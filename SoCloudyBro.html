@@ -3183,6 +3183,7 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
       <div class="error-text" id="login-face-error" style="text-align:center"></div>
       <button class="btn btn-full" id="login-face-btn" onclick="submitFaceLogin()">Verify with Face ↗</button>
+      <div style="text-align:center;margin-top:10px"><a href="#" onclick="useFaceViewPasskeyFallback();return false;" style="font-size:12px;color:var(--accent)">🔑 No camera? Use a passkey instead</a></div>
       <button class="btn btn-ghost btn-full" onclick="cancelFaceLoginView()" style="margin-top:8px">Cancel</button>
     </div>
   </div>
@@ -7721,15 +7722,15 @@ async function _verifyPasskeyAssertion(assertion, storedEntry, expectedChallenge
   const rawSig=_derToRawEcdsaSig(resp.signature);
   return crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},pubKey,rawSig,signedData.buffer);
 }
-async function loginWithPasskey(){
+// Shared core for both the main login screen's passkey link and the
+// face-verification fallback below — given an already-resolved user (and
+// the password value finishLogin() expects for them), runs the WebAuthn
+// challenge/verify and completes sign-in. errElId is whichever error
+// element is visible in the caller's current view.
+async function _attemptPasskeyLogin(user,pwdToStore,errElId){
+  const err=document.getElementById(errElId); if(err) err.textContent='';
   if(!passkeysSupported()){ showToast('Not supported','Passkeys aren\'t supported in this browser or device.'); return; }
-  const identity=(document.getElementById('login-email')||{}).value||'';
-  if(!identity.trim()){ showToast('Enter your account first','Type your email or number above, then tap "Sign in with a passkey" again.'); return; }
-  const err=document.getElementById('login-error'); if(err) err.textContent='';
   try{
-    const users=await getUsers();
-    const user=loginByNumber ? users.find(u=>u.number===parseInt(identity)) : users.find(u=>(u.email||'').toLowerCase()===identity.trim().toLowerCase());
-    if(!user){ if(err) err.textContent=scbErr('SCB-AUTH-18','No account found for that login.'); return; }
     const passkeys=Array.isArray(user.passkeys)?user.passkeys:[];
     if(!passkeys.length){ if(err) err.textContent=scbErr('SCB-AUTH-19','This account has no passkeys set up yet. Log in normally, then add one in Settings → Security.'); return; }
     const challenge=crypto.getRandomValues(new Uint8Array(32));
@@ -7747,10 +7748,37 @@ async function loginWithPasskey(){
     }
     if(user.banned){ if(err) err.textContent=scbErr('SCB-AUTH-12','This account has been suspended.'); return; }
     if(user.deleted){ if(err) err.textContent=scbErr('SCB-AUTH-13','This account has been deleted.'); return; }
-    await finishLogin(user, user.pwd);
+    await finishLogin(user, pwdToStore);
   }catch(e){
     if(err) err.textContent=scbErr('SCB-AUTH-22','Passkey sign-in failed.',e.message||'');
   }
+}
+async function loginWithPasskey(){
+  const identity=(document.getElementById('login-email')||{}).value||'';
+  if(!identity.trim()){ showToast('Enter your account first','Type your email or number above, then tap "Sign in with a passkey" again.'); return; }
+  const err=document.getElementById('login-error'); if(err) err.textContent='';
+  let user;
+  try{
+    const users=await getUsers();
+    user=loginByNumber ? users.find(u=>u.number===parseInt(identity)) : users.find(u=>(u.email||'').toLowerCase()===identity.trim().toLowerCase());
+  }catch(e){
+    if(err) err.textContent=scbErr('SCB-AUTH-22','Passkey sign-in failed.',e.message||'');
+    return;
+  }
+  if(!user){ if(err) err.textContent=scbErr('SCB-AUTH-18','No account found for that login.'); return; }
+  await _attemptPasskeyLogin(user,user.pwd,'login-error');
+}
+// Fallback for the face-verification screen: devices without a working
+// camera (none at all, permission denied, or faceapi/model load failure)
+// previously had no way past this screen except Cancel -> reload -> land
+// right back on it, since face was the only 2FA method on the account.
+// A passkey (Face/Touch ID, a security key, or the device's own PIN) needs
+// no camera, so it's offered as a real way through instead of a dead end.
+async function useFaceViewPasskeyFallback(){
+  if(!pending2fa){ return; }
+  if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
+  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
+  await _attemptPasskeyLogin(pending2fa.user,pending2fa.pwdToStore,'login-face-error');
 }
 
 // -- LOCK SCREEN ---------------------------------------------------------------
