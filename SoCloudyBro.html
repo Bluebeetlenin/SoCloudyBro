@@ -12198,7 +12198,7 @@ const DASHBOARD_WIDGETS={
   groups:{icon:'👥',label:'Groups',defaultW:1,defaultH:2},
   // calls & voice
   voice:{icon:'🔊',label:'Voice Channels',defaultW:2,defaultH:1},
-  missedcalls:{icon:'📵',label:'Missed Calls',defaultW:1,defaultH:2},
+  missedcalls:{icon:'📞',label:'Missed Calls',defaultW:1,defaultH:2},
   cloudyvoice:{icon:'🎙️',label:'Cloudy Assistant',defaultW:2,defaultH:1},
   // decorative/utility — last, not hero-styled
   clock:{icon:'🕐',label:'Clock & Weather',defaultW:1,defaultH:2}
@@ -12458,7 +12458,7 @@ function renderMissedCallsWidget(body){
   let log=[];
   try{ log=JSON.parse(localStorage.getItem('cc_missed_calls')||'[]'); }catch(e){}
   if(!log.length){ body.innerHTML='<div class="dash-widget-empty">No missed calls.</div>'; return; }
-  body.innerHTML=log.slice(-6).reverse().map(l=>'<div class="dash-list-item" onclick="dashOpenChatByNumber('+l.from+')">📵 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.fromName||('#'+l.from))+'</span><span class="dash-widget-empty" style="margin-left:auto">'+new Date(l.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');
+  body.innerHTML=log.slice(-6).reverse().map(l=>'<div class="dash-list-item" onclick="dashOpenChatByNumber('+l.from+')">📞 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.fromName||('#'+l.from))+'</span><span class="dash-widget-empty" style="margin-left:auto">'+new Date(l.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');
 }
 function dashOpenChatByNumber(num){
   const c=contacts.find(x=>x.type!=='group'&&x.number===num);
@@ -14373,13 +14373,13 @@ function renderMessages(msgs) {
       const iStarted = m.initiator==null || String(m.initiator)===String(me.number);
       let icon, labelHtml, isBad=false;
       if(m.callType==='declined'){
-        icon='📵'; isBad=true;
+        icon='📞'; isBad=true;
         labelHtml='<span class="call-ev-missed">'+esc((iStarted?'Outgoing':'Incoming')+' call · Declined')+'</span>';
       } else if(m.callType==='no_answer'){
-        icon='📵'; isBad=true;
+        icon='📞'; isBad=true;
         labelHtml='<span class="call-ev-missed">No answer</span>';
       } else if(m.missed){
-        icon='📵'; isBad=true;
+        icon='📞'; isBad=true;
         labelHtml='<span class="call-ev-missed">'+esc(scbT('missed_call'))+'</span>';
       } else {
         icon='📞';
@@ -16028,6 +16028,7 @@ function adminResetAccount(num){
   if(line) line.textContent='This clears '+nm+'\'s profile — name, bio, status, avatar and theme colours — and gives them a completely fresh start. Their message history, chats and groups stay exactly as they are, and so do their password, email, account age, blocked list and any connected Google or Syntax account.';
   const k=document.getElementById('admin-reset-keys'); if(k) k.checked=false;
   const p=document.getElementById('admin-reset-pwd'); if(p) p.checked=false;
+  const m=document.getElementById('admin-reset-mfa'); if(m) m.checked=false;
   const err=document.getElementById('admin-reset-error'); if(err) err.textContent='';
   openModal('admin-reset-modal');
 }
@@ -16039,6 +16040,7 @@ async function submitAdminResetAccount(){
   if(!num){ if(err) err.textContent=scbErr('SCB-ADMIN-09','No user selected.'); return; }
   const regenKeys=!!(document.getElementById('admin-reset-keys')||{}).checked;
   const forcePwd=!!(document.getElementById('admin-reset-pwd')||{}).checked;
+  const clearMfa=!!(document.getElementById('admin-reset-mfa')||{}).checked;
   const btn=document.getElementById('admin-reset-submit');
   if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span>'; }
   try{
@@ -16065,8 +16067,15 @@ async function submitAdminResetAccount(){
     // already handles: getDmAesKey() returns null and decryptConvoMessages()
     // marks bubbles textFailed instead of crashing.
     if(regenKeys) u.pubkey=null;
+    // --- two-factor/face sign-in: an admin-side rescue for a genuinely
+    // locked-out account (no camera, no passkey on hand, no backup PIN or
+    // security questions set up — the normal self-service fallbacks).
+    // secQuestions/backupPinHash are deliberately left untouched: they're
+    // the solution, not the lock, and clearing them would only strip a
+    // working recovery option the account might still have. ------------------
+    if(clearMfa){ u.totpEnabled=false; u.totpSecret=''; u.faceMfaEnabled=false; u.faceDescriptor=null; }
     // --- the stamp the target's own client reads ------------------------------
-    u.accountReset={at:Date.now(),by:me.number,keys:regenKeys,pwd:forcePwd};
+    u.accountReset={at:Date.now(),by:me.number,keys:regenKeys,pwd:forcePwd,mfa:clearMfa};
     // Keeps the current hash valid for one more sign-in and then makes them
     // choose a new one. Blanking `pwd` instead would be a real security
     // regression: submitLogin() treats an empty `pwd` as "no password set yet
@@ -16079,7 +16088,7 @@ async function submitAdminResetAccount(){
     // moderation log), so this records itself on the target's own record rather
     // than inventing an audit system that nothing else here uses.
     if(!Array.isArray(u.resetHistory)) u.resetHistory=[];
-    u.resetHistory.push({by:me.number,at:Date.now(),keysRegenerated:regenKeys,passwordResetRequired:forcePwd});
+    u.resetHistory.push({by:me.number,at:Date.now(),keysRegenerated:regenKeys,passwordResetRequired:forcePwd,mfaCleared:clearMfa});
     await saveUsers(users);
     closeModal('admin-reset-modal');
     _adminResetTarget=null;
@@ -16928,6 +16937,12 @@ async function renderAdminUsersTab(){
         const verified=!!u.verified;
         const shadowMuted=!!u.shadowMuted;
         const isAdmin=String(u.number)===String(ADMIN_NUMBER);
+        // Delegated admins (adminAccess.permissions, not just #2015) must
+        // never be deletable by anyone but the true owner — used only for
+        // the Delete button below, kept separate from `isAdmin` (which
+        // elsewhere on this card specifically means "is #2015") so those
+        // other owner-exclusive controls are unaffected.
+        const targetHasAdminAccess=isAdmin||!!(u.adminAccess&&Array.isArray(u.adminAccess.permissions)&&u.adminAccess.permissions.length);
         const joinDate=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
         return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px">'
           +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
@@ -16948,7 +16963,7 @@ async function renderAdminUsersTab(){
           +(hasPermission('users_ban')&&!isAdmin?(shadowMuted?'<button class="btn btn-ghost btn-sm" onclick="adminUnshadowMute('+u.number+')">🔈 Un-shadow-mute</button>':'<button class="btn btn-ghost btn-sm" onclick="adminShadowMute('+u.number+')" title="Their messages will silently never deliver — no ban notice shown to them">🔇 Shadow-mute</button>'):'')
           +(!isAdmin&&me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',' + esc(JSON.stringify(rawName)) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[])) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>':'')
-          +((!isAdmin&&Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete'))?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
+          +(Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete')&&(!targetHasAdminAccess||me.number===ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
           +'</div></div>';
       }).join('');
   }catch(e){
@@ -16981,6 +16996,26 @@ async function renderAdminGroupsTab(){
 async function adminDeleteUser(number,name){
   if(!requirePermission('users_delete')) return;
   if(Number(number)===ADMIN_NUMBER){ showToast('Protected','The admin account (#2015) cannot be deleted.'); return; }
+  // Only the true owner (#2015) can delete an admin account — a delegated
+  // admin (anyone with adminAccess.permissions, which is how someone other
+  // than #2015 got the users_delete permission that got them this far at
+  // all) must never be able to remove a peer admin or have their own
+  // account removed by one. Re-checked here against a fresh fetch rather
+  // than trusting the button having been hidden for this exact reason
+  // (see the comment on requireAdmin() above).
+  if(me.number!==ADMIN_NUMBER){
+    try{
+      const users=await getUsers();
+      const target=users.find(x=>x&&Number(x.number)===Number(number));
+      if(target&&target.adminAccess&&Array.isArray(target.adminAccess.permissions)&&target.adminAccess.permissions.length){
+        showToast('Protected','Only the owner (#'+ADMIN_NUMBER+') can delete an admin account.');
+        return;
+      }
+    }catch(e){
+      showToast('Delete failed',scbErr('SCB-ADMIN-31','Could not verify that account before deleting it — the server request failed.',(e&&e.message)||''));
+      return;
+    }
+  }
   if(!confirm('Permanently delete account for '+name+' (#'+number+')?\n\nThis removes their account from Firebase entirely — not a ban. If they\'re still signed in on a device, they\'ll be signed out the next time it checks in.\n\nThis cannot be undone.')) return;
   try{
     await fbdb.ref('users/'+number).remove();
@@ -16997,6 +17032,24 @@ async function adminDeleteUser(number,name){
       updated.push(Number(number));
       await fbdb.ref('admin_site/reserved_numbers').set([...new Set(updated)]);
     }catch(e){ console.error('Could not reserve deleted number',e); }
+    // Other users who had this account as a contact are left with a phantom
+    // entry otherwise — nothing else in the app ever cleaned these up, and
+    // the contacts.phantom diagnostic could only ever detect one, never fix
+    // it. Strip the deleted number out of every other user's own contacts
+    // list, writing only each affected user's own prefs/contacts path
+    // (same "touch only what changed" approach as the rest of this app).
+    try{
+      const allUsers=await getUsers();
+      for(const u of allUsers){
+        if(!u||Number(u.number)===Number(number)) continue;
+        const list=u.prefs&&Array.isArray(u.prefs.contacts)?u.prefs.contacts:null;
+        if(!list) continue;
+        const filtered=list.filter(c=>c&&Number(c.number)!==Number(number));
+        if(filtered.length!==list.length){
+          await fbdb.ref('users/'+u.number+'/prefs/contacts').set(filtered);
+        }
+      }
+    }catch(e){ console.error('Could not clean up phantom contacts after delete',e); }
     // Remove from local users cache
     usersCache=usersCache.filter(u=>String(u.number)!==String(number));
     _logAdminAction('delete_user','#'+number+' ('+(name||'?')+')').catch(()=>{});
@@ -18761,7 +18814,7 @@ renderSidebar = function(){
       const num=entry.number||entry.from||0;
       const name=entry.name||entry.fromName||('#'+num);
       const _badDir=entry.dir==='missed'||entry.dir==='declined_out'||entry.dir==='declined_in'||entry.dir==='no_answer'||entry.dir==='cancelled';
-      const icon=entry.dir==='in'?'📲':_badDir?'📵':'📤';
+      const icon=entry.dir==='in'?'📲':_badDir?'📞':'📤';
       const color=_badDir?'color:#e74c3c':'';
       const durStr=fmtCallDuration(entry.duration||0);
       const timeStr=entry.time?new Date(entry.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
@@ -22976,6 +23029,10 @@ init();
       <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px;cursor:pointer">
         <input type="checkbox" id="admin-reset-pwd" style="margin-top:2px;flex-shrink:0"/>
         <span><b>Also require a new password.</b> Their current password keeps working, and they're asked to choose a new one the next time they open the app. Their password is never removed — an account with no password could be taken over by anyone who knows its number.</span>
+      </label>
+      <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;cursor:pointer">
+        <input type="checkbox" id="admin-reset-mfa" style="margin-top:2px;flex-shrink:0"/>
+        <span><b>Also clear two-factor/face sign-in.</b> Only do this if they're actually locked out — no camera, no passkey, and no backup PIN or security questions set up. Turns off authenticator-app codes and face verification so they can sign in with just their password; their backup PIN and security questions (if any) are left as they are so they still work once they're back in.</span>
       </label>
       <div class="error-text" id="admin-reset-error"></div>
     </div>
