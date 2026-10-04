@@ -3408,6 +3408,21 @@ body.device-tablet .msg-body{max-width:74%}
   </div>
 </div>
 
+<div class="overlay" id="user-profile-modal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header"><button class="modal-close" onclick="closeModal('user-profile-modal')">✕</button></div>
+    <div class="modal-body" style="padding-bottom:20px;text-align:center">
+      <div id="user-profile-avatar" style="width:84px;height:84px;margin:0 auto 12px"></div>
+      <div id="user-profile-name" style="font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px"></div>
+      <div id="user-profile-number" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+      <div id="user-profile-status" style="font-size:12px;margin-top:6px"></div>
+      <div id="user-profile-bio" style="font-size:13px;color:var(--text2);margin-top:14px;line-height:1.5"></div>
+      <div id="user-profile-joined" style="font-size:11px;color:var(--muted);margin-top:10px"></div>
+      <button class="btn btn-full" id="user-profile-msg-btn" style="margin-top:18px" onclick="quickMessageUser(_userProfileTarget)">💬 Message</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="avatar-modal">
   <div class="modal">
     <div class="modal-header"><h2 id="avatar-modal-title">Choose Avatar</h2><p>Pick a preset or upload your own image.</p></div>
@@ -9255,6 +9270,19 @@ async function _origOpenChat(c){
   const _bizUser = c.type!=='group'&&c.number ? lookupUser(c.number) : null;
   const _bizActive = _bizUser && _bizUser.bizProfile && _bizUser.bizProfile.enabled;
   document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser('+c.number+'))">BIZ</span>' : '');
+  // DMs: a 1-on-1 chat has no per-message sender name/avatar to click (that's
+  // only shown in groups), so the header — already styled "Click for info"
+  // but with nothing actually wired to it — is the one place to reach the
+  // new profile card from. Groups don't have an equivalent info view yet,
+  // so left as-is rather than wiring it to something that doesn't exist.
+  const chatHeaderAv=document.getElementById('chat-header-av');
+  if(c.type!=='group'&&c.number){
+    document.getElementById('chat-header-name').onclick=()=>openUserProfile(c.number);
+    if(chatHeaderAv){ chatHeaderAv.style.cursor='pointer'; chatHeaderAv.onclick=()=>openUserProfile(c.number); }
+  } else {
+    document.getElementById('chat-header-name').onclick=null;
+    if(chatHeaderAv){ chatHeaderAv.style.cursor=''; chatHeaderAv.onclick=null; }
+  }
   const pollBtn=document.getElementById('poll-compose-btn');if(pollBtn) pollBtn.style.display=c.type==='group'?'flex':'none';
   const gameBtn=document.getElementById('game-compose-btn');if(gameBtn) gameBtn.style.display='flex';
   const addMemberBtn=document.getElementById('add-member-btn');if(addMemberBtn) addMemberBtn.style.display=c.type==='group'?'flex':'none';
@@ -14466,7 +14494,9 @@ function renderMessages(msgs) {
     if (activeConvo && activeConvo.type === 'group' && !isMe) {
       const u = lookupUser(m.from) || {};
       const avDiv = document.createElement('div'); avDiv.className = 'msg-avatar';
-      avDiv.style.cssText = 'background:var(--accent-grad);color:#fff;';
+      avDiv.style.cssText = 'background:var(--accent-grad);color:#fff;cursor:pointer;';
+      avDiv.title = 'View profile';
+      avDiv.onclick = (ev) => { ev.stopPropagation(); openUserProfile(m.from); };
       if (typeof u.avatar==='string' && (u.avatar.startsWith('data:image/')||u.avatar.startsWith('https://')) && u.avatar.length < 500000){ const img=document.createElement('img'); img.src=u.avatar; img.style.cssText='width:100%;height:100%;object-fit:cover;'; avDiv.appendChild(img); }
       else avDiv.textContent = (dec(u.name || '') || '?').charAt(0).toUpperCase();
       row.appendChild(avDiv);
@@ -14474,7 +14504,11 @@ function renderMessages(msgs) {
     const body = document.createElement('div'); body.className = 'msg-body';
     if (activeConvo && activeConvo.type === 'group' && !isMe) {
       const sn = document.createElement('div'); sn.className = 'msg-sender-name';
-      const u = lookupUser(m.from) || {}; sn.innerHTML = esc(dec(u.name || '') || '#' + m.from) + verifiedBadge(m.from); body.appendChild(sn);
+      sn.style.cssText = 'cursor:pointer;width:fit-content';
+      sn.title = 'View profile';
+      const u = lookupUser(m.from) || {}; sn.innerHTML = esc(dec(u.name || '') || '#' + m.from) + verifiedBadge(m.from);
+      sn.onclick = (ev) => { ev.stopPropagation(); openUserProfile(m.from); };
+      body.appendChild(sn);
     }
     if (m.forwarded) {
       const fwd = document.createElement('div'); fwd.style.cssText = 'font-size:10px;color:var(--muted);padding:0 4px;margin-bottom:2px;font-style:italic';
@@ -14787,8 +14821,10 @@ function renderThreadPanel() {
   const quoteEl = document.getElementById('thread-parent-quote');
   if (quoteEl) {
     const pu = lookupUser(parent.from) || {};
-    const pname = parent.from === me.number ? 'You' : (dec(pu.name || '') || '#' + parent.from);
-    quoteEl.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:3px">' + esc(pname) + ' · ' + fmtTime(parent.time) + '</div>'
+    const pIsMe = parent.from === me.number;
+    const pname = pIsMe ? 'You' : (dec(pu.name || '') || '#' + parent.from);
+    const pnameHtml = pIsMe ? esc(pname) : '<span style="cursor:pointer" title="View profile" onclick="event.stopPropagation();openUserProfile(' + parent.from + ')">' + esc(pname) + '</span>';
+    quoteEl.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:3px">' + pnameHtml + ' · ' + fmtTime(parent.time) + '</div>'
       + '<div style="font-size:13px;color:var(--text2)">' + renderMsgTextWithMentions(filterBadWords(msgText(parent))) + '</div>';
   }
   // Same shadow-mute rule as the main channel: a shadow-muted sender still
@@ -14808,9 +14844,10 @@ function renderThreadPanel() {
     const isMe = m.from === me.number;
     const u = lookupUser(m.from) || {};
     const name = isMe ? 'You' : (dec(u.name || '') || '#' + m.from);
+    const nameHtml = isMe ? esc(name) : '<span style="cursor:pointer" title="View profile" onclick="event.stopPropagation();openUserProfile(' + m.from + ')">' + esc(name) + '</span>';
     const row = document.createElement('div');
     row.style.cssText = 'margin-bottom:10px';
-    row.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:2px">' + esc(name) + ' · ' + fmtTime(m.time) + '</div>'
+    row.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:2px">' + nameHtml + ' · ' + fmtTime(m.time) + '</div>'
       + '<div class="bubble" style="display:inline-block;max-width:100%">' + renderMsgTextWithMentions(filterBadWords(msgText(m))) + '</div>';
     wrap.appendChild(row);
   });
@@ -14846,6 +14883,57 @@ async function sendThreadReply() {
   } catch (e) {
     showToast('Send failed', 'Your thread reply couldn\'t be sent.');
   }
+}
+
+// -- USER PROFILE CARD --------------------------------------------------------
+// A lightweight "who is this" card reachable from anywhere a sender's name
+// or avatar appears next to a message (group chat rows, thread replies) —
+// not just from the sidebar/admin panel like before. lookupUser() is the
+// same usersCache-backed source every other sender-identity display in the
+// app already reads from (message rows, reactions, call logs), so this
+// stays in sync with the real record the same way those do.
+let _userProfileTarget = null;
+function openUserProfile(number) {
+  if (!number || !me) return;
+  const u = lookupUser(number);
+  if (!u) { showToast('User not found', ''); return; }
+  _userProfileTarget = number;
+  const isSelf = number === me.number;
+  const avEl = document.getElementById('user-profile-avatar');
+  if (avEl) { avEl.innerHTML = ''; renderAvatar(avEl, { name: dec(u.name || ''), avatar: u.avatar || '' }, 84); }
+  const name = dec(u.name || '') || ('#' + number);
+  document.getElementById('user-profile-name').innerHTML = esc(name) + verifiedBadge(number);
+  document.getElementById('user-profile-number').textContent = '#' + number;
+  const statusEl = document.getElementById('user-profile-status');
+  const online = isOnline(u.lastSeen);
+  statusEl.innerHTML = online
+    ? '<span style="color:#3ba55d">● Online</span>'
+    : (u.lastSeen ? '<span style="color:var(--muted)">Last seen ' + fmtTime(u.lastSeen) + '</span>' : '');
+  const bio = dec(u.bio || '');
+  document.getElementById('user-profile-bio').textContent = bio || (u.customStatus ? dec(u.customStatus) : '');
+  const joinedEl = document.getElementById('user-profile-joined');
+  joinedEl.textContent = u.createdAt ? 'Joined ' + new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '';
+  const msgBtn = document.getElementById('user-profile-msg-btn');
+  // Messaging yourself isn't a real action — nothing else in the app
+  // offers a "DM yourself" flow, so hide it rather than letting it error.
+  if (msgBtn) msgBtn.style.display = isSelf ? 'none' : 'block';
+  openModal('user-profile-modal');
+}
+// Opens (creating if needed) a DM with this user — same "find or create the
+// contact, then openChat()" logic adminMessage() already uses for the admin
+// panel's Message button, just without the admin-only gate, since any user
+// should be able to start a chat with anyone whose message they can see.
+function quickMessageUser(number) {
+  if (!number || !me || number === me.number) return;
+  closeModal('user-profile-modal');
+  const existing = contacts.find(c => c.type !== 'group' && c.number === number);
+  if (existing) { openChat(existing); return; }
+  getUsers().then(users => {
+    const u = users.find(x => x.number === number);
+    if (!u) { showToast('User not found', ''); return; }
+    const c = { type: 'dm', number, name: dec(u.name) || '#' + number, avatar: u.avatar || '', key: 'dm_' + [me.number, number].sort((a, b) => a - b).join('_') };
+    contacts.push(c); saveStorage(); openChat(c);
+  }).catch(e => showToast('Error', e.message));
 }
 
 // ── PATCH submitReport TO INCLUDE ADMIN LINK ─────────────────────────────────
