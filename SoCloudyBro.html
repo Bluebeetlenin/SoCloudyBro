@@ -23651,7 +23651,21 @@ function _clearPinLock(){ try{ localStorage.removeItem(_pinLockKey()); }catch{} 
    blocked over it — this is a risk SIGNAL, not a hard gate on its own. ===== */
 async function _getApproxCountry(){
   try{
-    const res=await fetch('https://ipapi.co/json/');
+    // fetch() has no default timeout — if ipapi.co is slow, rate-limited,
+    // or silently intercepted by an ad-blocker/privacy extension (common
+    // for exactly this kind of third-party IP-lookup request), the promise
+    // can hang forever with no rejection. That left every caller stuck:
+    // _checkLoginRisk() is awaited directly in submitLogin() before 2FA
+    // branching even happens, so a hung fetch here froze the Log In button
+    // on an infinite spinner with no error ever shown — the existing
+    // .catch() wrappers only handle a REJECTED promise, not one that never
+    // settles at all. Aborting after 5s turns that into the same
+    // already-handled "treat as non-risky, let login proceed" fallback.
+    const ctrl=new AbortController();
+    const timeout=setTimeout(()=>ctrl.abort(),5000);
+    let res;
+    try{ res=await fetch('https://ipapi.co/json/',{signal:ctrl.signal}); }
+    finally{ clearTimeout(timeout); }
     if(!res.ok) return null;
     const data=await res.json();
     return (data&&data.country_code)?String(data.country_code).toUpperCase():null;
