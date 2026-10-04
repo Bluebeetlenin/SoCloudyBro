@@ -783,6 +783,12 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .msg-meta{font-size:10px;color:var(--muted);padding:0 4px;display:flex;align-items:center;gap:4px}
 .thread-reply-pill{display:inline-flex;align-items:center;gap:4px;margin:4px 4px 0;padding:3px 9px;font-size:11px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:999px;cursor:pointer;width:fit-content}
 .thread-reply-pill:hover{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+/* Discord-style hover preview — only on a real mouse/trackpad (see the
+   hover:hover guard in scheduleUserHoverCard()); touch devices have no
+   hover state to show this with, so they keep the existing tap-to-open
+   full profile modal as their only path, unchanged. */
+#user-hover-card{display:none;position:fixed;z-index:9500;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:14px;width:240px;gap:10px;align-items:flex-start}
+#user-hover-card.visible{display:flex}
 .msg-seen{font-size:10px;color:var(--accent)}
 .msg-row.me .msg-meta{flex-direction:row-reverse}
 .date-divider{text-align:center;font-size:11px;color:var(--muted);padding:12px 0 4px;font-weight:500}
@@ -3420,6 +3426,16 @@ body.device-tablet .msg-body{max-width:74%}
       <div id="user-profile-joined" style="font-size:11px;color:var(--muted);margin-top:10px"></div>
       <button class="btn btn-full" id="user-profile-msg-btn" style="margin-top:18px" onclick="quickMessageUser(_userProfileTarget)">💬 Message</button>
     </div>
+  </div>
+</div>
+
+<div id="user-hover-card">
+  <div id="user-hover-card-avatar" style="width:52px;height:52px;flex-shrink:0"></div>
+  <div style="min-width:0;flex:1">
+    <div id="user-hover-card-name" style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:4px"></div>
+    <div id="user-hover-card-status" style="font-size:11px;margin-top:2px"></div>
+    <div id="user-hover-card-bio" style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.4"></div>
+    <button class="btn btn-sm" id="user-hover-card-msg-btn" style="margin-top:8px;padding:4px 12px;font-size:11px" onclick="quickMessageUser(_userHoverCardTarget)">💬 Message</button>
   </div>
 </div>
 
@@ -9278,9 +9294,19 @@ async function _origOpenChat(c){
   const chatHeaderAv=document.getElementById('chat-header-av');
   if(c.type!=='group'&&c.number){
     document.getElementById('chat-header-name').onclick=()=>openUserProfile(c.number);
-    if(chatHeaderAv){ chatHeaderAv.style.cursor='pointer'; chatHeaderAv.onclick=()=>openUserProfile(c.number); }
+    // .onX property assignment (not addEventListener) is safe to repeat on
+    // every openChat() call — this is a persistent element reused across
+    // every chat, so addEventListener here would stack a fresh listener
+    // per chat switch instead of just replacing the target number.
+    if(chatHeaderAv){
+      chatHeaderAv.style.cursor='pointer';
+      chatHeaderAv.onclick=()=>openUserProfile(c.number);
+      chatHeaderAv.onmouseenter=()=>scheduleUserHoverCard(c.number,chatHeaderAv);
+      chatHeaderAv.onmouseleave=cancelUserHoverCard;
+    }
   } else {
     document.getElementById('chat-header-name').onclick=null;
+    if(chatHeaderAv){ chatHeaderAv.onmouseenter=null; chatHeaderAv.onmouseleave=null; }
     if(chatHeaderAv){ chatHeaderAv.style.cursor=''; chatHeaderAv.onclick=null; }
   }
   const pollBtn=document.getElementById('poll-compose-btn');if(pollBtn) pollBtn.style.display=c.type==='group'?'flex':'none';
@@ -14497,6 +14523,8 @@ function renderMessages(msgs) {
       avDiv.style.cssText = 'background:var(--accent-grad);color:#fff;cursor:pointer;';
       avDiv.title = 'View profile';
       avDiv.onclick = (ev) => { ev.stopPropagation(); openUserProfile(m.from); };
+      avDiv.addEventListener('mouseenter', () => scheduleUserHoverCard(m.from, avDiv));
+      avDiv.addEventListener('mouseleave', cancelUserHoverCard);
       if (typeof u.avatar==='string' && (u.avatar.startsWith('data:image/')||u.avatar.startsWith('https://')) && u.avatar.length < 500000){ const img=document.createElement('img'); img.src=u.avatar; img.style.cssText='width:100%;height:100%;object-fit:cover;'; avDiv.appendChild(img); }
       else avDiv.textContent = (dec(u.name || '') || '?').charAt(0).toUpperCase();
       row.appendChild(avDiv);
@@ -14935,6 +14963,72 @@ function quickMessageUser(number) {
     contacts.push(c); saveStorage(); openChat(c);
   }).catch(e => showToast('Error', e.message));
 }
+
+// -- USER HOVER CARD -----------------------------------------------------------
+// Discord-style "hover the profile picture" preview, layered on top of the
+// click-to-open full profile card above (that stays exactly as it was).
+// Gated to real mouse/trackpad input via (hover:hover) — a touch device has
+// no hover state at all, so a "hover" listener there would need an extra
+// phantom first tap before a real tap registered, making every avatar
+// effectively harder to use. Those devices keep tap-to-open as their only,
+// unchanged path.
+const _supportsHoverCard = typeof window.matchMedia === 'function' && window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+let _userHoverCardTarget = null, _hoverCardShowTimer = null, _hoverCardHideTimer = null;
+function scheduleUserHoverCard(number, anchorEl) {
+  if (!_supportsHoverCard) return;
+  clearTimeout(_hoverCardHideTimer);
+  clearTimeout(_hoverCardShowTimer);
+  _hoverCardShowTimer = setTimeout(() => showUserHoverCard(number, anchorEl), 350);
+}
+// Called on mouseleave of the avatar/name AND of the card itself — a short
+// grace delay so moving the mouse from the avatar into the card to click
+// Message doesn't immediately close it out from under the cursor.
+function cancelUserHoverCard() {
+  clearTimeout(_hoverCardShowTimer);
+  clearTimeout(_hoverCardHideTimer);
+  _hoverCardHideTimer = setTimeout(hideUserHoverCard, 200);
+}
+function showUserHoverCard(number, anchorEl) {
+  if (!number || !me || !anchorEl) return;
+  const u = lookupUser(number);
+  if (!u) return;
+  _userHoverCardTarget = number;
+  const card = document.getElementById('user-hover-card');
+  if (!card) return;
+  const avEl = document.getElementById('user-hover-card-avatar');
+  avEl.innerHTML = ''; renderAvatar(avEl, { name: dec(u.name || ''), avatar: u.avatar || '' }, 52);
+  const name = dec(u.name || '') || ('#' + number);
+  document.getElementById('user-hover-card-name').innerHTML = esc(name) + verifiedBadge(number);
+  const online = isOnline(u.lastSeen);
+  document.getElementById('user-hover-card-status').innerHTML = online
+    ? '<span style="color:#3ba55d">● Online</span>'
+    : (u.lastSeen ? '<span style="color:var(--muted)">Last seen ' + fmtTime(u.lastSeen) + '</span>' : '');
+  const bio = dec(u.bio || '') || (u.customStatus ? dec(u.customStatus) : '');
+  const bioEl = document.getElementById('user-hover-card-bio');
+  bioEl.textContent = bio; bioEl.style.display = bio ? 'block' : 'none';
+  const msgBtn = document.getElementById('user-hover-card-msg-btn');
+  msgBtn.style.display = number === me.number ? 'none' : 'block';
+  // Position below the avatar by default, flipping above it if there isn't
+  // room, and clamped horizontally so it never runs off either edge.
+  const rect = anchorEl.getBoundingClientRect();
+  card.classList.add('visible'); // needs real layout for offsetHeight below
+  const cardW = card.offsetWidth || 240, cardH = card.offsetHeight || 100;
+  let top = rect.bottom + 6;
+  if (top + cardH > window.innerHeight - 8) top = rect.top - cardH - 6;
+  card.style.top = Math.max(8, top) + 'px';
+  card.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - cardW - 8)) + 'px';
+}
+function hideUserHoverCard() {
+  const card = document.getElementById('user-hover-card');
+  if (card) card.classList.remove('visible');
+}
+(() => {
+  const card = document.getElementById('user-hover-card');
+  if (card) {
+    card.addEventListener('mouseenter', () => clearTimeout(_hoverCardHideTimer));
+    card.addEventListener('mouseleave', cancelUserHoverCard);
+  }
+})();
 
 // ── PATCH submitReport TO INCLUDE ADMIN LINK ─────────────────────────────────
 
