@@ -20011,6 +20011,10 @@ async function runSystemStatusChecks(){
   if(btn) btn.disabled=false;
 }
 function openSystemStatus(){
+  // Belt-and-suspenders: the row that calls this is hidden from non-admins
+  // by updateFeatureSettingsUI(), but guard the action itself too in case
+  // it's ever reached another way (stale DOM, a future direct call, etc.).
+  if(!hasAnyAdminAccess()){ showToast('Access denied',scbErr('SCB-ADMIN-01','This action is for administrators only.')); return; }
   openModal('scb-status-modal');
   runSystemStatusChecks();
 }
@@ -21550,7 +21554,7 @@ function injectFeatureSettings(){
       '<div class="settings-row-main"><div class="settings-row-sub" id="scb-family-none-text">Nothing to manage on this account.</div></div>'+
     '</div>'+
   '</div>'+
-  '<div class="settings-section" data-settings-tab="more">'+
+  '<div class="settings-section" data-settings-tab="more" id="scb-status-section" style="display:none">'+
     '<h3 data-i18n="system_status">System Status</h3>'+
     '<div class="settings-row" style="cursor:pointer" id="scb-status-row">'+
       '<div class="settings-row-main"><div class="settings-row-label" data-i18n="system_status">System Status</div><div class="settings-row-sub">Live check of messaging, Firebase, calls, the weather widget and the admin panel</div></div>'+
@@ -21633,6 +21637,13 @@ function updateFeatureSettingsUI(){
     ? ('Linked to #'+me.linkedParent+'. Unlinking needs your parental PIN.')
     : 'Optional. Verifies a parent and lets them manage what your account can do.';
   if(noneRow) noneRow.style.display=(isAdult||tier==='minor')?'none':'flex';
+  // System Status surfaces live internal infrastructure state (e.g. "Meetings
+  // (LiveKit): token proxy responded with 500") that every signed-in user
+  // could otherwise see — restrict it to the same admins who can see the
+  // Admin Dashboard's own Diagnostics tab (head admin, or any delegated
+  // admin with at least one granted permission).
+  const statusSection=document.getElementById('scb-status-section');
+  if(statusSection) statusSection.style.display=hasAnyAdminAccess()?'':'none';
   const cb=document.getElementById('scb-large-text-toggle');
   if(cb) cb.checked=document.body.classList.contains('scb-large-text');
   const np=document.getElementById('scb-now-playing-toggle');
