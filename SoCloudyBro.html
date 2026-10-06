@@ -713,6 +713,7 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .msg-row.me .bubble .msg-link{color:#fff;text-decoration-color:rgba(255,255,255,0.6)}
 .msg-row.me .bubble .mention-chip{color:#fff;background:rgba(255,255,255,0.25)}
 .verified-badge{color:#4f8ef7;font-size:11px;margin-left:2px}
+.equipped-badge{font-size:12px;margin-left:2px;cursor:default}
 #channel-bar{display:flex;align-items:center;gap:14px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;flex-shrink:0}
 .channel-group{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .channel-pill{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:16px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;border:1px solid transparent;flex-shrink:0}
@@ -3682,6 +3683,13 @@ body.device-tablet .msg-body{max-width:74%}
         <div id="gp-roles-list"></div>
         <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="openCreateRole()">+ Create Role</button>
       </div>
+      <!-- Badges section (servers only — every member can see it and equip
+           what they've earned; only server admins can create/manage) -->
+      <div id="gp-badges-section" style="display:none;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Badges</div>
+        <div id="gp-badges-list"></div>
+        <button id="gp-badges-create-btn" class="btn btn-ghost btn-sm" style="display:none;margin-top:6px" onclick="openCreateBadge()">+ Create Badge</button>
+      </div>
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Members</div>
       <div id="gp-members-list"></div>
     </div>
@@ -3730,6 +3738,45 @@ body.device-tablet .msg-body{max-width:74%}
       <div id="assign-role-list"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('assign-role-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- CREATE BADGE MODAL -->
+<div class="overlay" id="badge-modal">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-header"><h2>Create Badge</h2><p>Members who earn this can display it on their profile.</p></div>
+    <div class="modal-body" style="padding-bottom:10px">
+      <div class="field"><label>Badge name</label><input type="text" id="badge-name-input" maxlength="24" placeholder="e.g. Founding Member"/></div>
+      <div class="field"><label>Icon (emoji)</label><input type="text" id="badge-icon-input" maxlength="4" placeholder="🏅"/></div>
+      <div class="field"><label>Requirement (shown to members)</label><input type="text" id="badge-desc-input" maxlength="80" placeholder="e.g. Helped moderate during beta"/></div>
+      <div class="field"><label>How is it earned?</label>
+        <select id="badge-criteria-select" onchange="updateBadgeCriteriaFieldVisibility()">
+          <option value="manual">Manual — an admin grants it</option>
+          <option value="account_age_days">Automatic — account age</option>
+          <option value="member_for_days">Automatic — time in this server</option>
+        </select>
+      </div>
+      <div class="field" id="badge-criteria-days-field" style="display:none">
+        <label id="badge-criteria-days-label">Days</label>
+        <input type="number" id="badge-criteria-days" min="1" value="30"/>
+      </div>
+      <div class="error-text" id="badge-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="saveBadge()">Create Badge</button>
+      <button class="btn btn-ghost" onclick="closeModal('badge-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE BADGE MEMBERS MODAL (manual grant/revoke) -->
+<div class="overlay" id="badge-members-modal">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-header"><h2 id="badge-members-title">Manage Badge</h2><p>Grant or revoke this badge for individual members.</p></div>
+    <div class="modal-body" style="padding-bottom:10px">
+      <div id="badge-members-list"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('badge-members-modal')">Close</button></div>
   </div>
 </div>
 
@@ -4017,6 +4064,11 @@ const SCB_ERROR_CODES = {
   'SCB-GRP-30': {area:'Groups, channels, roles & polls', meaning:'Sending a channel invite threw'},
   'SCB-GRP-31': {area:'Groups, channels, roles & polls', meaning:'Share to group failed: owning group of this voice channel not found'},
   'SCB-GRP-32': {area:'Groups, channels, roles & polls', meaning:'Posting to the group threw'},
+  'SCB-GRP-50': {area:'Groups, channels, roles & polls', meaning:'Badge creation/edit blocked: not a server admin'},
+  'SCB-GRP-51': {area:'Groups, channels, roles & polls', meaning:'Create badge: badge name left empty'},
+  'SCB-GRP-52': {area:'Groups, channels, roles & polls', meaning:'Create badge: automatic criteria given an invalid day count'},
+  'SCB-GRP-53': {area:'Groups, channels, roles & polls', meaning:'Badge deletion blocked: not a server admin'},
+  'SCB-GRP-54': {area:'Groups, channels, roles & polls', meaning:'Badge grant/revoke blocked: not a server admin'},
   'SCB-LINK-01': {area:'Account linking (Google / Syntax)', meaning:'Google sign-in: the credential response could not be decoded'},
   'SCB-LINK-02': {area:'Account linking (Google / Syntax)', meaning:'Google sign-in: credential response unreadable (inline login error)'},
   'SCB-LINK-03': {area:'Account linking (Google / Syntax)', meaning:'Google sign-in: the matched account is suspended'},
@@ -5485,6 +5537,12 @@ async function addMemberToGroupKey(c,newMemberNum){
   payload.by=me.number;
   c.wrappedKeys=c.wrappedKeys||{};
   c.wrappedKeys[newMemberNum]=payload;
+  // Stamp when this member actually joined — the single chokepoint every
+  // member-add path (submitAddGroupMembers, approveJoinRequest) already
+  // goes through, so "member for N days" badge criteria has real data to
+  // check against instead of needing its own tracking added per call site.
+  c.memberJoinedAt=c.memberJoinedAt||{};
+  if(!c.memberJoinedAt[newMemberNum]) c.memberJoinedAt[newMemberNum]=Date.now();
   return true;
 }
 
@@ -6196,6 +6254,13 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
   payload.linkedSyntaxAccount     = (me.linkedSyntaxAccount!==undefined&&me.linkedSyntaxAccount!==null) ? me.linkedSyntaxAccount : ((u&&u.linkedSyntaxAccount)||null);
   payload.linkedSyntaxAccountName = me.linkedSyntaxAccountName || (u&&u.linkedSyntaxAccountName) || '';
   payload.bizProfile    = me.bizProfile || (u&&u.bizProfile) || null;
+  // Which server badge (if any) this account displays everywhere its name
+  // appears — see equippedBadgeHtml(). Self-controlled, same "server wins
+  // only when this device hasn't set one at all" rule doesn't apply here:
+  // selecting/clearing a badge is an explicit action (selectMyBadge/
+  // clearMyBadge), so me.selectedBadge is always this device's latest intent,
+  // including explicitly clearing it back to null.
+  payload.selectedBadge = (me.selectedBadge!==undefined) ? me.selectedBadge : ((u&&u.selectedBadge)||null);
   if(!u){u=payload;users.push(u);}else{Object.assign(u,payload);}
   // If this device id was force-logged-out from another device/admin action,
   // clear that tombstone on a fresh explicit login (re-authenticating is what
@@ -6296,6 +6361,12 @@ function _normalizeConvo(c){
     if(!c.coadmins) c.coadmins=[];
     if(!c.roles) c.roles=[];
     if(!c.memberRoles) c.memberRoles={};
+    // Badges (Discord-style, server-owner-defined) — same sparse-array/object
+    // quirk as roles/channels above.
+    if(c.badges && !Array.isArray(c.badges)) c.badges=Object.values(c.badges).filter(Boolean);
+    if(!Array.isArray(c.badges)) c.badges=[];
+    if(!c.memberBadges) c.memberBadges={};
+    if(!c.memberJoinedAt) c.memberJoinedAt={};
   }
 }
 async function getConvos(){
@@ -7819,7 +7890,7 @@ async function finishLogin(user, pwdToStore){
     // Without this, hasPermission()/hasAnyAdminAccess() have nothing to read
     // until the first registerOrUpdate() poll completes after launch, so a
     // delegated admin's admin button/tabs would flash hidden then appear.
-    adminAccess: user.adminAccess||null };
+    adminAccess: user.adminAccess||null, selectedBadge: user.selectedBadge||null };
   saveStorage();
   // Save account to multi-account list
   try{ _saveAccountToAccounts(me); }catch(e){}
@@ -9131,7 +9202,7 @@ async function submitSetup(){
 // -- PROFILE -------------------------------------------------------------------
 function renderMyCard(){
   if(!me)return;
-  document.getElementById('my-name').textContent=me.name;
+  document.getElementById('my-name').innerHTML=esc(me.name)+equippedBadgeHtml(me.number);
   const av=document.getElementById('my-avatar');
   renderAvatar(av,{name:me.name,avatar:me.avatar||''});
   const statusEl=document.getElementById('my-status-text');
@@ -9219,7 +9290,7 @@ function renderSidebar(){
     const _isCloudyContact=c.avatar==='__cloudy__';
     const avDiv=c.type==='group'?`<div class="group-avatar" style="background:${c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'linear-gradient(135deg,#ca5010,#6264a0)'};color:#fff;font-size:16px;">${_safeGrpAv}</div>`:_isCloudyContact?`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:20px;background:linear-gradient(135deg,#60a5fa,#a78bfa);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:50%;">☁️</div><div class="online-ring" style="background:var(--success)"></div></div>`:`<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?'background:none;':''}">${typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')?`<img src="${c.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(c.name||'?').charAt(0).toUpperCase()}</div><div class="${online?'online-ring':'offline-ring'}"></div></div>`;
     const _cDispName=dec(c.name)||c.name||'?';
-    div.innerHTML=`${avDiv}<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">${esc(_cDispName)}${c.type!=='group'?verifiedBadge(c.number):''}${inCall?' <span title="In a call now" style="color:var(--success)">\u260E</span>':''}</span><span class="sb-item-time">${timeStr}</span></div><div class="sb-item-preview">${esc(preview)}</div></div>`;
+    div.innerHTML=`${avDiv}<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">${esc(_cDispName)}${c.type!=='group'?verifiedBadge(c.number)+equippedBadgeHtml(c.number):''}${inCall?' <span title="In a call now" style="color:var(--success)">\u260E</span>':''}</span><span class="sb-item-time">${timeStr}</span></div><div class="sb-item-preview">${esc(preview)}</div></div>`;
     list.appendChild(div);
   });
 }
@@ -9344,7 +9415,7 @@ async function _origOpenChat(c){
   // Header
   const _bizUser = c.type!=='group'&&c.number ? lookupUser(c.number) : null;
   const _bizActive = _bizUser && _bizUser.bizProfile && _bizUser.bizProfile.enabled;
-  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser('+c.number+'))">BIZ</span>' : '');
+  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number)+equippedBadgeHtml(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser('+c.number+'))">BIZ</span>' : '');
   // DMs: a 1-on-1 chat has no per-message sender name/avatar to click (that's
   // only shown in groups), so the header — already styled "Click for info"
   // but with nothing actually wired to it — is the one place to reach the
@@ -9697,7 +9768,7 @@ async function submitNewGroup(){
   if(!convosCache) await getConvos();
   let c=convosCache.find(x=>x&&x.key===key);
   if(!c){
-    c={key,type:'group',name,info,avatar:tempGroupAvatar||'',participants:allMembers,members:allMembers,admins:[me.number],coadmins:[],roles:[],memberRoles:{},messages:[],isServer,
+    c={key,type:'group',name,info,avatar:tempGroupAvatar||'',participants:allMembers,members:allMembers,admins:[me.number],coadmins:[],roles:[],memberRoles:{},badges:[],memberBadges:{},memberJoinedAt:Object.fromEntries(allMembers.map(n=>[n,Date.now()])),messages:[],isServer,
       channels:isServer
         ?[{id:'general',name:'general',type:'text',order:0},{id:'announcements',name:'announcements',type:'text',order:1},{id:'voice',name:'Voice Chat',type:'voice',order:2}]
         :[{id:'general',name:'general',type:'text',order:0},{id:'voice',name:'Voice Chat',type:'voice',order:1}]};
@@ -12503,7 +12574,7 @@ function renderOnlineWidget(body){
   const withStatus=dms.map(c=>({c,online:isOnline((lookupUser(c.number)||{}).lastSeen)}));
   withStatus.sort((a,b)=>(b.online-a.online));
   if(!withStatus.length){ body.innerHTML='<div class="dash-widget-empty">No contacts yet.</div>'; return; }
-  body.innerHTML=withStatus.slice(0,8).map(x=>'<div class="dash-list-item" onclick="dashOpenChat(\''+x.c.key+'\')"><span class="dash-dot '+(x.online?'on':'off')+'"></span>'+esc(x.c.name)+verifiedBadge(x.c.number)+'</div>').join('');
+  body.innerHTML=withStatus.slice(0,8).map(x=>'<div class="dash-list-item" onclick="dashOpenChat(\''+x.c.key+'\')"><span class="dash-dot '+(x.online?'on':'off')+'"></span>'+esc(x.c.name)+verifiedBadge(x.c.number)+equippedBadgeHtml(x.c.number)+'</div>').join('');
 }
 async function renderVoiceWidget(body){
   const groups=contacts.filter(c=>c.type==='group');
@@ -13811,6 +13882,11 @@ function openGroupPanel() {
   document.getElementById('gp-edit-btn').style.display = isAdmin ? 'inline-flex' : 'none';
   document.getElementById('gp-name-edit').style.display = 'none';
   document.getElementById('gp-roles-section').style.display = isAdmin ? 'block' : 'none';
+  // Badges: render what we already know synchronously, then kick off the
+  // (async) auto-criteria check for the signed-in member \u2014 it re-renders
+  // this same section again if it actually grants anything new.
+  renderBadgesSection(conv);
+  if(isServer) _checkAutoBadges(conv);
   // Server-only: invite code (visible to every member \u2014 any member can share
   // it, same as Discord) and pending join requests (admins only, since
   // approving is what actually wraps the E2E key for the new member).
@@ -14296,6 +14372,219 @@ async function deleteRole(roleId) {
   openGroupPanel();
 }
 
+// ── BADGES (Discord-style, server-owner-defined) ────────────────────────────
+// Scoped per SERVER (a group with isServer:true), not per plain group —
+// mirrors roles' data shape:
+//   conv.badges         : [{id,name,icon,desc,criteria}]
+//   conv.memberBadges   : {num: [badgeId,...]}    — who has actually earned what
+//   conv.memberJoinedAt : {num: timestamp}         — stamped in addMemberToGroupKey()
+// criteria is null (manual — an admin grants/revokes it by hand) or
+// {type:'account_age_days',days:N} / {type:'member_for_days',days:N},
+// evaluated client-side for the signed-in member only (see _checkAutoBadges) —
+// so an auto-criteria badge is picked up the next time ITS OWNER has the
+// server's panel open, not instantly for every qualifying member at once.
+// A member can hold badges from several servers; which ONE they display
+// everywhere their name appears is their own choice (me.selectedBadge),
+// synced like any other profile field so everyone else can resolve it via
+// lookupUser() — see equippedBadgeHtml().
+function isServerBadgeOwner(conv){
+  return !!(conv && conv.admins && me && conv.admins.includes(me.number));
+}
+function updateBadgeCriteriaFieldVisibility(){
+  const type=document.getElementById('badge-criteria-select').value;
+  const manual=(type==='manual');
+  document.getElementById('badge-criteria-days-field').style.display=manual?'none':'block';
+  if(!manual) document.getElementById('badge-criteria-days-label').textContent = (type==='account_age_days') ? 'Account age (days)' : 'Member for (days)';
+}
+function openCreateBadge(){
+  const conv=getActiveConvoObj();
+  if(!isServerBadgeOwner(conv)){ showToast('Admins only',scbErr('SCB-GRP-50','Only server admins can create badges.')); return; }
+  document.getElementById('badge-name-input').value='';
+  document.getElementById('badge-icon-input').value='';
+  document.getElementById('badge-desc-input').value='';
+  document.getElementById('badge-criteria-select').value='manual';
+  document.getElementById('badge-criteria-days').value=30;
+  updateBadgeCriteriaFieldVisibility();
+  document.getElementById('badge-error').textContent='';
+  openModal('badge-modal');
+}
+async function saveBadge(){
+  const conv=getActiveConvoObj();
+  if(!isServerBadgeOwner(conv)){ showToast('Admins only',scbErr('SCB-GRP-50','Only server admins can create badges.')); return; }
+  const err=document.getElementById('badge-error'); err.textContent='';
+  const name=document.getElementById('badge-name-input').value.trim();
+  const icon=document.getElementById('badge-icon-input').value.trim()||'🏅';
+  const desc=document.getElementById('badge-desc-input').value.trim();
+  const critType=document.getElementById('badge-criteria-select').value;
+  if(!name){ err.textContent=scbErr('SCB-GRP-51','Enter a badge name.'); return; }
+  let criteria=null;
+  if(critType==='account_age_days'||critType==='member_for_days'){
+    const days=parseInt(document.getElementById('badge-criteria-days').value);
+    if(!days||days<1){ err.textContent=scbErr('SCB-GRP-52','Enter a number of days greater than 0.'); return; }
+    criteria={type:critType,days};
+  }
+  if(!convosCache) return;
+  const liveConv=convosCache.find(x=>x&&x.key===conv.key);
+  if(!liveConv) return;
+  if(!liveConv.badges) liveConv.badges=[];
+  liveConv.badges.push({id:Date.now().toString(36),name,icon,desc,criteria});
+  await saveConvos();
+  closeModal('badge-modal');
+  showToast('Badge created',icon+' '+name);
+  openGroupPanel();
+}
+async function deleteBadge(badgeId){
+  const conv=getActiveConvoObj();
+  if(!isServerBadgeOwner(conv)){ showToast('Admins only',scbErr('SCB-GRP-53','Only server admins can delete badges.')); return; }
+  if(!confirm('Delete this badge? Anyone currently displaying it will stop seeing it.')) return;
+  if(!convosCache) return;
+  const liveConv=convosCache.find(x=>x&&x.key===conv.key);
+  if(!liveConv) return;
+  liveConv.badges=(liveConv.badges||[]).filter(b=>b.id!==badgeId);
+  // Best-effort cleanup — equippedBadgeHtml() re-validates every render
+  // anyway (badge must still exist AND still be held), so a deleted badge
+  // disappears everywhere on its own even without this, but there's no
+  // reason to leave dangling ids sitting in memberBadges forever.
+  if(liveConv.memberBadges){
+    Object.keys(liveConv.memberBadges).forEach(num=>{
+      liveConv.memberBadges[num]=(liveConv.memberBadges[num]||[]).filter(id=>id!==badgeId);
+    });
+  }
+  await saveConvos();
+  openGroupPanel();
+}
+function openManageBadge(badgeId){
+  const conv=getActiveConvoObj();
+  if(!isServerBadgeOwner(conv)){ showToast('Admins only',scbErr('SCB-GRP-54','Only server admins can grant badges.')); return; }
+  const liveConv=(convosCache&&convosCache.find(x=>x&&x.key===conv.key))||conv;
+  const badge=(liveConv.badges||[]).find(b=>b.id===badgeId);
+  if(!badge) return;
+  document.getElementById('badge-members-title').textContent='Manage: '+badge.icon+' '+badge.name;
+  const members=liveConv.participants||liveConv.members||[];
+  document.getElementById('badge-members-list').innerHTML = members.length ? members.map(num=>{
+    const u=lookupUser(num)||{};
+    const name=dec(u.name||'')||'#'+num;
+    const has=((liveConv.memberBadges||{})[num]||[]).includes(badgeId);
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px">'
+      +'<div style="flex:1;font-size:13px">'+esc(name)+'<span style="color:var(--muted);font-size:11px"> #'+num+'</span></div>'
+      +'<button class="btn btn-sm'+(has?' btn-ghost':'')+'" onclick="toggleBadgeForMember(\''+badgeId+'\','+num+')">'+(has?'✓ Granted':'Grant')+'</button>'
+      +'</div>';
+  }).join('') : '<div style="font-size:12px;color:var(--muted)">No members.</div>';
+  openModal('badge-members-modal');
+}
+async function toggleBadgeForMember(badgeId,num){
+  const conv=getActiveConvoObj();
+  if(!isServerBadgeOwner(conv)){ showToast('Admins only',scbErr('SCB-GRP-54','Only server admins can grant badges.')); return; }
+  if(!convosCache) return;
+  const liveConv=convosCache.find(x=>x&&x.key===conv.key);
+  if(!liveConv) return;
+  if(!liveConv.memberBadges) liveConv.memberBadges={};
+  const held=liveConv.memberBadges[num]||[];
+  liveConv.memberBadges[num]=held.includes(badgeId) ? held.filter(id=>id!==badgeId) : [...held,badgeId];
+  await saveConvos();
+  openManageBadge(badgeId); // re-render the same modal so the admin can toggle several members in a row
+  renderBadgesSection(liveConv);
+}
+// Runs for the signed-in member only, when their server panel is opened —
+// lazy, same "check when viewed" pattern as the rest of this app (security
+// score, diagnostics), not a background job watching every member.
+async function _checkAutoBadges(conv){
+  if(!conv||!me||!Array.isArray(conv.badges)||!conv.badges.length) return;
+  const mine=new Set((conv.memberBadges||{})[me.number]||[]);
+  const joinedAt=(conv.memberJoinedAt||{})[me.number]||null;
+  const accountCreatedAt=me.createdAt||null;
+  const earned=[];
+  for(const b of conv.badges){
+    if(!b.criteria||mine.has(b.id)) continue;
+    let qualifies=false;
+    if(b.criteria.type==='account_age_days'&&accountCreatedAt) qualifies=(Date.now()-accountCreatedAt)>=b.criteria.days*86400000;
+    else if(b.criteria.type==='member_for_days'&&joinedAt) qualifies=(Date.now()-joinedAt)>=b.criteria.days*86400000;
+    if(qualifies) earned.push(b);
+  }
+  if(!earned.length) return;
+  if(!convosCache) return;
+  const liveConv=convosCache.find(x=>x&&x.key===conv.key);
+  if(!liveConv) return;
+  if(!liveConv.memberBadges) liveConv.memberBadges={};
+  if(!liveConv.memberBadges[me.number]) liveConv.memberBadges[me.number]=[];
+  earned.forEach(b=>liveConv.memberBadges[me.number].push(b.id));
+  try{ await saveConvos(); }catch(e){ return; }
+  earned.forEach(b=>showToast('🏅 Badge earned!',b.icon+' '+b.name+' — '+(liveConv.name||'this server')));
+  renderBadgesSection(liveConv);
+}
+function renderBadgesSection(conv){
+  const section=document.getElementById('gp-badges-section');
+  if(!section||!conv) return;
+  const isServer=!!conv.isServer;
+  section.style.display=isServer?'block':'none';
+  if(!isServer) return;
+  const isAdmin=isServerBadgeOwner(conv);
+  const badges=conv.badges||[];
+  const mine=new Set((conv.memberBadges||{})[me.number]||[]);
+  document.getElementById('gp-badges-list').innerHTML = badges.length ? badges.map(b=>{
+    const holds=mine.has(b.id);
+    const equipped=!!(me.selectedBadge&&me.selectedBadge.serverKey===conv.key&&me.selectedBadge.badgeId===b.id);
+    const reqText = b.criteria
+      ? ('Automatic — '+(b.criteria.type==='account_age_days'?'account at least '+b.criteria.days+' day'+(b.criteria.days===1?'':'s')+' old':'member for at least '+b.criteria.days+' day'+(b.criteria.days===1?'':'s')))
+      : (b.desc || 'Awarded by a server admin');
+    return '<div style="padding:8px;background:var(--surface2);border-radius:6px;margin-bottom:6px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<span style="font-size:16px">'+esc(b.icon||'🏅')+'</span>'
+      +'<span style="font-size:13px;font-weight:500;flex:1">'+esc(b.name)+'</span>'
+      +(isAdmin?'<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px" onclick="openManageBadge(\''+b.id+'\')">Manage</button>':'')
+      +(isAdmin?'<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="deleteBadge(\''+b.id+'\')">×</button>':'')
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;padding-left:24px">'+esc(reqText)+'</div>'
+      +(holds
+        ? ('<div style="margin-top:4px;padding-left:24px">'+(equipped
+            ? ('<span style="font-size:11px;color:var(--success,#27ae60)">✓ Displaying on your profile</span> <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px" onclick="clearMyBadge()">Hide</button>')
+            : ('<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="selectMyBadge(\''+conv.key+'\',\''+b.id+'\')">Display this badge</button>'))+'</div>')
+        : '')
+      +'</div>';
+  }).join('') : '<div style="font-size:12px;color:var(--muted)">No badges yet.</div>';
+  const createBtn=document.getElementById('gp-badges-create-btn');
+  if(createBtn) createBtn.style.display=isAdmin?'inline-flex':'none';
+}
+async function selectMyBadge(serverKey,badgeId){
+  if(!me) return;
+  me.selectedBadge={serverKey,badgeId};
+  saveStorage();
+  try{ await registerOrUpdate(); }catch(e){}
+  showToast('Badge displayed','');
+  try{ renderSidebar(); }catch(e){}
+  try{ renderMyCard(); }catch(e){}
+  const conv=getActiveConvoObj();
+  if(conv&&convosCache){ const liveConv=convosCache.find(x=>x&&x.key===conv.key); if(liveConv) renderBadgesSection(liveConv); }
+}
+async function clearMyBadge(){
+  if(!me) return;
+  me.selectedBadge=null;
+  saveStorage();
+  try{ await registerOrUpdate(); }catch(e){}
+  showToast('Badge removed','');
+  try{ renderSidebar(); }catch(e){}
+  try{ renderMyCard(); }catch(e){}
+  const conv=getActiveConvoObj();
+  if(conv&&convosCache){ const liveConv=convosCache.find(x=>x&&x.key===conv.key); if(liveConv) renderBadgesSection(liveConv); }
+}
+// Mirrors verifiedBadge(num) exactly — splice this next to it wherever a
+// name renders. Re-validates against live data every call (the server
+// convo still exists, the badge is still defined, the member still
+// actually holds it) so a deleted badge or a revoked grant disappears
+// everywhere on its own, with nothing to clean up at the point of change.
+function equippedBadgeHtml(num){
+  const u=lookupUser(num);
+  const sel=u&&u.selectedBadge;
+  if(!sel||!sel.serverKey||!sel.badgeId||!convosCache) return '';
+  const conv=convosCache.find(c=>c&&c.key===sel.serverKey);
+  if(!conv) return '';
+  const badge=(conv.badges||[]).find(b=>b.id===sel.badgeId);
+  if(!badge) return '';
+  const held=((conv.memberBadges||{})[num]||[]).includes(badge.id);
+  if(!held) return '';
+  return ' <span class="equipped-badge" title="'+esc(badge.name)+' — '+esc(conv.name||'')+'">'+esc(badge.icon||'🏅')+'</span>';
+}
+
 
 // ── MESSAGE SEARCH ────────────────────────────────────────────────────────────
 let msgSearchActive = false;
@@ -14608,7 +14897,7 @@ function renderMessages(msgs) {
       const sn = document.createElement('div'); sn.className = 'msg-sender-name';
       sn.style.cssText = 'cursor:pointer;width:fit-content';
       sn.title = 'View profile';
-      const u = lookupUser(m.from) || {}; sn.innerHTML = esc(dec(u.name || '') || '#' + m.from) + verifiedBadge(m.from);
+      const u = lookupUser(m.from) || {}; sn.innerHTML = esc(dec(u.name || '') || '#' + m.from) + verifiedBadge(m.from) + equippedBadgeHtml(m.from);
       sn.onclick = (ev) => { ev.stopPropagation(); openUserProfile(m.from); };
       body.appendChild(sn);
     }
@@ -15004,7 +15293,7 @@ function openUserProfile(number) {
   const avEl = document.getElementById('user-profile-avatar');
   if (avEl) { avEl.innerHTML = ''; renderAvatar(avEl, { name: dec(u.name || ''), avatar: u.avatar || '' }, 84); }
   const name = dec(u.name || '') || ('#' + number);
-  document.getElementById('user-profile-name').innerHTML = esc(name) + verifiedBadge(number);
+  document.getElementById('user-profile-name').innerHTML = esc(name) + verifiedBadge(number) + equippedBadgeHtml(number);
   document.getElementById('user-profile-number').textContent = '#' + number;
   const statusEl = document.getElementById('user-profile-status');
   const online = isOnline(u.lastSeen);
@@ -15072,7 +15361,7 @@ function showUserHoverCard(number, anchorEl) {
   const avEl = document.getElementById('user-hover-card-avatar');
   avEl.innerHTML = ''; renderAvatar(avEl, { name: dec(u.name || ''), avatar: u.avatar || '' }, 52);
   const name = dec(u.name || '') || ('#' + number);
-  document.getElementById('user-hover-card-name').innerHTML = esc(name) + verifiedBadge(number);
+  document.getElementById('user-hover-card-name').innerHTML = esc(name) + verifiedBadge(number) + equippedBadgeHtml(number);
   const online = isOnline(u.lastSeen);
   document.getElementById('user-hover-card-status').innerHTML = online
     ? '<span style="color:#3ba55d">● Online</span>'
@@ -19320,7 +19609,7 @@ renderSidebar = function(){
       : '<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
     div.innerHTML = avDiv +
       '<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+
-      (c.type!=='group'?verifiedBadge(c.number):'')+
+      (c.type!=='group'?verifiedBadge(c.number)+equippedBadgeHtml(c.number):'')+
       (inCall?' <span title="In a call now" style="color:var(--success)">☎</span>':'')+
       '</span><span class="sb-item-time">'+esc(timeStr)+'</span></div>'+
       '<div class="sb-item-preview">'+esc(preview)+'</div></div>'+
