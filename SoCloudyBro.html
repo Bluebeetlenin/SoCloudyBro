@@ -5811,6 +5811,19 @@ async function loadPrefsFromFirebase(){
 }
 
 // -- FIREBASE (Realtime Database) ---------------------------------------------
+// A stalled Firebase connection (blocked by a firewall/ad-blocker/extension, a
+// DNS hiccup, etc.) leaves fbdb.ref(...).get() neither resolved nor rejected —
+// same failure mode as the ipapi.co fetch fixed above (_getApproxCountry).
+// getUsers() is the very first thing submitLogin()/submitSetup()/launch() all
+// await, so a stuck connection there froze sign-in on an infinite spinner
+// with no error ever shown. Race it against a timeout so that instead surfaces
+// as a real, user-visible error.
+function _withFirebaseTimeout(promise, label, ms=15000){
+  return new Promise((resolve,reject)=>{
+    const t=setTimeout(()=>reject(new Error((label||'Request')+' timed out — check your internet connection and try again.')), ms);
+    promise.then(v=>{clearTimeout(t);resolve(v);}, e=>{clearTimeout(t);reject(e);});
+  });
+}
 // Same interface as before (getBin/putBin), so every call site elsewhere in this
 // file works unchanged — only the storage backend underneath has changed.
 async function getBin(path){
@@ -5835,7 +5848,7 @@ async function putBin(path,data){
 
 // -- USERS ---------------------------------------------------------------------
 async function getUsers(){
-  const snap=await fbdb.ref(USERS_BIN).get();
+  const snap=await _withFirebaseTimeout(fbdb.ref(USERS_BIN).get(), 'Loading accounts');
   if(!snap.exists()) return (usersCache=[]);
   const val=snap.val();
   // Support both legacy monolithic format {users:[...]} and new per-number format {<number>:{...}}
