@@ -5171,6 +5171,16 @@ function healMeFields(m){
 
 // -- E2E ENCRYPTION (ECDH P-256 + AES-GCM via WebCrypto) --------------------
 const _decCache={};      // msgId -> {text, gif, poll}
+// decryptConvoMessages() below caches a FAILED attempt (textFailed:true)
+// permanently — it skips any msgId already in _decCache, success or failure,
+// so a message that failed to decrypt once stays stuck showing "keys don't
+// match" for the rest of the session even after this device gets the right
+// key (cloud-restore finishing, or a manual key import). Call this right
+// after the key actually changes so those messages get a fresh attempt
+// instead of needing a full page reload to ever re-check.
+function _retryFailedDecryptions(){
+  Object.keys(_decCache).forEach(id=>{ if(_decCache[id]&&_decCache[id].textFailed) delete _decCache[id]; });
+}
 const _dmAesCache={};    // otherNumber -> CryptoKey
 const _groupAesCache={}; // convoKey -> CryptoKey
 const _pubKeyCache={};   // number -> CryptoKey (their ECDH public key)
@@ -5282,6 +5292,7 @@ async function ensureE2EKeypair(){
       if(restored){
         stored=localStorage.getItem('cc_e2e_priv_'+me.number);
         storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+        _retryFailedDecryptions();
       }
     }
     if((!stored||!storedPub)&&googleSub){
@@ -5289,6 +5300,7 @@ async function ensureE2EKeypair(){
       if(restored){
         stored=localStorage.getItem('cc_e2e_priv_'+me.number);
         storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+        _retryFailedDecryptions();
       }
     }
     if(stored&&storedPub){
@@ -24205,6 +24217,7 @@ async function importE2EKey(){
     Object.keys(window._dmAesCache||{}).forEach(k=>delete window._dmAesCache[k]);
     Object.keys(window._groupAesCache||{}).forEach(k=>delete window._groupAesCache[k]);
     await ensureE2EKeypair();
+    _retryFailedDecryptions();
     showToast('Key imported!','Your messages will now decrypt correctly on this device. Reload to decrypt existing messages.');
     setTimeout(()=>{ if(confirm('Reload now to apply the new key?')) location.reload(); },1500);
   }catch(e){ showToast('Import failed','Invalid or corrupted key: '+(e.message||'')); }
