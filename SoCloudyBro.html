@@ -5303,6 +5303,33 @@ async function ensureE2EKeypair(){
         _retryFailedDecryptions();
       }
     }
+    // Even when this device already has SOME local key, it may be a stale or
+    // orphaned one — e.g. generated before cloud-restore worked at all (see
+    // the Sept 25 fix to _restoreE2EKeyFromCloud), or from a device that was
+    // never able to restore in the first place. A wrong local key doesn't
+    // just break this device: the next registerOrUpdate() from here publishes
+    // its public key as the account's new canonical one, silently breaking
+    // decryption for everyone else too. So don't just trust whatever's
+    // already in localStorage — verify it still matches the account's
+    // current canonical pubkey in Firebase, and re-restore from the
+    // cloud-wrapped copy (kept in sync with the canonical key by
+    // _syncE2EKeyToCloudSlot) if it doesn't, instead of silently using a
+    // key nothing else on the account agrees with.
+    if(stored&&storedPub&&(_loginRawPwd||googleSub)){
+      try{
+        const pubSnap=await fbdb.ref(USERS_BIN+'/'+me.number+'/pubkey').once('value');
+        const canonicalPub=pubSnap.val();
+        if(canonicalPub&&canonicalPub!==storedPub){
+          let fixed=_loginRawPwd&&await _restoreE2EKeyFromCloud(_loginRawPwd,me.number);
+          if(!fixed&&googleSub) fixed=await _restoreE2EKeyFromCloudGoogle(googleSub,me.number);
+          if(fixed){
+            stored=localStorage.getItem('cc_e2e_priv_'+me.number);
+            storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+            _retryFailedDecryptions();
+          }
+        }
+      }catch(e){ console.warn('E2E canonical-key check failed (non-fatal):',e.message); }
+    }
     if(stored&&storedPub){
       const privJwk=JSON.parse(stored), pubJwk=JSON.parse(storedPub);
       const privateKey=await crypto.subtle.importKey('jwk',privJwk,{name:'ECDH',namedCurve:'P-256'},true,['deriveKey','deriveBits']);
