@@ -582,6 +582,10 @@ body.device-phone #sb-resize-handle,body.device-tablet #sb-resize-handle{display
 .admin-dash-tab{flex:0 1 auto;padding:6px 12px;border-radius:var(--r-xs);font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);border:1px solid var(--border);background:transparent;white-space:nowrap}
 .admin-dash-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .admin-dash-tab-sep{width:1px;align-self:stretch;min-height:18px;background:var(--border);margin:0 2px}
+.admin-dash-tab-group-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);width:100%;margin:6px 0 -2px;flex-basis:100%}
+.admin-dash-tab-group-label:first-child{margin-top:0}
+.admin-dash-tab-owner{border-style:dashed}
+.admin-dash-tab-owner.active{background:var(--danger);border-color:var(--danger)}
 .sb-tab:hover:not(.active){background:var(--surface2)}
 #sb-list{flex:1;overflow-y:auto;padding:4px 8px}
 #sb-list::-webkit-scrollbar{width:4px}
@@ -2049,11 +2053,13 @@ body.device-tablet .msg-body{max-width:74%}
   <input type="search" id="sb-search-input" placeholder="🔍  Search…" oninput="onSearchInput(this.value)" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"/>
 </div>
 <div id="search-results" style="display:none;flex-direction:column;max-height:300px;overflow-y:auto;border-bottom:1px solid var(--border);padding:4px 8px"></div>
-    <div id="sb-tabs">
-      <button class="sb-tab active" id="sb-tab-chats" data-tab="chats" draggable="true" onclick="switchTab('chats',this)">Chats</button>
-      <button class="sb-tab" id="sb-tab-groups" data-tab="groups" draggable="true" onclick="switchTab('groups',this)">Groups</button>
-      <button class="sb-tab" id="sb-tab-servers" data-tab="servers" draggable="true" onclick="switchTab('servers',this)">Servers</button>
-      <button class="sb-tab" id="sb-tab-archived" data-tab="archived" draggable="true" onclick="switchTab('archived',this)">Archived</button>
+    <div class="sb-tabs-wrap">
+      <div id="sb-tabs">
+        <button class="sb-tab active" id="sb-tab-chats" data-tab="chats" draggable="true" onclick="switchTab('chats',this)">Chats</button>
+        <button class="sb-tab" id="sb-tab-groups" data-tab="groups" draggable="true" onclick="switchTab('groups',this)">Groups</button>
+        <button class="sb-tab" id="sb-tab-servers" data-tab="servers" draggable="true" onclick="switchTab('servers',this)">Servers</button>
+        <button class="sb-tab" id="sb-tab-archived" data-tab="archived" draggable="true" onclick="switchTab('archived',this)">Archived</button>
+      </div>
     </div>
     <div id="sb-list"></div>
     <div id="sb-bottom">
@@ -10854,7 +10860,8 @@ function leaveVoiceChannel(){
 // same voice session plumbing used for group voice channels. ------------------
 function callPath(dmKey){ return voicePath(dmKey,'call'); }
 const CALL_PRESENCE_MAX_MS=6*60*60*1000; // 6h — past this an "active" call record is treated as orphaned
-let _outgoingCallPairKey=null, _outgoingCallRef=null, _outgoingCallHandler=null, _outgoingCallContact=null;
+let _outgoingCallPairKey=null, _outgoingCallRef=null, _outgoingCallHandler=null, _outgoingCallContact=null, _outgoingCallTimeoutTimer=null;
+const OUTGOING_CALL_RING_TIMEOUT_MS=45000; // auto no-answer if nobody picks up — don't rely solely on Firebase's own (slower, variable) onDisconnect detection to end a ringing call
 let _incomingCallPairKey=null, _incomingCallFrom=null, _incomingCallFromName=null, _incomingCallRef=null, _incomingCallHandler=null;
 const _seenIncomingCalls={};
 async function startDirectCall(contact){
@@ -10904,9 +10911,23 @@ async function startDirectCall(contact){
       await _beginDmCallSession(dmKeyStr,contact.number,contact.name,pairKey);
     }
   });
+  // Firebase's onDisconnect() only clears the record once it notices the
+  // other side's connection is actually gone, which can take a while (or
+  // never happen if their tab is merely backgrounded, not closed). Without
+  // a client-side cap, a call nobody answers rings forever instead of
+  // resolving to "no answer" — the exact same unbounded-wait shape as the
+  // sign-in hang, just in a different feature.
+  _outgoingCallTimeoutTimer=setTimeout(()=>{
+    if(_outgoingCallPairKey!==pairKey) return; // a newer call superseded this one
+    showToast('No answer','');
+    cRef.remove(); // also resolves the callee's incoming-call watcher
+    cleanupOutgoingWatcher();
+    closeModal('outgoing-call-modal');
+  },OUTGOING_CALL_RING_TIMEOUT_MS);
 }
 function cleanupOutgoingWatcher(){
   if(_outgoingCallRef&&_outgoingCallHandler) _outgoingCallRef.off('value',_outgoingCallHandler);
+  if(_outgoingCallTimeoutTimer){ clearTimeout(_outgoingCallTimeoutTimer); _outgoingCallTimeoutTimer=null; }
   _outgoingCallPairKey=null; _outgoingCallRef=null; _outgoingCallHandler=null; _outgoingCallContact=null;
 }
 function cancelOutgoingCall(){
@@ -15052,7 +15073,7 @@ async function openChat(c) {
       haEl.textContent = '☁️';
     }
     // Hide call/group buttons (Cloudy has its own logic)
-    const callBtn = document.getElementById('call-btn'); if(callBtn) callBtn.style.display='flex';
+    const callBtn = document.getElementById('call-btn'); if(callBtn) callBtn.style.display='none';
     const pollBtn = document.getElementById('poll-compose-btn'); if(pollBtn) pollBtn.style.display='none';
     const chBar = document.getElementById('channel-bar'); if(chBar) chBar.style.display='none';
     const voiceBar = document.getElementById('voice-bar'); if(voiceBar) voiceBar.style.display='none';
@@ -16462,7 +16483,8 @@ async function openAdminDashboard(){
       (t==='feedback'&&hasPermission('feedback_view'))||
       (t==='code'&&hasPermission('code_update'))||
       (t==='errors'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()))||
-      (t==='diagnostics'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()));
+      (t==='diagnostics'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()))||
+      (t==='ownertools'&&me.number===ADMIN_NUMBER);
     btn.style.display=show?'':'none';
   });
   _updateErrBadge();
@@ -16475,7 +16497,14 @@ function switchAdminTab(tab){
   adminDashTab=tab;
   document.querySelectorAll('.admin-dash-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   const perm={overview:'overview',users:'users_view',groups:'groups_view',reports:'reports_view',spam:'users_view',sla:'reports_view',feedback:'feedback_view',code:'code_update'};
-  if(!hasPermission(perm[tab]||tab)&&me&&me.number!==ADMIN_NUMBER){
+  // errors/diagnostics have no delegable permission of their own — this must
+  // match openAdminDashboard()'s own check for whether to show these two tab
+  // buttons at all (hasAnyAdminAccess()). It didn't: perm[tab] was undefined
+  // for both, so this fell through to hasPermission('errors'/'diagnostics') —
+  // a permission string that can never be granted — meaning every delegated
+  // admin could SEE these tabs but got "access denied" on every click.
+  const hasTabAccess=(tab==='errors'||tab==='diagnostics')?hasAnyAdminAccess():hasPermission(perm[tab]||tab);
+  if(!hasTabAccess&&me&&me.number!==ADMIN_NUMBER){
     const body=document.getElementById('admin-dashboard-body');
     if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">You don\'t have permission to view this section.</div>';
     return;
@@ -16490,6 +16519,7 @@ function switchAdminTab(tab){
   else if(tab==='code') renderAdminCodeTab();
   else if(tab==='errors') renderAdminErrorsTab();
   else if(tab==='diagnostics') renderAdminDiagnosticsTab();
+  else if(tab==='ownertools') renderAdminOwnerToolsTab();
 }
 
 // ── NUCLEAR RESET ────────────────────────────────────────────────────────────
@@ -16678,8 +16708,11 @@ async function submitFeedback(){
 
 // ── ADMIN FEEDBACK TAB ────────────────────────────────────────────────────────
 async function renderAdminFeedbackTab(){
-  if(!hasPermission('feedback_view')&&me&&me.number!==ADMIN_NUMBER) return;
   const body=document.getElementById('admin-dashboard-body');
+  if(!hasPermission('feedback_view')&&me&&me.number!==ADMIN_NUMBER){
+    if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">You don\'t have permission to view this section.</div>';
+    return;
+  }
   body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading…</div>';
   try{
     const snap=await fbdb.ref(FEEDBACK_PATH).get();
@@ -17199,42 +17232,56 @@ async function renderAdminOverviewTab(){
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${hasPermission('digest_send')?'<button class="btn btn-sm" onclick="sendAdminWeeklyDigest(this)">📧 Send weekly digest now</button>':''}
         ${hasPermission('moderation_export')?'<button class="btn btn-ghost btn-sm" onclick="exportModerationLogCsv()">⬇ Export moderation log (CSV)</button>':''}
-        ${me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="openSelfDestructedLog()">💀 Self-destructed accounts</button>':''}
-        ${me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="exportEncryptedAuditLog()">🔒 Export encrypted audit log</button>':''}
       </div>
       ${hasPermission('digest_send')?`<div style="font-size:10px;color:var(--muted);margin-top:8px">Last digest sent: <span id="last-digest-sent-text">${localStorage.getItem('cc_last_digest_sent')?new Date(Number(localStorage.getItem('cc_last_digest_sent'))).toLocaleString():'never'}</span></div>`:''}
       `:''}
-      ${me.number!==ADMIN_NUMBER?'':`
-      <details style="margin-top:20px">
-        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--danger);padding:8px 0;user-select:none">⚠️ Danger Zone — destructive database tools (click to expand)</summary>
-      <div id="admin-rules-section" style="margin-top:16px;">
-        <h4 style="margin:0 0 8px;font-size:13px;font-weight:600">Firebase Rules Manager</h4>
-        <textarea id="admin-rules-input" placeholder="Paste Firebase Realtime Database rules JSON here..."
-          style="width:100%;height:160px;font-family:monospace;font-size:12px;background:#1a1a2e;color:#e0e0e0;border:1px solid #444;border-radius:6px;padding:8px;box-sizing:border-box;resize:vertical;"></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button onclick="adminLoadRules()" style="flex:1;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">Load Current Rules</button>
-          <button onclick="adminPushRules()" style="flex:1;padding:8px;background:#e74c3c;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;">Push Rules</button>
-        </div>
-        <div id="admin-heal-log" style="margin-top:8px;font-size:11px;color:#888;font-family:monospace;max-height:80px;overflow-y:auto;white-space:pre-wrap;"></div>
-      </div>
-      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #333;">
-        <h4 style="margin:0 0 8px;color:#e0e0e0;">Data Cleanup</h4>
-        <p style="margin:0 0 10px;font-size:12px;color:#888;">Remove corrupted/orphaned data left by old bugs: pending message flags, cross-account messages, double-encrypted profiles.</p>
-        <button onclick="adminCleanFirebase()" style="width:100%;padding:10px;background:#e67e22;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-size:14px;">🧹 Clean Firebase Data</button>
-        <button onclick="adminDiagnoseFirebase()" style="width:100%;margin-top:8px;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">🔍 Diagnose Only (no changes)</button>
-      </div>
-      <div style="margin-top:16px;padding:14px;border:2px solid var(--danger);border-radius:var(--r-sm);background:rgba(220,50,50,0.07)">
-        <h4 style="margin:0 0 6px;color:var(--danger);font-size:13px">☢️ Nuclear Reset — Danger Zone</h4>
-        <p style="margin:0 0 10px;font-size:12px;color:var(--muted)">Permanently wipes <b>everything</b> from Firebase: all users, messages, conversations, groups, feedback, reports. The app returns to a blank state. <b>This cannot be undone.</b></p>
-        <button class="btn btn-danger btn-sm" onclick="adminNuclearReset()">☢️ Wipe Everything &amp; Start Fresh</button>
-      </div>
-      </details>
-      `}
+      ${me.number===ADMIN_NUMBER?'<div style="margin-top:16px;font-size:11px;color:var(--muted)">Firebase rules, data cleanup, nuclear reset, and other owner-only tools moved to the <b>👑 Owner Tools</b> tab.</div>':''}
     `;
   }catch(e){
     selfHeal('SCB-ADMIN-19', e, { context: 'renderAdminOverviewTab' });
     body.innerHTML='<div style="padding:10px;color:var(--danger)">'+esc(scbErr('SCB-ADMIN-19','The admin stats couldn\'t be loaded.',(e&&e.message)||''))+'</div>';
   }
+}
+// Owner-exclusive tools, split out of what used to be an Overview-tab
+// "Danger Zone" <details> block plus two buttons buried in its export row.
+// Pulling these into their own tab (gated owner-only in openAdminDashboard()'s
+// visibility map, same as the tab button itself) makes the three-tier model
+// — plain user / delegated admin / owner — visible in the panel's structure
+// instead of only in which buttons happen to render inside a shared tab.
+function renderAdminOwnerToolsTab(){
+  const body=document.getElementById('admin-dashboard-body');
+  if(me.number!==ADMIN_NUMBER){ if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Owner only.</div>'; return; }
+  body.innerHTML=`
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Visible only to the account that owns this deployment (#${ADMIN_NUMBER}) — not delegated admins.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-ghost btn-sm" onclick="openSelfDestructedLog()">💀 Self-destructed accounts</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportEncryptedAuditLog()">🔒 Export encrypted audit log</button>
+    </div>
+    <details>
+      <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--danger);padding:8px 0;user-select:none">⚠️ Danger Zone — destructive database tools (click to expand)</summary>
+    <div id="admin-rules-section" style="margin-top:16px;">
+      <h4 style="margin:0 0 8px;font-size:13px;font-weight:600">Firebase Rules Manager</h4>
+      <textarea id="admin-rules-input" placeholder="Paste Firebase Realtime Database rules JSON here..."
+        style="width:100%;height:160px;font-family:monospace;font-size:12px;background:#1a1a2e;color:#e0e0e0;border:1px solid #444;border-radius:6px;padding:8px;box-sizing:border-box;resize:vertical;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button onclick="adminLoadRules()" style="flex:1;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">Load Current Rules</button>
+        <button onclick="adminPushRules()" style="flex:1;padding:8px;background:#e74c3c;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;">Push Rules</button>
+      </div>
+      <div id="admin-heal-log" style="margin-top:8px;font-size:11px;color:#888;font-family:monospace;max-height:80px;overflow-y:auto;white-space:pre-wrap;"></div>
+    </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #333;">
+      <h4 style="margin:0 0 8px;color:#e0e0e0;">Data Cleanup</h4>
+      <p style="margin:0 0 10px;font-size:12px;color:#888;">Remove corrupted/orphaned data left by old bugs: pending message flags, cross-account messages, double-encrypted profiles.</p>
+      <button onclick="adminCleanFirebase()" style="width:100%;padding:10px;background:#e67e22;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-size:14px;">🧹 Clean Firebase Data</button>
+      <button onclick="adminDiagnoseFirebase()" style="width:100%;margin-top:8px;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">🔍 Diagnose Only (no changes)</button>
+    </div>
+    <div style="margin-top:16px;padding:14px;border:2px solid var(--danger);border-radius:var(--r-sm);background:rgba(220,50,50,0.07)">
+      <h4 style="margin:0 0 6px;color:var(--danger);font-size:13px">☢️ Nuclear Reset — Danger Zone</h4>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--muted)">Permanently wipes <b>everything</b> from Firebase: all users, messages, conversations, groups, feedback, reports. The app returns to a blank state. <b>This cannot be undone.</b></p>
+      <button class="btn btn-danger btn-sm" onclick="adminNuclearReset()">☢️ Wipe Everything &amp; Start Fresh</button>
+    </div>
+    </details>
+  `;
 }
 async function renderAdminUsersTab(){
   if(!hasPermission('users_view')&&!hasPermission('users_ban')){ const body=document.getElementById('admin-dashboard-body'); if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Access denied.</div>'; return; }
@@ -19822,6 +19869,32 @@ function checkCallSubsystem(){
   if(!hasScreen) return {state:'yellow', msg:'Voice and video OK; screen sharing is not supported on this browser'};
   return {state:'green', msg:'Camera, microphone, screen share and peer connections all available'};
 }
+// Meetings had no self-test at all — unlike every other major subsystem here,
+// nothing would ever flag it if LIVEKIT_URL/LIVEKIT_TOKEN_ENDPOINT or the SDK
+// script stopped working. checkCallSubsystem() above only covers the browser's
+// own WebRTC capability (shared with 1:1 calls); this covers the LiveKit
+// transport specifically, with the mesh fallback always reported healthy since
+// that path needs nothing external.
+async function checkMeetingsLiveKit(){
+  if(!LIVEKIT_URL && !LIVEKIT_TOKEN_ENDPOINT){
+    return {state:'green', msg:'LiveKit not configured — meetings run on the built-in mesh fallback (up to '+MAX_MEETING_PARTICIPANTS+' people)'};
+  }
+  if(!LIVEKIT_URL || !LIVEKIT_TOKEN_ENDPOINT){
+    return {state:'yellow', msg:'LiveKit only partly configured (need both LIVEKIT_URL and LIVEKIT_TOKEN_ENDPOINT) — meetings fall back to the mesh'};
+  }
+  if(!getLiveKitSdk()) return {state:'yellow', msg:'The livekit-client script never loaded — meetings will silently fall back to the mesh'};
+  const t0=Date.now();
+  try{
+    const res=await fetch(LIVEKIT_TOKEN_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room:'scb-diagnostics-check',identity:'diagnostics',name:'Diagnostics'})});
+    const ms=Date.now()-t0;
+    if(!res.ok) return {state:'red', msg:'Token proxy responded with '+res.status+' — meetings will fall back to the mesh'};
+    let data={}; try{ data=await res.json(); }catch(e){}
+    if(data.status!=='ok'||!data.token) return {state:'red', msg:'Token proxy reachable but did not return a valid token — meetings will fall back to the mesh'};
+    return {state: ms<2500?'green':'yellow', msg:'LiveKit SDK loaded, token proxy reachable — '+ms+' ms'};
+  }catch(e){
+    return {state:'red', msg:'Token proxy unreachable: '+((e&&e.message)||'network error')+' — meetings will fall back to the mesh'};
+  }
+}
 async function checkWeatherSource(){
   const t0=Date.now();
   try{
@@ -19851,6 +19924,7 @@ const SYSTEM_STATUS_CHECKS = [
   {id:'messaging', label:'Messaging',        run:checkMessaging},
   {id:'firebase',  label:'Firebase',         run:checkFirebasePing},
   {id:'calls',     label:'Voice & Video Calls', run:checkCallSubsystem},
+  {id:'meetings',  label:'Meetings (LiveKit)', run:checkMeetingsLiveKit},
   {id:'weather',   label:'Weather widget',   run:checkWeatherSource},
   {id:'admin',     label:'Admin Panel',      run:checkAdminPanelStatus}
 ];
@@ -20265,13 +20339,26 @@ async function connectToLiveKitRoom(meetingId, localStream){
     renderMeetingGrid();
   });
   lkRoom.on(LK.RoomEvent.Disconnected, ()=>{
-    if(meetingState && meetingState.mode==='livekit'){
+    // Guard on identity, not just mode: leaveMeeting() fires this disconnect
+    // asynchronously, and a quick leave-then-rejoin can already have a
+    // brand-new livekit-mode meetingState (a different Room) live by the
+    // time the OLD room's event actually arrives — which would otherwise
+    // pass the mode check and tear down the session you just rejoined.
+    if(meetingState && meetingState.mode==='livekit' && meetingState.lkRoom===lkRoom){
       showToast('Meeting ended',scbErr('SCB-MEET-02','You were disconnected from the room.'));
       leaveMeeting();
     }
   });
 
   await lkRoom.connect(LIVEKIT_URL, token);
+  // The LiveKit project enforces its own server-side caps, but nothing here
+  // mirrored LIVEKIT_MAX_PARTICIPANTS client-side — effectiveMaxParticipants()
+  // advertises it to users with no actual enforcement behind it.
+  const _lkRoomSize=1+(lkRoom.remoteParticipants?lkRoom.remoteParticipants.size:(lkRoom.participants?lkRoom.participants.size:0));
+  if(_lkRoomSize>LIVEKIT_MAX_PARTICIPANTS){
+    try{ lkRoom.disconnect(); }catch(e){}
+    throw new Error('This meeting is full ('+LIVEKIT_MAX_PARTICIPANTS+' people). Ask someone to leave, or start another room.');
+  }
   // Publish the camera/mic tracks already captured by joinMeeting(), so the
   // local preview tile and the existing mic/camera toggles (which flip
   // track.enabled on this same stream) keep working unchanged.
@@ -20336,11 +20423,17 @@ async function connectToMeshRoom(meetingId, localStream){
   partsRef.child(myId).onDisconnect().remove();
   roomRef.child('signals/'+myId).onDisconnect().remove();
 
-  // I offer to everyone already here; anyone who joins after me offers to me.
-  // That gives exactly one offerer per pair with no extra coordination.
-  for(const otherId of existing){
-    await createMeetingOffer(otherId);
-  }
+  // Peer connections are created reactively (here, and in onJoin below) and
+  // left to WebRTC's own onnegotiationneeded to create the offer, with
+  // handleMeetingSignal()'s perfect-negotiation handling resolving which
+  // side "wins" if both happen to offer at once — the same pattern
+  // _startVoiceSession/ensureVoicePeer use for 1:1 calls and voice channels.
+  // The previous version offered only to a ONE-SHOT snapshot of "existing"
+  // participants and relied on "whoever joins later offers to me" for
+  // everyone else — if two people joined within the same round-trip, each
+  // one's snapshot missed the other, NEITHER side ever offered, and they
+  // stayed silently connected-per-Firebase but unable to see/hear each other.
+  existing.forEach(otherId=>ensureMeetingPeer(otherId));
 
   const sigRef = roomRef.child('signals/'+myId);
   const onSignal = sigRef.on('child_added', async (s)=>{
@@ -20361,7 +20454,7 @@ async function connectToMeshRoom(meetingId, localStream){
   meetingState.refs.push({ref:partsRef, event:'child_removed', cb:onLeave});
 
   const onJoin = partsRef.on('child_added', (s)=>{
-    if(s.key!==myId) renderMeetingGrid();
+    if(s.key!==myId){ ensureMeetingPeer(s.key); renderMeetingGrid(); }
   });
   meetingState.refs.push({ref:partsRef, event:'child_added', cb:onJoin});
 
@@ -20379,7 +20472,11 @@ function ensureMeetingPeer(otherId){
   if(!meetingState) return null;
   if(meetingState.peers[otherId]) return meetingState.peers[otherId];
   const pc=new RTCPeerConnection({iceServers:RTC_ICE_SERVERS});
-  const entry={pc, stream:new MediaStream(), senders:{}, pendingCandidates:[]};
+  // Deterministic tie-break (same idea as ensureVoicePeer's pc._polite) so
+  // a collision between two simultaneous offers always resolves the same
+  // way on both ends — a plain string compare is enough since myId/otherId
+  // are always strings here (number+random suffix).
+  const entry={pc, stream:new MediaStream(), senders:{}, pendingCandidates:[], polite:String(meetingState.myId)>String(otherId), makingOffer:false};
   meetingState.peers[otherId]=entry;
   (meetingState.localStream?meetingState.localStream.getTracks():[]).forEach(track=>{
     entry.senders[track.kind]=pc.addTrack(track, meetingState.localStream);
@@ -20394,14 +20491,16 @@ function ensureMeetingPeer(otherId){
   pc.onconnectionstatechange=()=>{
     if(pc.connectionState==='failed'||pc.connectionState==='closed'){ teardownMeetingPeer(otherId); renderMeetingGrid(); }
   };
+  pc.onnegotiationneeded=async()=>{
+    try{
+      entry.makingOffer=true;
+      const offer=await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sendMeetingSignal(otherId,{type:'offer', sdp:JSON.stringify(pc.localDescription)});
+    }catch(e){ console.warn('meeting offer failed', e); }
+    finally{ entry.makingOffer=false; }
+  };
   return entry;
-}
-async function createMeetingOffer(otherId){
-  const entry=ensureMeetingPeer(otherId);
-  if(!entry) return;
-  const offer=await entry.pc.createOffer({offerToReceiveAudio:true, offerToReceiveVideo:true});
-  await entry.pc.setLocalDescription(offer);
-  sendMeetingSignal(otherId,{type:'offer', sdp:JSON.stringify(entry.pc.localDescription)});
 }
 async function _flushMeetingIceQueue(entry){
   if(!entry || !entry.pendingCandidates || !entry.pendingCandidates.length) return;
@@ -20416,12 +20515,24 @@ async function handleMeetingSignal(sig){
   const from=sig.from;
   if(sig.type==='offer'){
     const entry=ensureMeetingPeer(from);
-    await entry.pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(sig.sdp)));
-    await _flushMeetingIceQueue(entry);
-    const answer=await entry.pc.createAnswer();
-    await entry.pc.setLocalDescription(answer);
-    sendMeetingSignal(from,{type:'answer', sdp:JSON.stringify(entry.pc.localDescription)});
-    renderMeetingGrid();
+    try{
+      const desc=new RTCSessionDescription(JSON.parse(sig.sdp));
+      // Perfect-negotiation collision handling, mirroring ensureVoicePeer's
+      // signal handler: without this, two peers created within the same
+      // round-trip (see connectToMeshRoom's comment above) could both end up
+      // offering at once, and the loser's setRemoteDescription on a
+      // non-stable signaling state would throw and silently kill that pair.
+      const collision=entry.makingOffer||entry.pc.signalingState!=='stable';
+      const ignoreOffer=!entry.polite&&collision;
+      if(ignoreOffer) return;
+      if(collision){ await Promise.all([entry.pc.setLocalDescription({type:'rollback'}),entry.pc.setRemoteDescription(desc)]); }
+      else{ await entry.pc.setRemoteDescription(desc); }
+      await _flushMeetingIceQueue(entry);
+      const answer=await entry.pc.createAnswer();
+      await entry.pc.setLocalDescription(answer);
+      sendMeetingSignal(from,{type:'answer', sdp:JSON.stringify(entry.pc.localDescription)});
+      renderMeetingGrid();
+    }catch(e){ console.warn('meeting offer handling failed', e); }
   }else if(sig.type==='answer'){
     const entry=meetingState.peers[from];
     if(entry){ await entry.pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(sig.sdp))); await _flushMeetingIceQueue(entry); }
@@ -20466,9 +20577,14 @@ async function joinMeeting(meetingId){
     updateMeetingControls();
     showToast('Meeting started','Share the code '+meetingId+' with up to '+(effectiveMaxParticipants()-1)+' other people.');
   }catch(e){
+    // However far setup got — a mesh join can have already created peer
+    // connections, written a presence record, and attached up to 3 Firebase
+    // listeners before failing later in the sequence (e.g. the final
+    // attachMeetingChatFeed() step) — tear all of it down the same way a
+    // normal leave does, instead of just nulling meetingState and leaking
+    // RTCPeerConnections / a ghost presence record / live listeners behind it.
+    leaveMeeting();
     stream.getTracks().forEach(t=>t.stop());
-    document.getElementById('scb-meeting-room').classList.remove('visible');
-    meetingState=null;
     showToast('Couldn\'t join', scbErr('SCB-MEET-06','You couldn\'t join that meeting — connecting to the meeting room failed.',(e.message||'error')));
   }
 }
@@ -20480,7 +20596,14 @@ function leaveMeeting(){
   if(st.mode==='livekit'){
     try{ if(st.lkRoom) st.lkRoom.disconnect(); }catch(e){ console.warn('[meetings] LiveKit disconnect failed', e); }
   }else{
-    Object.keys(st.peers).forEach(id=>{ try{ st.peers[id].pc.close(); }catch(e){} });
+    Object.keys(st.peers||{}).forEach(id=>{ try{ st.peers[id].pc.close(); }catch(e){} });
+    // Cancel the onDisconnect registrations themselves (not just remove the
+    // data) — otherwise every join/leave cycle in one tab leaves a stale
+    // registration sitting on Firebase's side until the connection actually
+    // drops, the same listener-accumulation hazard _voiceCountListeners/
+    // _dropVoiceCountListeners was written to avoid for voice channels.
+    try{ fbdb.ref(MEETINGS_ROOT+'/'+st.id+'/participants/'+st.myId).onDisconnect().cancel(); }catch(e){}
+    try{ fbdb.ref(MEETINGS_ROOT+'/'+st.id+'/signals/'+st.myId).onDisconnect().cancel(); }catch(e){}
     try{ fbdb.ref(MEETINGS_ROOT+'/'+st.id+'/participants/'+st.myId).remove(); }catch(e){}
     try{ fbdb.ref(MEETINGS_ROOT+'/'+st.id+'/signals/'+st.myId).remove(); }catch(e){}
   }
@@ -20532,19 +20655,21 @@ async function toggleMeetingScreenShare(){
   if(meetingState.mode==='livekit'){ return toggleLiveKitScreenShare(); }
   if(meetingState.screenStream){ stopMeetingScreenShare(); return; }
   if(!navigator.mediaDevices.getDisplayMedia){ showToast('Not supported',scbErr('SCB-MEET-07','Screen sharing isn\'t available in this browser.')); return; }
+  let screen;
   try{
-    const screen=await navigator.mediaDevices.getDisplayMedia({video:true});
-    meetingState.screenStream=screen;
-    const track=screen.getVideoTracks()[0];
-    // Swap the outgoing video track on every peer connection, so nobody has to
-    // renegotiate.
-    Object.keys(meetingState.peers).forEach(id=>{
-      const s=meetingState.peers[id].senders.video;
-      if(s) s.replaceTrack(track).catch(e=>console.warn('replaceTrack failed', e));
-    });
-    track.onended=stopMeetingScreenShare;
-    renderMeetingGrid(); updateMeetingControls();
-  }catch(e){ /* user cancelled the picker */ }
+    screen=await navigator.mediaDevices.getDisplayMedia({video:true});
+  }catch(e){ return; } // user cancelled the browser's share picker
+  if(!meetingState){ screen.getTracks().forEach(t=>t.stop()); return; } // left the meeting while the picker was open
+  meetingState.screenStream=screen;
+  const track=screen.getVideoTracks()[0];
+  // Swap the outgoing video track on every peer connection, so nobody has to
+  // renegotiate.
+  Object.keys(meetingState.peers).forEach(id=>{
+    const s=meetingState.peers[id].senders.video;
+    if(s) s.replaceTrack(track).catch(e=>console.warn('replaceTrack failed', e));
+  });
+  track.onended=stopMeetingScreenShare;
+  renderMeetingGrid(); updateMeetingControls();
 }
 // LiveKit publishes/unpublishes the screen track itself — no manual
 // getDisplayMedia or replaceTrack, and no renegotiation to manage.
@@ -20554,6 +20679,7 @@ async function toggleLiveKitScreenShare(){
   const turningOn = !meetingState.screenOn;
   try{
     await lp.setScreenShareEnabled(turningOn);
+    if(!meetingState) return; // left the meeting while this was pending
     meetingState.screenOn = turningOn;
     // Mirror the shared screen into the local tile when the SDK exposes the
     // publication; if it doesn't, the tile keeps showing the camera and only
@@ -20576,9 +20702,9 @@ async function toggleLiveKitScreenShare(){
   }catch(e){
     // Most commonly the user cancelled the browser's screen picker.
     console.warn('[meetings] screen share toggle failed', e);
-    meetingState.screenOn = !turningOn ? meetingState.screenOn : false;
+    if(meetingState) meetingState.screenOn = !turningOn ? meetingState.screenOn : false;
   }
-  renderMeetingGrid(); updateMeetingControls();
+  if(meetingState){ renderMeetingGrid(); updateMeetingControls(); }
 }
 function stopMeetingScreenShare(){
   if(!meetingState||!meetingState.screenStream) return;
@@ -23305,19 +23431,20 @@ init();
   <div class="modal" style="max-width:720px">
     <div class="modal-header"><h2>🛡️ Admin Dashboard</h2><p>Overview · Moderation · Feedback · Engineering</p></div>
     <div style="display:flex;gap:6px;padding:0 20px 10px;flex-wrap:wrap;align-items:center">
-      <button class="admin-dash-tab active" data-tab="overview" onclick="switchAdminTab('overview')">Overview</button>
-      <span class="admin-dash-tab-sep"></span>
+      <button class="admin-dash-tab active" data-tab="overview" onclick="switchAdminTab('overview')">📊 Overview</button>
+      <span class="admin-dash-tab-group-label">Moderation</span>
       <button class="admin-dash-tab" data-tab="users" onclick="switchAdminTab('users')">Users</button>
+      <button class="admin-dash-tab" data-tab="groups" onclick="switchAdminTab('groups')">Groups</button>
       <button class="admin-dash-tab" data-tab="reports" onclick="switchAdminTab('reports')">Reports</button>
       <button class="admin-dash-tab" data-tab="spam" onclick="switchAdminTab('spam')">🤖 Spam</button>
       <button class="admin-dash-tab" data-tab="sla" onclick="switchAdminTab('sla')">📊 SLA</button>
-      <button class="admin-dash-tab" data-tab="groups" onclick="switchAdminTab('groups')">Groups</button>
-      <span class="admin-dash-tab-sep"></span>
+      <span class="admin-dash-tab-group-label">Platform</span>
       <button class="admin-dash-tab" data-tab="feedback" onclick="switchAdminTab('feedback')">💬 Feedback</button>
-      <span class="admin-dash-tab-sep"></span>
       <button class="admin-dash-tab" data-tab="code" onclick="switchAdminTab('code')">🚀 Code</button>
+      <span class="admin-dash-tab-group-label">Diagnostics</span>
       <button class="admin-dash-tab" id="admin-err-tab" data-tab="errors" onclick="switchAdminTab('errors')">⚠️ Errors</button>
       <button class="admin-dash-tab" data-tab="diagnostics" onclick="switchAdminTab('diagnostics')">🔍 Diagnostics</button>
+      <button class="admin-dash-tab admin-dash-tab-owner" data-tab="ownertools" onclick="switchAdminTab('ownertools')" title="Owner-only">👑 Owner Tools</button>
     </div>
     <div class="modal-body" id="admin-dashboard-body" style="padding-bottom:14px;max-height:520px;overflow-y:auto"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('admin-dashboard-modal')">Close</button></div>
