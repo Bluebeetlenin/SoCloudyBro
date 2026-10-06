@@ -8883,6 +8883,7 @@ function calcAge(birthdateStr){
   const b = new Date(birthdateStr);
   if(isNaN(b)) return null;
   const now = new Date();
+  if(b > now) return null; // a birthdate in the future is invalid, not a negative age
   let age = now.getFullYear() - b.getFullYear();
   const m = now.getMonth() - b.getMonth();
   if(m < 0 || (m===0 && now.getDate() < b.getDate())) age--;
