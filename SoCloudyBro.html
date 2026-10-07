@@ -1038,6 +1038,12 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 
 /* ── INPUTS BUTTONS ── */
 input[type=text],input[type=number],input[type=password],input[type=email],input[type=date],input[type=time],textarea,select{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 12px;outline:none;transition:border-color 0.18s,box-shadow 0.18s;color-scheme:dark light}
+/* Show/hide toggle on every real password field (not the 4-digit PIN boxes,
+   which are a different, intentionally-masked-only UI pattern). */
+.pwd-field-wrap{position:relative}
+.pwd-field-wrap input[type=password],.pwd-field-wrap input[type=text]{padding-right:38px!important}
+.pwd-toggle-btn{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:30px;height:30px;background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--muted);border-radius:7px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.pwd-toggle-btn:hover{background:var(--surface2);color:var(--text)}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(107,93,232,0.10)}
 input::placeholder,textarea::placeholder{color:var(--muted2)}
 textarea{resize:vertical;min-height:60px}
@@ -3170,7 +3176,7 @@ body.device-tablet .msg-body{max-width:74%}
       <div class="field"><label>Email</label><input type="email" id="setup-email" placeholder="you@example.com"/></div>
       <div class="field"><label>Your number</label><input type="number" id="setup-number" placeholder="e.g. 4821" min="1000" max="99999" oninput="checkNumberAvailability(this.value)"/><div class="field-hint" id="setup-number-hint">1000–99999 · must be unique · this is your permanent handle</div></div>
       <div id="setup-number-suggestions" style="display:none;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
-      <div class="field"><label>Password</label><input type="password" id="setup-password" placeholder="Create a password"/></div>
+      <div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="setup-password" placeholder="Create a password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('setup-password',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="field"><label>Date of birth</label><input type="date" id="setup-birthdate" onchange="checkSetupAgeForParentField()"/><div class="field-hint">Used to verify you meet our minimum age requirement</div></div>
       <div class="field" id="setup-parent-email-field" style="display:none">
         <label>Parent/guardian email</label>
@@ -3201,7 +3207,7 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="modal-body" id="login-view" style="padding-bottom:14px; padding-top:14px;">
       <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Log in with your email and password. If you signed up before email was added, use the number option below.</p>
       <div class="field"><label id="login-identity-label">Email</label><input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()"/></div>
-      <div class="field"><label>Password</label><input type="password" id="login-password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')submitLogin()"/></div>
+      <div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="login-password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')submitLogin()"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('login-password',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="error-text" id="login-error"></div>
       <button class="btn btn-full" id="login-btn" onclick="submitLogin()">Log In ↗</button>
       <div style="text-align:center;margin-top:10px"><a href="#" id="login-forgot-password-link" onclick="openRecoverAccount();return false;" style="font-size:12px;color:var(--accent)">Forgot password?</a></div>
@@ -3351,7 +3357,7 @@ body.device-tablet .msg-body{max-width:74%}
       <div class="error-text" id="recover-answers-error"></div>
     </div>
     <div class="modal-body" style="padding-bottom:14px;display:none" id="recover-step-newpass">
-      <div class="field"><label>New password</label><input type="password" id="recover-newpass-input" placeholder="At least 8 characters"/></div>
+      <div class="field"><label>New password</label><div class="pwd-field-wrap"><input type="password" id="recover-newpass-input" placeholder="At least 8 characters"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('recover-newpass-input',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="error-text" id="recover-newpass-error"></div>
     </div>
     <div class="modal-footer">
@@ -3365,9 +3371,9 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="modal">
     <div class="modal-header"><h2>🔑 Change Password</h2></div>
     <div class="modal-body" style="padding-bottom:14px">
-      <div class="field"><label>Current password</label><input type="password" id="chpwd-current" placeholder="Current password" autocomplete="current-password"/></div>
-      <div class="field"><label>New password</label><input type="password" id="chpwd-new" placeholder="At least 8 characters" autocomplete="new-password"/></div>
-      <div class="field"><label>Confirm new password</label><input type="password" id="chpwd-confirm" placeholder="Repeat new password" autocomplete="new-password"/></div>
+      <div class="field"><label>Current password</label><div class="pwd-field-wrap"><input type="password" id="chpwd-current" placeholder="Current password" autocomplete="current-password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('chpwd-current',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
+      <div class="field"><label>New password</label><div class="pwd-field-wrap"><input type="password" id="chpwd-new" placeholder="At least 8 characters" autocomplete="new-password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('chpwd-new',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
+      <div class="field"><label>Confirm new password</label><div class="pwd-field-wrap"><input type="password" id="chpwd-confirm" placeholder="Repeat new password" autocomplete="new-password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('chpwd-confirm',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="error-text" id="chpwd-error"></div>
     </div>
     <div class="modal-footer">
@@ -6181,25 +6187,39 @@ function addLoginSession(u){
   const sessionKey=Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
   dev.sessions[sessionKey]={at:Date.now()};
 }
-// Clears all local session data EXCEPT the per-account E2E encryption key pairs
-// (cc_e2e_priv_<number> / cc_e2e_pub_<number>). Those are the only piece of local
-// storage that isn't safely re-derivable from the server: the private key never
-// leaves the device, and messages are encrypted using a shared secret derived
-// from it. A plain localStorage.clear() on logout permanently destroys that key
-// — meaning every previously sent/received encrypted message becomes silently
-// undecryptable (the message renders, since the object itself is intact, but its
-// content comes back empty) the moment the same person logs back into the same
-// account on the same device. Preserving these two keys across logout is what
-// keeps message history readable across sessions; everything else is safe to
-// wipe as before.
+// Clears the LOCAL-SESSION data tied to the account that's signing out —
+// deliberately an explicit list of what TO clear, not (as this used to be)
+// "wipe everything, then restore a small allowlist". That inverted version
+// wiped every device-level preference and one-time "seen it" flag on every
+// single logout — theme, language, sidebar layout, and notably
+// cc_tutorial_done, which is exactly why the welcome tutorial kept coming
+// back after being skipped: skipping it only ever survived until the next
+// logout. A new preference/flag added later now persists across logout by
+// default, the way someone would actually expect, instead of silently being
+// wiped unless a developer remembered to also add it to a restore list.
+//
+// cc_e2e_priv_<number>/cc_e2e_pub_<number> (E2E keys) are never in this list
+// for the same reason as before: the private key never leaves the device,
+// and wiping it would make every previously sent/received encrypted message
+// silently undecryptable the moment the same account signs back in here.
+// cc_device_id and cc_accounts (the saved-accounts switcher) aren't session
+// data at all — they identify the device/browser itself, not whoever's
+// currently signed into it.
+const LOGOUT_CLEAR_KEYS=[
+  'cc_me','cc_contacts','cc_locked','cc_archived','cc_muted','cc_removed',
+  'cc_pin','cc_privacy','cc_cloudy_memory','cc_cloudy_msgs','cc_call_log',
+  'cc_missed_calls','cc_outbox','cc_session_start','cc_switch_to',
+  'cc_after_login_switch','cc_nicknames','cc_contact_notes',
+  'cc_group_invite_times','cc_needs_attention','cc_birthday_posts',
+  'cc_welcome_post','cc_auto_logout_reason','cc_dnd','cc_quiet_hours',
+];
+const LOGOUT_CLEAR_PREFIXES=['cc_reset_ack_','cc_secq_prompted_'];
 function clearLocalSessionPreservingE2EKeys(){
-  const preserved={};
-  for(let i=0;i<localStorage.length;i++){
+  for(let i=localStorage.length-1;i>=0;i--){
     const k=localStorage.key(i);
-    if(k&&(k.startsWith('cc_e2e_priv_')||k.startsWith('cc_e2e_pub_'))) preserved[k]=localStorage.getItem(k);
+    if(!k) continue;
+    if(LOGOUT_CLEAR_KEYS.includes(k)||LOGOUT_CLEAR_PREFIXES.some(p=>k.startsWith(p))) localStorage.removeItem(k);
   }
-  localStorage.clear();
-  Object.keys(preserved).forEach(k=>localStorage.setItem(k,preserved[k]));
 }
 function forceLocalLogout(reason){
   try{ if(typeof leaveVoiceChannel==='function') leaveVoiceChannel(); }catch{}
@@ -8443,10 +8463,18 @@ async function performScheduledAccountDeletion(){
 // -- LOGOUT --------------------------------------------------------------------
 function logOut(){
   if(!confirm('Log out of SoCloudyBro?')) return;
+  try{ if(typeof leaveVoiceChannel==='function') leaveVoiceChannel(); }catch{}
+  try{ if(typeof leaveMeeting==='function') leaveMeeting(); }catch{}
+  try{ if(typeof stopConvoRealtime==='function') stopConvoRealtime(); }catch{}
+  // Removing this device's entry from the account's device list is best-effort
+  // housekeeping, not something signing out should ever wait on — on a slow
+  // or degraded connection this round-trip (getUsers() + saveUsers()) could
+  // take several seconds on its own, which was the actual reason "signing
+  // out" felt slow: the local sign-out below can't even start until this
+  // finishes. Fire it off and don't block on it; at worst a stale device
+  // entry lingers in the account's device list until the next successful
+  // logout or a manual revoke, which is harmless.
   (async()=>{
-    try{ if(typeof leaveVoiceChannel==='function') leaveVoiceChannel(); }catch{}
-    try{ if(typeof leaveMeeting==='function') leaveMeeting(); }catch{}
-    try{ if(typeof stopConvoRealtime==='function') stopConvoRealtime(); }catch{}
     try{
       const users = await getUsers();
       const u = users.find(x=>x.number===me.number);
@@ -8455,14 +8483,25 @@ function logOut(){
         await saveUsers(users);
       }
     }catch{}
-    // Clear local session data — PIN included so reload goes straight to login —
-    // but preserve the E2E key pairs so message history stays readable if this
-    // same account logs back in on this same device (see
-    // clearLocalSessionPreservingE2EKeys for why: a plain localStorage.clear()
-    // here would silently destroy previously sent/received message content).
-    clearLocalSessionPreservingE2EKeys();
-    location.reload();
   })();
+  // Clear local session data — PIN included so reload goes straight to login —
+  // but preserve the E2E key pairs so message history stays readable if this
+  // same account logs back in on this same device (see
+  // clearLocalSessionPreservingE2EKeys for why: a plain localStorage.clear()
+  // here would silently destroy previously sent/received message content).
+  clearLocalSessionPreservingE2EKeys();
+  location.reload();
+}
+// Show/hide toggle shared by every real password field in the app (sign up,
+// log in, change password, recovery, child-profile and parent/Syntax linking
+// passwords) — see .pwd-field-wrap/.pwd-toggle-btn for the markup pattern.
+function togglePwd(inputId,btn){
+  const input=document.getElementById(inputId);
+  if(!input) return;
+  const show=input.type==='password';
+  input.type=show?'text':'password';
+  btn.textContent=show?'🙈':'👁️';
+  btn.setAttribute('aria-label',show?'Hide password':'Show password');
 }
 function pinNav(el,idx,ctx){
   if(!/^\d$/.test(el.value)){el.value='';return;}
@@ -22222,7 +22261,7 @@ function injectFeatureModals(){
       '<h4 class="scb-subhead">Add a child profile</h4>'+
       '<div class="field"><label>Child\'s display name</label><input type="text" id="scb-child-name" maxlength="24" placeholder="e.g. Sam"/></div>'+
       '<div class="field"><label>Account number</label><input type="number" id="scb-child-number" min="1000" max="99999" placeholder="e.g. 4821"/></div>'+
-      '<div class="field"><label>Password</label><input type="password" id="scb-child-password" placeholder="At least 8 characters"/></div>'+
+      '<div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="scb-child-password" placeholder="At least 8 characters"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd(\'scb-child-password\',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>'+
       '<div class="field"><label>Date of birth</label><input type="date" id="scb-child-birthdate"/></div>'+
       '<div class="error-text" id="scb-child-error"></div>'+
       '<button class="btn btn-full" id="scb-child-create-btn">Create child profile</button>'+
@@ -22235,7 +22274,7 @@ function injectFeatureModals(){
     '<div class="modal-body" style="padding-bottom:14px">'+
       '<div id="scb-link-form">'+
         '<div class="field"><label>Parent\'s account number</label><input type="number" id="scb-link-parent-number" min="1000" max="99999"/></div>'+
-        '<div class="field"><label>Parent\'s account password</label><input type="password" id="scb-link-parent-password"/><div class="field-hint">Your parent enters this themselves — it proves it\'s really them and is never stored.</div></div>'+
+        '<div class="field"><label>Parent\'s account password</label><div class="pwd-field-wrap"><input type="password" id="scb-link-parent-password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd(\'scb-link-parent-password\',this)" tabindex="-1" aria-label="Show password">👁️</button></div><div class="field-hint">Your parent enters this themselves — it proves it\'s really them and is never stored.</div></div>'+
         '<div class="field"><label>Choose a parental PIN</label><input type="text" id="scb-link-pin" inputmode="numeric" maxlength="8" placeholder="4–8 digits"/><div class="field-hint">Separate from your password. You\'ll need it to unlink later.</div></div>'+
         '<div class="error-text" id="scb-link-error"></div>'+
         '<button class="btn btn-full" id="scb-link-submit">Link parent</button>'+
@@ -22257,7 +22296,7 @@ function injectFeatureModals(){
     '<div class="modal-body" style="padding-bottom:14px">'+
       '<div class="field"><label>Syntax Account number</label><input type="number" id="scb-syntax-number" placeholder="e.g. 4821" min="1000" max="99999"/>'+
         '<div class="field-hint">1000–99999. This is a separate number from your SoCloudyBro number — it may or may not be the same digits.</div></div>'+
-      '<div class="field"><label>Password</label><input type="password" id="scb-syntax-password" placeholder="Your Syntax Account password"/></div>'+
+      '<div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="scb-syntax-password" placeholder="Your Syntax Account password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd(\'scb-syntax-password\',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>'+
       '<div class="error-text" id="scb-syntax-link-error"></div>'+
       '<button class="btn btn-full" id="scb-syntax-link-submit">Connect ↗</button>'+
       '<div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">Your Syntax Account password is checked by the Syntax Account system and is never stored here. Linking lets your contacts see a “🎮 Playing…” badge while you\'re in one of those games, if they have that setting on.</div>'+
