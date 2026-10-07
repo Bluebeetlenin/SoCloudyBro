@@ -3793,6 +3793,7 @@ body.device-tablet .msg-body{max-width:74%}
           <option value="manual">Manual — an admin grants it</option>
           <option value="account_age_days">Automatic — account age</option>
           <option value="member_for_days">Automatic — time in this server</option>
+          <option value="message_count">Automatic — messages sent in this server</option>
         </select>
       </div>
       <div class="field" id="badge-criteria-days-field" style="display:none">
@@ -6540,6 +6541,7 @@ function _normalizeConvo(c){
     if(!Array.isArray(c.badges)) c.badges=[];
     if(!c.memberBadges) c.memberBadges={};
     if(!c.memberJoinedAt) c.memberJoinedAt={};
+    if(!c.memberMsgCount) c.memberMsgCount={};
   }
 }
 async function getConvos(){
@@ -14646,7 +14648,9 @@ function updateBadgeCriteriaFieldVisibility(){
   const type=document.getElementById('badge-criteria-select').value;
   const manual=(type==='manual');
   document.getElementById('badge-criteria-days-field').style.display=manual?'none':'block';
-  if(!manual) document.getElementById('badge-criteria-days-label').textContent = (type==='account_age_days') ? 'Account age (days)' : 'Member for (days)';
+  if(!manual) document.getElementById('badge-criteria-days-label').textContent =
+    (type==='account_age_days') ? 'Account age (days)' :
+    (type==='member_for_days') ? 'Member for (days)' : 'Messages sent';
 }
 function openCreateBadge(){
   const conv=getActiveConvoObj();
@@ -14674,6 +14678,10 @@ async function saveBadge(){
     const days=parseInt(document.getElementById('badge-criteria-days').value);
     if(!days||days<1){ err.textContent=scbErr('SCB-GRP-52','Enter a number of days greater than 0.'); return; }
     criteria={type:critType,days};
+  }else if(critType==='message_count'){
+    const count=parseInt(document.getElementById('badge-criteria-days').value);
+    if(!count||count<1){ err.textContent=scbErr('SCB-GRP-52','Enter a number of messages greater than 0.'); return; }
+    criteria={type:critType,count};
   }
   if(!convosCache) return;
   const liveConv=convosCache.find(x=>x&&x.key===conv.key);
@@ -14745,12 +14753,14 @@ async function _checkAutoBadges(conv){
   const mine=new Set((conv.memberBadges||{})[me.number]||[]);
   const joinedAt=(conv.memberJoinedAt||{})[me.number]||null;
   const accountCreatedAt=me.createdAt||null;
+  const msgCount=(conv.memberMsgCount||{})[me.number]||0;
   const earned=[];
   for(const b of conv.badges){
     if(!b.criteria||mine.has(b.id)) continue;
     let qualifies=false;
     if(b.criteria.type==='account_age_days'&&accountCreatedAt) qualifies=(Date.now()-accountCreatedAt)>=b.criteria.days*86400000;
     else if(b.criteria.type==='member_for_days'&&joinedAt) qualifies=(Date.now()-joinedAt)>=b.criteria.days*86400000;
+    else if(b.criteria.type==='message_count') qualifies=msgCount>=b.criteria.count;
     if(qualifies) earned.push(b);
   }
   if(!earned.length) return;
@@ -14777,7 +14787,11 @@ function renderBadgesSection(conv){
     const holds=mine.has(b.id);
     const equipped=!!(me.selectedBadge&&me.selectedBadge.serverKey===conv.key&&me.selectedBadge.badgeId===b.id);
     const reqText = b.criteria
-      ? ('Automatic — '+(b.criteria.type==='account_age_days'?'account at least '+b.criteria.days+' day'+(b.criteria.days===1?'':'s')+' old':'member for at least '+b.criteria.days+' day'+(b.criteria.days===1?'':'s')))
+      ? ('Automatic — '+(
+          b.criteria.type==='account_age_days' ? 'account at least '+b.criteria.days+' day'+(b.criteria.days===1?'':'s')+' old' :
+          b.criteria.type==='member_for_days' ? 'member for at least '+b.criteria.days+' day'+(b.criteria.days===1?'':'s') :
+          'send at least '+b.criteria.count+' message'+(b.criteria.count===1?'':'s')+' in this server'
+        ))
       : (b.desc || 'Awarded by a server admin');
     return '<div style="padding:8px;background:var(--surface2);border-radius:6px;margin-bottom:6px">'
       +'<div style="display:flex;align-items:center;gap:8px">'
@@ -15390,6 +15404,16 @@ async function sendMsg(gifUrl) {
       if (mentions.length) msg.mentions = mentions;
     }
     c.messages.push(msg); _convosDirty=true;
+    // Server-scoped message count, for the "message_count" badge criteria
+    // (see _checkAutoBadges) — only tracked for servers, since badges are
+    // server-only. A running per-member counter rather than counting
+    // c.messages itself: that array is capped at 100 and trimmed from the
+    // front a few lines below, so it could never reflect a lifetime total.
+    if(c.isServer){
+      if(!c.memberMsgCount) c.memberMsgCount={};
+      c.memberMsgCount[me.number]=(c.memberMsgCount[me.number]||0)+1;
+      if(Array.isArray(c.badges)&&c.badges.length) _checkAutoBadges(c);
+    }
     if (replyingTo) cancelReply();
     if (c.typingByChannel) {
       const chKey = activeConvo.type==='group' ? (activeChannelId||'general') : '_dm';
