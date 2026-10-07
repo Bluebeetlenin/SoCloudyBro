@@ -623,6 +623,29 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 #cloudy-btn.listening{background:var(--accent-grad);color:#fff;animation:cloudyPulse 1.6s ease-in-out infinite}
 @keyframes cloudyPulse{0%,100%{box-shadow:0 0 0 0 rgba(107,93,232,0.45)}50%{box-shadow:0 0 0 8px rgba(107,93,232,0)}}
 
+/* ── FACE RECOGNITION scanner chrome — shared by login, enrollment and the
+   per-chat face-unlock check (all three draw onto it via _drawFaceOverlay()
+   in JS); gives the plain video+canvas box a sci-fi "scanning" feel instead
+   of a bare black rectangle. ── */
+.face-scan-wrap{position:relative;width:100%;max-width:320px;margin:0 auto 14px;border-radius:20px;overflow:hidden;background:#000;aspect-ratio:4/3;box-shadow:0 0 0 1px rgba(107,93,232,0.35),0 0 30px -8px rgba(107,93,232,0.55),0 14px 30px -10px rgba(0,0,0,0.5);animation:faceScanGlow 2.6s ease-in-out infinite}
+.face-scan-wrap.compact{max-width:260px}
+@keyframes faceScanGlow{0%,100%{box-shadow:0 0 0 1px rgba(107,93,232,0.35),0 0 26px -8px rgba(107,93,232,0.5),0 14px 30px -10px rgba(0,0,0,0.5)}50%{box-shadow:0 0 0 1px rgba(107,93,232,0.6),0 0 44px -4px rgba(107,93,232,0.85),0 14px 30px -10px rgba(0,0,0,0.5)}}
+.face-scan-wrap video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
+.face-scan-wrap canvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)}
+.face-scan-label{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.6);font-family:var(--font-mono,monospace);pointer-events:none;z-index:2}
+.face-scan-label .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:5px;box-shadow:0 0 6px 1px rgba(34,197,94,0.8);animation:faceScanDotBlink 1.4s ease-in-out infinite}
+@keyframes faceScanDotBlink{0%,100%{opacity:1}50%{opacity:.35}}
+.face-scan-line{position:absolute;left:8%;right:8%;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(124,109,232,.9),#8b7cf0,rgba(124,109,232,.9),transparent);box-shadow:0 0 12px 2px rgba(124,109,232,.7);animation:faceScanSweep 2.3s cubic-bezier(.45,0,.55,1) infinite;pointer-events:none;z-index:2}
+@keyframes faceScanSweep{0%{top:12%;opacity:0}8%{opacity:1}50%{top:85%;opacity:1}58%{opacity:0}100%{top:12%;opacity:0}}
+.face-scan-wrap.face-ok .face-scan-line{animation-play-state:paused;opacity:0;transition:opacity .2s}
+.face-scan-wrap.face-ok .face-scan-label .dot{background:#22c55e;animation:none;opacity:1}
+.face-scan-success{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px;background:radial-gradient(circle,rgba(39,174,96,.4),rgba(39,174,96,0) 70%);opacity:0;pointer-events:none;z-index:3}
+.face-scan-success.show{animation:faceScanSuccess .9s ease-out}
+@keyframes faceScanSuccess{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.08)}60%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+.face-scan-status{text-align:center;font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;min-height:18px;transition:color .2s}
+.face-scan-status.active{color:var(--accent)}
+.face-scan-status.success{color:var(--success,#27ae60)}
+
 /* ── MAIN ── */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg2)}
 #main-empty{flex:1;display:flex;flex-direction:column;align-items:center;overflow-y:auto;color:var(--text);padding:24px 32px 40px;background-size:cover;background-position:center}
@@ -3211,10 +3234,14 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
     <div class="modal-body" id="login-face-view" style="display:none;padding-bottom:14px;padding-top:14px;">
       <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Look at your camera — you'll be verified automatically.</p>
-      <div style="position:relative;width:100%;max-width:320px;margin:0 auto 10px;border-radius:var(--r-sm);overflow:hidden;background:#000">
-        <video id="login-face-video" autoplay muted playsinline style="width:100%;display:block;transform:scaleX(-1)"></video>
-        <canvas id="login-face-canvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)"></canvas>
+      <div class="face-scan-wrap">
+        <video id="login-face-video" autoplay muted playsinline></video>
+        <canvas id="login-face-canvas"></canvas>
+        <div class="face-scan-label"><span><span class="dot"></span>LIVE SCAN</span><span>FACE ID</span></div>
+        <div class="face-scan-line"></div>
+        <div class="face-scan-success">✅</div>
       </div>
+      <div class="face-scan-status" id="login-face-status">Center your face in frame…</div>
       <div class="error-text" id="login-face-error" style="text-align:center"></div>
       <button class="btn btn-full" id="login-face-btn" onclick="submitFaceLogin()">Verify with Face ↗</button>
       <div style="text-align:center;margin-top:10px"><a href="#" onclick="useFaceViewPasskeyFallback();return false;" style="font-size:12px;color:var(--accent)">🔑 No camera? Use a passkey instead</a></div>
@@ -3240,12 +3267,15 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="modal">
     <div class="modal-header"><h2>📷 Set Up Face Recognition</h2><p>This captures a face descriptor (a set of measurements) — not a photo — stored on your account for login verification.</p></div>
     <div class="modal-body" style="padding-bottom:14px">
-      <div style="position:relative;width:100%;max-width:320px;margin:0 auto 10px;border-radius:var(--r-sm);overflow:hidden;background:#000">
-        <video id="face-enroll-video" autoplay muted playsinline style="width:100%;display:block;transform:scaleX(-1)"></video>
-        <canvas id="face-enroll-canvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)"></canvas>
+      <div class="face-scan-wrap">
+        <video id="face-enroll-video" autoplay muted playsinline></video>
+        <canvas id="face-enroll-canvas"></canvas>
+        <div class="face-scan-label"><span><span class="dot"></span>LIVE SCAN</span><span>ENROLLING</span></div>
+        <div class="face-scan-line"></div>
+        <div class="face-scan-success">✅</div>
       </div>
       <div class="error-text" id="face-enroll-error" style="text-align:center"></div>
-      <div id="face-enroll-status" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px">Loading…</div>
+      <div class="face-scan-status" id="face-enroll-status">Loading…</div>
       <button class="btn btn-full" id="face-enroll-btn" onclick="captureFaceEnrollment()">Capture My Face ↗</button>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="cancelFaceEnrollment()">Cancel</button></div>
@@ -3579,11 +3609,14 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
       </div>
       <div id="chat-lock-face-pane" style="display:none">
-        <div style="position:relative;width:100%;max-width:260px;margin:0 auto 10px;border-radius:var(--r-sm);overflow:hidden;background:#000">
-          <video id="chat-lock-face-video" autoplay muted playsinline style="width:100%;display:block;transform:scaleX(-1)"></video>
-          <canvas id="chat-lock-face-canvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)"></canvas>
+        <div class="face-scan-wrap compact">
+          <video id="chat-lock-face-video" autoplay muted playsinline></video>
+          <canvas id="chat-lock-face-canvas"></canvas>
+          <div class="face-scan-label"><span><span class="dot"></span>LIVE SCAN</span><span>UNLOCK</span></div>
+          <div class="face-scan-line"></div>
+          <div class="face-scan-success">✅</div>
         </div>
-        <div id="chat-lock-face-status" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+        <div class="face-scan-status" id="chat-lock-face-status"></div>
       </div>
       <div class="error-text" id="chat-lock-error" style="text-align:center"></div>
     </div>
@@ -7427,20 +7460,60 @@ function _avgDescriptors(descriptors){
   for(const d of descriptors) for(let i=0;i<len;i++) avg[i]+=d[i]/descriptors.length;
   return avg;
 }
+// HUD-style scanner reticle: a soft glow fill, a dashed ring that slowly
+// marches around while searching (lineDashOffset driven off the clock) and
+// snaps to a solid glowing green ring plus four corner brackets once a face
+// is actually locked on — replaces the original plain oval + bounding box.
+// Also toggles .face-ok on the shared .face-scan-wrap wrapper (see its CSS)
+// so the ambient scan-line animation pauses the moment a face is found,
+// instead of still sweeping across a face that's already locked on.
 function _drawFaceOverlay(canvas, video, detection){
   const W=canvas.offsetWidth||canvas.width, H=canvas.offsetHeight||canvas.height;
   canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,W,H);
-  // oval guide
-  ctx.beginPath(); ctx.ellipse(W/2,H/2,W*0.28,H*0.42,0,0,2*Math.PI);
-  ctx.strokeStyle=detection?'#22c55e':'rgba(255,255,255,0.3)'; ctx.lineWidth=2.5; ctx.stroke();
-  if(detection&&video.videoWidth){
-    const sx=W/video.videoWidth, sy=H/video.videoHeight;
-    const b=detection.box;
-    // video is mirrored (scaleX(-1)) so canvas is too — x is already flipped
-    ctx.strokeStyle='#22c55e'; ctx.lineWidth=2;
-    ctx.strokeRect(b.x*sx, b.y*sy, b.width*sx, b.height*sy);
-  }
+  const wrap=canvas.parentElement;
+  if(wrap) wrap.classList.toggle('face-ok',!!detection);
+  const cx=W/2, cy=H/2, rx=W*0.28, ry=H*0.4;
+  const locked=!!detection;
+  const accent=locked?'#22c55e':'#7B74F0';
+  // Soft radial glow behind the guide
+  const grad=ctx.createRadialGradient(cx,cy,Math.min(rx,ry)*0.3,cx,cy,Math.max(rx,ry)*1.15);
+  grad.addColorStop(0,locked?'rgba(34,197,94,0.16)':'rgba(123,116,240,0.12)');
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grad; ctx.beginPath(); ctx.ellipse(cx,cy,rx*1.3,ry*1.2,0,0,2*Math.PI); ctx.fill();
+  // Guide ring — dashed and slowly rotating while searching, solid once locked on
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,2*Math.PI);
+  ctx.strokeStyle=accent; ctx.lineWidth=locked?3:2;
+  if(!locked){ ctx.setLineDash([10,8]); ctx.lineDashOffset=-(Date.now()/40)%18; }
+  ctx.shadowColor=accent; ctx.shadowBlur=locked?16:8;
+  ctx.stroke();
+  ctx.restore();
+  // Viewfinder corner brackets around the guide's bounding box
+  const bx=cx-rx, by=cy-ry, bw=rx*2, bh=ry*2, cl=Math.min(bw,bh)*0.22;
+  ctx.strokeStyle=accent; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.shadowColor=accent; ctx.shadowBlur=locked?10:4;
+  [[bx,by,1,1],[bx+bw,by,-1,1],[bx,by+bh,1,-1],[bx+bw,by+bh,-1,-1]].forEach(([x,y,dx,dy])=>{
+    ctx.beginPath();
+    ctx.moveTo(x,y+cl*dy);
+    ctx.lineTo(x,y);
+    ctx.lineTo(x+cl*dx,y);
+    ctx.stroke();
+  });
+  ctx.shadowBlur=0;
+}
+// Briefly flashes the ✅ success overlay over a given video's .face-scan-wrap
+// (see its CSS) and resolves after the animation has had time to play, so a
+// caller can `await` it before tearing down the camera/closing the modal
+// instead of the flash never actually being visible.
+function _showFaceScanSuccess(videoId,holdMs){
+  return new Promise(resolve=>{
+    const video=document.getElementById(videoId);
+    const flash=video&&video.parentElement&&video.parentElement.querySelector('.face-scan-success');
+    if(!flash){ resolve(); return; }
+    flash.classList.remove('show'); void flash.offsetWidth; flash.classList.add('show');
+    setTimeout(resolve,holdMs||550);
+  });
 }
 function onToggleFaceMfaClick(){
   if(!me) return;
@@ -7457,14 +7530,14 @@ async function startFaceEnrollment(){
   const errEl=document.getElementById('face-enroll-error');
   errEl.textContent=''; _faceEnrollAutoActive=false;
   openModal('face-mfa-setup-modal');
-  statusEl.textContent='Loading face detection models…';
+  statusEl.textContent='⏳ Loading face detection models…';
   try{
     await loadFaceApiModels();
     _faceEnrollStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
     const video=document.getElementById('face-enroll-video');
     video.srcObject=_faceEnrollStream;
     await new Promise(r=>{ video.onloadedmetadata=r; });
-    statusEl.textContent='Center your face in the oval — capture starts automatically.';
+    statusEl.textContent='🔍 Center your face in the oval — capture starts automatically.';
     _startEnrollLoop();
   }catch(e){
     errEl.textContent=scbErr('SCB-SEC-03','The camera or face-recognition model couldn\'t start.',(e.message||'could not start.'));
@@ -7484,16 +7557,18 @@ function _startEnrollLoop(){
       if(canvas) _drawFaceOverlay(canvas,video,det);
       if(det){
         _enrollStableCount++;
-        if(_enrollStableCount<4){ statusEl.textContent='Face detected — hold still…'; }
+        statusEl.classList.add('active');
+        if(_enrollStableCount<4){ statusEl.textContent='🎯 Face locked — hold still…'; }
         else{
-          statusEl.textContent='Hold still — capturing…';
+          statusEl.textContent='✨ Capturing…';
           _faceEnrollAutoActive=true;
           _runEnrollCapture(video,statusEl);
           return;
         }
       } else {
         _enrollStableCount=0;
-        statusEl.textContent='Center your face in the oval — capture starts automatically.';
+        statusEl.classList.remove('active');
+        statusEl.textContent='🔍 Center your face in the oval — capture starts automatically.';
       }
     }catch(e){}
     _faceEnrollLoopTimer=setTimeout(tick,350);
@@ -7515,7 +7590,8 @@ async function _runEnrollCapture(video,statusEl){
   if(samples.length<3){
     btn.disabled=false; btn.textContent='Capture My Face ↗'; _faceEnrollAutoActive=false;
     errEl.textContent=scbErr('SCB-SEC-04','Too few clear frames — ensure good lighting and try again.');
-    statusEl.textContent='Center your face in the oval.';
+    statusEl.classList.remove('active');
+    statusEl.textContent='🔍 Center your face in the oval.';
     _faceEnrollLoopTimer=setTimeout(()=>_startEnrollLoop(),800);
     return;
   }
@@ -7531,6 +7607,9 @@ async function _saveEnrollDescriptor(avgDesc){
     if(u){ u.faceDescriptor=descArr; u.faceMfaEnabled=true; u.totpEnabled=false; u.totpSecret=''; }
     await saveUsers(users);
     me.faceDescriptor=descArr; me.faceMfaEnabled=true; me.totpEnabled=false; saveStorage();
+    const statusEl2=document.getElementById('face-enroll-status');
+    if(statusEl2){ statusEl2.textContent='Face captured!'; statusEl2.classList.add('success'); }
+    await _showFaceScanSuccess('face-enroll-video');
     if(_faceEnrollStream){ _faceEnrollStream.getTracks().forEach(t=>t.stop()); _faceEnrollStream=null; }
     if(_faceEnrollLoopTimer){ clearTimeout(_faceEnrollLoopTimer); _faceEnrollLoopTimer=null; }
     closeModal('face-mfa-setup-modal'); updateFaceMfaStatusUI(); updateTotpStatusUI();
@@ -7559,7 +7638,7 @@ async function captureFaceEnrollment(){
       await new Promise(r=>setTimeout(r,280));
     }
     if(!samples.length){ errEl.textContent=scbErr('SCB-SEC-04','No face detected — make sure your face is clearly visible.'); _faceEnrollAutoActive=false; _startEnrollLoop(); return; }
-    statusEl.textContent='Saving…';
+    statusEl.textContent='✨ Saving…';
     await _saveEnrollDescriptor(_avgDescriptors(samples));
   }catch(e){
     errEl.textContent=scbErr('SCB-SEC-05','Couldn\'t capture your face.',(e.message||''));
@@ -7594,6 +7673,8 @@ function updateFaceMfaStatusUI(){
 let _faceLoginStream=null, _faceLoginLoopTimer=null, _faceLoginAutoVerifying=false;
 async function startFaceLoginView(){
   document.getElementById('login-face-error').textContent='';
+  const statusEl=document.getElementById('login-face-status');
+  if(statusEl){ statusEl.classList.remove('active','success'); statusEl.textContent='⏳ Starting camera…'; }
   _faceLoginAutoVerifying=false;
   try{
     await loadFaceApiModels();
@@ -7601,9 +7682,11 @@ async function startFaceLoginView(){
     const video=document.getElementById('login-face-video');
     video.srcObject=_faceLoginStream;
     await new Promise(r=>{ video.onloadedmetadata=r; });
+    if(statusEl) statusEl.textContent='🔍 Center your face in frame…';
     _startLoginLoop();
   }catch(e){
     document.getElementById('login-face-error').textContent=scbErr('SCB-AUTH-02','The camera or face-recognition model couldn\'t start.',(e.message||'could not start.'));
+    if(statusEl) statusEl.textContent='';
   }
 }
 let _loginMatchCount=0;
@@ -7611,6 +7694,7 @@ function _startLoginLoop(){
   _loginMatchCount=0;
   const video=document.getElementById('login-face-video');
   const canvas=document.getElementById('login-face-canvas');
+  const statusEl=document.getElementById('login-face-status');
   async function tick(){
     if(!_faceLoginStream||_faceLoginAutoVerifying) return;
     if(!pending2fa) return;
@@ -7621,13 +7705,14 @@ function _startLoginLoop(){
         const dist=faceapi.euclideanDistance(Array.from(det.descriptor),pending2fa.user.faceDescriptor);
         if(dist<FACE_MATCH_THRESHOLD){
           _loginMatchCount++;
+          if(statusEl){ statusEl.classList.add('active'); statusEl.textContent='🎯 Face matched — verifying…'; }
           if(_loginMatchCount>=2){
             _faceLoginAutoVerifying=true;
             await _finishFaceLogin(det.descriptor);
             return;
           }
-        } else { _loginMatchCount=0; }
-      } else { _loginMatchCount=0; }
+        } else { _loginMatchCount=0; if(statusEl){ statusEl.classList.add('active'); statusEl.textContent='🎯 Face detected — hold still…'; } }
+      } else { _loginMatchCount=0; if(statusEl){ statusEl.classList.remove('active'); statusEl.textContent='🔍 Center your face in frame…'; } }
     }catch(e){}
     _faceLoginLoopTimer=setTimeout(tick,400);
   }
@@ -7646,8 +7731,11 @@ function cancelFaceLoginView(){
 }
 async function _finishFaceLogin(descriptor){
   const btn=document.getElementById('login-face-btn');
+  const statusEl=document.getElementById('login-face-status');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  if(statusEl){ statusEl.classList.remove('active'); statusEl.classList.add('success'); statusEl.textContent='✅ Verified!'; }
   try{
+    await _showFaceScanSuccess('login-face-video',400);
     if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
     if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
     await finishLogin(pending2fa.user, pending2fa.pwdToStore);
@@ -8713,14 +8801,15 @@ async function startChatLockFaceCheck(){
   const statusEl=document.getElementById('chat-lock-face-status');
   const errEl=document.getElementById('chat-lock-error');
   _chatLockFaceAutoVerifying=false; _chatLockMatchCount=0;
-  statusEl.textContent='Loading face detection…';
+  statusEl.classList.remove('active','success');
+  statusEl.textContent='⏳ Loading face detection…';
   try{
     await loadFaceApiModels();
     _chatLockFaceStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
     const video=document.getElementById('chat-lock-face-video');
     video.srcObject=_chatLockFaceStream;
     await new Promise(r=>{ video.onloadedmetadata=r; });
-    statusEl.textContent='Center your face in the frame…';
+    statusEl.textContent='🔍 Center your face in the frame…';
     _chatLockFaceTick();
   }catch(e){
     errEl.textContent=scbErr('SCB-SEC-22','The camera or face-recognition model couldn\'t start.',(e.message||''));
@@ -8730,6 +8819,7 @@ async function startChatLockFaceCheck(){
 function _chatLockFaceTick(){
   const video=document.getElementById('chat-lock-face-video');
   const canvas=document.getElementById('chat-lock-face-canvas');
+  const statusEl=document.getElementById('chat-lock-face-status');
   async function tick(){
     if(!_chatLockFaceStream||_chatLockFaceAutoVerifying) return;
     try{
@@ -8739,9 +8829,10 @@ function _chatLockFaceTick(){
         const dist=faceapi.euclideanDistance(Array.from(det.descriptor),me.faceDescriptor);
         if(dist<FACE_MATCH_THRESHOLD){
           _chatLockMatchCount++;
+          if(statusEl){ statusEl.classList.add('active'); statusEl.textContent='🎯 Face matched — unlocking…'; }
           if(_chatLockMatchCount>=2){ _chatLockFaceAutoVerifying=true; _finishChatLockFace(); return; }
-        } else { _chatLockMatchCount=0; }
-      } else { _chatLockMatchCount=0; }
+        } else { _chatLockMatchCount=0; if(statusEl){ statusEl.classList.add('active'); statusEl.textContent='🎯 Face detected — hold still…'; } }
+      } else { _chatLockMatchCount=0; if(statusEl){ statusEl.classList.remove('active'); statusEl.textContent='🔍 Center your face in the frame…'; } }
     }catch(e){}
     _chatLockFaceLoopTimer=setTimeout(tick,400);
   }
@@ -8752,7 +8843,10 @@ function stopChatLockFaceCheck(){
   if(_chatLockFaceLoopTimer){ clearTimeout(_chatLockFaceLoopTimer); _chatLockFaceLoopTimer=null; }
   _chatLockFaceAutoVerifying=false;
 }
-function _finishChatLockFace(){
+async function _finishChatLockFace(){
+  const statusEl=document.getElementById('chat-lock-face-status');
+  if(statusEl){ statusEl.classList.remove('active'); statusEl.classList.add('success'); statusEl.textContent='✅ Verified!'; }
+  await _showFaceScanSuccess('chat-lock-face-video',400);
   stopChatLockFaceCheck();
   const target=_chatLockTarget;
   if(target){
