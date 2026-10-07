@@ -5943,7 +5943,7 @@ async function putBin(path,data){
   }
 }
 
-// -- USERS ---------------------------------------------------------------------
+// -- FIREBASE READ with WebSocket→REST fallback --------------------------------
 // Firebase's JS SDK talks over a WebSocket (falling back to long-polling if
 // that's blocked) — some corporate/school networks, VPNs and privacy
 // extensions block exactly that kind of connection while leaving ordinary
@@ -5951,26 +5951,70 @@ async function putBin(path,data){
 // indistinguishable from a dead connection (that hang is what
 // _withFirebaseTimeout above turns into a visible error at all, instead of
 // an infinite spinner). If the SDK path times out, fall back to Firebase's
-// plain HTTPS REST API — same publicly-readable data, over a transport a
-// block on WebSockets specifically can't touch — before giving up for real.
-async function _getUsersViaRest(){
-  const res=await fetch(firebaseConfig.databaseURL+'/'+USERS_BIN+'.json');
+// plain HTTPS REST API (carrying the same anonymous auth session the SDK
+// uses — see _fetchFirebaseRest) over a transport a block on WebSockets
+// specifically can't touch — before giving up for real.
+//
+// Sticky: getUsers()/getConvos() are two of the most-called functions in the
+// whole file (70+ call sites between them), including the 25s poll loop —
+// paying the full SDK timeout on EVERY one of those calls, every tick, for a
+// connection already known to be bad this session is what turned "sign-in
+// eventually works via REST" into "now everything is slow". Once the SDK
+// path has actually failed once, skip straight to REST on later calls;
+// rechecked periodically in case the connection recovers, rather than a
+// one-way downgrade for the rest of the session.
+let _sdkConnBad=false, _sdkConnCheckedAt=0;
+const SDK_RECHECK_MS=2*60*1000;
+async function _fetchFirebaseRest(path){
+  // Not every path is world-readable without auth — `users` is, but e.g.
+  // `conversations` requires the same anonymous Firebase Auth session the
+  // SDK already carries (the app signs in anonymously at launch; see
+  // onAuthStateChanged below). That sign-in itself goes over a normal HTTPS
+  // call to a different Google endpoint, not the Realtime Database's
+  // WebSocket, so it's unaffected even when THAT'S what's blocked — attach
+  // its token here so this fallback can actually read the same data the SDK
+  // would, not just the handful of paths with fully public rules.
+  let authParam='';
+  try{
+    const user=firebase.auth&&firebase.auth().currentUser;
+    if(user) authParam='?auth='+encodeURIComponent(await user.getIdToken());
+  }catch(e){}
+  const res=await fetch(firebaseConfig.databaseURL+'/'+path+'.json'+authParam);
   if(!res.ok) throw new Error('REST fallback got HTTP '+res.status);
   return res.json();
 }
-async function getUsers(){
-  let val;
-  try{
-    // Shorter than _withFirebaseTimeout's own default: there's a real,
-    // fast-succeeding fallback below worth getting to quickly rather than
-    // making someone wait out a long timeout on a connection that's
-    // actually just blocked, not slow.
-    const snap=await _withFirebaseTimeout(fbdb.ref(USERS_BIN).get(), 'Loading accounts', 8000);
-    val=snap.exists()?snap.val():null;
-  }catch(e){
-    try{ val=await _getUsersViaRest(); }
-    catch{ throw e; } // REST failed too — surface the SDK's original error, it's the more informative one
+async function _fbReadWithFallback(path,label){
+  const dueForRecheck=(Date.now()-_sdkConnCheckedAt)>SDK_RECHECK_MS;
+  if(!_sdkConnBad||dueForRecheck){
+    try{
+      // Shorter than _withFirebaseTimeout's own default: there's a real,
+      // fast-succeeding fallback below worth getting to quickly rather than
+      // making someone wait out a long timeout on a connection that's
+      // actually just blocked, not slow.
+      const snap=await _withFirebaseTimeout(fbdb.ref(path).get(),label,8000);
+      _sdkConnBad=false;
+      return snap.exists()?snap.val():null;
+    }catch(e){
+      _sdkConnBad=true; _sdkConnCheckedAt=Date.now();
+      try{ return await _fetchFirebaseRest(path); }
+      catch{ throw e; } // REST failed too — surface the SDK's original error, it's the more informative one
+    }
   }
+  try{
+    return await _fetchFirebaseRest(path);
+  }catch(e){
+    // REST failed too this time — give the SDK one more real shot before giving up
+    try{
+      const snap=await _withFirebaseTimeout(fbdb.ref(path).get(),label,8000);
+      _sdkConnBad=false;
+      return snap.exists()?snap.val():null;
+    }catch(e2){ throw e2; }
+  }
+}
+
+// -- USERS ---------------------------------------------------------------------
+async function getUsers(){
+  const val=await _fbReadWithFallback(USERS_BIN,'Loading accounts');
   if(!val) return (usersCache=[]);
   // Support both legacy monolithic format {users:[...]} and new per-number format {<number>:{...}}
   if(val&&val.users!==undefined){
@@ -6402,14 +6446,13 @@ async function getConvos(){
     // write to land first, so we always read at least what we just wrote.
     await _saveConvosPending.catch(()=>{});
   }
-  const snap=await fbdb.ref(CONVOS_BIN).get();
+  const val=await _fbReadWithFallback(CONVOS_BIN,'Loading conversations');
   let rawArr=[];
-  if(snap.exists()){
-    const val=snap.val();
-    if(val&&val.conversations!==undefined){
+  if(val){
+    if(val.conversations!==undefined){
       // Legacy monolithic format: {conversations:[...]}
       rawArr=Array.isArray(val.conversations)?val.conversations:Object.values(val.conversations||{});
-    } else if(val&&typeof val==='object'){
+    } else if(typeof val==='object'){
       // New per-key format: {<convoKey>:{...convo...}}
       rawArr=Object.values(val).filter(c=>c&&c.key);
     }
