@@ -20340,7 +20340,11 @@ async function checkFirebasePing(){
     // just does an ordinary shallow read — the same kind of call
     // checkMessaging() already uses successfully — which sidesteps the
     // special-path code entirely regardless of what was actually wrong with it.
-    const snap=await fbdb.ref(UPDATES_BIN).limitToFirst(1).get();
+    // Same unguarded-hang risk _withFirebaseTimeout exists for elsewhere in
+    // this file (see getUsers()/getConvos()) — a blocked WebSocket left this
+    // specific check stuck on "Checking…" forever instead of ever reporting
+    // red, which defeats the entire point of a diagnostics panel.
+    const snap=await _withFirebaseTimeout(fbdb.ref(UPDATES_BIN).limitToFirst(1).get(),'Firebase ping',8000);
     const ms=Date.now()-t0;
     void snap;
     return {state: ms<1500?'green':'yellow', msg:'Connected — responded in '+ms+' ms'};
@@ -20353,7 +20357,8 @@ async function checkMessaging(){
   try{
     // Deliberately a shallow read (one child, limited) rather than the whole
     // conversations blob — this is a reachability probe, not a data load.
-    await fbdb.ref(CONVOS_BIN).limitToFirst(1).get();
+    // See checkFirebasePing() above for why this is time-bounded.
+    await _withFirebaseTimeout(fbdb.ref(CONVOS_BIN).limitToFirst(1).get(),'Messaging check',8000);
     const ms=Date.now()-t0;
     return {state: ms<2500?'green':'yellow', msg:(ms<2500?'Sending and receiving normally':'Reachable but slow')+' — '+ms+' ms'};
   }catch(e){
@@ -20416,7 +20421,9 @@ async function checkAdminPanelStatus(){
   if(!me) return {state:'yellow', msg:'Not signed in'};
   if(me.number!==ADMIN_NUMBER) return {state:'green', msg:'Not applicable — this account isn\'t an admin'};
   try{
-    const d=await _origGetBin('reports');
+    // _origGetBin is the raw, unwrapped getBin() — same unguarded-hang risk
+    // as the two checks above, bypassing even the withRetry() wrapper below.
+    const d=await _withFirebaseTimeout(_origGetBin('reports'),'Admin panel check',8000);
     const n=Array.isArray(d.reports)?d.reports.length:0;
     return {state:'green', msg:'Admin data loaded — '+n+' report'+(n===1?'':'s')+' on file'};
   }catch(e){
