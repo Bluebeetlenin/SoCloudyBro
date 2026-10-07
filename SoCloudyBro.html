@@ -5944,10 +5944,34 @@ async function putBin(path,data){
 }
 
 // -- USERS ---------------------------------------------------------------------
+// Firebase's JS SDK talks over a WebSocket (falling back to long-polling if
+// that's blocked) — some corporate/school networks, VPNs and privacy
+// extensions block exactly that kind of connection while leaving ordinary
+// HTTPS requests completely untouched, which from inside the SDK is
+// indistinguishable from a dead connection (that hang is what
+// _withFirebaseTimeout above turns into a visible error at all, instead of
+// an infinite spinner). If the SDK path times out, fall back to Firebase's
+// plain HTTPS REST API — same publicly-readable data, over a transport a
+// block on WebSockets specifically can't touch — before giving up for real.
+async function _getUsersViaRest(){
+  const res=await fetch(firebaseConfig.databaseURL+'/'+USERS_BIN+'.json');
+  if(!res.ok) throw new Error('REST fallback got HTTP '+res.status);
+  return res.json();
+}
 async function getUsers(){
-  const snap=await _withFirebaseTimeout(fbdb.ref(USERS_BIN).get(), 'Loading accounts');
-  if(!snap.exists()) return (usersCache=[]);
-  const val=snap.val();
+  let val;
+  try{
+    // Shorter than _withFirebaseTimeout's own default: there's a real,
+    // fast-succeeding fallback below worth getting to quickly rather than
+    // making someone wait out a long timeout on a connection that's
+    // actually just blocked, not slow.
+    const snap=await _withFirebaseTimeout(fbdb.ref(USERS_BIN).get(), 'Loading accounts', 8000);
+    val=snap.exists()?snap.val():null;
+  }catch(e){
+    try{ val=await _getUsersViaRest(); }
+    catch{ throw e; } // REST failed too — surface the SDK's original error, it's the more informative one
+  }
+  if(!val) return (usersCache=[]);
   // Support both legacy monolithic format {users:[...]} and new per-number format {<number>:{...}}
   if(val&&val.users!==undefined){
     usersCache=(Array.isArray(val.users)?val.users:Object.values(val.users||{})).filter(Boolean);
