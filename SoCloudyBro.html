@@ -17713,9 +17713,13 @@ async function sendAdminWeeklyDigestSilent(){
 async function _logAdminAction(action,detail){
   if(!me) return;
   try{
-    await fbdb.ref('admin_site/audit_log').push({
+    // .push() isn't covered by the global Firebase timeout guard (see its
+    // installer comment near `const fbdb=...` — push() with no argument has
+    // to stay synchronous), so a push that includes data, like this one,
+    // needs its own guard at the call site instead.
+    await _withFirebaseTimeout(fbdb.ref('admin_site/audit_log').push({
       admin:me.number, adminName:me.name||'', action, detail:detail||'', at:Date.now(),
-    });
+    }),'Admin audit log write',10000);
   }catch(e){ console.warn('Admin audit log write failed (non-fatal):',e.message); }
 }
 async function exportEncryptedAuditLog(){
@@ -19339,20 +19343,22 @@ async function _checkMassReportSpike(reportedNumber,reportedName,allReports){
     let alreadyFlagged=false;
     snap.forEach(child=>{ const v=child.val(); if(v&&v.type==='mass_reported'&&!v.resolved&&v.at>cutoff) alreadyFlagged=true; });
     if(alreadyFlagged) return;
-    await fbdb.ref('spam_flags').push({
+    // .push() isn't covered by the global Firebase timeout guard (see its
+    // installer comment near `const fbdb=...`) — guarded individually here.
+    await _withFirebaseTimeout(fbdb.ref('spam_flags').push({
       number:reportedNumber,
       name:reportedName||'',
       type:'mass_reported',
       reportCount:distinctReporters,
       at:Date.now(),
       resolved:false
-    });
+    }),'Spam flag write',10000);
   }catch(e){ console.warn('Mass-report spike check failed (non-fatal):',e.message); }
 }
 async function _reportSpam(type, msgCount, identicalRun){
   if(!me) return;
   try{
-    await fbdb.ref('spam_flags').push({
+    await _withFirebaseTimeout(fbdb.ref('spam_flags').push({
       number: me.number,
       name: me.name||'',
       type,           // 'rate_limit' | 'identical_messages'
@@ -19360,7 +19366,7 @@ async function _reportSpam(type, msgCount, identicalRun){
       identicalRun,
       at: Date.now(),
       resolved: false
-    });
+    }),'Spam flag write',10000);
   }catch{}
 }
 
@@ -24571,11 +24577,13 @@ async function _sweepSelfDestructAccounts(){
       // Immutable log entry BEFORE anonymizing — this is the only remaining
       // record of who this account was, so it has to be written first.
       try{
-        await fbdb.ref('admin_site/self_destructed_log').push({
+        // .push() isn't covered by the global Firebase timeout guard (see its
+        // installer comment near `const fbdb=...`) — guarded individually here.
+        await _withFirebaseTimeout(fbdb.ref('admin_site/self_destructed_log').push({
           number:u.number, name:dec(u.name)||('#'+u.number), lastSeen:lastActive,
           selfDestructMonths:u.selfDestructMonths, destroyedAt:now,
           devices:u.devices?Object.values(u.devices).map(d=>d&&d.label).filter(Boolean):[],
-        });
+        }),'Self-destruct log write',10000);
       }catch(e){ console.warn('Self-destruct log write failed (non-fatal):',e.message); }
       u.name=enc('Deleted User'); u.bio=''; u.customStatus=''; u.avatar=''; u.pwd=''; u.email=''; u.birthdate='';
       u.blocked=[]; u.blockedCalls=[]; u.blockedMessages=[]; u.deleted=true; u.devices={};
