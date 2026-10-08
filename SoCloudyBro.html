@@ -4262,6 +4262,8 @@ const SCB_ERROR_CODES = {
   'SCB-SET-04': {area:'Settings & personalisation', meaning:'Weather location lookup threw'},
   'SCB-SET-05': {area:'Settings & personalisation', meaning:'Speech-to-text input unsupported in this browser'},
   'SCB-SET-06': {area:'Settings & personalisation', meaning:'Speech-to-text input failed to start (microphone permissions)'},
+  'SCB-SET-07': {area:'Settings & personalisation', meaning:'Do Not Disturb toggle failed to persist to localStorage'},
+  'SCB-SET-08': {area:'Settings & personalisation', meaning:'Quiet hours settings failed to persist to localStorage'},
   'SCB-SIGNUP-01': {area:'Sign-up', meaning:'Sign-up blocked because the device is age-blocked'},
   'SCB-SIGNUP-02': {area:'Sign-up', meaning:'Sign-up: display name left empty'},
   'SCB-SIGNUP-03': {area:'Sign-up', meaning:'Sign-up: email missing or malformed'},
@@ -5532,12 +5534,22 @@ function _userPubKeyStr(number){
 }
 
 async function getDmAesKey(otherNumber){
-  if(_dmAesCache[otherNumber]) return _dmAesCache[otherNumber];
   const jwkStr=_userPubKeyStr(otherNumber);
-  if(!jwkStr) return null;
   // Security feature 12/32: don't just silently re-derive and move on if
   // this contact's key changed since we last saw it — flag it loudly.
-  if(await _checkContactKeyChange(otherNumber,jwkStr)) _flagContactKeyChanged(otherNumber);
+  // This check must run BEFORE the cache short-circuit below, not after —
+  // it's a cheap, local-only comparison (no network call), but it used to
+  // sit after the `_dmAesCache` early-return, so it only ever ran once per
+  // contact per session (the first call, on a cache miss). A contact who
+  // rotated their key mid-session kept getting silently encrypted/decrypted
+  // against the stale cached key for the rest of the session, with the
+  // "key changed" banner never firing until a full page reload emptied
+  // _dmAesCache. _checkContactKeyChange() itself deletes the stale cache
+  // entry when it detects a change, so the cache check below still re-uses
+  // a cached key whenever nothing actually changed.
+  if(jwkStr && await _checkContactKeyChange(otherNumber,jwkStr)) _flagContactKeyChanged(otherNumber);
+  if(_dmAesCache[otherNumber]) return _dmAesCache[otherNumber];
+  if(!jwkStr) return null;
   const theirPub=await _importPubKey(jwkStr);
   const key=await _deriveAesFromPub(theirPub);
   if(key) _dmAesCache[otherNumber]=key;
@@ -5876,6 +5888,12 @@ function resetLocalSessionState(){
   _myKeyPair=null; _myPubJwk=null;
   launched = false;
   try{ localStorage.removeItem('cc_session_start'); }catch{}
+  // Login/signup can reach this without ever going through logOut() (e.g.
+  // switching to a saved account), so the same account-scoped localStorage
+  // keys logout clears (outbox, welcome banner flag, birthday-seen cache,
+  // etc.) need clearing here too, or the next account on this device
+  // inherits the previous one's leftover state.
+  try{ clearLocalSessionPreservingE2EKeys(); }catch(e){ console.warn('session key reset failed', e); }
 }
 
 // -- LOAD FROM STORAGE --------------------------------------------------------
@@ -6213,6 +6231,7 @@ const LOGOUT_CLEAR_KEYS=[
   'cc_after_login_switch','cc_nicknames','cc_contact_notes',
   'cc_group_invite_times','cc_needs_attention','cc_birthday_posts',
   'cc_welcome_post','cc_auto_logout_reason','cc_dnd','cc_quiet_hours',
+  'cc_welcomed','cc_birthday_seen',
 ];
 const LOGOUT_CLEAR_PREFIXES=['cc_reset_ack_','cc_secq_prompted_'];
 function clearLocalSessionPreservingE2EKeys(){
@@ -6390,7 +6409,16 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
   // the server's copy.
   const blockedCalls = blockedCallsOverride!==undefined ? blockedCallsOverride : ((u&&u.blockedCalls)||me.blockedCalls||[]);
   const blockedMessages = blockedMessagesOverride!==undefined ? blockedMessagesOverride : ((u&&u.blockedMessages)||me.blockedMessages||[]);
-  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked,blockedCalls,blockedMessages,lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
+  // lastActive is a SEPARATE field from lastSeen, deliberately never gated
+  // by the showOnline privacy pref. lastSeen is the public-facing "online
+  // status" shown to others, which should legitimately freeze when a user
+  // opts out of broadcasting it — but _sweepSelfDestructAccounts() uses
+  // whichever of these is freshest to decide if an account is truly
+  // inactive, and using lastSeen for that meant simply turning off "show
+  // online status" (an unrelated privacy toggle) froze the inactivity clock
+  // forever, so a fully active user could eventually have their account
+  // wrongly destroyed by the inactivity sweep.
+  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked,blockedCalls,blockedMessages,lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),lastActive:Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
   me.blocked = blocked; me.blockedCalls = blockedCalls; me.blockedMessages = blockedMessages; // keep the in-memory copy consistent with what was actually just persisted
   if(_myPubJwk) payload.pubkey=_myPubJwk;
   // Per-account settings added by the feature pack. Each falls back to whatever
@@ -6474,6 +6502,7 @@ async function heartbeat(){
     }
     if(u){
       u.lastSeen=Date.now();
+      u.lastActive=Date.now(); // see registerOrUpdate()'s comment — never gated by the showOnline privacy pref
       const revoked=upsertSession(u);
       if(revoked){
         if(revoked==='wipe') forceRemoteWipeLocal();
@@ -8076,10 +8105,28 @@ async function submit2faCode(){
   if(!pending2fa){ err.textContent=scbErr('SCB-AUTH-20','Session expired — log in again.'); return; }
   const entered=document.getElementById('login-2fa-code').value.trim();
   if(!/^\d{6}$/.test(entered)){ err.textContent=scbErr('SCB-AUTH-21','Enter the 6-digit code.'); return; }
+  // Rate-limit guessing, same as the password step above this one in the
+  // login flow uses. verifyTotpCode() is a local crypto.subtle computation
+  // with no network round-trip per attempt, so without this an attacker who
+  // already has the password could brute-force all 1,000,000 six-digit
+  // codes client-side in seconds. Keyed separately from the password
+  // attempt-counter (prefixed 2fa_) so failing the password step doesn't
+  // also eat into the 2FA attempt budget, or vice versa.
+  const rlId='2fa_'+pending2fa.user.number;
+  const rl=_checkLoginRateLimit(rlId);
+  if(rl&&rl.count>=5){ err.textContent=scbErr('SCB-AUTH-22','Too many incorrect codes. Try again in 5 minutes.'); return; }
   const btn=document.getElementById('login-2fa-btn'); btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
   try{
     const ok=await verifyTotpCode(pending2fa.user.totpSecret,entered);
-    if(!ok){ err.textContent=scbErr('SCB-AUTH-22','Incorrect code.'); return; }
+    if(!ok){
+      const rd=_recordLoginFailure(rlId);
+      const remaining=5-rd.count;
+      err.textContent=scbErr('SCB-AUTH-22', remaining>0
+        ? `Incorrect code. ${remaining} attempt${remaining===1?'':'s'} left before temporary lockout.`
+        : 'Too many incorrect codes. Try again in 5 minutes.');
+      return;
+    }
+    _clearLoginRateLimit(rlId);
     const trustEl=document.getElementById('login-2fa-trust-device');
     if(trustEl&&trustEl.checked) await trustThisDevice(pending2fa.user).catch(()=>{});
     await finishLogin(pending2fa.user, pending2fa.pwdToStore);
@@ -8363,7 +8410,13 @@ async function submitChangePassword(){
   // leftover from a design that predates the app's own password system and
   // was never migrated, making Change Password completely non-functional.
   try{
-    const ok=await verifyPassword(cur,me.pwd);
+    // verifyPassword() now fails closed on an empty `stored` (see its own
+    // comment) rather than treating "no password set yet" as "any input is
+    // correct" — so that case needs handling here instead: an account that
+    // genuinely has no password yet (e.g. Google-only sign-in) has nothing
+    // to verify `cur` against, and is setting its first password rather
+    // than changing one, so skip the current-password check for it only.
+    const ok=!me.pwd || await verifyPassword(cur,me.pwd);
     if(!ok){ err.textContent='Current password is incorrect.'; return; }
     const hashed=await hashPassword(nw);
     await fbdb.ref('users/'+me.number).update({pwd:hashed});
@@ -8579,7 +8632,15 @@ async function hashPassword(p,existingSalt){
   return salt+'$'+hex;
 }
 async function verifyPassword(p,stored){
-  if(!stored) return true; // no password set
+  // Fail CLOSED, not open: every caller (login, change-password's "current
+  // password" check, recovery security answers, backup PIN, parental PIN/
+  // password) is verifying a secret that's supposed to already be set. A
+  // missing/empty `stored` means that secret was never configured, which
+  // must never be treated as "any input matches" — that previously let
+  // submitChangePassword be bypassed by typing anything as the "current
+  // password" on any account whose `me.pwd` was empty (e.g. reachable via
+  // Google sign-in's pwdToStore=user.pwd||'').
+  if(!stored) return false;
   if(stored.indexOf('$')>-1){
     const salt=stored.split('$')[0];
     const recomputed=await hashPassword(p,salt);
@@ -10540,6 +10601,10 @@ function uploadAndSendFile(file){
 }
 async function sendFileMsg(fileMeta){
   if(!activeConvo||!me) return;
+  // Same navigation-time-only restriction gap as sendMsg() — enforce at the
+  // actual send, not just when the chat was opened.
+  if (activeConvo.type!=='group' && blockIfRestricted('noDm','Direct messages are turned off for your account.')) return;
+  if (activeConvo.type==='group' && blockIfRestricted('noGroups','Group chats are turned off for your account.')) return;
   if (activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)) { showToast('Cannot send', scbErr('SCB-MSG-21','This conversation is blocked.')); return; }
   try{
     if(!convosCache) await getConvos();
@@ -10552,7 +10617,12 @@ async function sendFileMsg(fileMeta){
       return;
     }
     const msg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),from:me.number,time:Date.now(),seen:[]};
-    if (activeConvo.type === 'group') msg.channelId = activeChannelId || 'general';
+    if (activeConvo.type === 'group') {
+      msg.channelId = activeChannelId || 'general';
+      // Same quarantine stamp sendMsg() applies to text — without it, an
+      // unapproved member could post files that bypass the hold entirely.
+      if (Array.isArray(c.pendingApproval) && c.pendingApproval.includes(me.number)) msg.quarantined = true;
+    }
     const aesKey=await getConvoAesKey(c);
     const wrapped=aesKey?await aesEnc(aesKey,JSON.stringify(fileMeta)):null;
     if(wrapped){ msg.cfile=wrapped; _decCache[msg.id]={file:fileMeta}; }
@@ -10929,7 +10999,19 @@ async function joinVoiceChannel(channelId){
 // Shared low-level connector used by both group voice channels and direct
 // (DM) calls — sets up the mic, the Firebase-signaled peer mesh, and the
 // voice bar. Callers set convoKey/channelId/isDm on voiceChannelActive after.
+let _startingVoiceSession=false;
 async function _startVoiceSession(path,label){
+  // Reentrancy guard: voiceChannelActive (the check right below) is only
+  // assigned once getUserMedia resolves, further down — it stays null for
+  // the whole span a mic-permission prompt or a slow Firebase round-trip can
+  // take. Without this, a fast double-click/tap on "join voice" starts two
+  // concurrent sessions: two getUserMedia streams, two voicePeers maps. The
+  // loser's assignment to voiceChannelActive/voicePeers gets clobbered by
+  // whichever finishes last, and nothing ever .stop()s the loser's stream or
+  // .close()s its peer connections — the mic indicator stays on even after
+  // the user leaves.
+  if(_startingVoiceSession) return false;
+  _startingVoiceSession=true;
   // Never start a second session on top of a live one. joinVoiceChannel() did
   // this itself, but the DM-call path did not: accepting an incoming call
   // while already in one replaced voiceChannelActive and reset voicePeers={}
@@ -10940,6 +11022,7 @@ async function _startVoiceSession(path,label){
   if(voiceChannelActive) leaveVoiceChannel();
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
     showToast('Not supported',scbErr('SCB-CALL-01','Voice needs microphone access (try https).'));
+    _startingVoiceSession=false;
     return false;
   }
   try{
@@ -10952,11 +11035,13 @@ async function _startVoiceSession(path,label){
   }catch(e){
     const {note}=await selfHeal('SCB-CALL-02',e,{context:'_startVoiceSession',silent:true});
     showToast('Microphone unavailable',scbErr('SCB-CALL-02',note));
+    _startingVoiceSession=false;
     return false;
   }
   const sessionStart=Date.now();
   voiceChannelActive={path,label,sessionStart};
   voicePeers={};
+  _startingVoiceSession=false; // voiceChannelActive now guards future calls
   const myRef=fbdb.ref(path+'/participants/'+me.number);
   await myRef.set({name:me.name,joinedAt:Date.now()});
   myRef.onDisconnect().remove();
@@ -11133,6 +11218,7 @@ function toggleVoiceMute(){
 // -- SCREEN SHARING (adds a video track to the existing voice-channel peers) ----
 let localScreenStream=null;
 const _remoteScreenStreams={};
+let _startingScreenShare=false;
 async function toggleScreenShare(){
   if(localScreenStream){ stopScreenShare(); return; }
   if(!voiceChannelActive){ showToast('Join a voice channel first',scbErr('SCB-CALL-03','Join a voice channel before sharing your screen.')); return; }
@@ -11140,9 +11226,18 @@ async function toggleScreenShare(){
     showToast('Not supported',scbErr('SCB-CALL-04','Screen sharing needs a desktop browser with getDisplayMedia support.'));
     return;
   }
+  // Reentrancy guard: localScreenStream isn't assigned until getDisplayMedia
+  // resolves, so a double-click while the OS screen-picker is open could
+  // otherwise start a second capture before the first one's picker closes —
+  // whichever resolves last wins the assignment, orphaning the other
+  // capture's tracks (never stopped, so the browser's "sharing" indicator
+  // can stay on even after the user clicks "Stop sharing").
+  if(_startingScreenShare) return;
+  _startingScreenShare=true;
   try{
     localScreenStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
   }catch(e){ return; } // user cancelled the picker
+  finally{ _startingScreenShare=false; }
   const track=localScreenStream.getVideoTracks()[0];
   track.onended=()=>stopScreenShare();
   Object.values(voicePeers).forEach(pc=>pc.addTrack(track,localScreenStream));
@@ -11245,6 +11340,14 @@ const _seenIncomingCalls={};
 async function startDirectCall(contact){
   if(!me||!contact||contact.type==='group'||!contact.number) return;
   if(voiceChannelActive){ showToast('Already in a call',scbErr('SCB-CALL-05','Hang up first.')); return; }
+  // voiceChannelActive only covers an ANSWERED call — it stays unset for the
+  // whole ringing phase (set only inside _beginDmCallSession, once the
+  // callee accepts), so without this a second click/tap while still ringing
+  // re-runs this whole function: it overwrites _outgoingCallHandler without
+  // detaching the first listener and overwrites _outgoingCallTimeoutTimer
+  // without clearing the first timer, so both eventually fire independently
+  // against the same callee once they finally answer.
+  if(_outgoingCallPairKey){ showToast('Already calling',scbErr('SCB-CALL-05','Cancel the current call before starting another.')); return; }
   if(isBlockedForCalls(contact.number)){ showToast('Cannot call',scbErr('SCB-CALL-06','Calls with this contact are blocked.')); return; }
   const pairKey=[me.number,contact.number].sort((a,b)=>a-b).join('_');
   const cRef=fbdb.ref('calls/'+pairKey);
@@ -11295,8 +11398,22 @@ async function startDirectCall(contact){
   // a client-side cap, a call nobody answers rings forever instead of
   // resolving to "no answer" — the exact same unbounded-wait shape as the
   // sign-in hang, just in a different feature.
-  _outgoingCallTimeoutTimer=setTimeout(()=>{
+  _outgoingCallTimeoutTimer=setTimeout(async()=>{
     if(_outgoingCallPairKey!==pairKey) return; // a newer call superseded this one
+    // Re-read the live record before deleting it. If the callee's accept
+    // landed on the server right around the 45s mark, this local timer can
+    // otherwise win a race against the caller's own `value` listener
+    // noticing it — deleting a call the callee already committed to
+    // (acceptIncomingCall already flipped status to 'active' and called
+    // _beginDmCallSession) and detaching the listener so it never sees the
+    // acceptance even if that notification was only microseconds away,
+    // leaving the callee stuck in an apparently-live call with no caller.
+    try{
+      const snap=await cRef.once('value');
+      const val=snap.val();
+      if(val&&val.status==='active') return; // already answered — let the 'active' handler above take it from here
+    }catch(e){}
+    if(_outgoingCallPairKey!==pairKey) return; // superseded while the re-check above was in flight
     showToast('No answer','');
     cRef.remove(); // also resolves the callee's incoming-call watcher
     cleanupOutgoingWatcher();
@@ -11778,7 +11895,19 @@ async function saveEditMsg(){
   if(!c) return;
   const m=c.messages.find(x=>x.id===editingMsgId);
   if(!m){cancelEdit();return;}
-  m.text=enc(newText);
+  const clean=filterBadWords(newText);
+  // Mirror sendMsg()'s encryption branch, not just the plain enc() path: a
+  // message that was sent with ctext (the normal case in any E2E-encrypted
+  // conversation) needs to be RE-encrypted with the convo's AES key, not
+  // switched over to the separate fixed-key enc() scheme — otherwise m.text
+  // is set but msgText() keeps serving the pre-edit text from _decCache
+  // (checked before falling back to dec(m.text), and decryptConvoMessages()
+  // skips any message that already has a _decCache entry), so the edit
+  // silently never shows up for anyone, including the editor after reload.
+  const aesKey=await getConvoAesKey(c);
+  const wrapped=aesKey?await aesEnc(aesKey,clean):null;
+  if(wrapped){ m.ctext=wrapped; delete m.text; _decCache[m.id]={text:clean}; }
+  else{ m.text=enc(clean); delete m.ctext; delete _decCache[m.id]; }
   m.edited=true;
   try{
     await saveConvos();
@@ -13334,8 +13463,15 @@ function requestNotifPerm(){
 
 
 function toggleDND(){
-  dndEnabled = !dndEnabled;
-  localStorage.setItem('cc_dnd', dndEnabled?'1':'0');
+  const next = !dndEnabled;
+  // Flip the persisted value BEFORE the in-memory flag (unlike the old
+  // order) so a localStorage failure (quota, private-mode storage block)
+  // aborts before dndEnabled changes — otherwise shouldSuppressNotifications()
+  // reads the already-flipped live flag while the UI/toast never updated and
+  // the change silently never persisted (reverts on reload).
+  try{ localStorage.setItem('cc_dnd', next?'1':'0'); }
+  catch(e){ showToast('Could not save',scbErr('SCB-SET-07','Your Do Not Disturb setting couldn\'t be saved on this device.')); return; }
+  dndEnabled = next;
   updateDNDUI();
   showToast(dndEnabled ? 'Do Not Disturb is on' : 'Do Not Disturb is off', dndEnabled ? 'Notifications are silenced. Turn it off anytime.' : 'You\'ll get notifications as normal.');
 }
@@ -13354,8 +13490,14 @@ function saveQuietHours(){
   const enabled = document.getElementById('quiet-hours-enabled').checked;
   const start = document.getElementById('quiet-hours-start').value || '22:00';
   const end = document.getElementById('quiet-hours-end').value || '07:00';
-  quietHours = {enabled, start, end};
-  localStorage.setItem('cc_quiet_hours', JSON.stringify(quietHours));
+  const next = {enabled, start, end};
+  // Persist before updating the in-memory value (see toggleDND's comment) —
+  // a quota/private-mode failure then leaves both the displayed settings and
+  // isQuietHoursActive()'s actual behavior on the previous value, instead of
+  // silently diverging.
+  try{ localStorage.setItem('cc_quiet_hours', JSON.stringify(next)); }
+  catch(e){ showToast('Could not save',scbErr('SCB-SET-08','Your quiet hours setting couldn\'t be saved on this device.')); return; }
+  quietHours = next;
 }
 
 function updateQuietHoursUI(){
@@ -13837,7 +13979,15 @@ function showUndoSendToast(originalText, msg, convo) {
 // ── THEME (DARK/LIGHT MANUAL) ────────────────────────────────────────────
 function toggleTheme() {
   const cur = localStorage.getItem('cc_theme') || 'auto';
-  const isDark = cur === 'dark' || (cur === 'auto' && window.matchMedia('(prefers-color-scheme:dark)').matches);
+  // cur==='schedule' used to fall through to isDark=false unconditionally,
+  // so clicking this quick-toggle while on a schedule not only silently
+  // dropped the user out of schedule mode into plain manual dark/light (the
+  // schedule itself, in cc_theme_schedule, is left stored and can still be
+  // switched back to from Settings — no data is lost), it also got the
+  // target color wrong half the time: if the schedule currently had the
+  // theme dark (e.g. nighttime), this still computed isDark=false and set
+  // 'dark' again instead of toggling to 'light'.
+  const isDark = cur === 'dark' || (cur === 'auto' && window.matchMedia('(prefers-color-scheme:dark)').matches) || (cur === 'schedule' && isWithinDarkSchedule());
   setTheme(isDark ? 'light' : 'dark');
 }
 
@@ -14384,7 +14534,7 @@ async function leaveGroup() {
   if (!convosCache) return;
   const conv = convosCache.find(x=>x&&x.key === activeConvo.key);
   if (conv) {
-    conv.participants = (conv.participants || []).filter(n => n !== me.number);
+    _removeMemberFromConv(conv, me.number);
     _addSystemMessage(conv,(dec(me.name)||me.name||('#'+me.number))+' left the '+(conv.isServer?'server':'group'));
     await saveConvos();
   }
@@ -14519,6 +14669,25 @@ function showMemberCtxMenu(e, num) {
   menu.style.top = Math.min(e.clientY, window.innerHeight - 180) + 'px';
   document.addEventListener('click', () => { menu.style.display = 'none'; }, { once: true });
 }
+// Shared cleanup for kicking/banning/leaving a group. conv.participants was
+// the only roster array any removal path used to prune — isConvoMemberOf()
+// and sendMsg()'s own membership guard both prefer conv.members when it's
+// present, so a kicked/banned/left member whose entry stayed in conv.members
+// could keep sending into the group indefinitely despite the UI showing them
+// as removed. Also drops their now-stale per-member data (roles, badges,
+// message count, join timestamp, wrapped group key copy) instead of leaving
+// it dangling.
+function _removeMemberFromConv(conv, num) {
+  conv.participants = (conv.participants || []).filter(n => n !== num);
+  if (conv.members) conv.members = conv.members.filter(n => n !== num);
+  if (conv.admins) conv.admins = conv.admins.filter(n => n !== num);
+  if (conv.coadmins) conv.coadmins = conv.coadmins.filter(n => n !== num);
+  if (conv.memberRoles) delete conv.memberRoles[num];
+  if (conv.memberBadges) delete conv.memberBadges[num];
+  if (conv.memberMsgCount) delete conv.memberMsgCount[num];
+  if (conv.memberJoinedAt) delete conv.memberJoinedAt[num];
+  if (conv.wrappedKeys) delete conv.wrappedKeys[num];
+}
 async function memberCtxAction(action) {
   const num = memberCtxTarget;
   if (!num || !convosCache) return;
@@ -14540,20 +14709,14 @@ async function memberCtxAction(action) {
     closeModal('group-panel-overlay'); openChat(c);
   } else if (action === 'remove') {
     if (!confirm('Kick this member?')) return;
-    conv.participants = (conv.participants || []).filter(n => n !== num);
-    if (conv.admins) conv.admins = conv.admins.filter(n => n !== num);
-    if (conv.coadmins) conv.coadmins = conv.coadmins.filter(n => n !== num);
-    if (conv.memberRoles) delete conv.memberRoles[num];
+    _removeMemberFromConv(conv, num);
     if (activeConvo) activeConvo.members = (activeConvo.members || []).filter(n => n !== num);
     const ci = contacts.find(x=>x&&x.key === conv.key); if (ci) ci.members = (ci.members || []).filter(n => n !== num);
     saveStorage();
     await saveConvos(); openGroupPanel(); showToast('Member kicked', '');
   } else if (action === 'ban') {
     if (!confirm('Ban and kick this member? They will not be able to be added back to this group.')) return;
-    conv.participants = (conv.participants || []).filter(n => n !== num);
-    if (conv.admins) conv.admins = conv.admins.filter(n => n !== num);
-    if (conv.coadmins) conv.coadmins = conv.coadmins.filter(n => n !== num);
-    if (conv.memberRoles) delete conv.memberRoles[num];
+    _removeMemberFromConv(conv, num);
     if (!conv.banned) conv.banned = [];
     if (!conv.banned.includes(num)) conv.banned.push(num);
     if (activeConvo) activeConvo.members = (activeConvo.members || []).filter(n => n !== num);
@@ -14622,6 +14785,11 @@ async function deleteRole(roleId) {
   const conv = convosCache.find(x=>x&&x.key === activeConvo.key);
   if (!conv) return;
   conv.roles = (conv.roles || []).filter(r => r.id !== roleId);
+  if (conv.memberRoles) {
+    Object.keys(conv.memberRoles).forEach(num => {
+      if (conv.memberRoles[num] === roleId) delete conv.memberRoles[num];
+    });
+  }
   await saveConvos();
   openGroupPanel();
 }
@@ -14985,12 +15153,25 @@ function renderMessages(msgs) {
     const _conv = convosCache.find(x => x && x.key === activeConvo.key);
     if (_conv && _conv.disappearAfter) {
       msgs = _applyDisappearingFilter(msgs || [], _conv.disappearAfter);
-      // Schedule re-render when the next message would expire
+      // Schedule an actual prune+save when the next message would expire —
+      // not just a re-render. _applyDisappearingFilter() only ever produced
+      // a filtered VIEW for rendering; nothing forced the expired message
+      // out of _conv.messages/Firebase at the moment it expired, so
+      // deletion from storage was purely incidental, dependent on some
+      // unrelated save happening to fire for this conversation afterward.
+      // Until that happened, the "disappeared" message was still sitting in
+      // the live database, readable by anyone with DB read access.
       const oldest = (msgs||[]).reduce((min,m)=>m.time&&m.time<min?m.time:min, Infinity);
       if(oldest<Infinity){
         const delay=Math.max(1000,(oldest+_conv.disappearAfter)-Date.now());
         clearTimeout(_disappearRenderTimer);
-        _disappearRenderTimer=setTimeout(()=>{ lastMsgHash=''; if(activeConvo&&_conv.key===activeConvo.key) renderMessages(_conv.messages); },delay);
+        _disappearRenderTimer=setTimeout(()=>{
+          if(!_conv) return;
+          const before=_conv.messages.length;
+          _conv.messages=_applyDisappearingFilter(_conv.messages,_conv.disappearAfter);
+          if(_conv.messages.length!==before){ _convosDirty=true; saveConvos().catch(()=>{}); }
+          lastMsgHash=''; if(activeConvo&&_conv.key===activeConvo.key) renderMessages(_conv.messages);
+        },delay);
       }
     }
   }
@@ -15330,6 +15511,14 @@ async function sendMsg(gifUrl) {
   const rawText = input.value.trim();
   if (!rawText && !gifUrl) return;
   if (!activeConvo || !me) return;
+  // Parental restrictions were only enforced by openChat()'s wrapper — i.e.
+  // at navigation time, not at the point of actually sending. A DM/group tab
+  // left open from before a restriction was turned on stayed sendable
+  // without ever re-opening it, and sendMsg() itself was reachable directly
+  // (e.g. from devtools) with no restriction check at all. Mirror exactly
+  // what openChat enforces, here, at the actual send.
+  if (activeConvo.type!=='group' && blockIfRestricted('noDm','Direct messages are turned off for your account.')) return;
+  if (activeConvo.type==='group' && blockIfRestricted('noGroups','Group chats are turned off for your account.')) return;
   if (activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)) { showToast('Cannot send', scbErr('SCB-MSG-16','This conversation is blocked.')); return; }
   // Security feature 22/32: scan for risky links BEFORE sending, not just
   // when the recipient later clicks one (linkifySegment's existing
@@ -16002,7 +16191,11 @@ async function submitPoll(){
     err.textContent=scbErr('SCB-GRP-28','You\'re not a member of that conversation.');
     return;
   }
+  const _isGrp=c.type==='group'||String(c.key||'').startsWith('grp_');
+  if(_isGrp && blockIfRestricted('noGroups','Group chats are turned off for your account.')){ return; }
+  if(!_isGrp && blockIfRestricted('noDm','Direct messages are turned off for your account.')){ return; }
   const msg={id:'msg_'+Date.now().toString(36),from:me.number,time:Date.now(),seen:[]};
+  if (Array.isArray(c.pendingApproval) && c.pendingApproval.includes(me.number)) msg.quarantined = true;
   const aesKey=await getConvoAesKey(c);
   if(aesKey){
     const cq=await aesEnc(aesKey,q);
@@ -16135,7 +16328,10 @@ async function pickGame(type){
     game={type,id:'g_'+Date.now().toString(36),phase:'lobby',hostId:me.number,players:[me.number],roles:{},alive:{},round:0,log:[],night:{wolfTargets:{},seerCheck:null},day:{votes:{}},winner:null};
   }
   const msg={id:'msg_'+Date.now().toString(36),from:me.number,time:Date.now(),seen:[],game};
-  if(activeConvo.type==='group') msg.channelId=activeChannelId||'general';
+  if(activeConvo.type==='group') {
+    msg.channelId=activeChannelId||'general';
+    if (Array.isArray(c.pendingApproval) && c.pendingApproval.includes(me.number)) msg.quarantined = true;
+  }
   c.messages.push(msg);
   await saveConvos();
   lastMsgHash=''; renderMessages(c.messages);
@@ -16278,10 +16474,14 @@ async function guessHangmanLetter(msgId,letter){
   const g=m.game;
   if(g.phase!=='playing') return; // no guessing before the host starts, or after
   if(g.setterId===me.number||(g.winnerIds||[]).length||g.wrong>=g.maxWrong) return;
+  // Participation check (same fix Trivia got, see submitTriviaAnswer): this
+  // used to silently add the caller to g.players with no maxPlayers check,
+  // so anyone in the conversation could guess without joining the lobby and
+  // overflow GAME_DEFS.hangman.maxPlayers.
+  if(!gameHasPlayer(g,me.number)) return;
   letter=letter.toUpperCase();
   if(g.guessed.includes(letter)) return;
   g.guessed.push(letter);
-  if(!g.players.includes(me.number)) g.players.push(me.number);
   if(!g.word.includes(letter)) g.wrong++;
   const solved=g.word.split('').every(ch=>ch===' '||g.guessed.includes(ch));
   if(solved) g.winnerIds=[...new Set([...(g.winnerIds||[]),me.number])];
@@ -18714,6 +18914,14 @@ async function cloudyCreatePoll(groupName,question){
 }
 async function cloudyChangeBio(text){
   if(!me) return;
+  // Match the limits the edit-profile form's maxlength attribute enforces
+  // (editProfile's <textarea id="edit-bio"> is capped at 120) — this path
+  // bypasses that input entirely, so it's the only thing stopping an
+  // arbitrarily long voice/chat-typed bio from being persisted. Also reject
+  // empty/whitespace-only text, which used to pass this function's `!text`
+  // check (a non-empty-but-blank string is still truthy).
+  text=String(text||'').trim().slice(0,120);
+  if(!text) return;
   me.bio=text;
   saveStorage();
   renderMyCard();
@@ -18724,6 +18932,11 @@ async function cloudyChangeBio(text){
 }
 async function cloudyChangeName(text){
   if(!me||!text) return;
+  // Same reasoning as cloudyChangeBio: match the edit-profile form's
+  // maxlength (<input id="edit-name"> is capped at 24), which this
+  // voice/chat path bypasses entirely.
+  text=String(text).trim().slice(0,24);
+  if(!text) return;
   me.name=text;
   saveStorage();
   renderMyCard();
@@ -18790,7 +19003,15 @@ function cloudyBlockToggle(name,block){
   if(!c){ showToast('Cloudy 🤔',scbErr('SCB-ASST-25','I couldn\'t find a contact named "'+name+'".')); cloudySpeak('I could not find that contact.'); return; }
   if(!me.blocked) me.blocked=[];
   const idx=me.blocked.indexOf(c.number);
-  if(block&&idx===-1){ me.blocked.push(c.number); }
+  // Same confirmation toggleBlockUser() requires from the sidebar menu —
+  // this voice/chat path reimplemented the block logic inline instead of
+  // calling that function, which skipped its confirm() entirely, so saying
+  // "Cloudy, block <name>" blocked someone immediately with no "are you
+  // sure" step.
+  if(block&&idx===-1){
+    if(!confirm('Block '+c.name+'? They won\'t be able to message you, and you won\'t be able to message them.')) return;
+    me.blocked.push(c.number);
+  }
   else if(!block&&idx!==-1){ me.blocked.splice(idx,1); }
   else{ showToast('Cloudy',block?(c.name+' is already blocked.'):(c.name+' is not blocked.')); return; }
   saveStorage();
@@ -18812,6 +19033,18 @@ function nextWeekdayAt(day,h,mins){
   d.setDate(d.getDate()+diff);
   return d.getTime();
 }
+// Validates an hour/minute pair BEFORE it reaches setHours()/setDate(),
+// which silently normalize out-of-range values by rolling the date forward
+// (setHours(25,...) quietly becomes 1 AM the next day) instead of erroring —
+// so a misheard digit (speech-to-text) or a typo used to create a reminder
+// silently scheduled for the wrong day/time with no error shown. `ap` is the
+// am/pm suffix actually typed/spoken, if any: with one given, the hour must
+// be a valid 12-hour-clock value (1-12); without one, it must be 24-hour (0-23).
+function _validReminderHM(hRaw,mins,ap){
+  if(!Number.isInteger(mins)||mins<0||mins>59) return false;
+  if(ap){ return Number.isInteger(hRaw)&&hRaw>=1&&hRaw<=12; }
+  return Number.isInteger(hRaw)&&hRaw>=0&&hRaw<=23;
+}
 function parseReminderTime(str){
   str=str.trim().toLowerCase();
   let m=str.match(/^in (\d+)\s*(minute|min|hour|hr)s?$/);
@@ -18820,12 +19053,14 @@ function parseReminderTime(str){
   if(m){
     const day=REMINDER_WEEKDAYS.indexOf(m[1]);
     let h=parseInt(m[2]); const mins=m[3]?parseInt(m[3]):0; const ap=m[4];
+    if(!_validReminderHM(h,mins,ap)) return null;
     if(ap==='pm'&&h<12) h+=12; if(ap==='am'&&h===12) h=0;
     return {next:nextWeekdayAt(day,h,mins),recurDay:day,recurHour:h,recurMin:mins};
   }
   m=str.match(/^tomorrow at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
   if(m){
     let h=parseInt(m[1]); const mins=m[2]?parseInt(m[2]):0; const ap=m[3];
+    if(!_validReminderHM(h,mins,ap)) return null;
     if(ap==='pm'&&h<12) h+=12; if(ap==='am'&&h===12) h=0;
     const d=new Date(); d.setDate(d.getDate()+1); d.setHours(h,mins,0,0);
     return {next:d.getTime(),recurDay:null};
@@ -18833,6 +19068,7 @@ function parseReminderTime(str){
   m=str.match(/^at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
   if(m){
     let h=parseInt(m[1]); const mins=m[2]?parseInt(m[2]):0; const ap=m[3];
+    if(!_validReminderHM(h,mins,ap)) return null;
     if(ap==='pm'&&h<12) h+=12; if(ap==='am'&&h===12) h=0;
     const d=new Date(); d.setHours(h,mins,0,0);
     if(d.getTime()<=Date.now()) d.setDate(d.getDate()+1);
@@ -20551,9 +20787,77 @@ async function checkAdminPanelStatus(){
     return {state:'red', msg:'Admin data unreadable: '+((e&&e.message)||'error')};
   }
 }
+async function checkE2EEncryption(){
+  if(!me) return {state:'yellow', msg:'Not signed in'};
+  try{
+    const kp=await ensureE2EKeypair();
+    if(!kp||!_myPubJwk) return {state:'red', msg:'No local encryption keypair on this device — messages can\'t be encrypted'};
+    // Compare the local public key against Firebase's canonical copy. A
+    // mismatch here is exactly the bug class that caused messages to stay
+    // encrypted/undecryptable after a device's local key went stale — this
+    // was fixed by having ensureE2EKeypair() self-heal against the cloud
+    // copy, but surfacing the comparison here too catches it if it recurs.
+    const snap=await _withFirebaseTimeout(fbdb.ref(USERS_BIN+'/'+me.number+'/pubkey').get(),'E2E key check',8000);
+    const cloudPub=snap.exists()?snap.val():null;
+    if(!cloudPub) return {state:'yellow', msg:'Local keypair ready, but not yet published to Firebase'};
+    if(cloudPub!==_myPubJwk) return {state:'red', msg:'Local encryption key doesn\'t match Firebase\'s copy — messages may fail to decrypt until this resolves (try reloading)'};
+    // Round-trip sanity check with a throwaway AES-GCM key, independent of
+    // any contact — this catches a broken Web Crypto implementation rather
+    // than a specific contact's key.
+    const testKey=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+    const wrapped=await aesEnc(testKey,'scb-diagnostic-ping');
+    const back=wrapped?await aesDec(testKey,wrapped):null;
+    if(back!=='scb-diagnostic-ping') return {state:'red', msg:'Encrypt/decrypt round-trip failed — Web Crypto may be unavailable in this browser'};
+    return {state:'green', msg:'Local key matches Firebase, and encrypt/decrypt round-trip succeeded'};
+  }catch(e){
+    return {state:'red', msg:'Encryption check failed: '+((e&&e.message)||'error')};
+  }
+}
+async function checkWriteRoundTrip(){
+  // The other checks here are all reads. A connection can serve reads fine
+  // while writes are degraded or dead (see _fbReadWithFallback — the
+  // WS→REST fallback it installs only covers reads, not writes), so without
+  // this, "everything green" could still mean nothing anyone sends actually
+  // goes through.
+  if(!me) return {state:'yellow', msg:'Not signed in'};
+  const t0=Date.now();
+  try{
+    const ref=fbdb.ref('admin_site/diagnostics_ping/'+me.number);
+    await _withFirebaseTimeout(ref.set(Date.now()),'Write round-trip (write)',8000);
+    await _withFirebaseTimeout(ref.get(),'Write round-trip (read-back)',8000);
+    const ms=Date.now()-t0;
+    return {state: ms<3000?'green':'yellow', msg:(ms<3000?'Writes confirmed normally':'Writes reachable but slow')+' — '+ms+' ms round-trip'};
+  }catch(e){
+    const cfg=isConfigFailure(e);
+    return {state:'red', msg:cfg?'Writes rejected by Firebase rules':'Write failed: '+((e&&e.message)||'network error')};
+  }
+}
+function checkConnectionMode(){
+  if(typeof _sdkConnBad==='undefined') return {state:'yellow', msg:'Connection-mode tracking unavailable'};
+  if(_sdkConnBad) return {state:'yellow', msg:'Reads are on the REST fallback — the live WebSocket connection looks blocked. Writes still go straight over the WebSocket and aren\'t covered by this fallback, so they may still be degraded even though reads work.'};
+  return {state:'green', msg:'Normal WebSocket connection'};
+}
+async function checkGroupKeyHealth(){
+  if(!me) return {state:'yellow', msg:'Not signed in'};
+  try{
+    if(!convosCache) await _withFirebaseTimeout(getConvos(),'Group key check',8000);
+    const groups=(convosCache||[]).filter(c=>c&&c.wrappedKeys&&(c.type==='group'||String(c.key||'').startsWith('grp_'))&&isConvoMemberOf(c,true));
+    if(!groups.length) return {state:'green', msg:'No encrypted groups to check'};
+    let broken=0;
+    for(const c of groups){ if(!(await getGroupAesKey(c))) broken++; }
+    if(!broken) return {state:'green', msg:'Group key decrypts correctly in all '+groups.length+' group'+(groups.length===1?'':'s')};
+    return {state:'red', msg:broken+' of '+groups.length+' group'+(groups.length===1?'':'s')+' can\'t decrypt their key on this device — messages there may be unreadable here'};
+  }catch(e){
+    return {state:'red', msg:'Group key check failed: '+((e&&e.message)||'error')};
+  }
+}
 const SYSTEM_STATUS_CHECKS = [
   {id:'messaging', label:'Messaging',        run:checkMessaging},
   {id:'firebase',  label:'Firebase',         run:checkFirebasePing},
+  {id:'write_rt',  label:'Write round-trip', run:checkWriteRoundTrip},
+  {id:'conn_mode', label:'Connection mode',  run:checkConnectionMode},
+  {id:'e2e',       label:'Message encryption', run:checkE2EEncryption},
+  {id:'group_key', label:'Group encryption keys', run:checkGroupKeyHealth},
   {id:'calls',     label:'Voice & Video Calls', run:checkCallSubsystem},
   {id:'meetings',  label:'Meetings (LiveKit)', run:checkMeetingsLiveKit},
   {id:'weather',   label:'Weather widget',   run:checkWeatherSource},
@@ -21188,6 +21492,7 @@ function teardownMeetingPeer(otherId){
   try{ entry.pc.close(); }catch(e){}
   delete meetingState.peers[otherId];
 }
+let _joiningMeeting=false;
 async function joinMeeting(meetingId){
   if(blockIfRestricted('noVoice','Meetings are turned off for your account.')) return;
   if(meetingState){ showToast('Already in a meeting',scbErr('SCB-MEET-03','Leave the current meeting first.')); return; }
@@ -21195,33 +21500,44 @@ async function joinMeeting(meetingId){
     showToast('Not supported',scbErr('SCB-MEET-04','This browser can\'t run meetings.'));
     return;
   }
-  let stream=null;
+  // Reentrancy guard: meetingState isn't assigned until deep inside
+  // connectToLiveKitRoom/connectToMeshRoom, well after the getUserMedia
+  // await below — a double-click on "start/join meeting" before that
+  // resolves would otherwise start two concurrent sessions (two camera/mic
+  // streams, two sets of peer connections), with the loser's never torn
+  // down by leaveMeeting() (which only knows about whichever meetingState
+  // "won").
+  if(_joiningMeeting) return;
+  _joiningMeeting=true;
   try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:true, video:true});
-  }catch(e){
-    // Fall back to audio-only rather than failing the whole join.
-    try{ stream=await navigator.mediaDevices.getUserMedia({audio:true, video:false}); }
-    catch(e2){ showToast('Can\'t join',scbErr('SCB-MEET-05','You couldn\'t join the meeting because microphone access is required and was refused.',(e2.message||'permission denied'))); return; }
-  }
-  try{
-    document.getElementById('scb-meeting-room').classList.add('visible');
-    document.getElementById('scb-meeting-id-label').textContent=meetingId;
-    document.getElementById('scb-meeting-chat-log').innerHTML='';
-    await connectToMeetingRoom(meetingId, stream);
-    renderMeetingGrid();
-    updateMeetingControls();
-    showToast('Meeting started','Share the code '+meetingId+' with up to '+(effectiveMaxParticipants()-1)+' other people.');
-  }catch(e){
-    // However far setup got — a mesh join can have already created peer
-    // connections, written a presence record, and attached up to 3 Firebase
-    // listeners before failing later in the sequence (e.g. the final
-    // attachMeetingChatFeed() step) — tear all of it down the same way a
-    // normal leave does, instead of just nulling meetingState and leaking
-    // RTCPeerConnections / a ghost presence record / live listeners behind it.
-    leaveMeeting();
-    stream.getTracks().forEach(t=>t.stop());
-    showToast('Couldn\'t join', scbErr('SCB-MEET-06','You couldn\'t join that meeting — connecting to the meeting room failed.',(e.message||'error')));
-  }
+    let stream=null;
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:true, video:true});
+    }catch(e){
+      // Fall back to audio-only rather than failing the whole join.
+      try{ stream=await navigator.mediaDevices.getUserMedia({audio:true, video:false}); }
+      catch(e2){ showToast('Can\'t join',scbErr('SCB-MEET-05','You couldn\'t join the meeting because microphone access is required and was refused.',(e2.message||'permission denied'))); return; }
+    }
+    try{
+      document.getElementById('scb-meeting-room').classList.add('visible');
+      document.getElementById('scb-meeting-id-label').textContent=meetingId;
+      document.getElementById('scb-meeting-chat-log').innerHTML='';
+      await connectToMeetingRoom(meetingId, stream);
+      renderMeetingGrid();
+      updateMeetingControls();
+      showToast('Meeting started','Share the code '+meetingId+' with up to '+(effectiveMaxParticipants()-1)+' other people.');
+    }catch(e){
+      // However far setup got — a mesh join can have already created peer
+      // connections, written a presence record, and attached up to 3 Firebase
+      // listeners before failing later in the sequence (e.g. the final
+      // attachMeetingChatFeed() step) — tear all of it down the same way a
+      // normal leave does, instead of just nulling meetingState and leaking
+      // RTCPeerConnections / a ghost presence record / live listeners behind it.
+      leaveMeeting();
+      stream.getTracks().forEach(t=>t.stop());
+      showToast('Couldn\'t join', scbErr('SCB-MEET-06','You couldn\'t join that meeting — connecting to the meeting room failed.',(e.message||'error')));
+    }
+  }finally{ _joiningMeeting=false; }
 }
 function leaveMeeting(){
   if(!meetingState){ document.getElementById('scb-meeting-room').classList.remove('visible'); return; }
@@ -24596,7 +24912,10 @@ async function _sweepSelfDestructAccounts(){
     for(const u of users){
       if(!u||!u.selfDestructMonths||u.deleted||u.number===ADMIN_NUMBER) continue;
       const thresholdMs=u.selfDestructMonths*30*86400000;
-      const lastActive=u.lastSeen||u.createdAt||0;
+      // Prefer lastActive (privacy-pref-independent) over lastSeen, which
+      // freezes for any user who has turned off "show online status" —
+      // see registerOrUpdate()'s comment on the lastActive field.
+      const lastActive=u.lastActive||u.lastSeen||u.createdAt||0;
       if(!lastActive||now-lastActive<thresholdMs) continue;
       // Immutable log entry BEFORE anonymizing — this is the only remaining
       // record of who this account was, so it has to be written first.
@@ -24938,6 +25257,12 @@ function sendSelfDestructMsg(){
 }
 async function _sendSelfDestruct(text){
   if(!window.me||!window.activeConvo||!window.convosCache) return;
+  // This path (view-once self-destruct messages) never checked parental
+  // restrictions at all — a noDm/noGroups-restricted account could send
+  // self-destruct messages with zero gating even with the direct fix above
+  // on sendMsg()/sendFileMsg().
+  if (window.activeConvo.type!=='group' && blockIfRestricted('noDm','Direct messages are turned off for your account.')) return;
+  if (window.activeConvo.type==='group' && blockIfRestricted('noGroups','Group chats are turned off for your account.')) return;
   const key=window.activeConvo.key;
   const c=(window.convosCache||[]).find(x=>x&&x.key===key);
   if(!c) return;
