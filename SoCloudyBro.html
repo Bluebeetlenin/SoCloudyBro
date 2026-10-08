@@ -18665,14 +18665,23 @@ async function adminCleanFirebase() {
 async function adminDiagnoseFirebase() {
   if(!requireAdmin()) return;
   showToast('🔍 Diagnosing…', 'Scanning Firebase for issues…');
-  const results = { pendingFlags: 0, orphanMsgs: 0, doubleEncrypted: 0, errors: 0 };
+  const results = {
+    pendingFlags: 0, orphanMsgs: 0, doubleEncrypted: 0,
+    emptyConvos: 0, missingNumber: 0, duplicateNumbers: 0,
+    orphanReports: 0, staleOpenReports: 0, duplicateBlacklist: 0,
+    errors: 0
+  };
 
   try {
     // Scan messages via SDK
     const convoSnap = await fbdb.ref('conversations').get();
     const convoData = convoSnap.val() || {};
     for (const [convoId, convo] of Object.entries(convoData)) {
-      if (!convo || !convo.messages) continue;
+      if (!convo) continue;
+      const hasMembers = Array.isArray(convo.members) && convo.members.length > 0;
+      const hasMessages = convo.messages && Object.keys(convo.messages).length > 0;
+      if (!hasMembers && !hasMessages) { results.emptyConvos++; continue; }
+      if (!convo.messages) continue;
       const members = new Set(convo.members || []);
       for (const [msgId, msg] of Object.entries(convo.messages)) {
         if (!msg) continue;
@@ -18681,12 +18690,21 @@ async function adminDiagnoseFirebase() {
       }
     }
 
-    // Scan users for double-encrypted fields via SDK
+    // Scan users for double-encrypted fields, missing/duplicate account numbers via SDK
     const usersSnap = await fbdb.ref('users').get();
     const usersRaw2 = usersSnap.val() || {};
     const usersObj2 = Array.isArray(usersRaw2) ? Object.fromEntries(usersRaw2.map((u,i)=>[i,u])) : usersRaw2;
+    const seenNumbers = new Set();
+    const knownNumbers = new Set();
     for (const [, acct] of Object.entries(usersObj2)) {
       if (!acct) continue;
+      if (acct.number == null || acct.number === '') { results.missingNumber++; }
+      else {
+        const n = String(acct.number);
+        if (seenNumbers.has(n)) results.duplicateNumbers++;
+        seenNumbers.add(n);
+        knownNumbers.add(n);
+      }
       for (const field of ['name', 'bio', 'customStatus']) {
         if (!acct[field]) continue;
         try {
@@ -18696,8 +18714,34 @@ async function adminDiagnoseFirebase() {
       }
     }
 
+    // Scan reports for stale/unresolved entries and references to accounts that no longer exist
+    try {
+      const reports = await getReports();
+      const staleCutoff = Date.now() - (30 * 24 * 60 * 60 * 1000); // 30 days
+      for (const r of (reports || [])) {
+        if (!r) continue;
+        if (r.reportedNumber != null && !knownNumbers.has(String(r.reportedNumber))) results.orphanReports++;
+        if ((r.status || 'open') === 'open' && typeof r.time === 'number' && r.time < staleCutoff) results.staleOpenReports++;
+      }
+    } catch(e) { results.errors++; }
+
+    // Scan the device/IP blacklist for duplicate entries (same deviceId or ip blocked more than once)
+    try {
+      const blSnap = await fbdb.ref('blacklist').get();
+      const blRaw = blSnap.exists() ? blSnap.val() : [];
+      const bl = (Array.isArray(blRaw) ? blRaw : Object.values(blRaw || {})).filter(Boolean);
+      const seenDevices = new Set(), seenIPs = new Set();
+      for (const b of bl) {
+        if (b.deviceId) { if (seenDevices.has(b.deviceId)) results.duplicateBlacklist++; seenDevices.add(b.deviceId); }
+        if (b.ip) { if (seenIPs.has(b.ip)) results.duplicateBlacklist++; seenIPs.add(b.ip); }
+      }
+    } catch(e) { results.errors++; }
+
     showToast('🔍 Diagnosis Complete',
-      `Found: ${results.pendingFlags} pending flags, ${results.orphanMsgs} orphan messages, ${results.doubleEncrypted} double-encrypted profile fields. Errors: ${results.errors}`);
+      `Found: ${results.pendingFlags} pending flags, ${results.orphanMsgs} orphan messages, ${results.doubleEncrypted} double-encrypted profile fields, `+
+      `${results.emptyConvos} empty conversations, ${results.missingNumber} accounts missing a number, ${results.duplicateNumbers} duplicate account numbers, `+
+      `${results.orphanReports} reports on deleted accounts, ${results.staleOpenReports} stale unresolved reports (30+ days), ${results.duplicateBlacklist} duplicate blacklist entries. `+
+      `Errors: ${results.errors}`);
   } catch(e) {
     selfHeal('SCB-ADMIN-26', e, { context: 'adminDiagnoseFirebase' });
     showToast('❌ Diagnosis Failed', scbErr('SCB-ADMIN-26', 'Firebase diagnosis failed', e.message));
