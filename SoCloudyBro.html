@@ -5226,10 +5226,14 @@ const MINT_TOKEN_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.worke
 // unreachable, bad credentials server-side somehow, timeout) this just
 // leaves the existing anonymous session in place exactly as before this
 // existed, so the worst case is "no upgrade happened," never "login broke."
-// `proof` is exactly one of {password} or {googleCredential} — whichever
-// the login path that just succeeded actually has.
+// `proof` is exactly one of {password}, {googleCredential}, {passkeyAssertion},
+// {faceDescriptor}, or {backupPin} — whichever the login path that just
+// succeeded actually has. The Worker independently re-verifies whichever one
+// is sent (password/PIN hash comparison, Google ID token signature, WebAuthn
+// assertion signature, or face-descriptor distance) server-side — the
+// client's say-so alone is never enough for any of them.
 async function _tryUpgradeToCustomAuth(number, proof){
-  if(!number || !proof || !(proof.password||proof.googleCredential) || !MINT_TOKEN_ENDPOINT) return false;
+  if(!number || !proof || !(proof.password||proof.googleCredential||proof.passkeyAssertion||proof.faceDescriptor||proof.backupPin) || !MINT_TOKEN_ENDPOINT) return false;
   try{
     const ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
     const timer = ctl ? setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 8000) : null;
@@ -5500,6 +5504,15 @@ var _loginGoogleSub=null;
 // token for this login the same way _loginRawPwd does for password logins.
 // See MINT_TOKEN_ENDPOINT's comment.
 var _loginGoogleCredential=null;
+// Same purpose as _loginRawPwd/_loginGoogleCredential, for the three login
+// methods that previously had no server-verifiable proof at all (see
+// MINT_TOKEN_ENDPOINT's comment) — set right before finishLogin() by
+// whichever of passkey/face/backup-PIN login just succeeded, consumed once,
+// and nulled alongside the others so a stale proof from an earlier attempt
+// can never leak into a later login.
+var _loginPasskeyProof=null;
+var _loginFaceDescriptorProof=null;
+var _loginBackupPinProof=null;
 
 async function ensureE2EKeypair(){
   if(_myKeyPair) return _myKeyPair;
@@ -7947,6 +7960,11 @@ async function _finishFaceLogin(descriptor){
     await _showFaceScanSuccess('login-face-video',400);
     if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
     if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
+    // The Worker recomputes the same faceapi.euclideanDistance() check
+    // against the account's stored descriptor before minting anything — the
+    // raw descriptor array is sent, never just a client-side "it matched".
+    _loginRawPwd=null; _loginGoogleCredential=null; _loginPasskeyProof=null; _loginBackupPinProof=null;
+    _loginFaceDescriptorProof=Array.from(descriptor);
     await finishLogin(pending2fa.user, pending2fa.pwdToStore);
     pending2fa=null;
   }catch(e){
@@ -8279,16 +8297,19 @@ async function finishLogin(user, pwdToStore){
     // until the first registerOrUpdate() poll completes after launch, so a
     // delegated admin's admin button/tabs would flash hidden then appear.
     adminAccess: user.adminAccess||null, selectedBadge: user.selectedBadge||null };
-  // _loginRawPwd/_loginGoogleCredential are only set by the password- and
-  // Google-login paths respectively — this is a no-op (stays on the
-  // anonymous session) for 2FA-completion/face/backup-PIN logins, by
-  // design, until each gets its own proof. See MINT_TOKEN_ENDPOINT's
-  // comment. Password is checked first only because it's set closer to
-  // this point in the normal case; a login only ever has one or the other.
+  // Exactly one of these five is set by whichever login path just
+  // succeeded (password, Google, passkey, face, or backup-PIN) — each gets
+  // its own server-verifiable proof now, see MINT_TOKEN_ENDPOINT's comment.
+  // Checked in this order only because password is set closest to this
+  // point in the common case; a login only ever has one set at a time.
   try{
     if(_loginRawPwd) await _tryUpgradeToCustomAuth(me.number, {password:_loginRawPwd});
     else if(_loginGoogleCredential) await _tryUpgradeToCustomAuth(me.number, {googleCredential:_loginGoogleCredential});
+    else if(_loginPasskeyProof) await _tryUpgradeToCustomAuth(me.number, {passkeyAssertion:_loginPasskeyProof});
+    else if(_loginFaceDescriptorProof) await _tryUpgradeToCustomAuth(me.number, {faceDescriptor:_loginFaceDescriptorProof});
+    else if(_loginBackupPinProof) await _tryUpgradeToCustomAuth(me.number, {backupPin:_loginBackupPinProof});
   }catch(e){}
+  _loginPasskeyProof=null; _loginFaceDescriptorProof=null; _loginBackupPinProof=null;
   saveStorage();
   // Save account to multi-account list
   try{ _saveAccountToAccounts(me); }catch(e){}
@@ -8430,6 +8451,17 @@ async function _attemptPasskeyLogin(user,pwdToStore,errElId){
     }
     if(user.banned){ if(err) err.textContent=scbErr('SCB-AUTH-12','This account has been suspended.'); return; }
     if(user.deleted){ if(err) err.textContent=scbErr('SCB-AUTH-13','This account has been deleted.'); return; }
+    // Hand the Worker everything it needs to independently re-verify this
+    // exact assertion (credential id to look up the stored public key, plus
+    // the three signed fields) — same algorithm as _verifyPasskeyAssertion
+    // above, just run server-side too before a real auth token is minted.
+    _loginRawPwd=null; _loginGoogleCredential=null; _loginFaceDescriptorProof=null; _loginBackupPinProof=null;
+    _loginPasskeyProof={
+      credentialId:_b64url(assertion.rawId),
+      clientDataJSON:_b64(assertion.response.clientDataJSON),
+      authenticatorData:_b64(assertion.response.authenticatorData),
+      signature:_b64(assertion.response.signature),
+    };
     await finishLogin(user, pwdToStore);
   }catch(e){
     if(err) err.textContent=scbErr('SCB-AUTH-22','Passkey sign-in failed.',e.message||'');
@@ -8912,6 +8944,11 @@ async function checkLoginBackupPin(pin,inputs){
     _clearLoginRateLimit(rlKey);
     const u=pending2fa.user,p=pending2fa.pwdToStore;
     pending2fa=null;
+    // Same salted-SHA-256 scheme/hash as the account password (see
+    // handleSetBackupPin) — the Worker verifies the PIN against
+    // backupPinHash the same way it verifies a password against pwd.
+    _loginRawPwd=null; _loginGoogleCredential=null; _loginPasskeyProof=null; _loginFaceDescriptorProof=null;
+    _loginBackupPinProof=pin;
     await finishLogin(u,p);
   }catch(e){
     err.textContent=scbErr('SCB-AUTH-27','Backup PIN sign-in couldn\'t be completed.',e.message);
@@ -18460,17 +18497,33 @@ const SCB_CANONICAL_RULES = {
     "users": {
       // Public read — needed for contact search/add and profile display
       ".read": true,
-      // Writes require anonymous auth (prevents unauthenticated spam writes)
-      ".write": "auth != null",
       // Index at the users level so orderByChild('number') on fbdb.ref('users') works
-      ".indexOn": ["number", "linkedSoCloudyBro"]
+      ".indexOn": ["number", "linkedSoCloudyBro"],
+      "$uid": {
+        // A user may only write their own record (auth.token.number comes from
+        // a real Firebase custom auth token minted by the firebase-rules
+        // Worker's /mint-token — see MINT_TOKEN_ENDPOINT's comment — never
+        // from the plain anonymous session every visitor gets for free).
+        // Admin #2015 and any account with adminAccess set can write any record.
+        ".write": "auth != null && (auth.token.number == $uid || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())"
+      }
     },
 
     "conversations": {
       // Public read — message content is E2E encrypted at the app layer
       ".read": true,
-      // Writes require anonymous auth
-      ".write": "auth != null",
+      // Writes require a REAL authenticated session (a custom auth token from
+      // /mint-token — password, Google, passkey, face, or backup-PIN login all
+      // mint one now), not just the anonymous session every visitor gets for
+      // free on page load. This does NOT yet check that the writer is actually
+      // a member of this specific conversation — members/participants are
+      // still stored as arrays, and Firebase rules can only cheaply check "does
+      // this child key exist", not "is this number in this array". Enforcing
+      // per-member write access needs migrating members/participants to a
+      // map (e.g. {"1234":true}) first, which touches every read site that
+      // does .includes()/.map()/.filter() on them — a separate, larger,
+      // carefully-tested pass, not bundled into this rule change.
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
       "$convoId": {
         "messages": {
           ".indexOn": ["at"]
