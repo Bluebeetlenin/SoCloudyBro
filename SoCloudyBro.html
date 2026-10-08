@@ -5203,6 +5203,50 @@ const GOOGLE_CLIENT_ID = '838238846995-462tmfqv9p4mthurorumg30d2uq4qin1.apps.goo
 // that isn't happening.
 const GOOGLE_VERIFY_ENDPOINT = 'https://socloudybro-google-verify.steveemil7.workers.dev';
 
+// MINT_TOKEN_ENDPOINT points at the existing firebase-rules Cloudflare
+// Worker's /mint-token route. init() signs every visitor in anonymously
+// (signInAnonymously()) purely so pre-login reads work at all — that
+// session satisfies Firebase's "auth != null" for literally anyone, logged
+// in or not, which is why every admin/permission/membership check in this
+// app is backed by nothing server-side today. finishLogin() calls
+// _tryUpgradeToCustomAuth() below to trade that anonymous session for a
+// real one once a PASSWORD login succeeds (the Worker independently
+// re-verifies the password server-side before minting anything — this
+// isn't the client asserting its own identity). This is intentionally only
+// step one: it changes who you're authenticated AS, not what any Firebase
+// rule actually checks — the rules themselves are unchanged, so this is
+// safe to ship on its own. It currently only covers the password-login
+// path; Google/passkey/face/backup-PIN logins still run on the plain
+// anonymous session until each gets its own proof wired up the same way.
+const MINT_TOKEN_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.workers.dev/mint-token';
+// Best-effort, never blocks or breaks login: on any failure (Worker
+// unreachable, bad credentials server-side somehow, timeout) this just
+// leaves the existing anonymous session in place exactly as before this
+// existed, so the worst case is "no upgrade happened," never "login broke."
+async function _tryUpgradeToCustomAuth(number, rawPwd){
+  if(!number || !rawPwd || !MINT_TOKEN_ENDPOINT) return false;
+  try{
+    const ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+    const timer = ctl ? setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 8000) : null;
+    let res;
+    try{
+      res = await fetch(MINT_TOKEN_ENDPOINT, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({number, password: rawPwd}),
+        ...(ctl?{signal:ctl.signal}:{}),
+      });
+    } finally { if(timer) clearTimeout(timer); }
+    if(!res.ok) return false;
+    const data = await res.json().catch(()=>null);
+    if(!data || !data.token) return false;
+    await firebase.auth().signInWithCustomToken(data.token);
+    return true;
+  }catch(e){
+    console.warn('[auth] custom-token upgrade failed, staying on the existing session:', e.message);
+    return false;
+  }
+}
+
 // Realtime Database paths (each holds the same JSON blob that used to live in a JSONBin bin)
 const USERS_BIN   = 'users';
 const CONVOS_BIN  = 'conversations';
@@ -8218,6 +8262,11 @@ async function finishLogin(user, pwdToStore){
     // until the first registerOrUpdate() poll completes after launch, so a
     // delegated admin's admin button/tabs would flash hidden then appear.
     adminAccess: user.adminAccess||null, selectedBadge: user.selectedBadge||null };
+  // _loginRawPwd is only set by the password-login path (submitLogin), not
+  // by Google/2FA-completion/face/backup-PIN logins — so this is a no-op
+  // (stays on the anonymous session) for all of those, by design, until
+  // each gets its own proof. See MINT_TOKEN_ENDPOINT's comment.
+  if(_loginRawPwd){ try{ await _tryUpgradeToCustomAuth(me.number, _loginRawPwd); }catch(e){} }
   saveStorage();
   // Save account to multi-account list
   try{ _saveAccountToAccounts(me); }catch(e){}
