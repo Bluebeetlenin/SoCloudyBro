@@ -18666,9 +18666,9 @@ async function adminDiagnoseFirebase() {
   if(!requireAdmin()) return;
   showToast('🔍 Diagnosing…', 'Scanning Firebase for issues…');
   const results = {
-    pendingFlags: 0, orphanMsgs: 0, doubleEncrypted: 0,
-    emptyConvos: 0, missingNumber: 0, duplicateNumbers: 0,
-    orphanReports: 0, staleOpenReports: 0, duplicateBlacklist: 0,
+    pendingFlags: 0, orphanMsgs: 0, doubleEncrypted: 0, missingTimestamp: 0, duplicateMembers: 0,
+    emptyConvos: 0, missingNumber: 0, duplicateNumbers: 0, duplicateGoogleSub: 0, contradictoryFlags: 0,
+    orphanReports: 0, staleOpenReports: 0, reportsOnBannedUnresolved: 0, duplicateBlacklist: 0,
     errors: 0
   };
 
@@ -18681,21 +18681,30 @@ async function adminDiagnoseFirebase() {
       const hasMembers = Array.isArray(convo.members) && convo.members.length > 0;
       const hasMessages = convo.messages && Object.keys(convo.messages).length > 0;
       if (!hasMembers && !hasMessages) { results.emptyConvos++; continue; }
+      if (Array.isArray(convo.members)) {
+        const uniqueMembers = new Set(convo.members.map(m => String(m)));
+        if (uniqueMembers.size !== convo.members.length) results.duplicateMembers++;
+      }
       if (!convo.messages) continue;
       const members = new Set(convo.members || []);
       for (const [msgId, msg] of Object.entries(convo.messages)) {
         if (!msg) continue;
         if (msg.pending === true) results.pendingFlags++;
         if (msg.from && members.size > 0 && !members.has(Number(msg.from)) && !members.has(String(msg.from))) results.orphanMsgs++;
+        if (msg.at == null || typeof msg.at !== 'number') results.missingTimestamp++;
       }
     }
 
-    // Scan users for double-encrypted fields, missing/duplicate account numbers via SDK
+    // Scan users for double-encrypted fields, missing/duplicate account numbers, duplicate
+    // googleSub (would let two accounts both sign in as the same Google identity), and
+    // contradictory banned+deleted flag combinations, via SDK
     const usersSnap = await fbdb.ref('users').get();
     const usersRaw2 = usersSnap.val() || {};
     const usersObj2 = Array.isArray(usersRaw2) ? Object.fromEntries(usersRaw2.map((u,i)=>[i,u])) : usersRaw2;
     const seenNumbers = new Set();
     const knownNumbers = new Set();
+    const bannedNumbers = new Set();
+    const seenGoogleSubs = new Set();
     for (const [, acct] of Object.entries(usersObj2)) {
       if (!acct) continue;
       if (acct.number == null || acct.number === '') { results.missingNumber++; }
@@ -18704,7 +18713,15 @@ async function adminDiagnoseFirebase() {
         if (seenNumbers.has(n)) results.duplicateNumbers++;
         seenNumbers.add(n);
         knownNumbers.add(n);
+        if (acct.banned) bannedNumbers.add(n);
       }
+      if (acct.googleSub) {
+        if (seenGoogleSubs.has(acct.googleSub)) results.duplicateGoogleSub++;
+        seenGoogleSubs.add(acct.googleSub);
+      }
+      // A deleted account that's also still marked banned is redundant/contradictory —
+      // deleteAccount() already wipes the record, banned shouldn't survive that.
+      if (acct.deleted && acct.banned) results.contradictoryFlags++;
       for (const field of ['name', 'bio', 'customStatus']) {
         if (!acct[field]) continue;
         try {
@@ -18714,7 +18731,8 @@ async function adminDiagnoseFirebase() {
       }
     }
 
-    // Scan reports for stale/unresolved entries and references to accounts that no longer exist
+    // Scan reports for stale/unresolved entries, references to accounts that no longer exist,
+    // and open reports against a user who's already been banned (moderation queue not closed out)
     try {
       const reports = await getReports();
       const staleCutoff = Date.now() - (30 * 24 * 60 * 60 * 1000); // 30 days
@@ -18722,6 +18740,7 @@ async function adminDiagnoseFirebase() {
         if (!r) continue;
         if (r.reportedNumber != null && !knownNumbers.has(String(r.reportedNumber))) results.orphanReports++;
         if ((r.status || 'open') === 'open' && typeof r.time === 'number' && r.time < staleCutoff) results.staleOpenReports++;
+        if ((r.status || 'open') === 'open' && r.reportedNumber != null && bannedNumbers.has(String(r.reportedNumber))) results.reportsOnBannedUnresolved++;
       }
     } catch(e) { results.errors++; }
 
@@ -18738,10 +18757,11 @@ async function adminDiagnoseFirebase() {
     } catch(e) { results.errors++; }
 
     showToast('🔍 Diagnosis Complete',
-      `Found: ${results.pendingFlags} pending flags, ${results.orphanMsgs} orphan messages, ${results.doubleEncrypted} double-encrypted profile fields, `+
-      `${results.emptyConvos} empty conversations, ${results.missingNumber} accounts missing a number, ${results.duplicateNumbers} duplicate account numbers, `+
-      `${results.orphanReports} reports on deleted accounts, ${results.staleOpenReports} stale unresolved reports (30+ days), ${results.duplicateBlacklist} duplicate blacklist entries. `+
-      `Errors: ${results.errors}`);
+      `Found: ${results.pendingFlags} pending flags, ${results.orphanMsgs} orphan messages, ${results.missingTimestamp} messages missing a timestamp, `+
+      `${results.doubleEncrypted} double-encrypted profile fields, ${results.emptyConvos} empty conversations, ${results.duplicateMembers} conversations with duplicate members, `+
+      `${results.missingNumber} accounts missing a number, ${results.duplicateNumbers} duplicate account numbers, ${results.duplicateGoogleSub} duplicate Google sign-in links, `+
+      `${results.contradictoryFlags} accounts both banned and deleted, ${results.orphanReports} reports on deleted accounts, ${results.staleOpenReports} stale unresolved reports (30+ days), `+
+      `${results.reportsOnBannedUnresolved} open reports on already-banned users, ${results.duplicateBlacklist} duplicate blacklist entries. Errors: ${results.errors}`);
   } catch(e) {
     selfHeal('SCB-ADMIN-26', e, { context: 'adminDiagnoseFirebase' });
     showToast('❌ Diagnosis Failed', scbErr('SCB-ADMIN-26', 'Firebase diagnosis failed', e.message));
