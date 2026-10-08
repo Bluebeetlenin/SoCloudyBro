@@ -4340,7 +4340,9 @@ const SCB_RECOVERY_STRATEGIES = {
 
   'SCB-MSG-01': { // opening a chat failed to load its messages
     maxRetries: 1,
-    instructionIfUnrecoverable: 'This chat couldn\'t load. Check your connection and try opening it again.',
+    instructionIfUnrecoverable: (err) => isConfigFailure(err)
+      ? 'This chat can\'t load right now — the server is rejecting reads. This looks like a site configuration problem, not something retrying fixes. The site owner has been notified.'
+      : 'This chat couldn\'t load. Check your connection and try opening it again.',
   },
 
   'SCB-GETUSERMEDIA': { // shared by every mic/camera call site
@@ -4375,10 +4377,33 @@ const SCB_RECOVERY_STRATEGIES = {
         try{ localStorage.clear(); return 'Local storage was full or corrupted and has been cleared — you may need to log in again.'; }
         catch(e2){ /* fall through to generic message below */ }
       }
+      // selfHeal() itself separately detects isConfigFailure(err) right after
+      // calling this (to flagNeedsAttention + notifyAdminByEmail), but this
+      // function's RETURN VALUE is what the user actually sees, and it never
+      // checked the same thing — every code that falls through to DEFAULT
+      // (which is most selfHeal() call sites: AUTH-15, SIGNUP-15, every
+      // ADMIN-*, the global error/rejection hooks, and anything not
+      // explicitly listed above) told the user "try again" even on a
+      // config/permission failure that retrying can never fix, while the
+      // explicitly-defined SCB-MSG-18 strategy got this right. Match it here.
+      if (isConfigFailure(err)) {
+        return 'This looks like a site configuration or permissions problem, not something retrying fixes. The site owner has been notified.';
+      }
       return 'Something went wrong and couldn\'t be fixed automatically'+(msg?': '+msg:'')+'. Try again; if it keeps happening, tell the site owner.';
     },
   },
 };
+// Declared here, right next to selfHeal() which reads it, rather than only
+// at its later original declaration site (~line 20650, inside the
+// withRetry/handleSubsystemFailure block much further down the same
+// script). `let` bindings aren't hoisted the way `function` declarations
+// are — they exist in the temporal dead zone until their declaration line
+// actually runs — so any error thrown during this script's own synchronous
+// top-to-bottom execution, before that later line had run, would have hit
+// a ReferenceError inside selfHeal() itself (via the global error/
+// unhandledrejection hooks a few lines below, which call selfHeal for
+// exactly that kind of early failure) instead of being handled.
+let _selfHealNotifiedFor = {};
 function _resolveRecoveryStrategy(code){
   let s = SCB_RECOVERY_STRATEGIES[code];
   const seen = new Set();
@@ -20647,7 +20672,8 @@ async function withRetry(fn, label, attempts){
 }
 // Recovery ladder: things the app can fix by itself, it fixes. Things it can't,
 // it says so — in-app on next login, plus an admin email once that's configured.
-let _selfHealNotifiedFor = {};
+// (_selfHealNotifiedFor, shared with selfHeal() above, is declared up near
+// selfHeal's own definition now — see the comment there.)
 function handleSubsystemFailure(label, err){
   const msg=(err&&err.message)||'Unknown error';
   console.error('[self-heal] '+label+' failed after retries:', msg);
