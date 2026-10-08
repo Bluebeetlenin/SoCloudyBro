@@ -5215,16 +5215,21 @@ const GOOGLE_VERIFY_ENDPOINT = 'https://socloudybro-google-verify.steveemil7.wor
 // isn't the client asserting its own identity). This is intentionally only
 // step one: it changes who you're authenticated AS, not what any Firebase
 // rule actually checks — the rules themselves are unchanged, so this is
-// safe to ship on its own. It currently only covers the password-login
-// path; Google/passkey/face/backup-PIN logins still run on the plain
-// anonymous session until each gets its own proof wired up the same way.
+// safe to ship on its own. Covers password AND Google logins (the Worker
+// independently re-verifies whichever proof is sent — a password hash
+// comparison, or the Google ID token's signature — server-side; the
+// client's say-so alone is never enough). Passkey/face/backup-PIN logins
+// still run on the plain anonymous session until each gets its own proof
+// wired up the same way.
 const MINT_TOKEN_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.workers.dev/mint-token';
 // Best-effort, never blocks or breaks login: on any failure (Worker
 // unreachable, bad credentials server-side somehow, timeout) this just
 // leaves the existing anonymous session in place exactly as before this
 // existed, so the worst case is "no upgrade happened," never "login broke."
-async function _tryUpgradeToCustomAuth(number, rawPwd){
-  if(!number || !rawPwd || !MINT_TOKEN_ENDPOINT) return false;
+// `proof` is exactly one of {password} or {googleCredential} — whichever
+// the login path that just succeeded actually has.
+async function _tryUpgradeToCustomAuth(number, proof){
+  if(!number || !proof || !(proof.password||proof.googleCredential) || !MINT_TOKEN_ENDPOINT) return false;
   try{
     const ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
     const timer = ctl ? setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 8000) : null;
@@ -5232,7 +5237,7 @@ async function _tryUpgradeToCustomAuth(number, rawPwd){
     try{
       res = await fetch(MINT_TOKEN_ENDPOINT, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({number, password: rawPwd}),
+        body: JSON.stringify({number, ...proof}),
         ...(ctl?{signal:ctl.signal}:{}),
       });
     } finally { if(timer) clearTimeout(timer); }
@@ -5489,6 +5494,12 @@ var _loginRawPwd=null;
 // account password. Also set when linking Google to an already-logged-in
 // account, so that account's other Google-only devices can restore too.
 var _loginGoogleSub=null;
+// The raw, already-verified Google ID token from the current login — set by
+// handleGoogleCredentialResponse() right alongside _loginGoogleSub above,
+// and consumed once by finishLogin() to mint a real Firebase custom auth
+// token for this login the same way _loginRawPwd does for password logins.
+// See MINT_TOKEN_ENDPOINT's comment.
+var _loginGoogleCredential=null;
 
 async function ensureE2EKeypair(){
   if(_myKeyPair) return _myKeyPair;
@@ -8116,6 +8127,12 @@ async function submitLogin() {
     }
     _clearLoginRateLimit(identity);
     _loginRawPwd = pwd; // available for E2E cloud key sync/restore during this session
+    // Clear any stale Google credential from an earlier login this session
+    // (e.g. a failed Google attempt, or a different account entirely) —
+    // otherwise finishLogin()'s _loginRawPwd-first check is fine on its
+    // own here, but leaving a stale credential around is still a latent
+    // trap for any future caller that checks it independently.
+    _loginGoogleCredential = null;
     // Transparently upgrade legacy weak hashes to the new salted SHA-256 format
     let pwdToStore = user.pwd;
     if(user.pwd.indexOf('$')===-1){ pwdToStore = await hashPassword(pwd); }
@@ -8262,11 +8279,16 @@ async function finishLogin(user, pwdToStore){
     // until the first registerOrUpdate() poll completes after launch, so a
     // delegated admin's admin button/tabs would flash hidden then appear.
     adminAccess: user.adminAccess||null, selectedBadge: user.selectedBadge||null };
-  // _loginRawPwd is only set by the password-login path (submitLogin), not
-  // by Google/2FA-completion/face/backup-PIN logins — so this is a no-op
-  // (stays on the anonymous session) for all of those, by design, until
-  // each gets its own proof. See MINT_TOKEN_ENDPOINT's comment.
-  if(_loginRawPwd){ try{ await _tryUpgradeToCustomAuth(me.number, _loginRawPwd); }catch(e){} }
+  // _loginRawPwd/_loginGoogleCredential are only set by the password- and
+  // Google-login paths respectively — this is a no-op (stays on the
+  // anonymous session) for 2FA-completion/face/backup-PIN logins, by
+  // design, until each gets its own proof. See MINT_TOKEN_ENDPOINT's
+  // comment. Password is checked first only because it's set closer to
+  // this point in the normal case; a login only ever has one or the other.
+  try{
+    if(_loginRawPwd) await _tryUpgradeToCustomAuth(me.number, {password:_loginRawPwd});
+    else if(_loginGoogleCredential) await _tryUpgradeToCustomAuth(me.number, {googleCredential:_loginGoogleCredential});
+  }catch(e){}
   saveStorage();
   // Save account to multi-account list
   try{ _saveAccountToAccounts(me); }catch(e){}
@@ -23210,6 +23232,19 @@ async function verifyGoogleCredential(credential){
  * marked unverified because no Worker is configured.
  */
 async function handleGoogleCredentialResponse(resp){
+  // Cached for finishLogin() to mint a real auth token with — see
+  // _loginGoogleCredential's own comment. Harmless to set even when
+  // verification below ends up failing or this is a link-to-existing-
+  // account flow rather than a login: finishLogin() only ever runs after a
+  // genuine login succeeds, and _tryUpgradeToCustomAuth() independently
+  // re-verifies this credential server-side regardless.
+  _loginGoogleCredential = resp && resp.credential;
+  // Clear any stale password from an earlier login this session — see the
+  // matching comment in submitLogin(). finishLogin() checks _loginRawPwd
+  // first, so a leftover password from a previous (possibly different)
+  // account would otherwise silently shadow this Google credential and the
+  // upgrade attempt would use the wrong proof entirely.
+  _loginRawPwd = null;
   const outcome=await verifyGoogleCredential(resp && resp.credential);
   if(!outcome.ok){
     // One rejection, reported on whichever surface the person is looking at.
