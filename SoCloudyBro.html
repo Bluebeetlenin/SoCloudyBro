@@ -18396,6 +18396,8 @@ function renderAdminOwnerToolsTab(){
       <button onclick="adminDiagnoseFirebase()" style="width:100%;margin-top:8px;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">🔍 Diagnose Only (no changes)</button>
       <button onclick="adminBackfillMemberSets()" style="width:100%;margin-top:8px;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">🔑 Backfill Conversation Member Index</button>
       <p style="margin:6px 0 0;font-size:11px;color:#666;">One-time, safe to re-run: adds a lookup index (memberSet) to every conversation so Firebase rules can enforce "only members can write here" — needed before that rule can actually be turned on. Purely additive; never touches messages or removes anything.</p>
+      <button onclick="adminMigrateReportsAndBlacklist()" style="width:100%;margin-top:8px;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">📦 Migrate Reports &amp; Blacklist Storage</button>
+      <p style="margin:6px 0 0;font-size:11px;color:#666;">Run this ONCE before pushing the tightened reports/blacklist Firebase rules — converts both from a single array blob to per-entry storage. Safe to re-run (no-op once migrated). Skipping this before the rule update would block ordinary users from filing new reports until it's run.</p>
     </div>
     <div style="margin-top:16px;padding:14px;border:2px solid var(--danger);border-radius:var(--r-sm);background:rgba(220,50,50,0.07)">
       <h4 style="margin:0 0 6px;color:var(--danger);font-size:13px">☢️ Nuclear Reset — Danger Zone</h4>
@@ -19148,6 +19150,47 @@ async function adminBackfillMemberSets(){
     selfHeal('SCB-ADMIN-28', e, { context: 'adminBackfillMemberSets' });
     showToast('❌ Backfill Failed', scbErr('SCB-ADMIN-28', 'Conversation member-index backfill failed', e.message));
   }
+}
+
+// One-time migration: reports and blacklist used to be stored as a single
+// array blob ({reports:[...]} / a plain array), which the tightened
+// Firebase rules for those paths can no longer apply a per-entry
+// create-vs-edit check against. getReports()/saveReports() and
+// blockDeviceForAge() already migrate to the new per-id keyed shape
+// automatically on their own next write — but until that happens, the OLD
+// blob key is still sitting there, and the new rule only lets an ADMIN
+// remove/replace an existing entry. That means an ORDINARY user's next
+// report or age-block write would be rejected outright (the whole write is
+// atomic — it can't partially succeed) until something admin-authored
+// clears the stale blob first. Run this ONCE, before switching the live
+// Firebase rules over to the tightened versions, so that moment never
+// happens for a real user.
+async function adminMigrateReportsAndBlacklist(){
+  if(!requireAdmin()) return;
+  showToast('📦 Migrating…', 'Converting reports & blacklist to per-entry storage…');
+  const results = { reportsMigrated: 0, blacklistMigrated: 0, errors: 0 };
+  try {
+    const reportsSnap = await fbdb.ref('reports').get();
+    const reportsVal = reportsSnap.val();
+    if (reportsVal && reportsVal.reports !== undefined) {
+      const arr = (Array.isArray(reportsVal.reports) ? reportsVal.reports : Object.values(reportsVal.reports || {})).filter(r => r && r.id);
+      await fbdb.ref('reports').set(Object.fromEntries(arr.map(r => [r.id, r])));
+      results.reportsMigrated = arr.length;
+    }
+  } catch(e) { results.errors++; }
+  try {
+    const blSnap = await fbdb.ref('blacklist').get();
+    const blVal = blSnap.val();
+    if (Array.isArray(blVal)) {
+      const obj = {}; let i = 0;
+      blVal.filter(Boolean).forEach(b => { obj[b.deviceId || b.ip || ('entry_'+(i++))] = b; });
+      await fbdb.ref('blacklist').set(obj);
+      results.blacklistMigrated = Object.keys(obj).length;
+    }
+  } catch(e) { results.errors++; }
+  showToast('✅ Migration Complete',
+    `Converted ${results.reportsMigrated} reports and ${results.blacklistMigrated} blacklist entries to per-entry storage. Errors: ${results.errors}. `+
+    `Safe to push the tightened Firebase rules now.`);
 }
 // -- END FIREBASE DATA CLEANUP ------------------------------------------------
 
