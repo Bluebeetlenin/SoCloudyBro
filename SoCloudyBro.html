@@ -12445,8 +12445,7 @@ async function submitReport(){
     // a report is otherwise just the reporter's own unverifiable claim.
     const evidence=_buildReportEvidence(activeConvo.key);
     try{
-      const reports=await getReports();
-      reports.push({
+      const newReport={
         id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),
         reportedNumber:reported?reported.number:null,
         reportedName:reported?reported.name:'Unknown',
@@ -12457,9 +12456,19 @@ async function submitReport(){
         evidence,
         time:Date.now(),
         status:'open'
-      });
-      await saveReports(reports);
-      if(reported) await _checkMassReportSpike(reported.number,reported.name,reports);
+      };
+      // Written narrowly to reports/<id> instead of fetch-all-then-
+      // saveReports(wholeArray) — the reports Firebase rule only allows a
+      // non-admin to create a NEW entry, not touch any existing one, so
+      // two reports filed close together used to race: whichever save
+      // landed second would omit the other's just-added report from its
+      // snapshot, which the rule reads as "deleting an existing report"
+      // and rejects the ENTIRE write — silently losing the second
+      // reporter's report (the catch below swallows it). A direct
+      // single-key write can't collide with anyone else's report this way.
+      await fbdb.ref('reports/'+newReport.id).set(newReport);
+      reportsCache=[...(reportsCache||[]),newReport];
+      if(reported) await _checkMassReportSpike(reported.number,reported.name,reportsCache);
     }catch(e){ /* report email below still goes out even if this fails */ }
     const evidenceText=evidence.length
       ? evidence.map(m=>'#'+m.from+' ('+new Date(m.time).toLocaleString()+'): '+m.text).join('\n')
@@ -18700,7 +18709,21 @@ const SCB_CANONICAL_RULES = {
         // (via the third branch, unaffected by this fix — delegated admins
         // still need this to ban/unban other users through saveUsers()'s
         // single whole-table write) can grant or revoke it.
-        ".write": "auth != null && ((auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())"
+        //
+        // SECOND FIX: saveUsers() always writes the ENTIRE users table in
+        // one .set() — dozens of ordinary self-service flows (trust/revoke
+        // a device, cancel account deletion, password reset, backup-PIN
+        // setup, etc.) call getUsers() (every account), mutate only the
+        // caller's own record, then saveUsers(wholeArray) straight back.
+        // Without an explicit "value didn't change" bypass, that single
+        // write would need EVERY OTHER user's record to also independently
+        // satisfy this rule for the write to succeed at all — which an
+        // ordinary non-admin caller never does — breaking every one of
+        // those flows outright. An unchanged record is a no-op by
+        // definition, so allowing it costs nothing security-wise; this
+        // mirrors the same bypass already used for the reports rule below,
+        // for the exact same reason.
+        ".write": "auth != null && (data.val() == newData.val() || (auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())"
       }
     },
 
