@@ -6283,8 +6283,28 @@ async function saveUsers(u){
   // First write migrates any existing legacy format automatically.
   await fbdb.ref(USERS_BIN).set(Object.fromEntries(valid.map(x=>[x.number,x])));
 }
-async function getReports(){const d=await getBin('reports');reportsCache=d.reports||[];return reportsCache;}
-async function saveReports(r){await putBin('reports',{reports:r});reportsCache=r;}
+async function getReports(){
+  const d=await getBin('reports');
+  // Support both the legacy monolithic format ({reports:[...]}) and the new
+  // per-report-id keyed format ({<id>:{...},...}) — same migration pattern
+  // as USERS_BIN. The Firebase rule needs each report individually
+  // addressable (to tell "a new report" from "an edit to an existing one"),
+  // which a single array blob can't provide.
+  if(d&&d.reports!==undefined){
+    reportsCache=(Array.isArray(d.reports)?d.reports:Object.values(d.reports||{})).filter(Boolean);
+  }else{
+    reportsCache=Object.values(d||{}).filter(r=>r&&r.id);
+  }
+  return reportsCache;
+}
+async function saveReports(r){
+  reportsCache=r;
+  const valid=r.filter(x=>x&&x.id);
+  // Write per-report-id keyed object — replaces the old monolithic
+  // {reports:[...]} blob. First write migrates any existing legacy format
+  // automatically (same as saveUsers()).
+  await fbdb.ref('reports').set(Object.fromEntries(valid.map(x=>[x.id,x])));
+}
 // -- MULTI-DEVICE SESSIONS -----------------------------------------------------
 function getDeviceLabel(){
   const ua = navigator.userAgent || '';
@@ -9559,8 +9579,11 @@ async function blockDeviceForAge(){
     const raw = snap.exists() ? snap.val() : [];
     const bl = (Array.isArray(raw) ? raw : Object.values(raw||{})).filter(Boolean);
     if(!bl.find(b=>b.deviceId===deviceId || (ip && b.ip===ip))){
-      bl.push({deviceId, ip: ip||null, reason:'underage_signup', blockedAt: Date.now()});
-      await fbdb.ref('blacklist').set(bl);
+      // Written to its own keyed child (by deviceId) instead of a full
+      // array replace — stored per-entry (like reports/spam_flags) so the
+      // Firebase rule can allow creating a NEW blacklist entry this way
+      // without granting the ability to rewrite or remove existing ones.
+      await fbdb.ref('blacklist/'+deviceId).set({deviceId, ip: ip||null, reason:'underage_signup', blockedAt: Date.now()});
     }
   }catch{}
 }
@@ -18684,8 +18707,18 @@ const SCB_CANONICAL_RULES = {
     },
 
     "reports": {
-      ".read": true,
-      ".write": "auth != null"
+      // Stored per-report-id (see saveReports()) instead of one big array
+      // blob, specifically so this rule can tell "a new report" from "an
+      // edit to an existing one": anyone can file a NEW report (data doesn't
+      // exist yet at that id), resending an UNCHANGED existing report is
+      // always harmless (every caller re-saves the whole list after
+      // mutating one entry), and only an admin can actually modify or
+      // delete an existing report. Previously any authenticated user could
+      // wipe or rewrite the entire reports collection in one write.
+      ".read": "auth != null",
+      "$reportId": {
+        ".write": "auth != null && (data.val() == newData.val() || !data.exists() || root.child('users').child(auth.token.number).child('adminAccess').exists() || auth.token.number == '2015')"
+      }
     },
 
     "calls": {
@@ -18721,16 +18754,32 @@ const SCB_CANONICAL_RULES = {
     },
 
     "blacklist": {
-      // Device/IP age-block list — separate path so reads/writes never touch user records
+      // Device/IP age-block list — separate path so reads/writes never touch
+      // user records. Stored per-entry (keyed by deviceId, see
+      // blockDeviceForAge()) instead of one array blob, so this rule can
+      // allow creating a NEW block entry without granting the ability to
+      // remove or rewrite an existing one (previously any authenticated
+      // user — including the blocked device itself — could clear the whole
+      // list via one write).
       ".read": "auth != null",
-      ".write": "auth != null"
+      "$entryId": {
+        ".write": "auth != null && (!data.exists() || root.child('users').child(auth.token.number).child('adminAccess').exists() || auth.token.number == '2015')"
+      }
     },
 
     "spam_flags": {
-      // Spam reports indexed for orderByChild('at') queries in admin panel
+      // Spam reports indexed for orderByChild('at') queries in admin panel.
+      // Each flag is its own pushed child, so (unlike reports/blacklist
+      // below) no data-model change was needed here — just a tighter rule:
+      // anyone can create a NEW flag (the existing rate-limit/mass-report
+      // detection this backs), but only an admin can modify or delete an
+      // EXISTING one. Previously any authenticated user could resolve their
+      // own flag or wipe everyone else's.
       ".read": "auth != null",
-      ".write": "auth != null",
-      ".indexOn": ["at", "reporter"]
+      ".indexOn": ["at", "reporter"],
+      "$flagId": {
+        ".write": "auth != null && (!data.exists() || root.child('users').child(auth.token.number).child('adminAccess').exists() || auth.token.number == '2015')"
+      }
     },
 
     "errors": {
@@ -18918,14 +18967,18 @@ async function adminCleanFirebase() {
       const blSnap = await fbdb.ref('blacklist').get();
       const blRaw = blSnap.exists() ? blSnap.val() : [];
       const bl = (Array.isArray(blRaw) ? blRaw : Object.values(blRaw || {})).filter(Boolean);
-      const seenDevices = new Set(), seenIPs = new Set(), deduped = [];
+      const seenDevices = new Set(), seenIPs = new Set(), deduped = {};
+      let i = 0;
       for (const b of bl) {
         const dupDevice = b.deviceId && seenDevices.has(b.deviceId);
         const dupIP = b.ip && seenIPs.has(b.ip);
         if (dupDevice || dupIP) { results.duplicateBlacklistRemoved++; continue; }
         if (b.deviceId) seenDevices.add(b.deviceId);
         if (b.ip) seenIPs.add(b.ip);
-        deduped.push(b);
+        // Keyed by deviceId (matches blockDeviceForAge()'s write shape) so
+        // the collection stays individually addressable per entry, not a
+        // single array blob — see the blacklist rule's comment.
+        deduped[b.deviceId || b.ip || ('entry_'+(i++))] = b;
       }
       if (results.duplicateBlacklistRemoved > 0) await fbdb.ref('blacklist').set(deduped);
     } catch(e) { results.errors++; }
