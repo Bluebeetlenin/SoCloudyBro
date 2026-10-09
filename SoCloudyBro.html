@@ -8224,8 +8224,7 @@ async function submitLogin() {
       _pendingEmailSetup = { user, pwdToStore };
       document.getElementById('login-set-email-input').value='';
       document.getElementById('login-set-email-error').textContent='';
-      document.getElementById('login-view').style.display = 'none';
-      document.getElementById('login-set-email-view').style.display = 'block';
+      showAuthView('login-set-email-view');
       return;
     }
 
@@ -8233,12 +8232,10 @@ async function submitLogin() {
       pending2fa = { user, pwdToStore };
       document.getElementById('login-2fa-code').value = '';
       document.getElementById('login-2fa-error').textContent = '';
-      document.getElementById('login-view').style.display = 'none';
-      document.getElementById('login-2fa-view').style.display = 'block';
+      showAuthView('login-2fa-view');
     } else if(user.faceMfaEnabled && user.faceDescriptor){
       pending2fa = { user, pwdToStore };
-      document.getElementById('login-view').style.display = 'none';
-      document.getElementById('login-face-view').style.display = 'block';
+      showAuthView('login-face-view');
       await startFaceLoginView();
     } else {
       await finishLogin(user, pwdToStore);
@@ -8270,12 +8267,10 @@ async function submitLoginSetEmail(){
       pending2fa = { user, pwdToStore };
       document.getElementById('login-2fa-code').value = '';
       document.getElementById('login-2fa-error').textContent = '';
-      document.getElementById('login-set-email-view').style.display = 'none';
-      document.getElementById('login-2fa-view').style.display = 'block';
+      showAuthView('login-2fa-view');
     } else if(user.faceMfaEnabled && user.faceDescriptor){
       pending2fa = { user, pwdToStore };
-      document.getElementById('login-set-email-view').style.display = 'none';
-      document.getElementById('login-face-view').style.display = 'block';
+      showAuthView('login-face-view');
       await startFaceLoginView();
     } else {
       await finishLogin(user, pwdToStore);
@@ -8971,8 +8966,7 @@ function showLoginBackupPinView(){
   if(!pending2fa) return;
   if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
   if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
-  document.getElementById('login-face-view').style.display='none';
-  document.getElementById('login-backup-pin-view').style.display='block';
+  showAuthView('login-backup-pin-view');
   document.getElementById('login-backup-pin-error').textContent='';
   clearPinInputs(document.getElementById('login-backup-pin-row').querySelectorAll('.pin-digit'));
 }
@@ -23575,13 +23569,11 @@ async function googleAuthenticate(identity){
         pending2fa={user, pwdToStore};
         document.getElementById('login-2fa-code').value='';
         document.getElementById('login-2fa-error').textContent='';
-        document.getElementById('login-view').style.display='none';
-        document.getElementById('login-2fa-view').style.display='block';
+        showAuthView('login-2fa-view');
         return;
       } else if(user.faceMfaEnabled && user.faceDescriptor){
         pending2fa={user, pwdToStore};
-        document.getElementById('login-view').style.display='none';
-        document.getElementById('login-face-view').style.display='block';
+        showAuthView('login-face-view');
         await startFaceLoginView();
         return;
       }
