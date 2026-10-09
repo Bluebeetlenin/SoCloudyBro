@@ -1182,22 +1182,29 @@ body.device-phone.chat-open #chat-panel{display:flex;width:100%}
    (both flex:1 in the same row) get squeezed to 0 width. Settings/Updates
    were rendered but completely off-canvas and unreachable on every phone. */
 body.device-phone:has(#settings-panel.visible) #sidebar,
-body.device-phone:has(#updates-panel.visible) #sidebar{display:none}
+body.device-phone:has(#updates-panel.visible) #sidebar,
+body.device-phone:has(#main-empty.visible) #sidebar{display:none}
 /* Same class of bug as the settings/updates one above, for the home
    dashboard specifically: #main-empty (the dashboard-grid widgets live
    inside it) was toggled with a plain inline style.display, with NOTHING
-   on phone ever setting it — the unconditional `display:none` two rules up
+   on phone ever setting it — the unconditional `display:none` rule above
    applied permanently and there was no button anywhere that reached it
    either. Every dashboard widget existed, rendered correct content, and
-   was completely unreachable/invisible on every phone. home-open (set by
-   showMainEmpty(), cleared by hideAll()) mirrors chat-open's own existing
-   mechanism; higher specificity here (two classes on body) is what lets it
-   win over the plain .device-phone rule above without needing !important,
-   same trick chat-open already relies on. */
-body.device-phone.home-open #sidebar{display:none}
-body.device-phone.home-open #main-empty{display:flex}
+   was completely unreachable/invisible on every phone.
+   This originally used a hand-rolled `home-open` body class (mirroring
+   chat-open), but that has to be manually kept in sync at every call site
+   that changes #main-empty's visibility — and applyDeviceType()'s resize
+   handler only re-syncs chat-open, not a class a later commit added. A
+   desktop window resized narrow while the dashboard happened to be showing
+   would desync: device-phone turns on, but nothing set home-open, so
+   #sidebar and #main-empty would render on top of each other again — the
+   exact bug this whole mechanism exists to prevent. Reusing the SAME
+   :has(#main-empty.visible) approach as settings/updates avoids that
+   entirely: it reads the panel's actual .visible class directly, so it can
+   never desync regardless of when device reclassification happens. */
+body.device-phone:has(#main-empty.visible) #main-empty{display:flex}
 body.device-phone #chat-back-btn{display:inline-flex}
-body.device-phone.home-open #home-back-btn{display:inline-flex}
+body.device-phone:has(#main-empty.visible) #home-back-btn{display:inline-flex}
 body.device-phone .modal{max-width:94vw!important;max-height:92dvh}
 body.device-phone .msg-body{max-width:82%}
 /* Keep the chat header from getting congested: truncate name/status to one
@@ -13151,16 +13158,17 @@ function getDashboardLayout(){
 function saveDashboardLayout(layout){ localStorage.setItem('cc_dashboard_layout_v2',JSON.stringify(layout)); }
 function showMainEmpty(){
   document.getElementById('main-empty').style.display='flex';
-  // See the home-open CSS comment near .chat-open — on phone this is what
-  // actually makes the dashboard reachable instead of fighting the sidebar
-  // for the same space.
-  if (document.body.classList.contains('device-phone')) document.body.classList.add('home-open');
+  // .visible is purely a marker for the phone CSS's :has(#main-empty.visible)
+  // selectors (see that rule's comment) — display is still controlled by the
+  // inline style above, same as always, on every device.
+  document.getElementById('main-empty').classList.add('visible');
   if(me) renderDashboard();
 }
 // On phones, returns from the home dashboard back to the sidebar — same
-// role as closeChatToSidebar(), for the home-open single-pane state.
+// role as closeChatToSidebar(), driven by the same #main-empty.visible
+// class the phone CSS's :has() selectors key off of.
 function closeHomeToSidebar(){
-  document.body.classList.remove('home-open');
+  document.getElementById('main-empty').classList.remove('visible');
   document.getElementById('main-empty').style.display='none';
 }
 // Safety net: if the dashboard is on screen, re-render it whenever the tab
@@ -13649,11 +13657,11 @@ function editorPointerUp(){
 
 function hideAll(){
   document.getElementById('main-empty').style.display='none';
+  document.getElementById('main-empty').classList.remove('visible');
   document.getElementById('chat-panel').classList.remove('visible');
   document.getElementById('settings-panel').classList.remove('visible');
   document.getElementById('updates-panel').classList.remove('visible');
   document.body.classList.remove('chat-open');
-  document.body.classList.remove('home-open');
 }
 
 // -- GAME UPDATES --------------------------------------------------------------
