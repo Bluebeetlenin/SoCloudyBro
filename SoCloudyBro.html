@@ -5462,6 +5462,17 @@ async function _syncE2EKeyToCloudSlot(rawSecret, number, privJwk, slot, field){
 }
 function _syncE2EKeyToCloud(rawPassword, number, privJwk){ return _syncE2EKeyToCloudSlot(rawPassword,number,privJwk,'pwd','e2eEnc'); }
 function _syncE2EKeyToCloudGoogle(googleSub, number, privJwk){ return _syncE2EKeyToCloudSlot(googleSub,number,privJwk,'google','e2eEncG'); }
+// Third slot (field e2eEncP), same scheme as the two above — wrapped with a
+// key derived from the backup PIN, so a device that only ever signs in with
+// the backup PIN (no password, no Google link) can still restore the
+// account's real E2E key instead of silently minting its own. Passkey and
+// face logins have no equivalent: there's no portable secret to derive a
+// wrap key from (a passkey's private key never leaves its device/OS
+// keychain, and a face descriptor isn't stable between scans), so a brand
+// new device signing in only that way still can't self-restore — it still
+// gets the canonical-pubkey mismatch repair below if THIS device previously
+// had a working key, just not a from-nothing cloud restore.
+function _syncE2EKeyToCloudBackupPin(backupPin, number, privJwk){ return _syncE2EKeyToCloudSlot(backupPin,number,privJwk,'pin','e2eEncP'); }
 
 // Fetch the encrypted ECDH private key from Firebase and restore it to localStorage.
 // Returns true if successfully restored, false otherwise.
@@ -5489,6 +5500,7 @@ async function _restoreE2EKeyFromCloudSlot(rawSecret, number, slot, field){
 }
 function _restoreE2EKeyFromCloud(rawPassword, number){ return _restoreE2EKeyFromCloudSlot(rawPassword,number,'pwd','e2eEnc'); }
 function _restoreE2EKeyFromCloudGoogle(googleSub, number){ return _restoreE2EKeyFromCloudSlot(googleSub,number,'google','e2eEncG'); }
+function _restoreE2EKeyFromCloudBackupPin(backupPin, number){ return _restoreE2EKeyFromCloudSlot(backupPin,number,'pin','e2eEncP'); }
 
 // Raw password available at login time — stored temporarily so ensureE2EKeypair
 // can sync/restore the cloud-backed key.
@@ -5542,6 +5554,14 @@ async function ensureE2EKeypair(){
         _retryFailedDecryptions();
       }
     }
+    if((!stored||!storedPub)&&_loginBackupPinProof){
+      const restored=await _restoreE2EKeyFromCloudBackupPin(_loginBackupPinProof,me.number);
+      if(restored){
+        stored=localStorage.getItem('cc_e2e_priv_'+me.number);
+        storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
+        _retryFailedDecryptions();
+      }
+    }
     // Even when this device already has SOME local key, it may be a stale or
     // orphaned one — e.g. generated before cloud-restore worked at all (see
     // the Sept 25 fix to _restoreE2EKeyFromCloud), or from a device that was
@@ -5554,13 +5574,14 @@ async function ensureE2EKeypair(){
     // cloud-wrapped copy (kept in sync with the canonical key by
     // _syncE2EKeyToCloudSlot) if it doesn't, instead of silently using a
     // key nothing else on the account agrees with.
-    if(stored&&storedPub&&(_loginRawPwd||googleSub)){
+    if(stored&&storedPub&&(_loginRawPwd||googleSub||_loginBackupPinProof)){
       try{
         const pubSnap=await fbdb.ref(USERS_BIN+'/'+me.number+'/pubkey').once('value');
         const canonicalPub=pubSnap.val();
         if(canonicalPub&&canonicalPub!==storedPub){
           let fixed=_loginRawPwd&&await _restoreE2EKeyFromCloud(_loginRawPwd,me.number);
           if(!fixed&&googleSub) fixed=await _restoreE2EKeyFromCloudGoogle(googleSub,me.number);
+          if(!fixed&&_loginBackupPinProof) fixed=await _restoreE2EKeyFromCloudBackupPin(_loginBackupPinProof,me.number);
           if(fixed){
             stored=localStorage.getItem('cc_e2e_priv_'+me.number);
             storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
@@ -5578,10 +5599,11 @@ async function ensureE2EKeypair(){
       // Opportunistically sync to cloud (both slots, whichever secrets are
       // available) if not yet done this session — covers both a fresh key
       // and backfilling the other slot for an account linked after the fact.
-      if((_loginRawPwd||googleSub)&&!sessionStorage.getItem('e2e_synced_'+me.number)){
+      if((_loginRawPwd||googleSub||_loginBackupPinProof)&&!sessionStorage.getItem('e2e_synced_'+me.number)){
         sessionStorage.setItem('e2e_synced_'+me.number,'1');
         if(_loginRawPwd) _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
         if(googleSub) _syncE2EKeyToCloudGoogle(googleSub,me.number,privJwk);
+        if(_loginBackupPinProof) _syncE2EKeyToCloudBackupPin(_loginBackupPinProof,me.number,privJwk);
       }
       return _myKeyPair;
     }
@@ -5592,11 +5614,12 @@ async function ensureE2EKeypair(){
     localStorage.setItem('cc_e2e_pub_'+me.number,JSON.stringify(pubJwk));
     _myKeyPair=kp;
     _myPubJwk=JSON.stringify(pubJwk);
-    // Sync new key to cloud for future devices (both slots, whichever secrets are available)
-    if(_loginRawPwd||googleSub){
+    // Sync new key to cloud for future devices (all slots, whichever secrets are available)
+    if(_loginRawPwd||googleSub||_loginBackupPinProof){
       sessionStorage.setItem('e2e_synced_'+me.number,'1');
       if(_loginRawPwd) _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
       if(googleSub) _syncE2EKeyToCloudGoogle(googleSub,me.number,privJwk);
+      if(_loginBackupPinProof) _syncE2EKeyToCloudBackupPin(_loginBackupPinProof,me.number,privJwk);
     }
     return _myKeyPair;
   }catch(e){ _myKeyPair=null; return null; }
@@ -8309,7 +8332,14 @@ async function finishLogin(user, pwdToStore){
     else if(_loginFaceDescriptorProof) await _tryUpgradeToCustomAuth(me.number, {faceDescriptor:_loginFaceDescriptorProof});
     else if(_loginBackupPinProof) await _tryUpgradeToCustomAuth(me.number, {backupPin:_loginBackupPinProof});
   }catch(e){}
-  _loginPasskeyProof=null; _loginFaceDescriptorProof=null; _loginBackupPinProof=null;
+  // Unlike _loginBackupPinProof (kept alive for the rest of the session, same
+  // as _loginRawPwd/_loginGoogleCredential, because ensureE2EKeypair() below
+  // and at various later points still needs it to restore/sync the E2E key —
+  // see the e2eEncP slot), the passkey assertion and face descriptor have no
+  // further use after this one mint-token call, so clearing them immediately
+  // just avoids holding onto a used WebAuthn assertion / biometric sample
+  // longer than needed.
+  _loginPasskeyProof=null; _loginFaceDescriptorProof=null;
   saveStorage();
   // Save account to multi-account list
   try{ _saveAccountToAccounts(me); }catch(e){}
