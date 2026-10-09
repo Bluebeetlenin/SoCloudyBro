@@ -6777,7 +6777,24 @@ function saveConvos(){
             msgs=msgs.filter(m=>!m||!m.time||m.time>cutoff);
           }
           if(msgs.some(m=>m&&m.pending)) msgs=msgs.map(m=>{ if(!m||!m.pending) return m; const {pending,...rest}=m; return rest; });
-          return msgs===c.messages?c:{...c,messages:msgs};
+          const withMsgs=msgs===c.messages?c:{...c,messages:msgs};
+          // memberSet: the SAME membership as participants/members, just also
+          // keyed as a map ({"1234":true}) instead of only an array — every
+          // read/mutation site elsewhere in the app keeps using the arrays
+          // exactly as before, untouched. This is purely additive and exists
+          // only so a Firebase security rule can cheaply check "is this
+          // account actually a member of this conversation" (hasChild/exists
+          // on a map), which it cannot do against an array at all. Written
+          // here, in the one function every conversation save already funnels
+          // through, instead of at each of the many places the app adds/
+          // removes a member — so this one spot tracks all of them for free
+          // and future membership changes stay in sync automatically.
+          const memberList=Array.isArray(withMsgs.participants)&&withMsgs.participants.length?withMsgs.participants
+            :Array.isArray(withMsgs.members)?withMsgs.members:[];
+          if(!memberList.length) return withMsgs;
+          const memberSet={};
+          memberList.forEach(n=>{ if(n!=null) memberSet[String(n)]=true; });
+          return {...withMsgs,memberSet};
         });
         // Write per-conversation key — replaces the old monolithic blob.
         // update() merges keys so concurrent writers don't clobber each other's conversations.
@@ -18303,6 +18320,8 @@ function renderAdminOwnerToolsTab(){
       <p style="margin:0 0 10px;font-size:12px;color:#888;">Remove corrupted/orphaned data left by old bugs: pending message flags, cross-account messages, double-encrypted profiles.</p>
       <button onclick="adminCleanFirebase()" style="width:100%;padding:10px;background:#e67e22;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-size:14px;">🧹 Clean Firebase Data</button>
       <button onclick="adminDiagnoseFirebase()" style="width:100%;margin-top:8px;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">🔍 Diagnose Only (no changes)</button>
+      <button onclick="adminBackfillMemberSets()" style="width:100%;margin-top:8px;padding:8px;background:#2a2a4a;border:1px solid #444;border-radius:6px;color:#ccc;cursor:pointer;">🔑 Backfill Conversation Member Index</button>
+      <p style="margin:6px 0 0;font-size:11px;color:#666;">One-time, safe to re-run: adds a lookup index (memberSet) to every conversation so Firebase rules can enforce "only members can write here" — needed before that rule can actually be turned on. Purely additive; never touches messages or removes anything.</p>
     </div>
     <div style="margin-top:16px;padding:14px;border:2px solid var(--danger);border-radius:var(--r-sm);background:rgba(220,50,50,0.07)">
       <h4 style="margin:0 0 6px;color:var(--danger);font-size:13px">☢️ Nuclear Reset — Danger Zone</h4>
@@ -18545,16 +18564,21 @@ const SCB_CANONICAL_RULES = {
       // Writes require a REAL authenticated session (a custom auth token from
       // /mint-token — password, Google, passkey, face, or backup-PIN login all
       // mint one now), not just the anonymous session every visitor gets for
-      // free on page load. This does NOT yet check that the writer is actually
-      // a member of this specific conversation — members/participants are
-      // still stored as arrays, and Firebase rules can only cheaply check "does
-      // this child key exist", not "is this number in this array". Enforcing
-      // per-member write access needs migrating members/participants to a
-      // map (e.g. {"1234":true}) first, which touches every read site that
-      // does .includes()/.map()/.filter() on them — a separate, larger,
-      // carefully-tested pass, not bundled into this rule change.
+      // free on page load.
       ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
       "$convoId": {
+        // Per-conversation membership check, on top of the blanket rule above.
+        // members/participants are stored as arrays (unchanged — every read/
+        // mutation site elsewhere in the app still uses them exactly as
+        // before), and Firebase rules can't cheaply check "is this number in
+        // this array". saveConvos() now ALSO writes a parallel memberSet map
+        // ({"1234":true,...}) on every save specifically so this rule can
+        // check "does this child key exist" instead. A conversation with no
+        // memberSet yet (saved before this existed, and not yet covered by
+        // the one-time admin "Backfill Conversation Member Index" pass) falls
+        // back to the blanket rule above instead of being locked — this can
+        // only ever ADD restriction, never remove access nothing else grants.
+        ".write": "!data.exists() || !data.child('memberSet').exists() || data.child('memberSet').child(auth.token.number).exists() || newData.child('memberSet').child(auth.token.number).exists()",
         "messages": {
           ".indexOn": ["at"]
         }
@@ -18848,6 +18872,55 @@ async function adminDiagnoseFirebase() {
   } catch(e) {
     selfHeal('SCB-ADMIN-26', e, { context: 'adminDiagnoseFirebase' });
     showToast('❌ Diagnosis Failed', scbErr('SCB-ADMIN-26', 'Firebase diagnosis failed', e.message));
+  }
+}
+
+// One-time (but safe to re-run — it skips anything already done) migration:
+// adds a memberSet map ({"1234":true,...}) to every existing conversation,
+// derived from its current participants/members array. saveConvos() now
+// writes this automatically for every FUTURE save (see its own comment), so
+// this only needs to run once to cover conversations that existed before
+// that change shipped. Purely additive — never modifies or removes
+// participants/members/messages/anything else, so there's nothing to lose
+// if it's interrupted or re-run. This is also the thing the tightened
+// conversations Firebase rule (requiring real membership to write) actually
+// checks against — a conversation with no memberSet still falls back to the
+// old "just needs to be really logged in" rule, so running this is what
+// turns real per-conversation enforcement on, not merely a cleanup step.
+async function adminBackfillMemberSets(){
+  if(!requireAdmin()) return;
+  showToast('🔑 Backfilling…', 'Scanning conversations…');
+  const results = { updated: 0, skipped: 0, errors: 0 };
+  try {
+    const convoSnap = await fbdb.ref('conversations').get();
+    const convoData = convoSnap.val() || {};
+    const patches = {};
+    for (const [convoId, convo] of Object.entries(convoData)) {
+      if (!convo) { results.skipped++; continue; }
+      if (convo.memberSet && typeof convo.memberSet === 'object' && Object.keys(convo.memberSet).length) {
+        results.skipped++; continue; // already backfilled (or already written by the new saveConvos())
+      }
+      const memberList = Array.isArray(convo.participants) && convo.participants.length ? convo.participants
+        : Array.isArray(convo.members) ? convo.members
+        : Object.values(convo.participants || convo.members || {}).filter(n => n != null);
+      if (!memberList.length) { results.skipped++; continue; }
+      const memberSet = {};
+      memberList.forEach(n => { if (n != null) memberSet[String(n)] = true; });
+      if (Object.keys(memberSet).length) {
+        patches[`conversations/${convoId}/memberSet`] = memberSet;
+        results.updated++;
+      } else {
+        results.skipped++;
+      }
+    }
+    if (Object.keys(patches).length > 0) {
+      await fbdb.ref('/').update(patches);
+    }
+    showToast('✅ Backfill Complete',
+      `Added a member index to ${results.updated} conversation(s). ${results.skipped} already had one or had no members. Errors: ${results.errors}`);
+  } catch(e) {
+    selfHeal('SCB-ADMIN-28', e, { context: 'adminBackfillMemberSets' });
+    showToast('❌ Backfill Failed', scbErr('SCB-ADMIN-28', 'Conversation member-index backfill failed', e.message));
   }
 }
 // -- END FIREBASE DATA CLEANUP ------------------------------------------------
