@@ -18626,7 +18626,10 @@ const SCB_CANONICAL_RULES = {
         // only ever ADD restriction, never remove access nothing else grants.
         ".write": "!data.exists() || !data.child('memberSet').exists() || data.child('memberSet').child(auth.token.number).exists() || newData.child('memberSet').child(auth.token.number).exists()",
         "messages": {
-          ".indexOn": ["at"]
+          // Messages store their timestamp as "time" (see sendMsg() and every
+          // other message-creation site), not "at" — this was indexing a
+          // field that doesn't exist on any message until now.
+          ".indexOn": ["time"]
         }
       }
     },
@@ -18739,50 +18742,87 @@ async function _fbRestAuthParam(){
   }catch(e){}
   return '';
 }
+// Covers every category adminDiagnoseFirebase() reports THAT HAS A SAFE,
+// unambiguous fix — pending flags, orphan messages, double-encrypted
+// profiles, empty junk conversations, duplicate entries in a conversation's
+// member list, a redundant banned flag on an already-deleted account,
+// moderation reports that can only resolve one way (target account gone, or
+// already banned), and duplicate blacklist entries.
+//
+// Deliberately NOT auto-fixed here, even though Diagnose Only counts them —
+// each needs a human judgment call this function has no safe default for:
+//   - accounts missing a number, or two accounts sharing one: which record
+//     is the real one isn't something this can infer from the data alone.
+//   - two accounts linking the same Google sign-in: unlinking the wrong one
+//     locks the rightful owner out.
+//   - stale (30+ day) open reports on an account still active: that's an
+//     actual moderation decision, not a data-integrity fix.
 async function adminCleanFirebase() {
   if(!requireAdmin()) return;
   if (!confirm('This will scan ALL Firebase data and remove corrupted/bad records. This may take a while. Continue?')) return;
 
-  const results = { pendingStripped: 0, orphanMsgs: 0, profilesFixed: 0, errors: 0 };
+  const results = { pendingStripped: 0, orphanMsgs: 0, profilesFixed: 0, emptyConvosRemoved: 0, duplicateMembersFixed: 0, contradictoryFlagsFixed: 0, orphanReportsResolved: 0, reportsOnBannedResolved: 0, duplicateBlacklistRemoved: 0, errors: 0 };
   showToast('🔧 Firebase Cleanup', 'Starting scan… this may take a minute');
 
   try {
-    // PASS 1: Strip pending:true from all stored messages (SDK, no REST needed)
-    showToast('🔧 Firebase Cleanup', 'Pass 1/3: Scanning messages…');
+    // PASS 1: Messages — strip pending:true, remove orphan messages, and
+    // remove conversations that are empty junk (no members, no messages) or
+    // have duplicate entries in their member list.
+    showToast('🔧 Firebase Cleanup', 'Pass 1/6: Scanning messages & conversations…');
     const convoSnap = await fbdb.ref('conversations').get();
     const convoRaw = convoSnap.val() || {};
     // saveConvos() stores {conversations:[...]} at the 'conversations' path
     const convoArr = Array.isArray(convoRaw.conversations) ? convoRaw.conversations : Object.values(convoRaw.conversations||convoRaw).filter(Boolean);
     const convoData = Object.fromEntries(convoArr.filter(c=>c&&c.key).map(c=>[c.key,c]));
+    const convoPatches = {};
     for (const [convoId, convo] of Object.entries(convoData)) {
-      if (!convo || !convo.messages) continue;
+      if (!convo) continue;
+      const hasMembers = Array.isArray(convo.members) && convo.members.length > 0;
+      const hasMessages = convo.messages && Object.keys(convo.messages).length > 0;
+      if (!hasMembers && !hasMessages) {
+        convoPatches[`conversations/${convoId}`] = null;
+        results.emptyConvosRemoved++;
+        continue;
+      }
+      if (Array.isArray(convo.members)) {
+        const deduped = [...new Set(convo.members.map(m => String(m)))].map(s => isNaN(Number(s)) ? s : Number(s));
+        if (deduped.length !== convo.members.length) {
+          convoPatches[`conversations/${convoId}/members`] = deduped;
+          results.duplicateMembersFixed++;
+        }
+      }
+      if (!convo.messages) continue;
       const members = new Set(convo.members || []);
-      const patches = {};
       for (const [msgId, msg] of Object.entries(convo.messages)) {
         if (!msg) continue;
         if (msg.pending === true) {
-          patches[`conversations/${convoId}/messages/${msgId}/pending`] = null;
+          convoPatches[`conversations/${convoId}/messages/${msgId}/pending`] = null;
           results.pendingStripped++;
         }
         if (msg.from && members.size > 0 && !members.has(Number(msg.from)) && !members.has(String(msg.from))) {
-          patches[`conversations/${convoId}/messages/${msgId}`] = null;
+          convoPatches[`conversations/${convoId}/messages/${msgId}`] = null;
           results.orphanMsgs++;
         }
       }
-      if (Object.keys(patches).length > 0) {
-        await fbdb.ref('/').update(patches);
-      }
+    }
+    if (Object.keys(convoPatches).length > 0) {
+      await fbdb.ref('/').update(convoPatches);
     }
 
-    // PASS 2: Fix double-encrypted profile fields in user records
-    showToast('🔧 Firebase Cleanup', 'Pass 2/3: Fixing profiles…');
+    // PASS 2: Fix double-encrypted profile fields, and clear a redundant
+    // banned flag on an account that's already deleted (deleteAccount()
+    // already wipes the record — a leftover banned:true there is stale, not
+    // meaningful; nothing reads it once deleted:true is set).
+    showToast('🔧 Firebase Cleanup', 'Pass 2/6: Fixing profiles…');
     const usersSnap = await fbdb.ref('users').get();
     const usersData = usersSnap.val() || {};
     const usersObj = Array.isArray(usersData)
       ? Object.fromEntries(usersData.map((u,i)=>[i,u]))
       : usersData;
+    const knownNumbers = new Set();
     for (const [acctKey, acct] of Object.entries(usersObj)) {
       if (!acct) continue;
+      if (acct.number != null) knownNumbers.add(String(acct.number));
       const profilePatches = {};
       for (const field of ['name', 'bio', 'customStatus']) {
         if (!acct[field]) continue;
@@ -18797,17 +18837,62 @@ async function adminCleanFirebase() {
           }
         } catch(e) { results.errors++; }
       }
+      if (acct.deleted && acct.banned) {
+        profilePatches[`users/${acctKey}/banned`] = false;
+        results.contradictoryFlagsFixed++;
+      }
       if (Object.keys(profilePatches).length > 0) {
         await fbdb.ref('/').update(profilePatches);
       }
     }
+    const bannedNumbers = new Set(Object.values(usersObj).filter(u => u && u.banned && u.number != null).map(u => String(u.number)));
 
-    // PASS 3: Remove null/empty message slots (Firebase sparse arrays)
-    showToast('🔧 Firebase Cleanup', 'Pass 3/3: Removing null slots…');
-    // Already handled above by patching null values
+    // PASS 3: Resolve reports that can only go one way — the reported
+    // account no longer exists, or it's already banned (the report already
+    // got the outcome it was asking for).
+    showToast('🔧 Firebase Cleanup', 'Pass 3/6: Resolving moot reports…');
+    try {
+      const reports = await getReports();
+      let reportsChanged = false;
+      for (const r of (reports || [])) {
+        if (!r || (r.status || 'open') !== 'open') continue;
+        if (r.reportedNumber == null) continue;
+        const num = String(r.reportedNumber);
+        if (!knownNumbers.has(num)) {
+          r.status = 'resolved'; r.resolution = 'Account no longer exists'; r.resolvedAt = Date.now();
+          results.orphanReportsResolved++; reportsChanged = true;
+        } else if (bannedNumbers.has(num)) {
+          r.status = 'resolved'; r.resolution = 'Account already banned'; r.resolvedAt = Date.now();
+          results.reportsOnBannedResolved++; reportsChanged = true;
+        }
+      }
+      if (reportsChanged) await saveReports(reports);
+    } catch(e) { results.errors++; }
+
+    // PASS 4: De-duplicate the device/IP blacklist (same device or IP
+    // blocked more than once — harmless but pointless bloat).
+    showToast('🔧 Firebase Cleanup', 'Pass 4/6: De-duplicating blacklist…');
+    try {
+      const blSnap = await fbdb.ref('blacklist').get();
+      const blRaw = blSnap.exists() ? blSnap.val() : [];
+      const bl = (Array.isArray(blRaw) ? blRaw : Object.values(blRaw || {})).filter(Boolean);
+      const seenDevices = new Set(), seenIPs = new Set(), deduped = [];
+      for (const b of bl) {
+        const dupDevice = b.deviceId && seenDevices.has(b.deviceId);
+        const dupIP = b.ip && seenIPs.has(b.ip);
+        if (dupDevice || dupIP) { results.duplicateBlacklistRemoved++; continue; }
+        if (b.deviceId) seenDevices.add(b.deviceId);
+        if (b.ip) seenIPs.add(b.ip);
+        deduped.push(b);
+      }
+      if (results.duplicateBlacklistRemoved > 0) await fbdb.ref('blacklist').set(deduped);
+    } catch(e) { results.errors++; }
 
     showToast('✅ Cleanup Complete',
-      `Removed ${results.pendingStripped} pending flags, ${results.orphanMsgs} orphan messages, fixed ${results.profilesFixed} profiles. Errors: ${results.errors}`);
+      `Removed ${results.pendingStripped} pending flags, ${results.orphanMsgs} orphan messages, ${results.emptyConvosRemoved} empty conversations, fixed ${results.duplicateMembersFixed} member-list duplicates, `+
+      `fixed ${results.profilesFixed} profiles, cleared ${results.contradictoryFlagsFixed} stale banned flags, resolved ${results.orphanReportsResolved + results.reportsOnBannedResolved} moot reports, `+
+      `removed ${results.duplicateBlacklistRemoved} duplicate blacklist entries. Errors: ${results.errors}. `+
+      `Not auto-fixed (needs a judgment call — see Diagnose Only): accounts missing/sharing a number, duplicate Google sign-in links, stale unresolved reports on active accounts.`);
 
   } catch(e) {
     selfHeal('SCB-ADMIN-25', e, { context: 'adminCleanFirebase' });
@@ -18844,7 +18929,7 @@ async function adminDiagnoseFirebase() {
         if (!msg) continue;
         if (msg.pending === true) results.pendingFlags++;
         if (msg.from && members.size > 0 && !members.has(Number(msg.from)) && !members.has(String(msg.from))) results.orphanMsgs++;
-        if (msg.at == null || typeof msg.at !== 'number') results.missingTimestamp++;
+        if (msg.time == null || typeof msg.time !== 'number') results.missingTimestamp++;
       }
     }
 
