@@ -1168,7 +1168,7 @@ select{cursor:pointer}
 }
 
 /* -- DEVICE-ADAPTIVE LAYOUT (set via JS device detection: device-phone / device-tablet / device-desktop) -- */
-#chat-back-btn{display:none;font-size:18px}
+#chat-back-btn,#home-back-btn{display:none;font-size:18px}
 body.device-phone #shell,body.device-tablet #shell{max-width:100%;height:100vh;height:100dvh;box-shadow:none;border-radius:0}
 body.device-phone #sidebar{width:100%}
 /* Single-pane navigation: show ONE of sidebar/chat-panel at a time on phones */
@@ -1183,7 +1183,21 @@ body.device-phone.chat-open #chat-panel{display:flex;width:100%}
    were rendered but completely off-canvas and unreachable on every phone. */
 body.device-phone:has(#settings-panel.visible) #sidebar,
 body.device-phone:has(#updates-panel.visible) #sidebar{display:none}
+/* Same class of bug as the settings/updates one above, for the home
+   dashboard specifically: #main-empty (the dashboard-grid widgets live
+   inside it) was toggled with a plain inline style.display, with NOTHING
+   on phone ever setting it — the unconditional `display:none` two rules up
+   applied permanently and there was no button anywhere that reached it
+   either. Every dashboard widget existed, rendered correct content, and
+   was completely unreachable/invisible on every phone. home-open (set by
+   showMainEmpty(), cleared by hideAll()) mirrors chat-open's own existing
+   mechanism; higher specificity here (two classes on body) is what lets it
+   win over the plain .device-phone rule above without needing !important,
+   same trick chat-open already relies on. */
+body.device-phone.home-open #sidebar{display:none}
+body.device-phone.home-open #main-empty{display:flex}
 body.device-phone #chat-back-btn{display:inline-flex}
+body.device-phone.home-open #home-back-btn{display:inline-flex}
 body.device-phone .modal{max-width:94vw!important;max-height:92dvh}
 body.device-phone .msg-body{max-width:82%}
 /* Keep the chat header from getting congested: truncate name/status to one
@@ -2100,6 +2114,7 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="icon-btn" onclick="openJoinServer()" title="Join a server"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></button>
       <span class="sb-bottom-sep"></span>
       <!-- Group 2: feature panels (Meetings is inserted here at runtime, see injectFeatureDom()) -->
+      <button class="icon-btn" onclick="hideAll();showMainEmpty();" title="Home dashboard"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
       <button class="icon-btn" onclick="showUpdates()" title="Game Updates"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="16" cy="10" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/></svg></button>
       <button class="icon-btn" id="cloudy-btn" onclick="toggleCloudy(this)" title="Cloudy voice assistant — say &quot;Hey Cloudy…&quot;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
       <span class="sb-bottom-sep"></span>
@@ -2118,6 +2133,7 @@ body.device-tablet .msg-body{max-width:74%}
   <div id="main">
     <div id="main-empty">
       <div id="dashboard-header">
+        <button class="icon-btn" id="home-back-btn" onclick="closeHomeToSidebar()" title="Back to chats" style="align-self:flex-start">←</button>
         <div class="hero-icon">☁</div>
         <h2>SoCloudyBro</h2>
         <p>Select a conversation, or check what's happening below.</p>
@@ -13135,7 +13151,17 @@ function getDashboardLayout(){
 function saveDashboardLayout(layout){ localStorage.setItem('cc_dashboard_layout_v2',JSON.stringify(layout)); }
 function showMainEmpty(){
   document.getElementById('main-empty').style.display='flex';
+  // See the home-open CSS comment near .chat-open — on phone this is what
+  // actually makes the dashboard reachable instead of fighting the sidebar
+  // for the same space.
+  if (document.body.classList.contains('device-phone')) document.body.classList.add('home-open');
   if(me) renderDashboard();
+}
+// On phones, returns from the home dashboard back to the sidebar — same
+// role as closeChatToSidebar(), for the home-open single-pane state.
+function closeHomeToSidebar(){
+  document.body.classList.remove('home-open');
+  document.getElementById('main-empty').style.display='none';
 }
 // Safety net: if the dashboard is on screen, re-render it whenever the tab
 // regains focus/visibility. This guarantees it reflects whatever's actually
@@ -13627,6 +13653,7 @@ function hideAll(){
   document.getElementById('settings-panel').classList.remove('visible');
   document.getElementById('updates-panel').classList.remove('visible');
   document.body.classList.remove('chat-open');
+  document.body.classList.remove('home-open');
 }
 
 // -- GAME UPDATES --------------------------------------------------------------
