@@ -9832,9 +9832,12 @@ let ctxContact=null;
 function showContactCtxMenu(e,c){
   ctxContact=c;
   const menu=document.getElementById('contact-ctx-menu');
-  menu.style.display='block';
-  menu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';
-  menu.style.top=Math.min(e.clientY,window.innerHeight-80)+'px';
+  // Measure actual rendered size instead of guessing — see showCtxMenu()'s
+  // comment for why a hardcoded guess here silently goes stale.
+  menu.style.left='-9999px';menu.style.top='-9999px';menu.style.display='block';
+  const mw=menu.offsetWidth,mh=menu.offsetHeight;
+  menu.style.left=Math.max(4,Math.min(e.clientX,window.innerWidth-mw-4))+'px';
+  menu.style.top=Math.max(4,Math.min(e.clientY,window.innerHeight-mh-4))+'px';
   document.addEventListener('click',hideContactCtxMenu,{once:true});
 }
 function hideContactCtxMenu(){
@@ -11768,7 +11771,17 @@ function showCtxMenu(e,m){
     const pinnedId=c?c.pinnedByChannel[pinKeyFor(c)]:null;
     pinBtn.textContent=(pinnedId===m.id)?'📌 Unpin':'📌 Pin';
   }
-  menu.style.display='block';menu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';menu.style.top=Math.min(e.clientY,window.innerHeight-150)+'px';
+  // Clamp against the menu's ACTUAL rendered size, not a guessed width/height —
+  // this menu has grown to 10 items over time (Thread, Translate, etc. were
+  // added after the original 150px-tall guess was written) and a stale guess
+  // just lets it run off the bottom/right edge of the screen instead of
+  // actually fitting, exactly what was happening before this fix. Make it
+  // visible off-screen first so offsetWidth/offsetHeight reflect its real
+  // size, then position it for real.
+  menu.style.left='-9999px';menu.style.top='-9999px';menu.style.display='block';
+  const mw=menu.offsetWidth,mh=menu.offsetHeight;
+  menu.style.left=Math.max(4,Math.min(e.clientX,window.innerWidth-mw-4))+'px';
+  menu.style.top=Math.max(4,Math.min(e.clientY,window.innerHeight-mh-4))+'px';
   document.addEventListener('click',hideCtxMenu,{once:true});
 }
 function hideCtxMenu(){document.getElementById('ctx-menu').style.display='none';}
@@ -14871,9 +14884,13 @@ async function denyJoinRequest(num){
 function showMemberCtxMenu(e, num) {
   memberCtxTarget = num;
   const menu = document.getElementById('member-ctx-menu');
-  menu.style.display = 'block';
-  menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
-  menu.style.top = Math.min(e.clientY, window.innerHeight - 180) + 'px';
+  // Measure actual rendered size instead of guessing — this menu's item
+  // count varies by permission (admin vs regular member), so a fixed guess
+  // is wrong even more often than the similar fix in showCtxMenu().
+  menu.style.left='-9999px';menu.style.top='-9999px';menu.style.display='block';
+  const mw=menu.offsetWidth,mh=menu.offsetHeight;
+  menu.style.left = Math.max(4,Math.min(e.clientX, window.innerWidth-mw-4)) + 'px';
+  menu.style.top = Math.max(4,Math.min(e.clientY, window.innerHeight-mh-4)) + 'px';
   document.addEventListener('click', () => { menu.style.display = 'none'; }, { once: true });
 }
 // Shared cleanup for kicking/banning/leaving a group. conv.participants was
