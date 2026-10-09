@@ -1332,6 +1332,12 @@ body.device-tablet .msg-body{max-width:74%}
 
   /* Always show back button on mobile */
   #chat-back-btn { display: inline-flex !important; }
+  /* Without this, a plain desktop browser resized narrow (never
+     JS-reclassified as device-phone, so the device-phone-scoped
+     #home-back-btn rule doesn't apply) could reach the dashboard via
+     Home but have no visible way back — #sidebar hidden, #main-empty
+     shown, and #home-back-btn stuck at its base display:none. */
+  body:has(#main-empty.visible) #home-back-btn { display: inline-flex !important; }
 
   /* Modals: full-width bottom-sheet style */
   .overlay { align-items: flex-end !important; padding: 0 !important; }
