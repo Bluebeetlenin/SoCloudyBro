@@ -14808,7 +14808,12 @@ async function submitJoinServer(){
   if(conv.joinRequests.some(r=>r.number===me.number)){ err.textContent=scbErr('SCB-GRP-38','You\'ve already requested to join — waiting on an admin to approve.'); return; }
   conv.joinRequests.push({number:me.number,name:me.name||('#'+me.number),time:Date.now()});
   try{
-    await saveConvos();
+    // Written narrowly to conversations/<key>/joinRequests only, NOT via the
+    // general saveConvos() (which replaces the whole conversation object) —
+    // the requester isn't a member yet, so the Firebase rule only allows
+    // them to write this one specific path, not the conversation as a
+    // whole. See the conversations rule's joinRequests sub-rule comment.
+    await fbdb.ref('conversations/'+conv.key+'/joinRequests').set(conv.joinRequests);
     closeModal('join-server-modal');
     showToast('Request sent','An admin needs to approve your request to join "'+(conv.name||'that server')+'".');
   }catch(e){ err.textContent=scbErr('SCB-GRP-39','That request couldn\'t be sent — the server rejected the write.',(e.message||'')); }
@@ -18600,7 +18605,21 @@ const SCB_CANONICAL_RULES = {
         // Worker's /mint-token — see MINT_TOKEN_ENDPOINT's comment — never
         // from the plain anonymous session every visitor gets for free).
         // Admin #2015 and any account with adminAccess set can write any record.
-        ".write": "auth != null && (auth.token.number == $uid || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())"
+        //
+        // SECURITY FIX: the self-write branch below used to have no field
+        // restriction, which let any ordinary user grant themselves
+        // adminAccess by writing it onto their OWN record — and since the
+        // third branch here grants full write over EVERY user record to
+        // anyone whose own adminAccess merely exists(), that one self-write
+        // was a full privilege escalation to "can overwrite any account,
+        // including banning/deleting others or hijacking their pwd/PIN
+        // hash". The self-write branch now explicitly forbids changing
+        // adminAccess (newData must match the current value) — only the
+        // literal admin account or an account that ALREADY has adminAccess
+        // (via the third branch, unaffected by this fix — delegated admins
+        // still need this to ban/unban other users through saveUsers()'s
+        // single whole-table write) can grant or revoke it.
+        ".write": "auth != null && ((auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())"
       }
     },
 
@@ -18624,7 +18643,30 @@ const SCB_CANONICAL_RULES = {
         // the one-time admin "Backfill Conversation Member Index" pass) falls
         // back to the blanket rule above instead of being locked — this can
         // only ever ADD restriction, never remove access nothing else grants.
-        ".write": "!data.exists() || !data.child('memberSet').exists() || data.child('memberSet').child(auth.token.number).exists() || newData.child('memberSet').child(auth.token.number).exists()",
+        //
+        // SECURITY FIX: this used to also accept
+        // newData.child('memberSet').child(auth.token.number).exists() — i.e.
+        // "allow the write if the SUBMITTED data includes the writer in
+        // memberSet". Since every save is a full-object replace (saveConvos()
+        // always writes the whole conversation, never a narrow patch), that
+        // let ANY authenticated user submit a complete rewrite of ANY
+        // existing conversation — messages, admins, wrappedKeys, everything —
+        // just by including their own number in the memberSet they were
+        // submitting. No legitimate flow actually needs this: joining an
+        // existing conversation always goes through joinRequests (below),
+        // approved by an admin who is already a member and so already
+        // satisfies the rule below without it.
+        ".write": "!data.exists() || !data.child('memberSet').exists() || data.child('memberSet').child(auth.token.number).exists()",
+        // Lets a non-member submit a join request (see submitJoinServer(),
+        // which writes ONLY this path — not the whole conversation — for
+        // exactly this reason) without the blanket membership check above
+        // applying to this one path. Same trust level as reports/spam_flags:
+        // any real-auth user can write here, an admin reviews before acting
+        // on it, and the worst a bad actor can do is submit junk requests or
+        // clobber the pending list, not touch messages/members/anything else.
+        "joinRequests": {
+          ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'"
+        },
         "messages": {
           // Messages store their timestamp as "time" (see sendMsg() and every
           // other message-creation site), not "at" — this was indexing a
