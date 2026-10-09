@@ -1303,12 +1303,27 @@ body.device-tablet .msg-body{max-width:74%}
   #sb-bottom { flex-wrap: wrap !important; justify-content: center !important; }
   #sb-bottom .icon-btn { flex-shrink: 0 !important; flex-grow: 0 !important; width: 34px !important; height: 34px !important; }
 
-  /* Single-pane view: show only sidebar OR chat, never both.
-     Uses :has() to detect when a chat is open via the .visible class. */
-  body:has(#chat-panel.visible) #sidebar { display: none !important; }
+  /* Single-pane view: show only sidebar OR chat OR the home dashboard,
+     never more than one. Uses :has() to detect which is open via its own
+     .visible class.
+     BUG FIX: the chat/main-empty hide rule below used to unconditionally
+     force #main-empty to display:none!important whenever chat wasn't
+     open — which is exactly the state the home dashboard needs to be
+     visible in. Since that rule carries !important, it always won over
+     both the non-!important :has(#main-empty.visible) show-rule below
+     AND showMainEmpty()'s own inline style, regardless of specificity —
+     !important always wins over a non-!important rule, cascade order
+     and origin notwithstanding. The dashboard was rendered, reachable by
+     tapping Home, and then invisible: neither the sidebar nor the
+     dashboard showed, a blank pane, on every real phone (which is always
+     under this 639px breakpoint). Now explicitly exempted, mirroring the
+     chat-panel show-rule immediately above it. */
+  body:has(#chat-panel.visible) #sidebar,
+  body:has(#main-empty.visible) #sidebar { display: none !important; }
   body:has(#chat-panel.visible) #chat-panel { display: flex !important; width: 100% !important; }
-  body:not(:has(#chat-panel.visible)) #chat-panel,
-  body:not(:has(#chat-panel.visible)) #main-empty { display: none !important; }
+  body:has(#main-empty.visible) #main-empty { display: flex !important; width: 100% !important; }
+  body:not(:has(#chat-panel.visible)):not(:has(#main-empty.visible)) #chat-panel,
+  body:not(:has(#chat-panel.visible)):not(:has(#main-empty.visible)) #main-empty { display: none !important; }
   /* Same fix as the device-phone rule above, for a plain resized desktop
      browser that never got JS-reclassified — Settings/Updates were rendered
      completely off-canvas with the sidebar still claiming full width. */
