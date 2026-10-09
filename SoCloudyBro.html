@@ -7315,13 +7315,25 @@ async function launch(){
 }
 
 // -- AUTH TABS & LOGIN ---------------------------------------------------------
+// The setup modal (#setup-modal) is one of several "steps" below, shown one
+// at a time: the main signup/login forms, plus the login-flow steps a
+// session can get routed into (needs an email on file, 2FA code, face scan,
+// backup PIN). Those used to each be toggled individually with raw
+// style.display calls scattered across many functions — easy to forget to
+// hide a sibling view when showing a new one, which would leave two views
+// visible stacked on top of each other. showAuthView() is the one place
+// that knows the full set and guarantees exactly one is ever visible.
+const AUTH_VIEW_IDS=['signup-view','login-view','login-set-email-view','login-2fa-view','login-face-view','login-backup-pin-view'];
+function showAuthView(viewId){
+  AUTH_VIEW_IDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=(id===viewId)?'block':'none';
+  });
+}
 function switchAuthTab(tab) {
   document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
   document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-  document.getElementById('signup-view').style.display = tab === 'signup' ? 'block' : 'none';
-  document.getElementById('login-view').style.display = tab === 'login' ? 'block' : 'none';
-  document.getElementById('login-2fa-view').style.display = 'none';
-  document.getElementById('login-set-email-view').style.display = 'none';
+  showAuthView(tab === 'signup' ? 'signup-view' : 'login-view');
   document.getElementById('setup-error').textContent = '';
   document.getElementById('login-error').textContent = '';
   if(tab === 'signup') resetTurnstile();
@@ -14904,7 +14916,30 @@ function showMemberCtxMenu(e, num) {
 async function _removeMemberFromConv(conv, num) {
   conv.participants = (conv.participants || []).filter(n => n !== num);
   if (conv.members) conv.members = conv.members.filter(n => n !== num);
-  if (conv.admins) conv.admins = conv.admins.filter(n => n !== num);
+  if (conv.admins) {
+    conv.admins = conv.admins.filter(n => n !== num);
+    // Without this, a group whose only/last admin leaves (or is removed)
+    // becomes permanently unmanageable — regenerating the invite code,
+    // approving join requests, kicking/banning, and promoting anyone else
+    // all gate on conv.admins.includes(), so an empty admins list is a dead
+    // end nobody can recover from, not just "no one happens to be admin
+    // right now". Auto-promote the longest-standing remaining member (or
+    // just the first one left, if join times aren't tracked) instead.
+    if (!conv.admins.length) {
+      const remainingMembers = (conv.members && conv.members.length ? conv.members : conv.participants) || [];
+      if (remainingMembers.length) {
+        let nextAdmin = remainingMembers[0];
+        if (conv.memberJoinedAt) {
+          const sorted = remainingMembers.slice().sort((a, b) => (conv.memberJoinedAt[a] ?? Infinity) - (conv.memberJoinedAt[b] ?? Infinity));
+          nextAdmin = sorted[0];
+        }
+        conv.admins = [nextAdmin];
+        const promotedUser = (usersCache || []).find(u => u && u.number === nextAdmin);
+        const promotedName = promotedUser ? (dec(promotedUser.name) || promotedUser.name) : ('#' + nextAdmin);
+        _addSystemMessage(conv, promotedName + ' is now an admin (the group had none left)');
+      }
+    }
+  }
   if (conv.coadmins) conv.coadmins = conv.coadmins.filter(n => n !== num);
   if (conv.memberRoles) delete conv.memberRoles[num];
   if (conv.memberBadges) delete conv.memberBadges[num];
