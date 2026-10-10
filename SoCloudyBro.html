@@ -18908,7 +18908,7 @@ const SCB_CANONICAL_RULES = {
           ".write": "auth != null && auth.token.email != null && auth.token.email != '' && auth.token.email == data.parent().child('parentEmail').val() && (newData.val() == 'approved' || newData.val() == 'denied')"
         },
         "parentNumber": {
-          ".write": "auth != null && auth.token.email != null && auth.token.email != '' && auth.token.email == data.parent().child('parentEmail').val() && newData.val().toString() == auth.token.number"
+          ".write": "auth != null && auth.token.email != null && auth.token.email != '' && auth.token.email == data.parent().child('parentEmail').val() && (newData.val() + '') == auth.token.number"
         }
       }
     },
