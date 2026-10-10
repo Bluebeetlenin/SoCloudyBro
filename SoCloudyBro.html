@@ -18723,7 +18723,23 @@ const SCB_CANONICAL_RULES = {
         // definition, so allowing it costs nothing security-wise; this
         // mirrors the same bypass already used for the reports rule below,
         // for the exact same reason.
-        ".write": "auth != null && (data.val() == newData.val() || (auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())"
+        //
+        // THIRD FIX: brand-new sign-up (submitSetup() -> registerOrUpdate()
+        // -> saveUsers()) writes the new account's own record while the
+        // session is STILL anonymous — _tryUpgradeToCustomAuth() only ever
+        // runs from finishLogin() on an existing account, because minting a
+        // token requires something server-side to verify a proof against,
+        // and a brand-new account has no server record yet to verify
+        // against. An anonymous session has no auth.token.number at all, so
+        // every branch above was unsatisfiable and EVERY new sign-up was
+        // rejected with PERMISSION_DENIED. Fixed by allowing a write to a
+        // path with no existing record at all (pure account creation) —
+        // but only when the new record doesn't carry adminAccess, so this
+        // can't be used to self-grant admin by "signing up" at an unclaimed
+        // number (numbers are also pre-screened client-side in
+        // submitSetup(), but that's not a substitute for a server-side
+        // guarantee).
+        ".write": "auth != null && ((!data.exists() && !newData.child('adminAccess').exists()) || data.val() == newData.val() || (auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())"
       }
     },
 
