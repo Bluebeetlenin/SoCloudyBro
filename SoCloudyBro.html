@@ -1058,6 +1058,24 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 
 /* ── INPUTS BUTTONS ── */
 input[type=text],input[type=number],input[type=password],input[type=email],input[type=date],input[type=time],textarea,select{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 12px;outline:none;transition:border-color 0.18s,box-shadow 0.18s;color-scheme:dark light}
+/* Custom checkbox/radio skin — a bare native checkbox (just an OS-default
+   square, at most tinted via accent-color) is the one remaining "generic
+   browser control" look left in the app; everything else (buttons, text
+   inputs, selects) already has its own styled skin above. appearance:none
+   + a drawn-on checkmark/dot means every <input type=checkbox>/[type=radio]
+   in the app gets this for free, with no markup changes needed anywhere —
+   safer than hand-converting ~25 individual checkbox call sites to a JS
+   component. Rules with a more specific selector elsewhere (e.g. sizing a
+   checkbox inline next to text) still win via normal CSS specificity. */
+input[type=checkbox],input[type=radio]{appearance:none;-webkit-appearance:none;width:17px;height:17px;flex-shrink:0;border:1.5px solid var(--border2);background:var(--bg3);cursor:pointer;position:relative;vertical-align:middle;transition:background .15s,border-color .15s;margin:0}
+input[type=checkbox]{border-radius:5px}
+input[type=radio]{border-radius:50%}
+input[type=checkbox]:hover,input[type=radio]:hover{border-color:var(--accent)}
+input[type=checkbox]:checked,input[type=radio]:checked{background:var(--accent-grad);border-color:transparent}
+input[type=checkbox]:checked::after{content:'';position:absolute;left:5px;top:2px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+input[type=radio]:checked::after{content:'';position:absolute;left:50%;top:50%;width:7px;height:7px;background:#fff;border-radius:50%;transform:translate(-50%,-50%)}
+input[type=checkbox]:disabled,input[type=radio]:disabled{opacity:.5;cursor:not-allowed}
+input[type=checkbox]:focus-visible,input[type=radio]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* Show/hide toggle on every real password field (not the 4-digit PIN boxes,
    which are a different, intentionally-masked-only UI pattern). */
 .pwd-field-wrap{position:relative}
@@ -7243,6 +7261,7 @@ async function init(){
   loadStorage();
   _initCompactMode();
   _initScheduledMsgs();
+  loadFeatureFlags(); // best-effort, non-blocking — isFeatureEnabled() falls back to its default if this hasn't resolved yet
   // Dismiss splash — Firebase has settled and storage is loaded; the rest of
   // init (landing page, login modal, or launch) runs without the splash overlay.
   // If launch() is called it adds its own fade-out after full initialisation.
@@ -18650,6 +18669,13 @@ function renderAdminOwnerToolsTab(){
       <button class="btn btn-ghost btn-sm" onclick="openSelfDestructedLog()">💀 Self-destructed accounts</button>
       <button class="btn btn-ghost btn-sm" onclick="exportEncryptedAuditLog()">🔒 Export encrypted audit log</button>
     </div>
+    <h4 style="margin:0 0 6px;font-size:13px;font-weight:600">🚩 Feature Flags</h4>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">Toggle named behaviors on/off instantly — no Vercel redeploy needed. Only features explicitly built to check a flag respond to it; this doesn't retroactively gate everything in the app.</p>
+    <div id="admin-feature-flags-list" style="margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:18px">
+      <input type="text" id="admin-new-flag-key" placeholder="new_flag_key" style="flex:1">
+      <button class="btn btn-ghost btn-sm" onclick="addFeatureFlag()">+ Add</button>
+    </div>
     <details>
       <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--danger);padding:8px 0;user-select:none">⚠️ Danger Zone — destructive database tools (click to expand)</summary>
     <div id="admin-rules-section" style="margin-top:16px;">
@@ -18679,6 +18705,137 @@ function renderAdminOwnerToolsTab(){
     </div>
     </details>
   `;
+  renderFeatureFlagsList();
+}
+// -- FEATURE FLAGS -----------------------------------------------------------
+// Stored at admin_site/feature_flags/<key> (boolean). Loaded once at launch
+// (see loadFeatureFlags() in init()) and cached in-memory; isFeatureEnabled()
+// reads the cache, never a fresh network call, so gating a feature behind a
+// flag costs nothing on the hot path. Owner Tools can flip a flag live —
+// every open tab picks it up on its next natural Firebase poll, no redeploy.
+let _featureFlagsCache={};
+async function loadFeatureFlags(){
+  try{
+    const snap=await fbdb.ref('admin_site/feature_flags').get();
+    _featureFlagsCache=snap.val()||{};
+  }catch(e){ console.warn('loadFeatureFlags failed:',e.message); }
+}
+function isFeatureEnabled(key,defaultValue){
+  if(!_featureFlagsCache||typeof _featureFlagsCache[key]==='undefined') return !!defaultValue;
+  return !!_featureFlagsCache[key];
+}
+async function toggleFeatureFlag(key){
+  if(!requireAdmin()) return;
+  const next=!isFeatureEnabled(key,false);
+  try{
+    await fbdb.ref('admin_site/feature_flags/'+key).set(next);
+    _featureFlagsCache[key]=next;
+    renderFeatureFlagsList();
+  }catch(e){ showToast('Failed',scbErr('SCB-FLAG-01','That flag couldn\'t be saved — the server rejected the write.',e.message)); }
+}
+async function addFeatureFlag(){
+  if(!requireAdmin()) return;
+  const input=document.getElementById('admin-new-flag-key');
+  const key=(input.value||'').trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
+  if(!key){ showToast('Enter a key','e.g. quarantine_new_members'); return; }
+  try{
+    await fbdb.ref('admin_site/feature_flags/'+key).set(false);
+    _featureFlagsCache[key]=false;
+    input.value='';
+    renderFeatureFlagsList();
+  }catch(e){ showToast('Failed',scbErr('SCB-FLAG-02','That flag couldn\'t be created — the server rejected the write.',e.message)); }
+}
+function renderFeatureFlagsList(){
+  const list=document.getElementById('admin-feature-flags-list');
+  if(!list) return;
+  const keys=Object.keys(_featureFlagsCache).sort();
+  if(!keys.length){ list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:6px 0">No flags yet — add one below.</div>'; return; }
+  list.innerHTML=keys.map(k=>{
+    const on=!!_featureFlagsCache[k];
+    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;cursor:pointer">'
+      +'<input type="checkbox" '+(on?'checked':'')+' onchange="toggleFeatureFlag(\''+esc(k)+'\')">'
+      +'<span style="font-family:monospace">'+esc(k)+'</span>'
+      +'<span style="margin-left:auto;color:'+(on?'var(--success)':'var(--muted)')+';font-size:11px">'+(on?'ON':'OFF')+'</span>'
+      +'</label>';
+  }).join('');
+}
+// -- USER RECORD VIEWER -------------------------------------------------------
+// Pulls the account's full profile plus every report/spam-flag that
+// mentions them (either as the target or the one who filed it) into one
+// place, instead of an admin having to cross-reference the separate
+// Users/Reports/Spam tabs by number manually. Read-only except for the
+// admin-notes field, which is a free-text scratchpad for moderators —
+// never shown to the account owner, purely internal.
+let _adminRecordTargetNumber=null;
+async function openUserRecordModal(number){
+  if(!hasPermission('users_view')&&!hasPermission('users_ban')&&me.number!==ADMIN_NUMBER){ showToast('Access denied',scbErr('SCB-ADMIN-25','You do not have access to view user records.')); return; }
+  _adminRecordTargetNumber=number;
+  const body=document.getElementById('admin-record-body');
+  document.getElementById('admin-record-title').textContent='📋 User Record — #'+number;
+  body.innerHTML='<div style="padding:16px 0;color:var(--muted)">Loading…</div>';
+  openModal('admin-user-record-modal');
+  try{
+    const [users,reportsSnap,flagsSnap]=await Promise.all([
+      getUsers(),
+      fbdb.ref('reports').get().catch(()=>null),
+      fbdb.ref('spam_flags').get().catch(()=>null)
+    ]);
+    const u=users.find(x=>x.number===number);
+    if(!u){ body.innerHTML='<div style="padding:16px 0;color:var(--muted)">No record found for #'+number+'.</div>'; return; }
+    const reports=[];
+    if(reportsSnap&&reportsSnap.exists()) reportsSnap.forEach(c=>{ const v=c.val(); if(v&&(v.reportedNumber===number||v.reporterNumber===number)) reports.push(v); });
+    reports.sort((a,b)=>(b.time||0)-(a.time||0));
+    const flags=[];
+    if(flagsSnap&&flagsSnap.exists()) flagsSnap.forEach(c=>{ const v=c.val(); if(v&&v.number===number) flags.push(v); });
+    flags.sort((a,b)=>(b.at||0)-(a.at||0));
+
+    const fmt=t=>t?new Date(t).toLocaleString():'—';
+    let html='';
+    html+='<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12.5px;margin:10px 0 14px">';
+    html+='<div style="color:var(--muted)">Name</div><div>'+esc(dec(u.name)||'—')+'</div>';
+    html+='<div style="color:var(--muted)">Email</div><div>'+esc(u.email||'—')+(u.emailVerified?' ✓':'')+'</div>';
+    html+='<div style="color:var(--muted)">Joined</div><div>'+fmt(u.createdAt)+'</div>';
+    html+='<div style="color:var(--muted)">Status</div><div>'+(u.banned?'<span style="color:var(--danger)">Banned</span> ':'')+(u.shadowMuted?'<span style="color:var(--warn)">Shadow-muted</span> ':'')+(u.verified?'Verified ':'')+(!u.banned&&!u.shadowMuted?'Active':'')+'</div>';
+    html+='<div style="color:var(--muted)">2FA</div><div>'+(u.totpEnabled?'Authenticator app':u.faceMfaEnabled?'Face MFA':'Off')+'</div>';
+    html+='<div style="color:var(--muted)">Parent email</div><div>'+esc(u.parentEmail||'—')+(u.parentalConsentStatus?' ('+esc(u.parentalConsentStatus)+')':'')+'</div>';
+    html+='</div>';
+
+    html+='<h4 style="margin:14px 0 6px;font-size:12.5px;color:var(--text)">📝 Admin notes <span style="font-weight:400;color:var(--muted)">(internal only, never shown to the user)</span></h4>';
+    html+='<textarea id="admin-record-notes" style="min-height:60px" placeholder="Nothing noted yet...">'+esc(u.adminNotes||'')+'</textarea>';
+    html+='<button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="saveAdminUserNote()">Save note</button>';
+
+    html+='<h4 style="margin:16px 0 6px;font-size:12.5px;color:var(--text)">🚩 Reports ('+reports.length+')</h4>';
+    html+=reports.length?reports.map(r=>{
+      const dir=r.reportedNumber===number?'against this account':'filed by this account';
+      return '<div style="font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">'
+        +'<div style="color:var(--muted)">'+fmt(r.time)+' · '+esc(dir)+' · <span style="text-transform:capitalize">'+esc(r.status||'open')+'</span></div>'
+        +'<div>'+esc(r.category||'')+(r.reason?': '+esc(r.reason):'')+'</div>'
+        +'</div>';
+    }).join(''):'<div style="font-size:12px;color:var(--muted)">None.</div>';
+
+    html+='<h4 style="margin:16px 0 6px;font-size:12.5px;color:var(--text)">🤖 Spam flags ('+flags.length+')</h4>';
+    html+=flags.length?flags.map(f=>{
+      return '<div style="font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">'
+        +'<div style="color:var(--muted)">'+fmt(f.at)+' · <span style="text-transform:capitalize">'+esc((f.type||'').replace(/_/g,' '))+'</span>'+(f.resolved?' · resolved':'')+'</div>'
+        +'</div>';
+    }).join(''):'<div style="font-size:12px;color:var(--muted)">None.</div>';
+
+    body.innerHTML=html;
+  }catch(e){
+    selfHeal('SCB-ADMIN-26', e, { context: 'openUserRecordModal' });
+    body.innerHTML='<div style="color:var(--danger)">'+esc(scbErr('SCB-ADMIN-26','This record couldn\'t be loaded.',(e&&e.message)||''))+'</div>';
+  }
+}
+async function saveAdminUserNote(){
+  if(!_adminRecordTargetNumber) return;
+  const ta=document.getElementById('admin-record-notes');
+  const note=(ta?ta.value:'').slice(0,4000);
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===_adminRecordTargetNumber);
+    if(u){ u.adminNotes=note; await saveUsers(users); }
+    showToast('Saved','Admin note updated.');
+  }catch(e){ showToast('Failed',scbErr('SCB-ADMIN-27','That note couldn\'t be saved — the server rejected the write.',e.message)); }
 }
 async function renderAdminUsersTab(){
   if(!hasPermission('users_view')&&!hasPermission('users_ban')){ const body=document.getElementById('admin-dashboard-body'); if(body) body.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Access denied.</div>'; return; }
@@ -18716,12 +18873,13 @@ async function renderAdminUsersTab(){
           +'</div></div>'
           +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
           +'<button class="btn btn-ghost btn-sm" onclick="adminMessage('+u.number+')" title="Open DM">💬 Message</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="openUserRecordModal('+u.number+')" title="Full record: profile, reports, flags, notes">📋 Record</button>'
           +(me.number===ADMIN_NUMBER?(verified?'<button class="btn btn-ghost btn-sm" onclick="adminUnverify('+u.number+')">✓ Unverify</button>':'<button class="btn btn-ghost btn-sm" onclick="adminVerify('+u.number+')">☑️ Verify</button>'):'')
           +(hasPermission('users_ban')?(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan('+u.number+')">🚫 Ban</button>'):'')
           +(hasPermission('users_ban')&&!isAdmin?(shadowMuted?'<button class="btn btn-ghost btn-sm" onclick="adminUnshadowMute('+u.number+')">🔈 Un-shadow-mute</button>':'<button class="btn btn-ghost btn-sm" onclick="adminShadowMute('+u.number+')" title="Their messages will silently never deliver — no ban notice shown to them">🔇 Shadow-mute</button>'):'')
           +(!isAdmin&&me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',' + esc(JSON.stringify(rawName)) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[])) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>':'')
-          +(Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete')&&(!targetHasAdminAccess||me.number===ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:auto" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
+          +(Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete')&&(!targetHasAdminAccess||me.number===ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
           +'</div></div>';
       }).join('');
   }catch(e){
@@ -25438,6 +25596,14 @@ init();
 </div>
 
 <!-- ADMIN DASHBOARD (only for admin #2015) -->
+<div class="overlay" id="admin-user-record-modal">
+  <div class="modal" style="max-width:520px;height:min(620px,86vh);padding:0;overflow:hidden;display:flex;flex-direction:column">
+    <div class="modal-header" style="padding:18px 20px 12px"><h2 id="admin-record-title">📋 User Record</h2><p>Full account record, reports, and flags</p></div>
+    <div class="modal-body" id="admin-record-body" style="flex:1;overflow-y:auto;padding:0 20px 14px"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('admin-user-record-modal')">Close</button></div>
+  </div>
+</div>
+
 <div class="overlay" id="admin-dashboard-modal">
   <div class="modal" style="max-width:860px;height:min(640px,86vh);padding:0;overflow:hidden">
     <div class="modal-header" style="padding:20px 20px 14px"><h2>🛡️ Admin Dashboard</h2><p>Overview · Moderation · Feedback · Engineering</p></div>
