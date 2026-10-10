@@ -5098,6 +5098,34 @@ const SCB_CHECKS = [
       return {pass:Array.isArray(b),warn:!Array.isArray(b),detail:Array.isArray(b)?b.length+' blocked numbers':'blocked is not an array: '+typeof b};
     }
   },
+  { id:'sec.admin_rules_hardened', cat:'Security', name:'Admin-sensitive paths still require real identity',
+    // Guards against the exact regression class this app has hit before
+    // (admin_site's write rule was plain "auth != null" — ANY authenticated
+    // session, including the free anonymous one every visitor gets, could
+    // overwrite reserved_numbers/feature_flags/the audit log — fixed in the
+    // rules compile). A blanket "flag every auth != null rule" linter would
+    // be mostly noise: several paths (calls, voice, feedback, updates,
+    // errors) are LEGITIMATELY that open by design. Instead this checks the
+    // specific paths that are supposed to require real ownership/admin
+    // proof still do, in the canonical rules copy this admin keeps synced
+    // with the live deployed rules (see "Load canonical rules" in Owner
+    // Tools) — it can't see the LIVE rules directly (no public read access
+    // to Firebase's rules endpoint), so this is a check on intent, not
+    // literal live-server state; still catches an accidental copy-paste
+    // regression in the canonical source before it ever gets pushed.
+    run:()=>{
+      try{
+        const admin=JSON.stringify(SCB_CANONICAL_RULES.rules.admin_site[".write"]||'');
+        const users=JSON.stringify(SCB_CANONICAL_RULES.rules.users.$uid[".write"]||'');
+        const convos=JSON.stringify(SCB_CANONICAL_RULES.rules.conversations[".write"]||'');
+        const problems=[];
+        if(admin.indexOf('adminAccess')===-1) problems.push('admin_site');
+        if(users.indexOf('adminAccess')===-1) problems.push('users/$uid');
+        if(convos.indexOf('sign_in_provider')===-1) problems.push('conversations');
+        return {pass:!problems.length,detail:problems.length?'Missing the expected identity check: '+problems.join(', '):'All three still require real identity proof, not just auth != null'};
+      }catch(e){ return {pass:false,detail:'Could not inspect SCB_CANONICAL_RULES: '+e.message}; }
+    }
+  },
 
   // ── UI ─────────────────────────────────────────────────────────────────────
   { id:'ui.sidebar', cat:'UI', name:'Sidebar DOM element present',
@@ -5427,6 +5455,64 @@ async function _tryUpgradeToCustomAuth(number, proof){
     console.warn('[auth] custom-token upgrade failed, staying on the existing session:', e.message);
     return false;
   }
+}
+
+// Any account that logged in before the custom-auth upgrade existed (or
+// whose browser simply kept its old anonymous Firebase session alive
+// across reloads — Firebase persists that session the same way it
+// persists a real one) is still running on the plain anonymous session
+// today: nothing besides an explicit fresh login (finishLogin(), which is
+// what actually calls _tryUpgradeToCustomAuth()) ever upgrades it. Not
+// exploitable on its own (every sensitive write still requires the real
+// token), but it means that device's own Firebase rule checks silently
+// fall back to weaker "auth != null" coverage wherever a bypass branch for
+// that exists, and the account can't be told apart from ANY anonymous
+// visitor server-side. This surfaces a small, dismissible, non-blocking
+// banner offering a one-click fix; dismissing it only silences this
+// session (reappears next full reload) specifically so it isn't
+// permanently ignorable by accident.
+function checkStaleAnonymousSession(){
+  try{
+    if(!me||!me.number) return;
+    const cu=firebase.auth&&firebase.auth().currentUser;
+    if(!cu||!cu.isAnonymous) return;
+    if(sessionStorage.getItem('cc_stale_session_dismissed')==='1') return;
+    _showStaleSessionBanner();
+  }catch(e){ console.warn('checkStaleAnonymousSession failed (non-fatal):',e.message); }
+}
+function _dismissStaleSessionBanner(){
+  try{ sessionStorage.setItem('cc_stale_session_dismissed','1'); }catch(e){}
+  const el=document.getElementById('stale-session-banner');
+  if(el) el.remove();
+}
+function _showStaleSessionBanner(){
+  if(document.getElementById('stale-session-banner')) return;
+  const hasPwd=!!(me.pwd);
+  const el=document.createElement('div');
+  el.id='stale-session-banner';
+  el.style.cssText='position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:900;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-card);box-shadow:var(--shadow-lg);padding:12px 14px;max-width:360px;width:calc(100% - 32px);font-size:12.5px';
+  el.innerHTML = hasPwd
+    ? ('<div style="margin-bottom:8px"><b>🔒 Secure this session</b><br><span style="color:var(--muted)">This device is signed in but hasn\'t verified your identity since an update. Confirm your password once to secure it.</span></div>'
+      +'<input type="password" id="stale-session-pwd" placeholder="Password" style="margin-bottom:6px">'
+      +'<div class="error-text" id="stale-session-error" style="margin-bottom:6px;font-size:11px"></div>'
+      +'<div style="display:flex;gap:6px"><button class="btn btn-sm" style="flex:1" onclick="_submitStaleSessionUpgrade()">Secure</button><button class="btn btn-ghost btn-sm" onclick="_dismissStaleSessionBanner()">Later</button></div>')
+    : ('<div style="margin-bottom:8px"><b>🔒 Secure this session</b><br><span style="color:var(--muted)">This device is signed in but hasn\'t verified your identity since an update. Log out and back in once to secure it.</span></div>'
+      +'<div style="display:flex;gap:6px"><button class="btn btn-sm" style="flex:1" onclick="logOut()">Log out</button><button class="btn btn-ghost btn-sm" onclick="_dismissStaleSessionBanner()">Later</button></div>');
+  document.body.appendChild(el);
+}
+async function _submitStaleSessionUpgrade(){
+  const input=document.getElementById('stale-session-pwd');
+  const err=document.getElementById('stale-session-error');
+  const pwd=(input?input.value:'').trim();
+  if(err) err.textContent='';
+  if(!pwd){ if(err) err.textContent='Enter your password.'; return; }
+  // Fast local check first (same hash already cached in me.pwd) before
+  // spending a network round-trip — the Worker independently re-verifies
+  // regardless, this is purely for snappier wrong-password feedback.
+  if(!(await verifyPassword(pwd,me.pwd))){ if(err) err.textContent='Incorrect password.'; return; }
+  const ok=await _tryUpgradeToCustomAuth(me.number,{password:pwd});
+  if(ok){ _dismissStaleSessionBanner(); showToast('Secured','This session is now fully verified.'); }
+  else if(err) err.textContent='Couldn\'t verify with the server — check your connection and try again.';
 }
 
 // Realtime Database paths (each holds the same JSON blob that used to live in a JSONBin bin)
@@ -7520,6 +7606,7 @@ async function launch(){
   if(me.mustChangePassword) step('promptForcedPasswordChange', promptForcedPasswordChange);
   if(_resetApplied) step('renderMyCard (after reset)', renderMyCard);
   if(shouldShowTutorial()) step('startTutorial', startTutorial);
+  step('checkStaleAnonymousSession', checkStaleAnonymousSession);
   step('startMusicPolling', ()=>{ if(getSpotifyTokens()||getLastfmUsername()) startMusicPolling(); });
   // Dismiss the splash/loading screen now that the app is fully ready
   const _splash=document.getElementById('scb-splash');
@@ -7776,8 +7863,8 @@ async function saveSecurityQuestions(){
   if(q1Key==='custom'&&q1Text==='custom'){ err.textContent='Type your first question.'; return; }
   if(q2Key==='custom'&&q2Text==='custom'){ err.textContent='Type your second question.'; return; }
   try{
-    const hash1=await hashPassword(normalizeSecAnswer(a1));
-    const hash2=await hashPassword(normalizeSecAnswer(a2));
+    const hash1=await hashPasswordV2(normalizeSecAnswer(a1));
+    const hash2=await hashPasswordV2(normalizeSecAnswer(a2));
     const users=await getUsers();
     const u=users.find(x=>x.number===me.number);
     const secQuestions=[{q:q1Text,hash:hash1},{q:q2Text,hash:hash2}];
@@ -7882,7 +7969,7 @@ async function recoverSubmitStep(){
       const users=await getUsers();
       const u=users.find(x=>x.number===_recoverState.number);
       if(u){
-        u.pwd=await hashPassword(newPwd);
+        u.pwd=await hashPasswordV2(newPwd);
         // An admin reset can ask for a new password (adminResetAccount's second
         // checkbox). Setting one is what satisfies that, whichever route they
         // took to get here, so clear the flag in the same write.
@@ -8442,9 +8529,13 @@ async function submitLogin() {
     // directly; re-running it here for password logins is a harmless no-op
     // if it already succeeded.
     await _tryUpgradeToCustomAuth(user.number, {password:pwd});
-    // Transparently upgrade legacy weak hashes to the new salted SHA-256 format
+    // Transparently upgrade any pre-PBKDF2 hash (unsalted legacy, or the
+    // older single-round salted-SHA-256 format) to the new PBKDF2 format —
+    // registerOrUpdate()'s next save (part of the normal launch() flow)
+    // persists me.pwd back to Firebase, so this reaches the server without
+    // a dedicated write here. No forced reset, no user-visible change.
     let pwdToStore = user.pwd;
-    if(user.pwd.indexOf('$')===-1){ pwdToStore = await hashPassword(pwd); }
+    if(user.pwd.indexOf('v2$')!==0){ pwdToStore = await hashPasswordV2(pwd); }
 
     // Risk-based login challenge: an unfamiliar country for an account with
     // established history requires explicit confirmation before continuing,
@@ -8865,7 +8956,7 @@ async function submitChangePassword(){
     // than changing one, so skip the current-password check for it only.
     const ok=!me.pwd || await verifyPassword(cur,me.pwd);
     if(!ok){ err.textContent='Current password is incorrect.'; return; }
-    const hashed=await hashPassword(nw);
+    const hashed=await hashPasswordV2(nw);
     await fbdb.ref('users/'+me.number).update({pwd:hashed});
     me.pwd=hashed; saveStorage();
     closeModal('change-password-modal');
@@ -9078,6 +9169,31 @@ async function hashPassword(p,existingSalt){
   const hex=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   return salt+'$'+hex;
 }
+// PBKDF2-SHA256, 210000 iterations (OWASP's current minimum recommendation
+// for PBKDF2-HMAC-SHA256) — a single unsalted/lightly-salted SHA-256 round
+// (hashPassword() above) is fast enough that an offline attacker with a
+// leaked hash can brute-force it at billions of guesses/second on commodity
+// GPU hardware; PBKDF2's deliberate per-guess cost is the actual point of a
+// password hash, which plain SHA-256 was never designed to provide. Format
+// is "v2$<iterations>$<saltB64>$<hashHex>" — the iteration count travels
+// WITH the hash specifically so it can be raised later for new hashes
+// without invalidating ones already stored at a lower count. Every new
+// credential (signup, password change, new backup PIN, new security
+// answers) goes through this; verifyPassword() below still verifies old
+// hashPassword()-format hashes, and callers transparently re-hash through
+// this function the next time that secret is successfully verified (see
+// submitLogin()'s "Transparently upgrade legacy weak hashes" step) — no
+// forced resets, no user-visible change, just upgrades in place over time.
+const PBKDF2_ITERATIONS=210000;
+async function hashPasswordV2(p,existingSaltB64,iterations){
+  iterations=iterations||PBKDF2_ITERATIONS;
+  const saltBytes=existingSaltB64?Uint8Array.from(atob(existingSaltB64),c=>c.charCodeAt(0)):crypto.getRandomValues(new Uint8Array(16));
+  const saltB64=existingSaltB64||_b64(saltBytes.buffer);
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(p),{name:'PBKDF2'},false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:saltBytes,iterations,hash:'SHA-256'},key,256);
+  const hex=Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return 'v2$'+iterations+'$'+saltB64+'$'+hex;
+}
 async function verifyPassword(p,stored){
   // Fail CLOSED, not open: every caller (login, change-password's "current
   // password" check, recovery security answers, backup PIN, parental PIN/
@@ -9088,6 +9204,13 @@ async function verifyPassword(p,stored){
   // password" on any account whose `me.pwd` was empty (e.g. reachable via
   // Google sign-in's pwdToStore=user.pwd||'').
   if(!stored) return false;
+  if(stored.indexOf('v2$')===0){
+    const parts=stored.split('$');
+    const iterations=parseInt(parts[1],10);
+    const salt=parts[2];
+    const recomputed=await hashPasswordV2(p,salt,iterations);
+    return recomputed===stored;
+  }
   if(stored.indexOf('$')>-1){
     const salt=stored.split('$')[0];
     const recomputed=await hashPassword(p,salt);
@@ -9164,7 +9287,7 @@ async function handleSetBackupPin(pin,inputs){
     return;
   }
   try{
-    const hash=await hashPassword(pin);
+    const hash=await hashPasswordV2(pin);
     const users=await getUsers();
     const u=users.find(x=>x.number===me.number);
     if(u){ u.backupPinHash=hash; await saveUsers(users); }
@@ -10031,7 +10154,7 @@ async function submitSetup(){
     // Hash the password locally (salted SHA-256) before storing -- never sent or stored in plaintext
     _loginRawPwd = pwd; // available for E2E cloud key sync during this session
     resetLocalSessionState();
-    me={name,email,number:num,bio,birthdate,pwd:await hashPassword(pwd),avatar:tempSetupAvatar||'',createdAt:Date.now()};
+    me={name,email,number:num,bio,birthdate,pwd:await hashPasswordV2(pwd),avatar:tempSetupAvatar||'',createdAt:Date.now()};
     // Stamp the Google identity onto the brand-new account. `sub` is Google's
     // stable per-account subject id and is what every later sign-in matches on;
     // the email is stored only for display in Settings, never for matching,
@@ -10419,7 +10542,7 @@ function updateOnlineStatus(num){
   const myKey=me&&_myPubJwk;
   const e2eOn=!!(theirKey&&myKey);
   const e2eBadge=e2eOn?' <span style="color:var(--success);font-size:10px;font-weight:600">🔒 E2E</span>':'';
-  if(customStatus){ el.innerHTML=customStatus+e2eBadge; el.className=online?'online':''; return; }
+  if(customStatus){ el.innerHTML=esc(customStatus)+e2eBadge; el.className=online?'online':''; return; }
   el.innerHTML=(online?'● Online':`Last seen ${u?fmtTime(u.lastSeen):'unknown'}`)+e2eBadge;
   el.className=online?'online':'';
 }
@@ -22531,7 +22654,7 @@ async function createChildProfile(){
     }catch(e){}
     const rec={
       number:num, name:name, bio:'', customStatus:'', avatar:'',
-      pwd:await hashPassword(pwd), email:'', birthdate:bd, blocked:[], lastSeen:0,
+      pwd:await hashPasswordV2(pwd), email:'', birthdate:bd, blocked:[], lastSeen:0,
       createdAt:Date.now(), accountTier:deriveAccountTier(bd), childOf:me.number,
       // Child profiles start locked down; the parent opens things up deliberately.
       restrictions:{noDm:true, noCalls:true, noGroups:true, noVoice:true}
@@ -22586,7 +22709,7 @@ async function submitLinkParent(){
     const mine=users.find(u=>u&&u.number===me.number);
     if(!mine){ err.textContent=scbErr('SCB-FAM-24','Your account record wasn\'t found.'); return; }
     mine.linkedParent=pnum;
-    mine.parentalPin=await hashPassword(pin);   // same salted-SHA-256 helper as passwords, separate field
+    mine.parentalPin=await hashPasswordV2(pin);   // same PBKDF2 helper as passwords, separate field
     await saveUsers(users);
     me.linkedParent=pnum;
     try{ saveStorage(); }catch(e){}
