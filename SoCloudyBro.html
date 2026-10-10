@@ -5502,6 +5502,24 @@ async function _tryUpgradeToCustomAuth(number, proof){
 // banner offering a one-click fix; dismissing it only silences this
 // session (reappears next full reload) specifically so it isn't
 // permanently ignorable by accident.
+// A brute-force lockout (5 failed mint-token attempts) now stamps
+// users/<number>/lastLockoutAt server-side — surfaced here so the real
+// account owner finds out an attack happened, instead of it being
+// invisible to everyone except whoever was attempting it. De-duped against
+// localStorage (keyed by the exact timestamp, not just "seen one ever") so
+// the SAME lockout episode isn't re-alerted on every poll, but a NEW one
+// (a different lastLockoutAt) always gets its own toast.
+function maybeShowLockoutAlert(){
+  try{
+    if(!me||!me.lastLockoutAt) return;
+    const key='cc_lockout_ack_'+me.number;
+    const ack=parseInt(localStorage.getItem(key)||'0',10);
+    if(me.lastLockoutAt<=ack) return;
+    localStorage.setItem(key,String(me.lastLockoutAt));
+    showToast('⚠️ Repeated failed login attempts',
+      'Someone made several incorrect attempts to log into this account around '+new Date(me.lastLockoutAt).toLocaleString()+'. If that wasn\'t you, consider changing your password.');
+  }catch(e){}
+}
 function checkStaleAnonymousSession(){
   try{
     if(!me||!me.number) return;
@@ -6862,6 +6880,13 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
       me.shadowMuted=false;
       fbdb.ref('users/'+me.number).update({shadowMuted:false,shadowMuteExpiresAt:null}).catch(()=>{});
     }
+    // The Worker stamps this when a brute-force lockout actually triggers
+    // (5 failed attempts) — refreshed on every poll, not just fresh login,
+    // so an already-logged-in device picks up "someone just tried to
+    // brute-force your account" even if it happened on a different device.
+    // maybeShowLockoutAlert() does its own once-per-episode de-dupe.
+    me.lastLockoutAt=u.lastLockoutAt||null;
+    if(me.lastLockoutAt) maybeShowLockoutAlert();
     try{ saveStorage(); }catch(e){}
   }
   // `blocked` can't use the simple "prefer me.* over server" rule every other
@@ -8704,7 +8729,7 @@ async function finishLogin(user, pwdToStore){
     // Without this, hasPermission()/hasAnyAdminAccess() have nothing to read
     // until the first registerOrUpdate() poll completes after launch, so a
     // delegated admin's admin button/tabs would flash hidden then appear.
-    adminAccess: user.adminAccess||null, selectedBadge: user.selectedBadge||null };
+    adminAccess: user.adminAccess||null, selectedBadge: user.selectedBadge||null, lastLockoutAt: user.lastLockoutAt||null };
   // Exactly one of these five is set by whichever login path just
   // succeeded (password, Google, passkey, face, or backup-PIN) — each gets
   // its own server-verifiable proof now, see MINT_TOKEN_ENDPOINT's comment.
