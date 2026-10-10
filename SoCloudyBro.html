@@ -2068,13 +2068,32 @@ body.device-tablet .msg-body{max-width:74%}
   <div style="font-size:48px;margin-bottom:16px">📧</div>
   <h2 style="margin-bottom:8px">Confirm your email to continue</h2>
   <p style="color:var(--muted);max-width:380px;margin-bottom:6px">
-    SoCloudyBro needs your email confirmed before you can use your account. Verify by linking a Google account below — it just needs to be a real, verified email, not necessarily this exact address.
+    SoCloudyBro needs your email confirmed before you can use your account. We'll send a 6-digit code to your email.
   </p>
-  <div id="google-btn-emailverify" style="display:flex;justify-content:center;margin:14px 0"></div>
-  <button class="btn" id="email-verify-fallback" style="display:none" disabled>Google sign-in unavailable</button>
-  <p id="email-verify-note" style="display:none;font-size:12px;color:var(--muted);max-width:360px;margin-bottom:10px"></p>
-  <div class="error-text" id="email-verify-error" style="margin-bottom:6px"></div>
-  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+
+  <div id="email-otp-step-email" style="width:100%;max-width:300px;margin-top:10px">
+    <input type="email" id="email-otp-address" placeholder="your@email.com" autocomplete="email" style="margin-bottom:10px">
+    <button class="btn btn-full" id="email-otp-send-btn" onclick="sendEmailOtp()">Send code</button>
+  </div>
+
+  <div id="email-otp-step-code" style="display:none;width:100%;max-width:300px;margin-top:10px">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Code sent to <strong id="email-otp-sent-to"></strong>. Enter it below.</p>
+    <input type="text" id="email-otp-code" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="margin-bottom:10px;text-align:center;letter-spacing:4px;font-size:20px">
+    <button class="btn btn-full" id="email-otp-verify-btn" onclick="verifyEmailOtp()">Verify</button>
+    <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="resetEmailOtpStep()">Use a different email / resend</button>
+  </div>
+
+  <p id="email-otp-note" style="font-size:12px;color:var(--muted);max-width:360px;margin:10px 0 0"></p>
+  <div class="error-text" id="email-verify-error" style="margin:6px 0"></div>
+
+  <details style="margin-top:14px;max-width:360px">
+    <summary style="cursor:pointer;font-size:12px;color:var(--muted)">Or verify with Google instead</summary>
+    <div id="google-btn-emailverify" style="display:flex;justify-content:center;margin:14px 0"></div>
+    <button class="btn" id="email-verify-fallback" style="display:none" disabled>Google sign-in unavailable</button>
+    <p id="email-verify-note" style="display:none;font-size:12px;color:var(--muted);max-width:360px;margin-bottom:10px"></p>
+  </details>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:14px">
     <button class="btn btn-ghost btn-sm" onclick="checkEmailVerifyStatus()">Check again</button>
     <button class="btn btn-ghost btn-sm" onclick="logOut()">Log out</button>
   </div>
@@ -5266,6 +5285,10 @@ const GOOGLE_VERIFY_ENDPOINT = 'https://socloudybro-google-verify.steveemil7.wor
 // still run on the plain anonymous session until each gets its own proof
 // wired up the same way.
 const MINT_TOKEN_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.workers.dev/mint-token';
+// Same Worker, two new routes for email verification via a one-time code
+// (see the Worker's own comment block for how the stateless challenge works).
+const SEND_OTP_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.workers.dev/send-otp';
+const VERIFY_OTP_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.workers.dev/verify-otp';
 // Best-effort, never blocks or breaks login: on any failure (Worker
 // unreachable, bad credentials server-side somehow, timeout) this just
 // leaves the existing anonymous session in place exactly as before this
@@ -9461,7 +9484,93 @@ function showEmailVerifyGate(){
   gate.style.display='flex';
   const shell=document.getElementById('shell'); if(shell) shell.style.display='none';
   const splash=document.getElementById('scb-splash'); if(splash) splash.remove();
+  resetEmailOtpStep();
+  const addrEl=document.getElementById('email-otp-address');
+  if(addrEl && me && me.email) addrEl.value=me.email;
   initEmailVerifyGoogleButton();
+}
+// -- EMAIL OTP (verification gate) ------------------------------------------
+// `_emailOtpChallenge` holds the signed, stateless token the Worker handed
+// back from /send-otp — it carries the code's hash + expiry, never the code
+// itself, and is only meaningful to the Worker (see its own comment block).
+let _emailOtpChallenge=null;
+function resetEmailOtpStep(){
+  _emailOtpChallenge=null;
+  const stepEmail=document.getElementById('email-otp-step-email');
+  const stepCode=document.getElementById('email-otp-step-code');
+  if(stepEmail) stepEmail.style.display='block';
+  if(stepCode) stepCode.style.display='none';
+  const codeEl=document.getElementById('email-otp-code'); if(codeEl) codeEl.value='';
+  const note=document.getElementById('email-otp-note'); if(note) note.textContent='';
+  const err=document.getElementById('email-verify-error'); if(err) err.textContent='';
+}
+async function sendEmailOtp(){
+  const addrEl=document.getElementById('email-otp-address');
+  const email=(addrEl?addrEl.value:'').trim().toLowerCase();
+  const err=document.getElementById('email-verify-error');
+  const note=document.getElementById('email-otp-note');
+  err.textContent='';note.textContent='';
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='Enter a valid email address.';return;}
+  const btn=document.getElementById('email-otp-send-btn');
+  btn.disabled=true;const origLabel=btn.textContent;btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const res=await fetch(SEND_OTP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const data=await res.json().catch(()=>null);
+    if(!res.ok||!data||!data.challenge){
+      err.textContent=(data&&data.error)?data.error:'Couldn\'t send the code. Try again in a moment.';
+      return;
+    }
+    _emailOtpChallenge=data.challenge;
+    document.getElementById('email-otp-sent-to').textContent=email;
+    document.getElementById('email-otp-step-email').style.display='none';
+    document.getElementById('email-otp-step-code').style.display='block';
+    document.getElementById('email-otp-code').focus();
+  }catch(e){
+    err.textContent='Couldn\'t reach the server. Check your connection and try again.';
+  }finally{
+    btn.disabled=false;btn.textContent=origLabel;
+  }
+}
+async function verifyEmailOtp(){
+  const codeEl=document.getElementById('email-otp-code');
+  const code=(codeEl?codeEl.value:'').trim();
+  const err=document.getElementById('email-verify-error');
+  err.textContent='';
+  if(!_emailOtpChallenge){err.textContent='Request a new code first.';return;}
+  if(!/^\d{6}$/.test(code)){err.textContent='Enter the 6-digit code.';return;}
+  const btn=document.getElementById('email-otp-verify-btn');
+  btn.disabled=true;const origLabel=btn.textContent;btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const res=await fetch(VERIFY_OTP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenge:_emailOtpChallenge,code})});
+    const data=await res.json().catch(()=>null);
+    if(!res.ok||!data||!data.ok){
+      err.textContent=(data&&data.error)?data.error:'That code didn\'t match. Try again.';
+      return;
+    }
+    // Verified server-side — the Worker independently confirmed the code
+    // matches what it emailed to this address, same trust boundary as the
+    // Google-link path (which also only trusts the Worker's own check).
+    await _markEmailVerified(data.email);
+  }catch(e){
+    err.textContent='Couldn\'t reach the server. Check your connection and try again.';
+  }finally{
+    btn.disabled=false;btn.textContent=origLabel;
+  }
+}
+async function _markEmailVerified(verifiedEmail){
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===me.number);
+    if(u){
+      u.emailVerified=true;
+      if(verifiedEmail && !u.email) u.email=verifiedEmail;
+      await saveUsers(users);
+    }
+    me.emailVerified=true; saveStorage();
+    location.reload();
+  }catch(e){
+    document.getElementById('email-verify-error').textContent=scbErr('SCB-SEC-23','Your verification status couldn\'t be saved.',(e.message||'Try again in a moment.'));
+  }
 }
 function hideEmailVerifyGate(){
   const gate=document.getElementById('email-verify-gate');
