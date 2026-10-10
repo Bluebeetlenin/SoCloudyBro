@@ -5120,8 +5120,14 @@ const SCB_CHECKS = [
     async:true,
     run:async()=>{
       try{
+        // _runSCBChecks() runs every check strictly sequentially, and
+        // worker.otp right below reuses checkRulesWorker() (its own 8s
+        // timeout) — a shorter cap here keeps the worst-case combined wait
+        // for both Worker checks during an actual outage closer to ~13s
+        // than ~16s, without the larger, riskier change of parallelizing
+        // the whole 40-check diagnostics runner for this.
         const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
-        const timer=ctl?setTimeout(()=>{try{ctl.abort();}catch(e){}},8000):null;
+        const timer=ctl?setTimeout(()=>{try{ctl.abort();}catch(e){}},5000):null;
         const t0=Date.now();
         let res;
         try{ res=await fetch(MINT_TOKEN_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',...(ctl?{signal:ctl.signal}:{})}); }
@@ -5134,18 +5140,13 @@ const SCB_CHECKS = [
   },
   { id:'worker.otp', cat:'Workers', name:'send-otp / verify-otp endpoints reachable',
     async:true,
+    // Calls the SAME function the public System Status widget and Owner
+    // Tools' service-status panel use (checkRulesWorker()) — one
+    // implementation of this probe, not a second copy that could silently
+    // drift from it.
     run:async()=>{
-      try{
-        const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
-        const timer=ctl?setTimeout(()=>{try{ctl.abort();}catch(e){}},8000):null;
-        const t0=Date.now();
-        let res;
-        try{ res=await fetch(VERIFY_OTP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenge:'x',code:'000000'}),...(ctl?{signal:ctl.signal}:{})}); }
-        finally{ if(timer) clearTimeout(timer); }
-        const ms=Date.now()-t0;
-        if(res.status>=500) return {pass:false,detail:'Worker returned HTTP '+res.status+' ('+ms+'ms) — its own code is erroring'};
-        return {pass:true,detail:'Responded HTTP '+res.status+' in '+ms+'ms'};
-      }catch(e){ return {pass:false,detail:'Unreachable: '+((e&&e.message)||'network error')}; }
+      const r=await checkRulesWorker();
+      return {pass:r.state==='green'||r.state==='yellow',warn:r.state==='yellow',detail:r.msg};
     }
   },
 
@@ -5158,7 +5159,12 @@ const SCB_CHECKS = [
         const snap=await firebase.database().ref('errors').orderByChild('ts').startAt(cutoff).limitToLast(500).once('value');
         const counts={};
         let total=0;
-        if(snap.exists()) snap.forEach(c=>{ const v=c.val(); if(!v) return; total++; const code=v.code||'unknown'; counts[code]=(counts[code]||0)+1; });
+        // Excludes this very diagnostics run's own "DIAG-*" entries (every
+        // failed check gets logged to errors/ by _runSCBChecks — including
+        // a failure of THIS check) — otherwise re-running diagnostics while
+        // the count is already high inflates the very number it's measuring,
+        // and this check's own code climbs its own "top codes" list.
+        if(snap.exists()) snap.forEach(c=>{ const v=c.val(); if(!v) return; const code=v.code||'unknown'; if(code.indexOf('DIAG-')===0) return; total++; counts[code]=(counts[code]||0)+1; });
         const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+' ×'+v).join(', ');
         // No fixed "healthy" threshold exists for this app (traffic varies),
         // so this warns rather than fails once there's a non-trivial volume
@@ -22307,7 +22313,13 @@ async function checkGroupKeyHealth(){
 const SYSTEM_STATUS_CHECKS = [
   {id:'messaging', label:'Messaging',        run:checkMessaging},
   {id:'firebase',  label:'Firebase',         run:checkFirebasePing},
-  {id:'worker',    label:'Login/Sign-up Server', run:checkRulesWorker},
+  // checkRulesWorker() deliberately NOT in this list: this widget is public,
+  // reachable by every signed-in AND anonymous visitor, and the check sends
+  // a POST to the OTP-verification Worker route — if that route rate-limits
+  // repeated bad attempts (the normal defense against OTP brute-forcing),
+  // many people opening this panel from the same network could trip that
+  // limiter and block real logins. Worker health stays admin-only (admin
+  // Diagnostics' "Workers" category, Owner Tools' service-status panel).
   {id:'write_rt',  label:'Write round-trip', run:checkWriteRoundTrip},
   {id:'conn_mode', label:'Connection mode',  run:checkConnectionMode},
   {id:'e2e',       label:'Message encryption', run:checkE2EEncryption},
