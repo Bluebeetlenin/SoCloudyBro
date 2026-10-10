@@ -153,8 +153,9 @@
     return typeof id === 'string' && id.length > 0 && /^[A-Za-z0-9_-]+$/.test(id);
   }
 
-  // -- password hashing (same salted SHA-256 pattern as SoCloudyBro) -------
+  // -- password hashing (same scheme as SoCloudyBro's own hashPasswordV2) --
   function b64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+  function unb64(str){ const s=atob(str); const b=new Uint8Array(s.length); for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i); return b; }
   async function hashPassword(p, existingSalt){
     if(!global.crypto || !global.crypto.subtle){
       throw new Error('Syntax Account: password hashing needs the Web Crypto API, which requires HTTPS (or localhost).');
@@ -165,12 +166,36 @@
     const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
     return salt + '$' + hex;
   }
+  // PBKDF2-HMAC-SHA256, 210000 iterations — same format/reasoning as
+  // hashPasswordV2() in the main SoCloudyBro script (single-round salted
+  // SHA-256 above is fast enough to brute-force at GPU speed if this
+  // account store ever leaked). Kept as a local copy rather than calling
+  // the main script's hashPasswordV2() directly: this module is a
+  // self-contained IIFE that doesn't assume script load order relative to
+  // the rest of the page, and duplicating ~8 lines is cheaper than a load-
+  // order dependency bug.
+  const PBKDF2_ITERATIONS = 210000;
+  async function hashPasswordV2(p, existingSaltB64, iterations){
+    iterations = iterations || PBKDF2_ITERATIONS;
+    const saltBytes = existingSaltB64 ? unb64(existingSaltB64) : crypto.getRandomValues(new Uint8Array(16));
+    const saltB64 = existingSaltB64 || b64(saltBytes.buffer);
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(p), {name:'PBKDF2'}, false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({name:'PBKDF2', salt:saltBytes, iterations, hash:'SHA-256'}, key, 256);
+    const hex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2,'0')).join('');
+    return 'v2$'+iterations+'$'+saltB64+'$'+hex;
+  }
   async function verifyPassword(p, stored){
     // `p` must be an actual string: anything else (undefined, a number, an
     // array) would otherwise be stringified into the digest input, so e.g.
     // logIn(number) with no password at all would hash the literal text
     // "undefined" and succeed against an account whose password is that word.
     if(typeof p !== 'string' || typeof stored !== 'string') return false;
+    if(stored.indexOf('v2$') === 0){
+      const parts = stored.split('$');
+      const iterations = parseInt(parts[1],10);
+      const salt = parts[2];
+      return (await hashPasswordV2(p, salt, iterations)) === stored;
+    }
     if(stored.indexOf('$') === -1) {
       // Legacy unhashed / plain password support (will be transparently upgraded on login)
       return p === stored;
@@ -239,7 +264,7 @@
 
       const account = {
         number, name: name.trim(),
-        pwd: await hashPassword(password),
+        pwd: await hashPasswordV2(password),
         email: '', avatar: '',
         createdAt: Date.now(),
         linkedSoCloudyBro: null
@@ -257,6 +282,12 @@
       const account = await dbGet(`syntax_accounts/${number}`);
       if(!account) throw new Error('No Syntax Account found with that number.');
       if(!(await verifyPassword(password, account.pwd))) throw new Error('Incorrect password.');
+      // Transparently upgrade a pre-PBKDF2 hash on successful login — same
+      // reasoning as the main SoCloudyBro script's equivalent step. Never
+      // blocks or fails the login itself.
+      if(account.pwd.indexOf('v2$')!==0){
+        hashPasswordV2(password).then(v2=>dbPut(`syntax_accounts/${number}/pwd`,v2)).catch(()=>{});
+      }
       const { pwd, ...publicAccount } = account;
       // Pin the session to the number that was just validated and
       // authenticated against, NOT to the record's own `number` field. That
@@ -9187,7 +9218,7 @@ async function hashPassword(p,existingSalt){
 const PBKDF2_ITERATIONS=210000;
 async function hashPasswordV2(p,existingSaltB64,iterations){
   iterations=iterations||PBKDF2_ITERATIONS;
-  const saltBytes=existingSaltB64?Uint8Array.from(atob(existingSaltB64),c=>c.charCodeAt(0)):crypto.getRandomValues(new Uint8Array(16));
+  const saltBytes=existingSaltB64?new Uint8Array(_unb64(existingSaltB64)):crypto.getRandomValues(new Uint8Array(16));
   const saltB64=existingSaltB64||_b64(saltBytes.buffer);
   const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(p),{name:'PBKDF2'},false,['deriveBits']);
   const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:saltBytes,iterations,hash:'SHA-256'},key,256);
