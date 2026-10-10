@@ -5051,7 +5051,8 @@ const SCB_CHECKS = [
     run:()=>{
       const needed=['sendMsg','renderSidebar','openChat','getUsers','lookupUser',
                     'showToast','selfHeal','ensureE2EKeypair','saveStorage',
-                    'loadPrefsFromFirebase','syncContactsFromConvos'];
+                    'loadPrefsFromFirebase','syncContactsFromConvos',
+                    '_tryUpgradeToCustomAuth','isFeatureEnabled','finishLogin'];
       const missing=needed.filter(f=>typeof window[f]!=='function');
       return {pass:missing.length===0,detail:missing.length?'Missing: '+missing.join(', '):'All '+needed.length+' present'};
     }
@@ -5105,6 +5106,66 @@ const SCB_CHECKS = [
     run:()=>{
       try{showToast('Diagnostics','Self-test toast check');return {pass:true,detail:'Toast dispatched'};}
       catch(e){return {pass:false,detail:e.message};}
+    }
+  },
+
+  // ── WORKERS (Cloudflare) ────────────────────────────────────────────────────
+  // Each is a deliberately-invalid request that the Worker should reject
+  // cleanly and fast (4xx) — proves the route is actually deployed and
+  // routing, not just that the edge answers at all. A 5xx means the
+  // Worker's own code is broken even though it's reachable; a thrown
+  // exception/timeout means it isn't reachable at all. Timeout-guarded the
+  // same way _tryUpgradeToCustomAuth()'s own fetch to this Worker is.
+  { id:'worker.mint_token', cat:'Workers', name:'mint-token endpoint reachable',
+    async:true,
+    run:async()=>{
+      try{
+        const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+        const timer=ctl?setTimeout(()=>{try{ctl.abort();}catch(e){}},8000):null;
+        const t0=Date.now();
+        let res;
+        try{ res=await fetch(MINT_TOKEN_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',...(ctl?{signal:ctl.signal}:{})}); }
+        finally{ if(timer) clearTimeout(timer); }
+        const ms=Date.now()-t0;
+        if(res.status>=500) return {pass:false,detail:'Worker returned HTTP '+res.status+' ('+ms+'ms) — its own code is erroring'};
+        return {pass:true,detail:'Responded HTTP '+res.status+' in '+ms+'ms'};
+      }catch(e){ return {pass:false,detail:'Unreachable: '+((e&&e.message)||'network error')}; }
+    }
+  },
+  { id:'worker.otp', cat:'Workers', name:'send-otp / verify-otp endpoints reachable',
+    async:true,
+    run:async()=>{
+      try{
+        const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+        const timer=ctl?setTimeout(()=>{try{ctl.abort();}catch(e){}},8000):null;
+        const t0=Date.now();
+        let res;
+        try{ res=await fetch(VERIFY_OTP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenge:'x',code:'000000'}),...(ctl?{signal:ctl.signal}:{})}); }
+        finally{ if(timer) clearTimeout(timer); }
+        const ms=Date.now()-t0;
+        if(res.status>=500) return {pass:false,detail:'Worker returned HTTP '+res.status+' ('+ms+'ms) — its own code is erroring'};
+        return {pass:true,detail:'Responded HTTP '+res.status+' in '+ms+'ms'};
+      }catch(e){ return {pass:false,detail:'Unreachable: '+((e&&e.message)||'network error')}; }
+    }
+  },
+
+  // ── CODE HEALTH ──────────────────────────────────────────────────────────────
+  { id:'code.recent_errors', cat:'Code Health', name:'Client error rate (last 24h)',
+    async:true, warn:true,
+    run:async()=>{
+      try{
+        const cutoff=Date.now()-86400000;
+        const snap=await firebase.database().ref('errors').orderByChild('ts').startAt(cutoff).limitToLast(500).once('value');
+        const counts={};
+        let total=0;
+        if(snap.exists()) snap.forEach(c=>{ const v=c.val(); if(!v) return; total++; const code=v.code||'unknown'; counts[code]=(counts[code]||0)+1; });
+        const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+' ×'+v).join(', ');
+        // No fixed "healthy" threshold exists for this app (traffic varies),
+        // so this warns rather than fails once there's a non-trivial volume
+        // to look at, and always shows the top codes so an admin can judge
+        // for themselves rather than trusting an arbitrary number here.
+        return {pass:total<50,warn:total>=10,detail:total===0?'No errors logged in the last 24h':total+' error(s) — top: '+(top||'n/a')};
+      }catch(e){ return {pass:true,warn:true,detail:'Could not read errors/: '+((e&&e.message)||'')}; }
     }
   },
 ];
@@ -18850,20 +18911,17 @@ function renderAdminOwnerToolsTab(){
   renderServiceStatus();
 }
 // -- SERVICE STATUS ------------------------------------------------------------
-// Reuses existing, already-public endpoints rather than adding a dedicated
-// /health route to the Worker (which would mean yet another manual
-// Cloudflare redeploy just for this) — a cheap shallow Firebase read and a
-// garbage /verify-otp POST (never a real challenge, no side effects, no
-// email sent) both double as reachability probes. Cached for 60s so
-// switching Owner Tools tabs repeatedly doesn't re-hit the live Worker
-// endpoint on every render (it's a security-sensitive route — needless
-// repeat traffic there is worth avoiding even if nothing here is a real
-// credential attempt).
+// Thin UI wrapper (caching + an in-flight guard, so switching Owner Tools
+// tabs repeatedly doesn't repeatedly hit the live, security-sensitive
+// Worker endpoint) around the same canonical checks the public System
+// Status widget and the admin Diagnostics tab's "Workers" category both
+// use (checkFirebasePing(), checkRulesWorker()) — one probe implementation,
+// not three independently-maintained copies of the same reachability logic.
 let _serviceStatusCache=null, _serviceStatusCacheAt=0, _serviceStatusInFlight=null;
 async function renderServiceStatus(force){
   const el=document.getElementById('admin-service-status');
   if(!el) return;
-  const row=(label,ok,detail)=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span>'+(ok===null?'⏳':ok?'🟢':'🔴')+'</span><span style="flex:1">'+esc(label)+'</span><span style="color:var(--muted);font-size:11px">'+esc(detail||'')+'</span></div>';
+  const row=(label,ok,detail)=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span>'+(ok===null?'⏳':ok==='yellow'?'🟡':ok?'🟢':'🔴')+'</span><span style="flex:1">'+esc(label)+'</span><span style="color:var(--muted);font-size:11px">'+esc(detail||'')+'</span></div>';
   if(!force&&_serviceStatusCache&&Date.now()-_serviceStatusCacheAt<60000){
     el.innerHTML=row('Firebase Realtime Database',_serviceStatusCache.fbOk,_serviceStatusCache.fbDetail)+row('Firebase Rules Worker',_serviceStatusCache.workerOk,_serviceStatusCache.workerDetail)
       +'<button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="renderServiceStatus(true)">Re-check now</button>';
@@ -18876,22 +18934,10 @@ async function renderServiceStatus(force){
   // actually finished and populated it.
   if(!force&&_serviceStatusInFlight){ await _serviceStatusInFlight; return renderServiceStatus(false); }
   el.innerHTML=row('Firebase Realtime Database',null,'')+row('Firebase Rules Worker',null,'');
-  const t0=Date.now();
-  const fbCheck=_withFirebaseTimeout(fbdb.ref('updates').limitToLast(1).get(),'Service status: Firebase ping',8000)
-    .then(()=>({ok:true,detail:(Date.now()-t0)+'ms'}))
-    .catch(e=>({ok:false,detail:(e&&e.message)||'unreachable'}));
-  const t1=Date.now();
-  const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
-  const timer=ctl?setTimeout(()=>{ try{ ctl.abort(); }catch(e){} },8000):null;
-  const workerCheck=fetch(VERIFY_OTP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenge:'x',code:'000000'}),...(ctl?{signal:ctl.signal}:{})})
-    // A completed response under 500 proves the Worker is up and routing
-    // correctly (a 4xx rejection on this deliberately-garbage probe is the
-    // EXPECTED healthy outcome); a 5xx means its own code broke even though
-    // the edge answered, which is exactly what this is meant to catch.
-    .then(res=>({ok:res.status<500,detail:(Date.now()-t1)+'ms'+(res.status>=500?' (HTTP '+res.status+')':'')}))
-    .catch(e=>({ok:false,detail:(e&&e.message)||'unreachable'}))
-    .finally(()=>{ if(timer) clearTimeout(timer); });
-  const probe=Promise.all([fbCheck,workerCheck]);
+  const probe=Promise.all([
+    checkFirebasePing().then(r=>({ok:r.state==='green'?true:r.state==='yellow'?'yellow':false,detail:r.msg})).catch(e=>({ok:false,detail:(e&&e.message)||'unreachable'})),
+    checkRulesWorker().then(r=>({ok:r.state==='green'?true:r.state==='yellow'?'yellow':false,detail:r.msg})).catch(e=>({ok:false,detail:(e&&e.message)||'unreachable'})),
+  ]);
   _serviceStatusInFlight=probe;
   const [fb,worker]=await probe;
   _serviceStatusInFlight=null;
@@ -22217,6 +22263,28 @@ async function checkWriteRoundTrip(){
     return {state:'red', msg:cfg?'Writes rejected by Firebase rules':'Write failed: '+((e&&e.message)||'network error')};
   }
 }
+async function checkRulesWorker(){
+  // Same deliberately-invalid-request pattern as the Workers category in
+  // SCB_CHECKS (admin diagnostics) — a clean 4xx proves the route is
+  // actually deployed and routing; a 5xx means its own code is broken even
+  // though it answered; a thrown error/timeout means it's unreachable.
+  // This is public-facing (not admin-only) because this Worker mints the
+  // real auth session for every login/signup — if it's down, that's
+  // everyone's problem, not just an admin's.
+  const t0=Date.now();
+  try{
+    const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+    const timer=ctl?setTimeout(()=>{try{ctl.abort();}catch(e){}},8000):null;
+    let res;
+    try{ res=await fetch(VERIFY_OTP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenge:'x',code:'000000'}),...(ctl?{signal:ctl.signal}:{})}); }
+    finally{ if(timer) clearTimeout(timer); }
+    const ms=Date.now()-t0;
+    if(res.status>=500) return {state:'red', msg:'The login/sign-up server returned an error (HTTP '+res.status+', '+ms+'ms) — sign-in and account recovery may be affected'};
+    return {state: ms<1500?'green':'yellow', msg:'Connected — responded in '+ms+' ms'};
+  }catch(e){
+    return {state:'red', msg:'Cannot reach the login/sign-up server: '+((e&&e.message)||'unknown error')};
+  }
+}
 function checkConnectionMode(){
   if(typeof _sdkConnBad==='undefined') return {state:'yellow', msg:'Connection-mode tracking unavailable'};
   if(_sdkConnBad) return {state:'yellow', msg:'Reads are on the REST fallback — the live WebSocket connection looks blocked. Writes still go straight over the WebSocket and aren\'t covered by this fallback, so they may still be degraded even though reads work.'};
@@ -22239,6 +22307,7 @@ async function checkGroupKeyHealth(){
 const SYSTEM_STATUS_CHECKS = [
   {id:'messaging', label:'Messaging',        run:checkMessaging},
   {id:'firebase',  label:'Firebase',         run:checkFirebasePing},
+  {id:'worker',    label:'Login/Sign-up Server', run:checkRulesWorker},
   {id:'write_rt',  label:'Write round-trip', run:checkWriteRoundTrip},
   {id:'conn_mode', label:'Connection mode',  run:checkConnectionMode},
   {id:'e2e',       label:'Message encryption', run:checkE2EEncryption},
