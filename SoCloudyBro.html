@@ -18805,6 +18805,8 @@ function renderAdminOwnerToolsTab(){
       <button class="btn btn-ghost btn-sm" onclick="openSelfDestructedLog()">💀 Self-destructed accounts</button>
       <button class="btn btn-ghost btn-sm" onclick="exportEncryptedAuditLog()">🔒 Export encrypted audit log</button>
     </div>
+    <h4 style="margin:0 0 6px;font-size:13px;font-weight:600">🩺 Service Status</h4>
+    <div id="admin-service-status" style="margin-bottom:18px;font-size:12px">Checking…</div>
     <h4 style="margin:0 0 6px;font-size:13px;font-weight:600">🧾 Recent Admin Actions</h4>
     <div id="admin-audit-log-list" style="max-height:200px;overflow-y:auto;margin-bottom:18px;font-size:12px"></div>
     <h4 style="margin:0 0 6px;font-size:13px;font-weight:600">🚩 Feature Flags</h4>
@@ -18845,6 +18847,33 @@ function renderAdminOwnerToolsTab(){
   `;
   renderFeatureFlagsList();
   renderAdminAuditLog();
+  renderServiceStatus();
+}
+// -- SERVICE STATUS ------------------------------------------------------------
+// Reuses existing, already-public endpoints rather than adding a dedicated
+// /health route to the Worker (which would mean yet another manual
+// Cloudflare redeploy just for this) — a cheap shallow Firebase read and a
+// deliberately-invalid /verify-otp POST (always answers fast with a 400/401
+// JSON error, no side effects, no email sent) both double as liveness probes.
+async function renderServiceStatus(){
+  const el=document.getElementById('admin-service-status');
+  if(!el) return;
+  const row=(label,ok,detail)=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span>'+(ok===null?'⏳':ok?'🟢':'🔴')+'</span><span style="flex:1">'+esc(label)+'</span><span style="color:var(--muted);font-size:11px">'+esc(detail||'')+'</span></div>';
+  el.innerHTML=row('Firebase Realtime Database',null,'')+row('Firebase Rules Worker',null,'');
+  const t0=Date.now();
+  let fbOk=false,fbDetail='';
+  try{
+    await fbdb.ref('updates').limitToLast(1).get();
+    fbOk=true; fbDetail=(Date.now()-t0)+'ms';
+  }catch(e){ fbDetail=(e&&e.message)||'unreachable'; }
+  const t1=Date.now();
+  let workerOk=false,workerDetail='';
+  try{
+    const res=await fetch(VERIFY_OTP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenge:'x',code:'000000'})});
+    workerOk=res.status===400||res.status===401; // any well-formed rejection proves it's up and routing correctly
+    workerDetail=(Date.now()-t1)+'ms';
+  }catch(e){ workerDetail=(e&&e.message)||'unreachable'; }
+  el.innerHTML=row('Firebase Realtime Database',fbOk,fbDetail)+row('Firebase Rules Worker',workerOk,workerDetail);
 }
 async function renderAdminAuditLog(){
   const el=document.getElementById('admin-audit-log-list');
