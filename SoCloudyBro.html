@@ -18859,7 +18859,7 @@ function renderAdminOwnerToolsTab(){
 // endpoint on every render (it's a security-sensitive route — needless
 // repeat traffic there is worth avoiding even if nothing here is a real
 // credential attempt).
-let _serviceStatusCache=null, _serviceStatusCacheAt=0;
+let _serviceStatusCache=null, _serviceStatusCacheAt=0, _serviceStatusInFlight=null;
 async function renderServiceStatus(force){
   const el=document.getElementById('admin-service-status');
   if(!el) return;
@@ -18869,6 +18869,12 @@ async function renderServiceStatus(force){
       +'<button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="renderServiceStatus(true)">Re-check now</button>';
     return;
   }
+  // A probe already in flight (e.g. the admin flipped tabs and back before
+  // the first one resolved) is reused instead of starting a second
+  // concurrent hit on the security-sensitive Worker endpoint — the whole
+  // point of the cache above, which can't help until the FIRST call has
+  // actually finished and populated it.
+  if(!force&&_serviceStatusInFlight){ await _serviceStatusInFlight; return renderServiceStatus(false); }
   el.innerHTML=row('Firebase Realtime Database',null,'')+row('Firebase Rules Worker',null,'');
   const t0=Date.now();
   const fbCheck=_withFirebaseTimeout(fbdb.ref('updates').limitToLast(1).get(),'Service status: Firebase ping',8000)
@@ -18878,10 +18884,17 @@ async function renderServiceStatus(force){
   const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
   const timer=ctl?setTimeout(()=>{ try{ ctl.abort(); }catch(e){} },8000):null;
   const workerCheck=fetch(VERIFY_OTP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenge:'x',code:'000000'}),...(ctl?{signal:ctl.signal}:{})})
-    .then(res=>({ok:true,detail:(Date.now()-t1)+'ms'})) // any HTTP response at all (even a 500 on this deliberately-garbage probe) proves the Worker is up and routing — this is a reachability check, not a correctness check
+    // A completed response under 500 proves the Worker is up and routing
+    // correctly (a 4xx rejection on this deliberately-garbage probe is the
+    // EXPECTED healthy outcome); a 5xx means its own code broke even though
+    // the edge answered, which is exactly what this is meant to catch.
+    .then(res=>({ok:res.status<500,detail:(Date.now()-t1)+'ms'+(res.status>=500?' (HTTP '+res.status+')':'')}))
     .catch(e=>({ok:false,detail:(e&&e.message)||'unreachable'}))
     .finally(()=>{ if(timer) clearTimeout(timer); });
-  const [fb,worker]=await Promise.all([fbCheck,workerCheck]);
+  const probe=Promise.all([fbCheck,workerCheck]);
+  _serviceStatusInFlight=probe;
+  const [fb,worker]=await probe;
+  _serviceStatusInFlight=null;
   _serviceStatusCache={fbOk:fb.ok,fbDetail:fb.detail,workerOk:worker.ok,workerDetail:worker.detail};
   _serviceStatusCacheAt=Date.now();
   el.innerHTML=row('Firebase Realtime Database',fb.ok,fb.detail)+row('Firebase Rules Worker',worker.ok,worker.detail)
