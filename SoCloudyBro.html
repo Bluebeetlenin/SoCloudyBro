@@ -13290,7 +13290,7 @@ function _renderBizProductsList(){
   const list = document.getElementById('biz-products-list');
   if(!list) return;
   if(!products.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No items yet</div>'; return; }
-  list.innerHTML = products.map((p,i)=>`<div class="biz-bot-rule"><div style="flex:1;min-width:0"><div class="biz-product-name">${esc(p.name||'Untitled')}</div><div class="biz-product-desc">${esc(p.desc||'')}</div></div><button class="btn btn-ghost btn-sm" onclick="removeBizProduct(${i})">Remove</button></div>`).join('');
+  list.innerHTML = products.map((p,i)=>`<div class="biz-bot-rule"><div style="flex:1;min-width:0"><div class="biz-product-name">${esc(p.name||'Untitled')}</div><div class="biz-product-desc">${esc(p.desc||'')}</div></div><button class="btn btn-ghost btn-sm" data-i="${i}" onclick="removeBizProduct(Number(this.dataset.i))">Remove</button></div>`).join('');
 }
 function addBizProduct(){
   const name = document.getElementById('biz-new-prod-name').value.trim();
@@ -13329,7 +13329,7 @@ function _renderBizBotRules(){
   const list = document.getElementById('biz-bot-rules-list');
   if(!list) return;
   if(!rules.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No rules yet — add one below</div>'; return; }
-  list.innerHTML = rules.map((r,i)=>`<div class="biz-bot-rule"><span class="biz-bot-kw">${esc(r.keyword||'')}</span><span class="biz-bot-reply">${esc(r.reply||'')}</span><button class="btn btn-ghost btn-sm" onclick="removeBizBotRule(${i})">×</button></div>`).join('');
+  list.innerHTML = rules.map((r,i)=>`<div class="biz-bot-rule"><span class="biz-bot-kw">${esc(r.keyword||'')}</span><span class="biz-bot-reply">${esc(r.reply||'')}</span><button class="btn btn-ghost btn-sm" data-i="${i}" onclick="removeBizBotRule(Number(this.dataset.i))">×</button></div>`).join('');
 }
 function addBizBotRule(){
   const kw = document.getElementById('biz-bot-kw-input').value.trim();
@@ -13510,8 +13510,8 @@ function renderSavedAccounts(){
     return `<div class="saved-acct-item">
       <div class="saved-acct-av">${av}</div>
       <div class="saved-acct-info"><div class="saved-acct-name">${esc(a.name||'User')}</div><div class="saved-acct-num">#${a.number}</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="switchAccount(${a.number})">Switch</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="forgetAccount(${a.number})">✕</button>
+      <button class="btn btn-ghost btn-sm" data-number="${a.number}" onclick="switchAccount(this.dataset.number)">Switch</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-number="${a.number}" onclick="forgetAccount(this.dataset.number)">✕</button>
     </div>`;
   }).join('');
 }
@@ -18413,7 +18413,7 @@ function openFeedbackModal(type){
   if(type==='rate'){
     html+=`<div style="text-align:center;margin-bottom:14px">
       <div id="fb-stars" style="font-size:32px;cursor:pointer;letter-spacing:4px;user-select:none">
-        ${[1,2,3,4,5].map(i=>`<span class="fb-star" data-v="${i}" onclick="setFeedbackRating(${i})" onmouseover="hoverFbStar(${i})" onmouseout="resetFbStars()" style="opacity:.3;transition:opacity .1s">★</span>`).join('')}
+        ${[1,2,3,4,5].map(i=>`<span class="fb-star" data-v="${i}" onclick="setFeedbackRating(Number(this.dataset.v))" onmouseover="hoverFbStar(Number(this.dataset.v))" onmouseout="resetFbStars()" style="opacity:.3;transition:opacity .1s">★</span>`).join('')}
       </div>
       <div id="fb-rating-label" style="font-size:12px;color:var(--muted);margin-top:6px;height:16px"></div>
     </div>`;
@@ -18510,9 +18510,9 @@ async function renderAdminFeedbackTab(){
             ${item.text?`<div style="font-size:13px;color:var(--text2);margin-bottom:8px;white-space:pre-wrap;word-break:break-word">${esc(item.text)}</div>`:''}
             ${item.adminReply?`<div style="font-size:12px;background:var(--surface2);border-left:3px solid var(--accent);padding:6px 8px;border-radius:0 var(--r-xs) var(--r-xs) 0;margin-bottom:8px;white-space:pre-wrap;word-break:break-word"><b style="color:var(--accent)">Admin replied:</b> ${esc(item.adminReply)}</div>`:''}
             ${hasPermission('feedback_manage')?`<div style="display:flex;gap:6px;flex-wrap:wrap">
-              ${item.status!=='reviewed'?`<button class="btn btn-ghost btn-sm" onclick="setFeedbackStatus('${item.id}','reviewed')">Mark Reviewed</button>`:''}
-              ${item.status!=='resolved'?`<button class="btn btn-ghost btn-sm" style="color:var(--success)" onclick="setFeedbackStatus('${item.id}','resolved')">✓ Resolve</button>`:''}
-              <button class="btn btn-ghost btn-sm" onclick="replyToFeedback('${item.id}',${esc(JSON.stringify(item.fromName||'User #'+item.from))})">↩ Reply</button>
+              ${item.status!=='reviewed'?`<button class="btn btn-ghost btn-sm" data-id="${esc(item.id)}" onclick="setFeedbackStatus(this.dataset.id,'reviewed')">Mark Reviewed</button>`:''}
+              ${item.status!=='resolved'?`<button class="btn btn-ghost btn-sm" style="color:var(--success)" data-id="${esc(item.id)}" onclick="setFeedbackStatus(this.dataset.id,'resolved')">✓ Resolve</button>`:''}
+              <button class="btn btn-ghost btn-sm" data-id="${esc(item.id)}" data-name="${esc(item.fromName||'User #'+item.from)}" onclick="replyToFeedback(this.dataset.id,this.dataset.name)">↩ Reply</button>
             </div>`:''}
           </div>
         `).join('')}
@@ -18576,8 +18576,8 @@ function openPermissionEditor(userNum,userName,currentPerms,currentRoleTag){
     ${roleTagField}
     ${rows}
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="btn" onclick="savePermissions(${userNum})">Save Access</button>
-      <button class="btn btn-ghost" style="color:var(--danger)" onclick="revokeAllPermissions(${userNum})">Revoke All Access</button>
+      <button class="btn" data-number="${userNum}" onclick="savePermissions(Number(this.dataset.number))">Save Access</button>
+      <button class="btn btn-ghost" style="color:var(--danger)" data-number="${userNum}" onclick="revokeAllPermissions(Number(this.dataset.number))">Revoke All Access</button>
       <button class="btn btn-ghost" onclick="closeModal('perm-editor-modal')">Cancel</button>
     </div>`;
   let m=document.getElementById('perm-editor-modal');
@@ -21238,8 +21238,8 @@ async function renderAdminSpamTab(){
           <div style="font-size:12px;color:var(--muted);margin-top:2px">${typeLabel} · ${esc(detail)} · ${esc(when)}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          ${(!f.resolved&&hasPermission('spam_resolve'))?`<button class="btn btn-ghost btn-sm" onclick="resolveSpamFlag('${esc(f._key)}',this)">Dismiss</button>`:''}
-          ${hasPermission('users_ban')?`<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan(${f.number})">Ban</button>`:''}
+          ${(!f.resolved&&hasPermission('spam_resolve'))?`<button class="btn btn-ghost btn-sm" data-key="${esc(f._key)}" onclick="resolveSpamFlag(this.dataset.key,this)">Dismiss</button>`:''}
+          ${hasPermission('users_ban')?`<button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-number="${f.number}" onclick="adminBan(Number(this.dataset.number))">Ban</button>`:''}
         </div>
       </div>`;
     }).join('');
@@ -26674,7 +26674,7 @@ function openSelfDestructedLog(){
           <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">${esc(e.name||'Unknown')} <span style="color:var(--muted);font-size:11px">#${e.number}</span></div>
           <div style="font-size:11px;color:var(--muted)">Destroyed ${new Date(e.destroyedAt).toLocaleString()} · inactive ${e.selfDestructMonths}mo · last seen ${e.lastSeen?new Date(e.lastSeen).toLocaleDateString():'?'}</div>
           ${(e.devices||[]).length?'<div style="font-size:10px;color:var(--muted)">Devices: '+esc(e.devices.join(', '))+'</div>':''}</div>
-          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBanDestroyedAccount(${e.number})">🚫 Ban #${e.number}</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-number="${e.number}" onclick="adminBanDestroyedAccount(Number(this.dataset.number))">🚫 Ban #${e.number}</button>
         </div>`).join('')
       : '<div style="color:var(--muted);font-size:13px;padding:12px 0">No accounts have self-destructed yet.</div>';
     const dlg=document.createElement('div');
