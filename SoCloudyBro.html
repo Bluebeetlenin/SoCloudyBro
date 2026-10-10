@@ -19372,7 +19372,7 @@ const SCB_CANONICAL_RULES = {
         // number (numbers are also pre-screened client-side in
         // submitSetup(), but that's not a substitute for a server-side
         // guarantee).
-        ".write": "auth != null && ((!data.exists() && !newData.child('adminAccess').exists()) || data.val() == newData.val() || (auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())",
+        ".write": "auth != null && ((!data.exists() && !newData.child('adminAccess').exists()) || data.val() == newData.val() || (auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))",
         // A parent approving/denying a CHILD's account (approveChildAccount()/
         // denyChildAccount()) writes to the CHILD's record as the parent —
         // none of the branches above cover that (the parent's own
@@ -19465,7 +19465,7 @@ const SCB_CANONICAL_RULES = {
       // wipe or rewrite the entire reports collection in one write.
       ".read": "auth != null",
       "$reportId": {
-        ".write": "auth != null && (data.val() == newData.val() || !data.exists() || root.child('users').child(auth.token.number).child('adminAccess').exists() || auth.token.number == '2015')"
+        ".write": "auth != null && (data.val() == newData.val() || !data.exists() || auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))"
       }
     },
 
@@ -19496,9 +19496,15 @@ const SCB_CANONICAL_RULES = {
     },
 
     "admin_site": {
-      // Live code updater — readable by all (needed for update banner), writable by admin via app
+      // Live code updater — readable by all (needed for update banner).
+      // SECURITY FIX: write used to be "auth != null" — ANY authenticated
+      // session (including the plain anonymous one every visitor gets for
+      // free) could overwrite this path, including reserved_numbers (used
+      // to stop a wiped account being silently recreated) and, as of
+      // tonight, feature_flags and the admin audit log. Tightened to match
+      // every other admin-controlled path in this file.
       ".read": true,
-      ".write": "auth != null"
+      ".write": "auth != null && (auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))"
     },
 
     "blacklist": {
@@ -19511,7 +19517,7 @@ const SCB_CANONICAL_RULES = {
       // list via one write).
       ".read": "auth != null",
       "$entryId": {
-        ".write": "auth != null && (!data.exists() || root.child('users').child(auth.token.number).child('adminAccess').exists() || auth.token.number == '2015')"
+        ".write": "auth != null && (!data.exists() || auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))"
       }
     },
 
@@ -19526,7 +19532,7 @@ const SCB_CANONICAL_RULES = {
       ".read": "auth != null",
       ".indexOn": ["at", "reporter"],
       "$flagId": {
-        ".write": "auth != null && (!data.exists() || root.child('users').child(auth.token.number).child('adminAccess').exists() || auth.token.number == '2015')"
+        ".write": "auth != null && (!data.exists() || auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))"
       }
     },
 
