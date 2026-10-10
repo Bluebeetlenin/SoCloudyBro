@@ -5400,6 +5400,7 @@ function requireAdmin(silent){
 function hasPermission(perm){
   if(!me) return false;
   if(me.number===ADMIN_NUMBER) return true;
+  if(me.adminAccess&&me.adminAccess.expiresAt&&Date.now()>=me.adminAccess.expiresAt) return false;
   const perms=me.adminAccess&&me.adminAccess.permissions;
   if(!Array.isArray(perms)) return false;
   return perms.includes(perm);
@@ -5421,6 +5422,7 @@ function requirePermission(perm,silent){
 function hasAnyAdminAccess(){
   if(!me) return false;
   if(me.number===ADMIN_NUMBER) return true;
+  if(me.adminAccess&&me.adminAccess.expiresAt&&Date.now()>=me.adminAccess.expiresAt) return false;
   const perms=me.adminAccess&&me.adminAccess.permissions;
   return Array.isArray(perms)&&perms.length>0;
 }
@@ -6652,11 +6654,30 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
     // so a permission an admin granted via the permission editor would never
     // actually take effect on the grantee's own session.
     me.adminAccess=u.adminAccess||null;
+    // Time-limited admin grants (openPermissionEditor()'s expiry field)
+    // self-heal the same way shadowMuteExpiresAt does below — once past,
+    // clear it here rather than leaving a stale, now-meaningless adminAccess
+    // object sitting on the record. hasPermission()/hasAnyAdminAccess()
+    // already refuse an expired grant client-side the moment it passes
+    // (both check expiresAt directly); this just tidies the stored data to
+    // match on the next poll.
+    if(me.adminAccess&&me.adminAccess.expiresAt&&Date.now()>=me.adminAccess.expiresAt){
+      me.adminAccess=null;
+      fbdb.ref('users/'+me.number+'/adminAccess').remove().catch(()=>{});
+    }
     // Same reasoning as adminAccess above: shadow-mute is an admin-applied
     // restriction, not something this device should keep a stale cached
     // copy of — an admin lifting it must take effect on the very next poll,
     // same as applying it in the first place.
     me.shadowMuted=!!u.shadowMuted;
+    // "Mute for X hours" (adminShadowMuteForHours()) stamps shadowMuteExpiresAt
+    // alongside shadowMuted — self-heals back to unmuted here once it's past,
+    // same best-effort fire-and-forget pattern the reserved-numbers check
+    // above uses, rather than needing a server-side cron the app doesn't have.
+    if(u.shadowMuted&&u.shadowMuteExpiresAt&&Date.now()>=u.shadowMuteExpiresAt){
+      me.shadowMuted=false;
+      fbdb.ref('users/'+me.number).update({shadowMuted:false,shadowMuteExpiresAt:null}).catch(()=>{});
+    }
     try{ saveStorage(); }catch(e){}
   }
   // `blocked` can't use the simple "prefer me.* over server" rule every other
@@ -17713,12 +17734,31 @@ async function adminShadowMute(num){
   }
   if(document.getElementById('admin-dashboard-modal').classList.contains('visible')) renderAdminUsersTab();
 }
+async function adminShadowMuteForHours(num,hours){
+  if(!requirePermission('users_ban')) return;
+  if(!confirm('Shadow-mute user #'+num+' for '+hours+' hour(s)? It lifts automatically — no need to come back and undo it.')) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===num);
+    if(!u){showToast('User not found',scbErr('SCB-ADMIN-31','No user with that account number was found.'));return;}
+    u.shadowMuted=true;
+    u.shadowMuteExpiresAt=Date.now()+hours*3600000;
+    await saveUsers(users);
+    await _logSecurityEvent('shadow_mute','Shadow-muted #'+num+' for '+hours+'h').catch(()=>{});
+    _logAdminAction('shadow_mute_temp','#'+num+' for '+hours+'h').catch(()=>{});
+    showToast('Temporarily muted','#'+num+' is shadow-muted for '+hours+' hour(s), lifts automatically.');
+  }catch(e){
+    selfHeal('SCB-ADMIN-31', e, { context: 'adminShadowMuteForHours' });
+    showToast('Failed',scbErr('SCB-ADMIN-31','That user couldn\'t be shadow-muted — the server rejected the write.',(e.message||'')));return;
+  }
+  if(document.getElementById('admin-dashboard-modal').classList.contains('visible')) renderAdminUsersTab();
+}
 async function adminUnshadowMute(num){
   if(!requirePermission('users_ban')) return;
   try{
     const users=await getUsers();
     const u=users.find(x=>x.number===num);
-    if(u) u.shadowMuted=false;
+    if(u){ u.shadowMuted=false; u.shadowMuteExpiresAt=null; }
     await saveUsers(users);
     await _logSecurityEvent('shadow_mute','Un-shadow-muted #'+num).catch(()=>{});
     _logAdminAction('un_shadow_mute','#'+num).catch(()=>{});
@@ -18265,6 +18305,15 @@ function openPermissionEditor(userNum,userName,currentPerms,currentRoleTag){
     <div style="margin-bottom:14px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);display:block;margin-bottom:4px">Role tag <span style="font-weight:400;text-transform:none">(shown next to their name, any text — e.g. "Support", "General Manager (France)", "Tester 7")</span></label>
       <input type="text" id="perm-role-tag" value="${esc(currentRoleTag||'')}" placeholder="e.g. Assistant Head Admin" maxlength="60">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);display:block;margin-bottom:4px">Access expires</label>
+      <select id="perm-expires">
+        <option value="">Never (standing access)</option>
+        <option value="7">In 7 days</option>
+        <option value="30">In 30 days</option>
+        <option value="90">In 90 days</option>
+      </select>
     </div>`;
   const rows=ADMIN_PERMS.map(g=>`
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 4px">${esc(g.group)}</div>
@@ -18301,6 +18350,9 @@ async function savePermissions(userNum){
   const checked=[...document.querySelectorAll('#perm-editor-body input[data-perm]:checked')].map(i=>i.dataset.perm);
   const roleTagEl=document.getElementById('perm-role-tag');
   const roleTag=(roleTagEl?roleTagEl.value:'').trim().slice(0,60);
+  const expiresEl=document.getElementById('perm-expires');
+  const expiresDays=expiresEl&&expiresEl.value?Number(expiresEl.value):null;
+  const expiresAt=expiresDays?Date.now()+expiresDays*86400000:null;
   try{
     const usersSnap=await fbdb.ref('users').orderByChild('number').equalTo(userNum).get();
     let uid=null;usersSnap.forEach(c=>{uid=c.key;});
@@ -18309,8 +18361,8 @@ async function savePermissions(userNum){
     // Tester" might only need to see things, not act on them), so it's
     // preserved even when `checked` is empty rather than only writing
     // adminAccess when permissions exist.
-    await fbdb.ref('users/'+uid+'/adminAccess').set((checked.length||roleTag)?{permissions:checked,roleTag:roleTag||null}:null);
-    _logAdminAction('set_permissions','#'+userNum+': '+(checked.length?checked.join(', '):'(none)')+(roleTag?' · tag: '+roleTag:'')).catch(()=>{});
+    await fbdb.ref('users/'+uid+'/adminAccess').set((checked.length||roleTag)?{permissions:checked,roleTag:roleTag||null,expiresAt}:null);
+    _logAdminAction('set_permissions','#'+userNum+': '+(checked.length?checked.join(', '):'(none)')+(roleTag?' · tag: '+roleTag:'')+(expiresAt?' · expires '+new Date(expiresAt).toLocaleDateString():'')).catch(()=>{});
     closeModal('perm-editor-modal');
     showToast('Saved','Admin access updated for user #'+userNum+'.');
     renderAdminUsersTab();
@@ -18985,6 +19037,7 @@ async function renderAdminUsersTab(){
           +(me.number===ADMIN_NUMBER?(verified?'<button class="btn btn-ghost btn-sm" onclick="adminUnverify('+u.number+')">✓ Unverify</button>':'<button class="btn btn-ghost btn-sm" onclick="adminVerify('+u.number+')">☑️ Verify</button>'):'')
           +(hasPermission('users_ban')?(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan('+u.number+')">🚫 Ban</button>'):'')
           +(hasPermission('users_ban')&&!isAdmin?(shadowMuted?'<button class="btn btn-ghost btn-sm" onclick="adminUnshadowMute('+u.number+')">🔈 Un-shadow-mute</button>':'<button class="btn btn-ghost btn-sm" onclick="adminShadowMute('+u.number+')" title="Their messages will silently never deliver — no ban notice shown to them">🔇 Shadow-mute</button>'):'')
+          +(hasPermission('users_ban')&&!isAdmin&&!shadowMuted?'<select onchange="if(this.value){adminShadowMuteForHours('+u.number+',Number(this.value));this.value=\'\'}" style="width:auto;padding:5px 8px;font-size:12px" title="Shadow-mute for a fixed window, lifts automatically"><option value="">⏱️ Mute for...</option><option value="1">1 hour</option><option value="6">6 hours</option><option value="24">24 hours</option><option value="168">7 days</option></select>':'')
           +(!isAdmin&&me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',' + esc(JSON.stringify(rawName)) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[])) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.roleTag)||'')) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>':'')
           +(Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete')&&(!targetHasAdminAccess||me.number===ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
