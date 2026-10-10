@@ -15555,15 +15555,86 @@ async function clearMyBadge(){
 // everywhere on its own, with nothing to clean up at the point of change.
 function equippedBadgeHtml(num){
   const u=lookupUser(num);
+  let html='';
+  // Individually admin-granted badges — not tied to any one group, unlike
+  // conv.badges below. Always shown (no "equip one at a time" pool to
+  // compete over, since these aren't earned per-group criteria — an admin
+  // granted them directly), so every one of them renders here.
+  if(u&&Array.isArray(u.globalBadges)){
+    u.globalBadges.forEach(b=>{
+      if(!b) return;
+      html+=' <span class="equipped-badge" title="'+esc(b.name||'')+'">'+esc(b.icon||'🏅')+'</span>';
+    });
+  }
   const sel=u&&u.selectedBadge;
-  if(!sel||!sel.serverKey||!sel.badgeId||!convosCache) return '';
+  if(!sel||!sel.serverKey||!sel.badgeId||!convosCache) return html;
   const conv=convosCache.find(c=>c&&c.key===sel.serverKey);
-  if(!conv) return '';
+  if(!conv) return html;
   const badge=(conv.badges||[]).find(b=>b.id===sel.badgeId);
-  if(!badge) return '';
+  if(!badge) return html;
   const held=((conv.memberBadges||{})[num]||[]).includes(badge.id);
-  if(!held) return '';
-  return ' <span class="equipped-badge" title="'+esc(badge.name)+' — '+esc(conv.name||'')+'">'+esc(badge.icon||'🏅')+'</span>';
+  if(!held) return html;
+  return html+' <span class="equipped-badge" title="'+esc(badge.name)+' — '+esc(conv.name||'')+'">'+esc(badge.icon||'🏅')+'</span>';
+}
+// -- INDIVIDUAL (ADMIN-GRANTED) BADGES ---------------------------------------
+async function openGrantBadgeModal(number){
+  if(!requirePermission('badges_grant')) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===number);
+    if(!u){ showToast('Not found',''); return; }
+    const existing=Array.isArray(u.globalBadges)?u.globalBadges:[];
+    let m=document.getElementById('badge-grant-modal');
+    if(!m){
+      m=document.createElement('div');m.className='overlay';m.id='badge-grant-modal';
+      m.innerHTML='<div class="modal" style="max-width:380px"><div class="modal-header"><h2>🏅 Badges — <span id="badge-grant-who"></span></h2></div><div class="modal-body" id="badge-grant-body"></div></div>';
+      m.addEventListener('click',e=>{if(e.target===m)closeModal('badge-grant-modal');});
+      document.body.appendChild(m);
+    }
+    document.getElementById('badge-grant-who').textContent='#'+number;
+    const body=document.getElementById('badge-grant-body');
+    body.innerHTML=
+      '<div id="badge-grant-list" style="margin-bottom:12px">'
+      +(existing.length?existing.map((b,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:18px">'+esc(b.icon||'🏅')+'</span><span style="flex:1;font-size:13px">'+esc(b.name||'')+'</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="revokeGlobalBadge('+number+','+i+')">Revoke</button></div>').join(''):'<div style="font-size:12px;color:var(--muted)">No individual badges yet.</div>')
+      +'</div>'
+      +'<div style="display:flex;gap:6px;align-items:center">'
+      +'<input type="text" id="badge-grant-icon" placeholder="🏅" maxlength="4" style="width:54px;text-align:center">'
+      +'<input type="text" id="badge-grant-name" placeholder="Badge name" maxlength="40" style="flex:1">'
+      +'</div>'
+      +'<button class="btn btn-sm" style="margin-top:8px" onclick="grantGlobalBadge('+number+')">+ Grant Badge</button>'
+      +'<div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="closeModal(\'badge-grant-modal\')">Close</button></div>';
+    openModal('badge-grant-modal');
+  }catch(e){ showToast('Error',scbErr('SCB-ADMIN-28','Badges couldn\'t be loaded.',e.message)); }
+}
+async function grantGlobalBadge(number){
+  if(!requirePermission('badges_grant')) return;
+  const iconEl=document.getElementById('badge-grant-icon'), nameEl=document.getElementById('badge-grant-name');
+  const icon=(iconEl.value||'🏅').trim().slice(0,4)||'🏅';
+  const name=(nameEl.value||'').trim().slice(0,40);
+  if(!name){ showToast('Name required',''); return; }
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===number);
+    if(!u){ showToast('Not found',''); return; }
+    if(!Array.isArray(u.globalBadges)) u.globalBadges=[];
+    u.globalBadges.push({id:Date.now().toString(36),icon,name,grantedBy:me.number,grantedAt:Date.now()});
+    await saveUsers(users);
+    _logAdminAction('grant_badge','#'+number+': '+name).catch(()=>{});
+    showToast('Granted',name+' granted to #'+number+'.');
+    openGrantBadgeModal(number);
+  }catch(e){ showToast('Failed',scbErr('SCB-ADMIN-29','That badge couldn\'t be saved — the server rejected the write.',e.message)); }
+}
+async function revokeGlobalBadge(number,index){
+  if(!requirePermission('badges_grant')) return;
+  try{
+    const users=await getUsers();
+    const u=users.find(x=>x.number===number);
+    if(!u||!Array.isArray(u.globalBadges)) return;
+    const removed=u.globalBadges.splice(index,1)[0];
+    await saveUsers(users);
+    _logAdminAction('revoke_badge','#'+number+': '+((removed&&removed.name)||'')).catch(()=>{});
+    openGrantBadgeModal(number);
+  }catch(e){ showToast('Failed',scbErr('SCB-ADMIN-30','That badge couldn\'t be revoked — the server rejected the write.',e.message)); }
 }
 
 
@@ -18020,6 +18091,7 @@ const ADMIN_PERMS=[
     {id:'users_view',label:'View Users'},
     {id:'users_ban',label:'Ban / Unban Users'},
     {id:'users_delete',label:'Permanently Delete User Accounts'},
+    {id:'badges_grant',label:'Grant / Revoke Individual Badges'},
   ]},
   {group:'Groups',perms:[
     {id:'groups_view',label:'View Groups'},
@@ -18187,8 +18259,13 @@ function replyToFeedback(id,name){
 }
 
 // ── PERMISSION EDITOR (in admin Users tab) ───────────────────────────────────
-function openPermissionEditor(userNum,userName,currentPerms){
+function openPermissionEditor(userNum,userName,currentPerms,currentRoleTag){
   const permsArr=Array.isArray(currentPerms)?currentPerms:[];
+  const roleTagField=`
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);display:block;margin-bottom:4px">Role tag <span style="font-weight:400;text-transform:none">(shown next to their name, any text — e.g. "Support", "General Manager (France)", "Tester 7")</span></label>
+      <input type="text" id="perm-role-tag" value="${esc(currentRoleTag||'')}" placeholder="e.g. Assistant Head Admin" maxlength="60">
+    </div>`;
   const rows=ADMIN_PERMS.map(g=>`
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 4px">${esc(g.group)}</div>
     ${g.perms.map(p=>`
@@ -18201,6 +18278,7 @@ function openPermissionEditor(userNum,userName,currentPerms){
       Granting admin panel access to <b style="color:var(--text)">${esc(userName)}</b> (#${userNum}). Full admin (you) always has all permissions. This is the complete list of permissions that can be delegated.
     </div>
     <div style="font-size:11px;color:var(--warn);background:var(--warn-soft);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px">⚠️ Nuclear Reset, the Firebase Rules Manager, and Data Cleanup can never be granted — those stay restricted to the primary admin account no matter what's checked below.</div>
+    ${roleTagField}
     ${rows}
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="btn" onclick="savePermissions(${userNum})">Save Access</button>
@@ -18221,12 +18299,18 @@ function openPermissionEditor(userNum,userName,currentPerms){
 async function savePermissions(userNum){
   if(!requireAdmin()) return;
   const checked=[...document.querySelectorAll('#perm-editor-body input[data-perm]:checked')].map(i=>i.dataset.perm);
+  const roleTagEl=document.getElementById('perm-role-tag');
+  const roleTag=(roleTagEl?roleTagEl.value:'').trim().slice(0,60);
   try{
     const usersSnap=await fbdb.ref('users').orderByChild('number').equalTo(userNum).get();
     let uid=null;usersSnap.forEach(c=>{uid=c.key;});
     if(!uid){showToast('Error','User not found.');return;}
-    await fbdb.ref('users/'+uid+'/adminAccess').set(checked.length?{permissions:checked}:null);
-    _logAdminAction('set_permissions','#'+userNum+': '+(checked.length?checked.join(', '):'(none)')).catch(()=>{});
+    // A role tag with no permissions still means something (e.g. "Head
+    // Tester" might only need to see things, not act on them), so it's
+    // preserved even when `checked` is empty rather than only writing
+    // adminAccess when permissions exist.
+    await fbdb.ref('users/'+uid+'/adminAccess').set((checked.length||roleTag)?{permissions:checked,roleTag:roleTag||null}:null);
+    _logAdminAction('set_permissions','#'+userNum+': '+(checked.length?checked.join(', '):'(none)')+(roleTag?' · tag: '+roleTag:'')).catch(()=>{});
     closeModal('perm-editor-modal');
     showToast('Saved','Admin access updated for user #'+userNum+'.');
     renderAdminUsersTab();
@@ -18669,6 +18753,8 @@ function renderAdminOwnerToolsTab(){
       <button class="btn btn-ghost btn-sm" onclick="openSelfDestructedLog()">💀 Self-destructed accounts</button>
       <button class="btn btn-ghost btn-sm" onclick="exportEncryptedAuditLog()">🔒 Export encrypted audit log</button>
     </div>
+    <h4 style="margin:0 0 6px;font-size:13px;font-weight:600">🧾 Recent Admin Actions</h4>
+    <div id="admin-audit-log-list" style="max-height:200px;overflow-y:auto;margin-bottom:18px;font-size:12px"></div>
     <h4 style="margin:0 0 6px;font-size:13px;font-weight:600">🚩 Feature Flags</h4>
     <p style="font-size:11px;color:var(--muted);margin:0 0 10px">Toggle named behaviors on/off instantly — no Vercel redeploy needed. Only features explicitly built to check a flag respond to it; this doesn't retroactively gate everything in the app.</p>
     <div id="admin-feature-flags-list" style="margin-bottom:8px"></div>
@@ -18706,6 +18792,26 @@ function renderAdminOwnerToolsTab(){
     </details>
   `;
   renderFeatureFlagsList();
+  renderAdminAuditLog();
+}
+async function renderAdminAuditLog(){
+  const el=document.getElementById('admin-audit-log-list');
+  if(!el) return;
+  el.innerHTML='<div style="color:var(--muted)">Loading…</div>';
+  try{
+    const snap=await fbdb.ref('admin_site/audit_log').orderByChild('at').limitToLast(30).get();
+    const entries=[];
+    if(snap.exists()) snap.forEach(c=>entries.push(c.val()));
+    entries.sort((a,b)=>(b.at||0)-(a.at||0));
+    if(!entries.length){ el.innerHTML='<div style="color:var(--muted)">No actions logged yet.</div>'; return; }
+    el.innerHTML=entries.map(e=>
+      '<div style="padding:5px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="color:var(--muted)">'+new Date(e.at||0).toLocaleString()+'</span> — '
+      +'<b>#'+esc(String(e.admin||'?'))+'</b> '+esc((e.action||'').replace(/_/g,' '))
+      +(e.detail?' <span style="color:var(--muted)">('+esc(e.detail)+')</span>':'')
+      +'</div>'
+    ).join('');
+  }catch(e){ el.innerHTML='<div style="color:var(--danger)">Couldn\'t load the audit log.</div>'; }
 }
 // -- FEATURE FLAGS -----------------------------------------------------------
 // Stored at admin_site/feature_flags/<key> (boolean). Loaded once at launch
@@ -18866,6 +18972,7 @@ async function renderAdminUsersTab(){
           +'<div style="font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+name
           +(verified?' <span class="verified-badge" title="Verified">✓</span>':'')
           +(isAdmin?' <span style="font-size:10px;background:var(--accent);color:#fff;border-radius:4px;padding:1px 5px">Admin</span>':'')
+          +(u.adminAccess&&u.adminAccess.roleTag?' <span style="font-size:10px;background:var(--surface2);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:1px 5px">'+esc(u.adminAccess.roleTag)+'</span>':'')
           +(banned?' <span style="font-size:10px;background:var(--danger);color:#fff;border-radius:4px;padding:1px 5px">Banned</span>':'')
           +(shadowMuted?' <span style="font-size:10px;background:var(--warn);color:#fff;border-radius:4px;padding:1px 5px" title="Their messages silently never deliver — they are not told">🔇 Shadow-muted</span>':'')
           +'</div>'
@@ -18874,10 +18981,11 @@ async function renderAdminUsersTab(){
           +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
           +'<button class="btn btn-ghost btn-sm" onclick="adminMessage('+u.number+')" title="Open DM">💬 Message</button>'
           +'<button class="btn btn-ghost btn-sm" onclick="openUserRecordModal('+u.number+')" title="Full record: profile, reports, flags, notes">📋 Record</button>'
+          +(hasPermission('badges_grant')?'<button class="btn btn-ghost btn-sm" onclick="openGrantBadgeModal('+u.number+')" title="Grant an individual badge">🏅 Badges</button>':'')
           +(me.number===ADMIN_NUMBER?(verified?'<button class="btn btn-ghost btn-sm" onclick="adminUnverify('+u.number+')">✓ Unverify</button>':'<button class="btn btn-ghost btn-sm" onclick="adminVerify('+u.number+')">☑️ Verify</button>'):'')
           +(hasPermission('users_ban')?(banned?'<button class="btn btn-ghost btn-sm" onclick="adminUnban('+u.number+')">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminBan('+u.number+')">🚫 Ban</button>'):'')
           +(hasPermission('users_ban')&&!isAdmin?(shadowMuted?'<button class="btn btn-ghost btn-sm" onclick="adminUnshadowMute('+u.number+')">🔈 Un-shadow-mute</button>':'<button class="btn btn-ghost btn-sm" onclick="adminShadowMute('+u.number+')" title="Their messages will silently never deliver — no ban notice shown to them">🔇 Shadow-mute</button>'):'')
-          +(!isAdmin&&me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',' + esc(JSON.stringify(rawName)) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[])) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
+          +(!isAdmin&&me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openPermissionEditor('+u.number+',' + esc(JSON.stringify(rawName)) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[])) + ',' + esc(JSON.stringify((u.adminAccess&&u.adminAccess.roleTag)||'')) + ')" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="adminResetAccount('+u.number+')" title="Clear profile for a fresh start">🔄 Reset</button>':'')
           +(Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete')&&(!targetHasAdminAccess||me.number===ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="adminDeleteUser('+u.number+',' + esc(JSON.stringify(rawName)) + ')">🗑️ Delete</button>':'')
           +'</div></div>';
