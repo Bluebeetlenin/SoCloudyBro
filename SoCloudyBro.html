@@ -579,13 +579,33 @@ body.device-phone #sb-resize-handle,body.device-tablet #sb-resize-handle{display
 .sb-tab{flex:0 0 auto;padding:4px 8px;border-radius:var(--r-xs);font-size:10.5px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);transition:all 0.15s;border:none;background:transparent;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis}
 .sb-tab.dragging{opacity:0.4}
 .sb-tab.active{background:var(--accent);color:#fff}
-.admin-dash-tab{flex:0 1 auto;padding:6px 12px;border-radius:var(--r-xs);font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);border:1px solid var(--border);background:transparent;white-space:nowrap}
+.admin-dash-layout{display:flex;align-items:stretch;flex:1;min-height:0;border-top:1px solid var(--border)}
+.admin-dash-sidebar{width:190px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.admin-dash-search-wrap{position:relative;margin-bottom:8px;flex-shrink:0}
+.admin-dash-search-wrap svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.admin-dash-search-input{width:100%;padding:7px 8px 7px 28px;font-size:12px;border-radius:var(--r-xs);border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.admin-dash-nav-empty{font-size:12px;color:var(--muted);text-align:center;padding:14px 4px}
+.admin-dash-content{flex:1;min-width:0;overflow-y:auto;padding:16px}
+.admin-dash-tab{flex:0 0 auto;padding:7px 10px;border-radius:var(--r-xs);font-size:12.5px;font-weight:500;text-align:left;cursor:pointer;color:var(--muted);border:1px solid transparent;background:transparent;white-space:nowrap;width:100%;display:block}
+.admin-dash-tab:hover:not(.active){background:var(--surface2);color:var(--text)}
 .admin-dash-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.admin-dash-tab-sep{width:1px;align-self:stretch;min-height:18px;background:var(--border);margin:0 2px}
-.admin-dash-tab-group-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);width:100%;margin:6px 0 -2px;flex-basis:100%}
-.admin-dash-tab-group-label:first-child{margin-top:0}
+.admin-dash-tab-sep{display:none}
+.admin-dash-tab-group-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);width:100%;margin:10px 0 2px;padding:0 10px}
+.admin-dash-tab-group-label:first-of-type{margin-top:0}
 .admin-dash-tab-owner{border-style:dashed}
 .admin-dash-tab-owner.active{background:var(--danger);border-color:var(--danger)}
+@media(max-width:640px){
+  /* Not enough width for a side-by-side sidebar — stack it as a horizontal
+     scrolling strip above the content instead, same information, no
+     side-by-side squeeze. */
+  .admin-dash-layout{flex-direction:column}
+  .admin-dash-sidebar{width:100%;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;border-right:none;border-bottom:1px solid var(--border);padding:8px;gap:6px;align-items:center}
+  .admin-dash-search-wrap{margin-bottom:0;flex-shrink:0;width:140px}
+  .admin-dash-nav-empty{white-space:nowrap}
+  #admin-dash-nav{display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto}
+  .admin-dash-tab-group-label{display:none}
+  .admin-dash-tab{width:auto;padding:6px 10px}
+}
 .sb-tab:hover:not(.active){background:var(--surface2)}
 #sb-list{flex:1;overflow-y:auto;padding:4px 8px}
 #sb-list::-webkit-scrollbar{width:4px}
@@ -17803,7 +17823,11 @@ let adminDashTab='overview';
 async function openAdminDashboard(){
   if(!hasAnyAdminAccess()){showToast('Access denied',scbErr('SCB-ADMIN-13','You do not have admin panel access.'));return;}
   openModal('admin-dashboard-modal');
-  // Hide tabs the user doesn't have access to
+  // Hide tabs the user doesn't have access to. Permission-based visibility
+  // is tracked separately (data-allowed) from the search filter's own
+  // show/hide, so typing in the search box can never reveal a section this
+  // user isn't actually permitted to see — filterAdminNav() always ANDs the
+  // two together.
   document.querySelectorAll('.admin-dash-tab').forEach(btn=>{
     const t=btn.dataset.tab;
     const show=me.number===ADMIN_NUMBER||
@@ -17818,13 +17842,45 @@ async function openAdminDashboard(){
       (t==='errors'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()))||
       (t==='diagnostics'&&(me.number===ADMIN_NUMBER||hasAnyAdminAccess()))||
       (t==='ownertools'&&me.number===ADMIN_NUMBER);
-    btn.style.display=show?'':'none';
+    btn.dataset.allowed=show?'1':'0';
   });
   _updateErrBadge();
+  const searchInput=document.getElementById('admin-dash-search');
+  if(searchInput) searchInput.value='';
+  filterAdminNav('');
   // Pick first visible tab (avoids opening on a hidden tab after permission changes)
-  const visibleTabs=[...document.querySelectorAll('.admin-dash-tab')].filter(b=>b.style.display!=='none').map(b=>b.dataset.tab);
+  const visibleTabs=[...document.querySelectorAll('.admin-dash-tab')].filter(b=>b.dataset.allowed==='1').map(b=>b.dataset.tab);
   const firstTab=visibleTabs.includes(adminDashTab)?adminDashTab:(visibleTabs[0]||'overview');
   switchAdminTab(firstTab);
+}
+// Filters the sidebar nav by substring match against each button's visible
+// label plus its data-keywords (so e.g. "ban" finds Users, "deploy" finds
+// Code). Group labels (Moderation/Platform/Diagnostics) hide themselves
+// when every button in their group is filtered out, so the sidebar never
+// shows an orphaned heading over an empty section.
+function filterAdminNav(query){
+  const q=(query||'').trim().toLowerCase();
+  const nav=document.getElementById('admin-dash-nav');
+  if(!nav) return;
+  let anyVisible=false;
+  let groupLabel=null, groupHasVisible=false;
+  Array.from(nav.children).forEach(el=>{
+    if(el.classList.contains('admin-dash-tab-group-label')){
+      if(groupLabel) groupLabel.style.display=groupHasVisible?'':'none';
+      groupLabel=el; groupHasVisible=false;
+      return;
+    }
+    if(!el.classList.contains('admin-dash-tab')) return;
+    const allowed=el.dataset.allowed!=='0';
+    const haystack=(el.textContent+' '+(el.dataset.keywords||'')).toLowerCase();
+    const matches=!q||haystack.includes(q);
+    const show=allowed&&matches;
+    el.style.display=show?'':'none';
+    if(show){ anyVisible=true; groupHasVisible=true; }
+  });
+  if(groupLabel) groupLabel.style.display=groupHasVisible?'':'none';
+  const empty=document.getElementById('admin-dash-nav-empty');
+  if(empty) empty.style.display=anyVisible?'none':'block';
 }
 function switchAdminTab(tab){
   adminDashTab=tab;
@@ -25383,25 +25439,34 @@ init();
 
 <!-- ADMIN DASHBOARD (only for admin #2015) -->
 <div class="overlay" id="admin-dashboard-modal">
-  <div class="modal" style="max-width:720px">
-    <div class="modal-header"><h2>🛡️ Admin Dashboard</h2><p>Overview · Moderation · Feedback · Engineering</p></div>
-    <div style="display:flex;gap:6px;padding:0 20px 10px;flex-wrap:wrap;align-items:center">
-      <button class="admin-dash-tab active" data-tab="overview" onclick="switchAdminTab('overview')">📊 Overview</button>
-      <span class="admin-dash-tab-group-label">Moderation</span>
-      <button class="admin-dash-tab" data-tab="users" onclick="switchAdminTab('users')">Users</button>
-      <button class="admin-dash-tab" data-tab="groups" onclick="switchAdminTab('groups')">Groups</button>
-      <button class="admin-dash-tab" data-tab="reports" onclick="switchAdminTab('reports')">Reports</button>
-      <button class="admin-dash-tab" data-tab="spam" onclick="switchAdminTab('spam')">🤖 Spam</button>
-      <button class="admin-dash-tab" data-tab="sla" onclick="switchAdminTab('sla')">📊 SLA</button>
-      <span class="admin-dash-tab-group-label">Platform</span>
-      <button class="admin-dash-tab" data-tab="feedback" onclick="switchAdminTab('feedback')">💬 Feedback</button>
-      <button class="admin-dash-tab" data-tab="code" onclick="switchAdminTab('code')">🚀 Code</button>
-      <span class="admin-dash-tab-group-label">Diagnostics</span>
-      <button class="admin-dash-tab" id="admin-err-tab" data-tab="errors" onclick="switchAdminTab('errors')">⚠️ Errors</button>
-      <button class="admin-dash-tab" data-tab="diagnostics" onclick="switchAdminTab('diagnostics')">🔍 Diagnostics</button>
-      <button class="admin-dash-tab admin-dash-tab-owner" data-tab="ownertools" onclick="switchAdminTab('ownertools')" title="Owner-only">👑 Owner Tools</button>
+  <div class="modal" style="max-width:860px;height:min(640px,86vh);padding:0;overflow:hidden">
+    <div class="modal-header" style="padding:20px 20px 14px"><h2>🛡️ Admin Dashboard</h2><p>Overview · Moderation · Feedback · Engineering</p></div>
+    <div class="admin-dash-layout">
+      <div class="admin-dash-sidebar">
+        <div class="admin-dash-search-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" class="admin-dash-search-input" id="admin-dash-search" placeholder="Search sections..." oninput="filterAdminNav(this.value)">
+        </div>
+        <div id="admin-dash-nav">
+          <button class="admin-dash-tab active" data-tab="overview" data-keywords="overview home summary stats" onclick="switchAdminTab('overview')">📊 Overview</button>
+          <span class="admin-dash-tab-group-label">Moderation</span>
+          <button class="admin-dash-tab" data-tab="users" data-keywords="users accounts members ban" onclick="switchAdminTab('users')">👤 Users</button>
+          <button class="admin-dash-tab" data-tab="groups" data-keywords="groups servers conversations" onclick="switchAdminTab('groups')">👥 Groups</button>
+          <button class="admin-dash-tab" data-tab="reports" data-keywords="reports flags complaints" onclick="switchAdminTab('reports')">🚩 Reports</button>
+          <button class="admin-dash-tab" data-tab="spam" data-keywords="spam bot flags" onclick="switchAdminTab('spam')">🤖 Spam</button>
+          <button class="admin-dash-tab" data-tab="sla" data-keywords="sla moderation response time" onclick="switchAdminTab('sla')">📊 SLA</button>
+          <span class="admin-dash-tab-group-label">Platform</span>
+          <button class="admin-dash-tab" data-tab="feedback" data-keywords="feedback suggestions" onclick="switchAdminTab('feedback')">💬 Feedback</button>
+          <button class="admin-dash-tab" data-tab="code" data-keywords="code deploy push engineering" onclick="switchAdminTab('code')">🚀 Code</button>
+          <span class="admin-dash-tab-group-label">Diagnostics</span>
+          <button class="admin-dash-tab" id="admin-err-tab" data-tab="errors" data-keywords="errors logs crashes" onclick="switchAdminTab('errors')">⚠️ Errors</button>
+          <button class="admin-dash-tab" data-tab="diagnostics" data-keywords="diagnostics health check clean firebase data" onclick="switchAdminTab('diagnostics')">🔍 Diagnostics</button>
+          <button class="admin-dash-tab admin-dash-tab-owner" data-tab="ownertools" data-keywords="owner tools danger zone rules nuclear reset" onclick="switchAdminTab('ownertools')" title="Owner-only">👑 Owner Tools</button>
+        </div>
+        <div class="admin-dash-nav-empty" id="admin-dash-nav-empty" style="display:none">No matching sections</div>
+      </div>
+      <div class="admin-dash-content" id="admin-dashboard-body"></div>
     </div>
-    <div class="modal-body" id="admin-dashboard-body" style="padding-bottom:14px;max-height:520px;overflow-y:auto"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('admin-dashboard-modal')">Close</button></div>
   </div>
 </div>
