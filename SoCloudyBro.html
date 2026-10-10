@@ -4291,6 +4291,7 @@ const SCB_ERROR_CODES = {
   'SCB-RECOV-09': {area:'Account recovery / security questions', meaning:'Recovery threw while checking the security answers'},
   'SCB-RECOV-10': {area:'Account recovery / security questions', meaning:'Recovery: new password shorter than 8 characters'},
   'SCB-RECOV-11': {area:'Account recovery / security questions', meaning:'Recovery threw while saving the new password'},
+  'SCB-RECOV-12': {area:'Account recovery / security questions', meaning:'Recovery: server-side re-verification of the security answers failed (couldn\'t mint a real session for the write that follows)'},
   'SCB-SCAN-01': {area:'File threat scanning', meaning:'Download note: no scanning proxy is configured on this site'},
   'SCB-SCAN-02': {area:'File threat scanning', meaning:'Download note: nothing scannable was resolved for this attachment'},
   'SCB-SCAN-03': {area:'File threat scanning', meaning:'Scan result: scanner reported it is unconfigured'},
@@ -7725,6 +7726,17 @@ async function recoverSubmitStep(){
       const ok1=await verifyPassword(normalizeSecAnswer(a1),_recoverState.secQuestions[0].hash);
       const ok2=await verifyPassword(normalizeSecAnswer(a2),_recoverState.secQuestions[1].hash);
       if(!ok1||!ok2){ _recordLoginFailure(recoverKey); err.textContent=scbErr('SCB-RECOV-08','One or both answers are incorrect.'); return; }
+      // The check above is a fast local pre-check (same public-read hashes
+      // anyone could read anyway) — the thing that actually authorizes the
+      // password write in step 3 is this: trade the plain anonymous session
+      // for a real one, independently re-verified server-side against the
+      // SAME two answers (see the Worker's secAnswers proof type). Without
+      // this, saveUsers() in step 3 would still be writing as an anonymous
+      // session that doesn't match the target account, and the users/$uid
+      // rule would reject it — account recovery would locally say "verified"
+      // and then fail to actually reset anything.
+      const upgraded=await _tryUpgradeToCustomAuth(_recoverState.number,{secAnswers:[a1,a2]});
+      if(!upgraded){ _recordLoginFailure(recoverKey); err.textContent=scbErr('SCB-RECOV-12','Your answers couldn\'t be verified by the server. Check your connection and try again.'); return; }
       _clearLoginRateLimit(recoverKey);
       _recoverState.verified=true;
       document.getElementById('recover-step-questions').style.display='none';
@@ -8290,6 +8302,19 @@ async function submitLogin() {
     // own here, but leaving a stale credential around is still a latent
     // trap for any future caller that checks it independently.
     _loginGoogleCredential = null;
+    // Mint the real custom auth token right here, as soon as the password is
+    // confirmed valid — NOT only at the end via finishLogin(). The branches
+    // below (no email on file, 2FA, face MFA) can all return early before
+    // finishLogin() ever runs, and the "no email on file" branch in
+    // particular writes to this user's own record (submitLoginSetEmail())
+    // while still on the plain anonymous session if this isn't done first —
+    // the users/$uid rule's self-write branch needs auth.token.number to
+    // already equal this account's number, which only a minted token
+    // provides. finishLogin() still calls this again at the very end for
+    // every OTHER login path (face/passkey/backup-PIN) that reaches it
+    // directly; re-running it here for password logins is a harmless no-op
+    // if it already succeeded.
+    await _tryUpgradeToCustomAuth(user.number, {password:pwd});
     // Transparently upgrade legacy weak hashes to the new salted SHA-256 format
     let pwdToStore = user.pwd;
     if(user.pwd.indexOf('$')===-1){ pwdToStore = await hashPassword(pwd); }
@@ -9616,7 +9641,7 @@ async function checkEmailVerifyStatus(){
       me.emailVerified=true; saveStorage();
       location.reload();
     } else {
-      showToast('Not verified yet','Your email isn\'t confirmed yet — use the Google button above to verify.');
+      showToast('Not verified yet','Your email isn\'t confirmed yet — send and enter the code above (or use Google) to verify.');
     }
   }catch(e){ showToast('Couldn\'t check',scbErr('SCB-SEC-23','Your verification status couldn\'t be checked.',(e.message||'Try again in a moment.'))); }
 }
@@ -9682,9 +9707,14 @@ async function approveChildAccount(childNumber){
     const u=users.find(x=>x.number===childNumber);
     if(!u){ showToast('Not found',scbErr('SCB-FAM-02','That account no longer exists.')); return; }
     if(!me||!me.email||(u.parentEmail||'').toLowerCase()!==me.email.toLowerCase()){ showToast('Not allowed',scbErr('SCB-FAM-02','You are not the registered parent for that account.')); return; }
-    u.parentalConsentStatus='approved';
-    u.parentNumber=me.number;
-    await saveUsers(users);
+    // Narrow writes to exactly the two fields the Firebase rule authorizes a
+    // matching parent (by email claim) to touch on a CHILD's own record —
+    // see users/$uid/parentalConsentStatus's rule. A whole-table saveUsers()
+    // here would be rejected: the parent's own auth.token.number never
+    // equals the child's $uid, so none of the normal self/admin branches
+    // apply to this cross-account write.
+    await fbdb.ref('users/'+childNumber+'/parentNumber').set(me.number);
+    await fbdb.ref('users/'+childNumber+'/parentalConsentStatus').set('approved');
     showToast('Approved',`${dec(u.name)} can now use SoCloudyBro.`);
     await checkPendingChildApprovals();
     if(!document.getElementById('parental-approval-list').children.length) closeModal('parental-approval-modal');
@@ -9696,7 +9726,7 @@ async function denyChildAccount(childNumber){
     const users=await getUsers();
     const u=users.find(x=>x.number===childNumber);
     if(u&&(!me||!me.email||(u.parentEmail||'').toLowerCase()!==me.email.toLowerCase())){ showToast('Not allowed',scbErr('SCB-FAM-04','You are not the registered parent for that account.')); return; }
-    if(u){ u.parentalConsentStatus='denied'; await saveUsers(users); }
+    if(u){ await fbdb.ref('users/'+childNumber+'/parentalConsentStatus').set('denied'); }
     showToast('Denied','');
     await checkPendingChildApprovals();
     if(!document.getElementById('parental-approval-list').children.length) closeModal('parental-approval-modal');
@@ -18861,7 +18891,25 @@ const SCB_CANONICAL_RULES = {
         // number (numbers are also pre-screened client-side in
         // submitSetup(), but that's not a substitute for a server-side
         // guarantee).
-        ".write": "auth != null && ((!data.exists() && !newData.child('adminAccess').exists()) || data.val() == newData.val() || (auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())"
+        ".write": "auth != null && ((!data.exists() && !newData.child('adminAccess').exists()) || data.val() == newData.val() || (auth.token.number == $uid && newData.child('adminAccess').val() == data.child('adminAccess').val()) || auth.token.number == '2015' || root.child('users').child(auth.token.number).child('adminAccess').exists())",
+        // A parent approving/denying a CHILD's account (approveChildAccount()/
+        // denyChildAccount()) writes to the CHILD's record as the parent —
+        // none of the branches above cover that (the parent's own
+        // auth.token.number never equals the child's $uid, and an ordinary
+        // parent has no adminAccess). Identified by email instead of number,
+        // since that's what the child's signup flow actually records
+        // (parentEmail) — /mint-token now includes the account's own email as
+        // a custom claim specifically for this. Scoped narrowly to exactly
+        // these two fields (writes go through narrow set()s at these paths,
+        // not the whole-record $uid rule above) so a matching parent can only
+        // ever flip consent + record their own number, nothing else on the
+        // child's record.
+        "parentalConsentStatus": {
+          ".write": "auth != null && auth.token.email != null && auth.token.email != '' && auth.token.email == data.parent().child('parentEmail').val() && (newData.val() == 'approved' || newData.val() == 'denied')"
+        },
+        "parentNumber": {
+          ".write": "auth != null && auth.token.email != null && auth.token.email != '' && auth.token.email == data.parent().child('parentEmail').val() && newData.val().toString() == auth.token.number"
+        }
       }
     },
 
