@@ -18959,7 +18959,11 @@ async function renderAdminAuditLog(){
   try{
     const snap=await fbdb.ref('admin_site/audit_log').orderByChild('at').limitToLast(30).get();
     const entries=[];
-    if(snap.exists()) snap.forEach(c=>entries.push(c.val()));
+    // A malformed/null entry (e.g. a write that got interrupted mid-way)
+    // used to crash the whole render via (b.at||0) on null — one bad
+    // record then permanently broke this panel for everyone, forever,
+    // with no way to tell why. Filtered out instead of trusted blindly.
+    if(snap.exists()) snap.forEach(c=>{ const v=c.val(); if(v&&typeof v==='object') entries.push(v); });
     entries.sort((a,b)=>(b.at||0)-(a.at||0));
     if(!entries.length){ el.innerHTML='<div style="color:var(--muted)">No actions logged yet.</div>'; return; }
     el.innerHTML=entries.map(e=>
@@ -18969,7 +18973,7 @@ async function renderAdminAuditLog(){
       +(e.detail?' <span style="color:var(--muted)">('+esc(e.detail)+')</span>':'')
       +'</div>'
     ).join('');
-  }catch(e){ el.innerHTML='<div style="color:var(--danger)">Couldn\'t load the audit log.</div>'; }
+  }catch(e){ el.innerHTML='<div style="color:var(--danger)">Couldn\'t load the audit log — '+esc((e&&e.message)||'unknown error')+'</div>'; }
 }
 // -- FEATURE FLAGS -----------------------------------------------------------
 // Stored at admin_site/feature_flags/<key> (boolean). Loaded once at launch
