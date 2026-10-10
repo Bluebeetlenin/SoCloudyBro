@@ -9889,6 +9889,19 @@ async function submitSetup(){
       me.parentalConsentStatus='pending';
     }
     saveStorage();await registerOrUpdate();
+    // Trade the plain anonymous session every visitor starts with for a real
+    // custom auth token now that the account actually exists — mirrors what
+    // finishLogin() does for an existing-account LOGIN (see
+    // _tryUpgradeToCustomAuth()'s own comment). Without this, a freshly
+    // signed-up account stayed anonymous forever (nothing else ever upgrades
+    // it) and every subsequent conversations/ write — which the Firebase
+    // rule requires auth.token.firebase.sign_in_provider=='custom' for, with
+    // no "unchanged" bypass — was rejected with PERMISSION_DENIED the moment
+    // the new user tried to send a message or join anything. Best-effort,
+    // like every other call to this: on failure the account still exists,
+    // it just stays anonymous until the user next logs in explicitly.
+    if(_pendingGoogleSignup && _loginGoogleCredential) await _tryUpgradeToCustomAuth(num, {googleCredential:_loginGoogleCredential});
+    else await _tryUpgradeToCustomAuth(num, {password:pwd});
     _pendingGoogleSignup=null;
     // Send welcome message to SoCloudyBro channel
     try{
