@@ -13142,9 +13142,8 @@ function openChatWallpaperPicker(){
   const key=activeConvo.key;
   const current=localStorage.getItem('cc_chat_bg_'+key)||localStorage.getItem('cc_bg')||'none';
   const wrap=document.getElementById('chat-wallpaper-options');
-  const keyJs="'"+String(key).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
   wrap.innerHTML=CHAT_BG_OPTIONS.map(o=>
-    '<div class="bg-option '+o.cls+(o.name===current?' selected':'')+'" onclick="setChatBg(\''+o.name+'\',this,'+keyJs+')">'+esc(o.label)+'</div>'
+    '<div class="bg-option '+o.cls+(o.name===current?' selected':'')+'" data-bg-name="'+esc(o.name)+'" data-convo-key="'+esc(key)+'" onclick="setChatBg(this.dataset.bgName,this,this.dataset.convoKey)">'+esc(o.label)+'</div>'
   ).join('');
   openModal('chat-wallpaper-modal');
 }
@@ -13720,14 +13719,14 @@ function renderPinnedWidget(body){
   });
   items.sort((a,b)=>b.time-a.time);
   if(!items.length){ body.innerHTML='<div class="dash-widget-empty">Nothing pinned yet.</div>'; return; }
-  body.innerHTML=items.slice(0,5).map(it=>'<div class="dash-list-item" onclick="dashOpenChat(\''+it.contact.key+'\',\''+it.chId+'\')">📌 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.contact.name)+' — '+esc(it.text.substring(0,40))+'</span></div>').join('');
+  body.innerHTML=items.slice(0,5).map(it=>'<div class="dash-list-item" data-key="'+esc(it.contact.key)+'" data-ch-id="'+esc(it.chId)+'" onclick="dashOpenChat(this.dataset.key,this.dataset.chId)">📌 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.contact.name)+' — '+esc(it.text.substring(0,40))+'</span></div>').join('');
 }
 function renderOnlineWidget(body){
   const dms=contacts.filter(c=>c.type!=='group');
   const withStatus=dms.map(c=>({c,online:isOnline((lookupUser(c.number)||{}).lastSeen)}));
   withStatus.sort((a,b)=>(b.online-a.online));
   if(!withStatus.length){ body.innerHTML='<div class="dash-widget-empty">No contacts yet.</div>'; return; }
-  body.innerHTML=withStatus.slice(0,8).map(x=>'<div class="dash-list-item" onclick="dashOpenChat(\''+x.c.key+'\')"><span class="dash-dot '+(x.online?'on':'off')+'"></span>'+esc(x.c.name)+verifiedBadge(x.c.number)+equippedBadgeHtml(x.c.number)+'</div>').join('');
+  body.innerHTML=withStatus.slice(0,8).map(x=>'<div class="dash-list-item" data-key="'+esc(x.c.key)+'" onclick="dashOpenChat(this.dataset.key)"><span class="dash-dot '+(x.online?'on':'off')+'"></span>'+esc(x.c.name)+verifiedBadge(x.c.number)+equippedBadgeHtml(x.c.number)+'</div>').join('');
 }
 async function renderVoiceWidget(body){
   const groups=contacts.filter(c=>c.type==='group');
@@ -13741,7 +13740,7 @@ async function renderVoiceWidget(body){
     });
   });
   if(!rows.length){ body.innerHTML='<div class="dash-widget-empty">No voice channels in your groups.</div>'; return; }
-  body.innerHTML=rows.slice(0,6).map(r=>'<div class="dash-list-item" onclick="dashJoinVoice(\''+r.group.key+'\',\''+r.ch.id+'\')">🔊 '+esc(r.group.name)+' — '+esc(r.ch.name)+' <span class="dash-widget-empty" id="dash-vc-count-'+r.ch.id+'" style="margin-left:auto"></span></div>').join('');
+  body.innerHTML=rows.slice(0,6).map(r=>'<div class="dash-list-item" data-key="'+esc(r.group.key)+'" data-ch-id="'+esc(r.ch.id)+'" onclick="dashJoinVoice(this.dataset.key,this.dataset.chId)">🔊 '+esc(r.group.name)+' — '+esc(r.ch.name)+' <span class="dash-widget-empty" id="dash-vc-count-'+r.ch.id+'" style="margin-left:auto"></span></div>').join('');
   rows.forEach(r=>{
     fbdb.ref(voicePath(r.group.key,r.ch.id)+'/participants').get().then(snap=>{
       const n=Object.keys(snap.val()||{}).length;
@@ -13763,7 +13762,7 @@ function renderRecentWidget(body){
   });
   items.sort((a,b)=>b.time-a.time);
   if(!items.length){ body.innerHTML='<div class="dash-widget-empty">No activity yet.</div>'; return; }
-  body.innerHTML=items.slice(0,6).map(it=>'<div class="dash-list-item" onclick="dashOpenChat(\''+it.c.key+'\')">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>'+esc(it.c.name)+'</b>: '+esc(it.text.substring(0,36))+'</span></div>').join('');
+  body.innerHTML=items.slice(0,6).map(it=>'<div class="dash-list-item" data-key="'+esc(it.c.key)+'" onclick="dashOpenChat(this.dataset.key)">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>'+esc(it.c.name)+'</b>: '+esc(it.text.substring(0,36))+'</span></div>').join('');
 }
 function renderGroupsWidget(body){
   const groups=contacts.filter(c=>c.type==='group'&&!c.isServer);
@@ -13771,7 +13770,7 @@ function renderGroupsWidget(body){
   body.innerHTML=groups.slice(0,8).map(g=>{
     const conv=convosCache?convosCache.find(x=>x&&x.key===g.key):null;
     const memberCount=conv?(conv.participants||conv.members||[]).length:0;
-    return '<div class="dash-list-item" onclick="dashOpenChat(\''+g.key+'\')">👥 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.name)+'</span><span class="dash-widget-empty" style="margin-left:auto">'+memberCount+'</span></div>';
+    return '<div class="dash-list-item" data-key="'+esc(g.key)+'" onclick="dashOpenChat(this.dataset.key)">👥 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.name)+'</span><span class="dash-widget-empty" style="margin-left:auto">'+memberCount+'</span></div>';
   }).join('');
 }
 function renderUnreadWidget(body){
@@ -13785,7 +13784,7 @@ function renderUnreadWidget(body){
   });
   items.sort((a,b)=>b.unread-a.unread);
   if(!items.length){ body.innerHTML='<div class="dash-widget-empty">You\'re all caught up! ✅</div>'; return; }
-  body.innerHTML=items.slice(0,8).map(it=>'<div class="dash-list-item" onclick="dashOpenChat(\''+it.c.key+'\')">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.c.name)+'</span>'+renderUnreadBadgeHtml(it.unread,'margin-left:auto')+'</div>').join('');
+  body.innerHTML=items.slice(0,8).map(it=>'<div class="dash-list-item" data-key="'+esc(it.c.key)+'" onclick="dashOpenChat(this.dataset.key)">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.c.name)+'</span>'+renderUnreadBadgeHtml(it.unread,'margin-left:auto')+'</div>').join('');
 }
 function logCallHistory(entry){
   try{
@@ -13829,7 +13828,7 @@ function renderMissedCallsWidget(body){
   let log=[];
   try{ log=JSON.parse(localStorage.getItem('cc_missed_calls')||'[]'); }catch(e){}
   if(!log.length){ body.innerHTML='<div class="dash-widget-empty">No missed calls.</div>'; return; }
-  body.innerHTML=log.slice(-6).reverse().map(l=>'<div class="dash-list-item" onclick="dashOpenChatByNumber('+l.from+')">📞 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.fromName||('#'+l.from))+'</span><span class="dash-widget-empty" style="margin-left:auto">'+new Date(l.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');
+  body.innerHTML=log.slice(-6).reverse().map(l=>'<div class="dash-list-item" data-number="'+l.from+'" onclick="dashOpenChatByNumber(Number(this.dataset.number))">📞 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.fromName||('#'+l.from))+'</span><span class="dash-widget-empty" style="margin-left:auto">'+new Date(l.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');
 }
 function dashOpenChatByNumber(num){
   const c=contacts.find(x=>x.type!=='group'&&x.number===num);
@@ -14175,7 +14174,7 @@ function renderUpdates(){
     const featuresHtml=(Array.isArray(u.features)&&u.features.length)
       ?`<ul class="update-card-features">${u.features.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>` : '';
     const tryBtnHtml=(u.tryTarget&&u.tryTarget!=='none')
-      ?`<button class="update-try-btn" onclick="tryFeatureUpdate(${i})">🧪 Try it out</button>` : '';
+      ?`<button class="update-try-btn" data-i="${i}" onclick="tryFeatureUpdate(Number(this.dataset.i))">🧪 Try it out</button>` : '';
     card.innerHTML=`<div class="update-card-channel">${esc(u.channel)}</div>${versionHtml}<div class="update-card-title">${esc(u.title||'')}</div><div class="update-card-body">${esc(u.body||'')}</div>${featuresHtml}<div class="update-card-time">${new Date(u.time).toLocaleString()}</div>${tryBtnHtml}`;
     feed.appendChild(card);
   });
