@@ -17183,7 +17183,7 @@ function openGameMenu(){
   body.innerHTML=Object.entries(GAME_DEFS).map(([id,def])=>{
     const pool=gamePlayerPool();
     const disabled=pool.length<def.minPlayers;
-    return '<div class="sb-item" style="border-radius:var(--r-sm);'+(disabled?'opacity:.4;cursor:not-allowed':'cursor:pointer')+'" '+(disabled?'':'onclick="pickGame(\''+id+'\')"')+'>'
+    return '<div class="sb-item" style="border-radius:var(--r-sm);'+(disabled?'opacity:.4;cursor:not-allowed':'cursor:pointer')+'" '+(disabled?'':'data-id="'+esc(id)+'" onclick="pickGame(this.dataset.id)"')+'>'
       +'<div class="avatar" style="width:34px;height:34px;font-size:16px;background:var(--accent-grad);color:#fff">'+def.icon+'</div>'
       +'<div class="sb-item-info"><div class="sb-item-name">'+def.label+'</div><div class="sb-item-preview">'+def.minPlayers+'+ players'+(disabled?' — not enough people here':'')+'</div></div>'
       +'</div>';
@@ -17904,10 +17904,10 @@ async function openAdminPanel(reportedNum){
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" onclick="adminMessage(${reportedNum})">💬 Message</button>
+        <button class="btn btn-sm" data-number="${reportedNum}" onclick="adminMessage(Number(this.dataset.number))">💬 Message</button>
         ${isBanned
-          ? `<button class="btn btn-ghost btn-sm" onclick="adminUnban(${reportedNum})">✅ Unban</button>`
-          : `<button class="btn btn-danger btn-sm" onclick="adminBan(${reportedNum})">🚫 Ban</button>`}
+          ? `<button class="btn btn-ghost btn-sm" data-number="${reportedNum}" onclick="adminUnban(Number(this.dataset.number))">✅ Unban</button>`
+          : `<button class="btn btn-danger btn-sm" data-number="${reportedNum}" onclick="adminBan(Number(this.dataset.number))">🚫 Ban</button>`}
       </div>
       ${isBanned?'<div style="margin-top:10px;padding:8px 12px;background:rgba(209,52,56,0.1);border:1px solid rgba(209,52,56,0.3);border-radius:8px;font-size:12px;color:var(--danger)">This user is currently banned.</div>':''}
     `;
@@ -19198,7 +19198,7 @@ function renderFeatureFlagsList(){
   list.innerHTML=keys.map(k=>{
     const on=!!_featureFlagsCache[k];
     return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;cursor:pointer">'
-      +'<input type="checkbox" '+(on?'checked':'')+' onchange="toggleFeatureFlag(\''+esc(k)+'\')">'
+      +'<input type="checkbox" '+(on?'checked':'')+' data-key="'+esc(k)+'" onchange="toggleFeatureFlag(this.dataset.key)">'
       +'<span style="font-family:monospace">'+esc(k)+'</span>'
       +'<span style="margin-left:auto;color:'+(on?'var(--success)':'var(--muted)')+';font-size:11px">'+(on?'ON':'OFF')+'</span>'
       +'</label>';
@@ -19349,7 +19349,7 @@ async function renderAdminGroupsTab(){
       return '<div class="sb-item" style="border-radius:var(--r-sm)">'
         +'<div class="avatar" style="width:36px;height:36px;background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff">👥</div>'
         +'<div class="sb-item-info"><div class="sb-item-name">'+name+'</div><div class="sb-item-preview">'+memberCount+' member(s) · '+(g.messages||[]).length+' messages</div></div>'
-        +(hasPermission('groups_delete')?'<button class="btn btn-danger btn-sm" onclick="adminDeleteGroup(\''+g.key+'\')">🗑️ Delete</button>':'')
+        +(hasPermission('groups_delete')?'<button class="btn btn-danger btn-sm" data-key="'+esc(g.key)+'" onclick="adminDeleteGroup(this.dataset.key)">🗑️ Delete</button>':'')
         +'</div>';
     }).join('');
   }catch(e){
@@ -19458,8 +19458,8 @@ async function renderAdminReportsTab(){
           +evidence.map(m=>'<div style="margin-bottom:4px"><b>#'+m.from+'</b> · '+new Date(m.time).toLocaleTimeString()+': '+esc(m.text)+'</div>').join('')
           +'</div></details>'):'')
         +'<div style="display:flex;gap:6px">'
-        +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" onclick="openAdminPanel('+r.reportedNumber+')">View user</button>':'')
-        +(hasPermission('reports_resolve')?(open?'<button class="btn btn-ghost btn-sm" onclick="resolveReport(\''+r.id+'\')">✅ Mark resolved</button>':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'):(open?'':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'))
+        +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" data-number="'+r.reportedNumber+'" onclick="openAdminPanel(Number(this.dataset.number))">View user</button>':'')
+        +(hasPermission('reports_resolve')?(open?'<button class="btn btn-ghost btn-sm" data-id="'+esc(r.id)+'" onclick="resolveReport(this.dataset.id)">✅ Mark resolved</button>':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'):(open?'':'<span style="font-size:11px;color:var(--muted)">Resolved</span>'))
         +'</div></div>';
     }).join('');
   }catch(e){
