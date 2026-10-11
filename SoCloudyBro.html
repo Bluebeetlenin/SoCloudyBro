@@ -14677,9 +14677,9 @@ function openContactUs(){
         <div style="font-weight:600;font-size:14px;margin-bottom:4px">${esc(a.name)}</div>
         ${a.email ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
           <span style="font-size:12px;color:var(--text2)">${esc(a.email)}</span>
-          <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" onclick="navigator.clipboard.writeText('${esc(a.email)}').then(()=>showToast('Copied','Email address copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: ${esc(a.email)}'))">Copy</button>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" data-email="${esc(a.email)}" onclick="navigator.clipboard.writeText(this.dataset.email).then(()=>showToast('Copied','Email address copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: '+this.dataset.email))">Copy</button>
         </div>` : ''}
-        ${a.number ? `<button class="btn btn-sm" style="font-size:12px;padding:4px 12px" onclick="closeModal('contact-us-modal');_openDmWithAdmin(${a.number})">💬 Message #${a.number}</button>` : ''}
+        ${a.number ? `<button class="btn btn-sm" style="font-size:12px;padding:4px 12px" data-number="${a.number}" onclick="closeModal('contact-us-modal');_openDmWithAdmin(Number(this.dataset.number))">💬 Message #${a.number}</button>` : ''}
       </div>
     `).join('');
   }
@@ -14913,7 +14913,7 @@ function toggleMutualFriendsList(){
   const opening=list.style.display==='none';
   if(opening){
     list.innerHTML=label._friends.map(f=>
-      `<span class="cloudy-chip" style="display:inline-block;margin:2px" onclick="closeModal('contact-panel-overlay');cloudyOpenChatByNumber(${JSON.stringify(f.number)})">${esc(f.name)}</span>`
+      `<span class="cloudy-chip" style="display:inline-block;margin:2px" data-number="${f.number}" onclick="closeModal('contact-panel-overlay');cloudyOpenChatByNumber(Number(this.dataset.number))">${esc(f.name)}</span>`
     ).join('');
   }
   list.style.display=opening?'block':'none';
@@ -15079,8 +15079,8 @@ function openGroupPanel() {
       const name=dec(u.name||'')||r.name||('#'+r.number);
       return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px">'
         +'<div style="flex:1;font-size:13px">'+esc(name)+' <span style="color:var(--muted);font-size:11px">#'+r.number+'</span></div>'
-        +'<button class="btn btn-sm" onclick="approveJoinRequest('+r.number+')">\u2713 Approve</button>'
-        +'<button class="btn btn-ghost btn-sm" onclick="denyJoinRequest('+r.number+')">\u2715</button>'
+        +'<button class="btn btn-sm" data-number="'+r.number+'" onclick="approveJoinRequest(Number(this.dataset.number))">\u2713 Approve</button>'
+        +'<button class="btn btn-ghost btn-sm" data-number="'+r.number+'" onclick="denyJoinRequest(Number(this.dataset.number))">\u2715</button>'
         +'</div>';
     }).join('');
   }
@@ -15098,7 +15098,7 @@ function openGroupPanel() {
         const name=dec(u.name||'')||'#'+n;
         return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px">'
           +'<div style="flex:1;font-size:13px">'+esc(name)+' <span style="color:var(--muted);font-size:11px">#'+n+'</span></div>'
-          +'<button class="btn btn-sm" onclick="approveQuarantinedMember('+n+')">✓ Approve</button>'
+          +'<button class="btn btn-sm" data-number="'+n+'" onclick="approveQuarantinedMember(Number(this.dataset.number))">✓ Approve</button>'
           +'</div>';
       }).join('');
     }
@@ -15117,7 +15117,7 @@ function openGroupPanel() {
     '<div style="display:flex;align-items:center;gap:8px">' +
     '<span>' + (r.icon || '\uD83C\uDFF7') + '</span><span style="font-size:13px;font-weight:500">' + esc(r.name) + '</span>' +
     '<span style="font-size:11px;color:var(--muted);margin-left:auto">P' + r.priority + '</span>' +
-    '<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="deleteRole(\'' + r.id + '\')">×</button></div>' +
+    '<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" data-id="' + esc(r.id) + '" onclick="deleteRole(this.dataset.id)">×</button></div>' +
     (r.desc ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;padding-left:24px">' + esc(r.desc) + '</div>' : '') +
     '</div>'
   ).join('') : '<div style="font-size:12px;color:var(--muted)">No roles yet.</div>';
@@ -15217,7 +15217,7 @@ function toggleAddGroupMember(num,name,row){
   if(existingChip){ existingChip.remove(); if(theRow) theRow.style.background=''; }
   else{
     const chip=document.createElement('div');chip.className='chip';chip.dataset.num=num;
-    chip.innerHTML=esc(name)+' <span class="chip-remove" onclick="toggleAddGroupMember('+num+')">×</span>';
+    chip.innerHTML=esc(name)+' <span class="chip-remove" onclick="toggleAddGroupMember(this.closest(\'.chip\').dataset.num)">×</span>';
     sel.appendChild(chip); if(theRow) theRow.style.background='var(--bg3)';
   }
 }
@@ -15552,7 +15552,7 @@ async function memberCtxAction(action) {
     document.getElementById('assign-role-desc').textContent = 'Assign a role to ' + (dec(u2.name || '') || '#' + num);
     const list = document.getElementById('assign-role-list');
     list.innerHTML = roles.map(r =>
-      '<div class="sb-item" style="border-radius:var(--r-xs);cursor:pointer" onclick="assignRole(\'' + r.id + '\',' + num + ')">' +
+      '<div class="sb-item" style="border-radius:var(--r-xs);cursor:pointer" data-id="' + esc(r.id) + '" data-number="' + num + '" onclick="assignRole(this.dataset.id,this.dataset.number)">' +
       '<span style="font-size:18px">' + r.icon + '</span>' +
       '<div><div style="font-size:13px;font-weight:500">' + esc(r.name) + '</div><div style="font-size:11px;color:var(--muted)">Priority ' + r.priority + '</div></div></div>'
     ).join('');
@@ -15707,7 +15707,7 @@ function openManageBadge(badgeId){
     const has=((liveConv.memberBadges||{})[num]||[]).includes(badgeId);
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px">'
       +'<div style="flex:1;font-size:13px">'+esc(name)+'<span style="color:var(--muted);font-size:11px"> #'+num+'</span></div>'
-      +'<button class="btn btn-sm'+(has?' btn-ghost':'')+'" onclick="toggleBadgeForMember(\''+badgeId+'\','+num+')">'+(has?'✓ Granted':'Grant')+'</button>'
+      +'<button class="btn btn-sm'+(has?' btn-ghost':'')+'" data-badge-id="'+esc(badgeId)+'" data-number="'+num+'" onclick="toggleBadgeForMember(this.dataset.badgeId,this.dataset.number)">'+(has?'✓ Granted':'Grant')+'</button>'
       +'</div>';
   }).join('') : '<div style="font-size:12px;color:var(--muted)">No members.</div>';
   openModal('badge-members-modal');
@@ -15777,14 +15777,14 @@ function renderBadgesSection(conv){
       +'<div style="display:flex;align-items:center;gap:8px">'
       +'<span style="font-size:16px">'+esc(b.icon||'🏅')+'</span>'
       +'<span style="font-size:13px;font-weight:500;flex:1">'+esc(b.name)+'</span>'
-      +(isAdmin?'<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px" onclick="openManageBadge(\''+b.id+'\')">Manage</button>':'')
-      +(isAdmin?'<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="deleteBadge(\''+b.id+'\')">×</button>':'')
+      +(isAdmin?'<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px" data-id="'+esc(b.id)+'" onclick="openManageBadge(this.dataset.id)">Manage</button>':'')
+      +(isAdmin?'<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" data-id="'+esc(b.id)+'" onclick="deleteBadge(this.dataset.id)">×</button>':'')
       +'</div>'
       +'<div style="font-size:11px;color:var(--muted);margin-top:2px;padding-left:24px">'+esc(reqText)+'</div>'
       +(holds
         ? ('<div style="margin-top:4px;padding-left:24px">'+(equipped
             ? ('<span style="font-size:11px;color:var(--success,#27ae60)">✓ Displaying on your profile</span> <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px" onclick="clearMyBadge()">Hide</button>')
-            : ('<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="selectMyBadge(\''+conv.key+'\',\''+b.id+'\')">Display this badge</button>'))+'</div>')
+            : ('<button class="btn btn-ghost btn-sm" style="font-size:11px" data-key="'+esc(conv.key)+'" data-id="'+esc(b.id)+'" onclick="selectMyBadge(this.dataset.key,this.dataset.id)">Display this badge</button>'))+'</div>')
         : '')
       +'</div>';
   }).join('') : '<div style="font-size:12px;color:var(--muted)">No badges yet.</div>';
@@ -15860,13 +15860,13 @@ async function openGrantBadgeModal(number){
     const body=document.getElementById('badge-grant-body');
     body.innerHTML=
       '<div id="badge-grant-list" style="margin-bottom:12px">'
-      +(existing.length?existing.map((b,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:18px">'+esc(b.icon||'🏅')+'</span><span style="flex:1;font-size:13px">'+esc(b.name||'')+'</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="revokeGlobalBadge('+number+','+i+')">Revoke</button></div>').join(''):'<div style="font-size:12px;color:var(--muted)">No individual badges yet.</div>')
+      +(existing.length?existing.map((b,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:18px">'+esc(b.icon||'🏅')+'</span><span style="flex:1;font-size:13px">'+esc(b.name||'')+'</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-number="'+number+'" data-i="'+i+'" onclick="revokeGlobalBadge(Number(this.dataset.number),Number(this.dataset.i))">Revoke</button></div>').join(''):'<div style="font-size:12px;color:var(--muted)">No individual badges yet.</div>')
       +'</div>'
       +'<div style="display:flex;gap:6px;align-items:center">'
       +'<input type="text" id="badge-grant-icon" placeholder="🏅" maxlength="4" style="width:54px;text-align:center">'
       +'<input type="text" id="badge-grant-name" placeholder="Badge name" maxlength="40" style="flex:1">'
       +'</div>'
-      +'<button class="btn btn-sm" style="margin-top:8px" onclick="grantGlobalBadge('+number+')">+ Grant Badge</button>'
+      +'<button class="btn btn-sm" style="margin-top:8px" data-number="'+number+'" onclick="grantGlobalBadge(Number(this.dataset.number))">+ Grant Badge</button>'
       +'<div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="closeModal(\'badge-grant-modal\')">Close</button></div>';
     openModal('badge-grant-modal');
   }catch(e){ showToast('Error',scbErr('SCB-ADMIN-28','Badges couldn\'t be loaded.',e.message)); }
