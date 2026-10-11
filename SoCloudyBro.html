@@ -7154,8 +7154,15 @@ async function getConvos(){
     // other conversation just because they're normalized in the same pass.
     try{ _normalizeConvo(c); }catch(e){ console.error('Failed to normalize conversation',c&&c.key,e); }
   });
+  // See getUsers()'s matching comment: callers mutate convosCache's objects
+  // in place, so it can't double as saveConvos()'s "before" baseline — keep
+  // a separate deep-cloned snapshot frozen at fetch time (post-normalize,
+  // since that's what every conversation's OWN snapshot was also taken
+  // after, making the comparison apples-to-apples).
+  _convosCacheSnapshot=JSON.parse(JSON.stringify(convosCache));
   return convosCache;
 }
+let _convosCacheSnapshot=[];
 let _saveConvosTimer=null, _saveConvosPending=null, _convosDirty=false;
 function saveConvos(){
   // Coalesce rapid-fire saves (typing, votes, sends) into a single PUT request to cut JSON traffic
@@ -7209,12 +7216,33 @@ function saveConvos(){
         });
         // Write per-conversation key — replaces the old monolithic blob.
         // update() merges keys so concurrent writers don't clobber each other's conversations.
-        const convoUpdates=Object.fromEntries(toSave.filter(c=>c&&c.key).map(c=>[c.key,c]));
+        //
+        // Only include conversations that actually changed. conversations/
+        // has public READ (so convosCache can easily hold conversations —
+        // public/discoverable servers especially — this user has never
+        // joined), but the $convoId WRITE rule has no "unchanged" bypass at
+        // all: it strictly requires memberSet to already contain this user.
+        // Bundling every cached conversation into one update() meant that
+        // the instant convosCache held even a single conversation this user
+        // isn't a member of, Firebase rejected the ENTIRE multi-path write —
+        // including the actual conversation being saved. Scoping to just
+        // the changed ones (which a non-member's conversation never is,
+        // since nothing here ever mutates it) sidesteps that entirely, the
+        // same fix as saveUsers()/saveReports().
+        const prevByKey=new Map((_convosCacheSnapshot||[]).filter(c=>c&&c.key).map(c=>[c.key,c]));
+        const convoUpdates={};
+        for(const c of toSave){
+          if(!c||!c.key) continue;
+          const before=prevByKey.get(c.key);
+          if(!before||JSON.stringify(before)!==JSON.stringify(c)) convoUpdates[c.key]=c;
+        }
         // Null out the legacy nested 'conversations' array key in the same atomic update —
         // Firebase treats null as "delete". Without this, getConvos() would keep finding
         // the old key and re-reading stale data, making new messages vanish on reload.
         convoUpdates['conversations']=null;
-        await fbdb.ref(CONVOS_BIN).update(convoUpdates); _saveConvosPending=null; _convosDirty=false; resolve(); }
+        await fbdb.ref(CONVOS_BIN).update(convoUpdates); _saveConvosPending=null; _convosDirty=false;
+        _convosCacheSnapshot=JSON.parse(JSON.stringify(convosCache));
+        resolve(); }
       catch(e){ _saveConvosPending=null; reject(e); }
     },350);
   });
