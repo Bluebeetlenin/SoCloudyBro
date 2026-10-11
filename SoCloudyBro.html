@@ -9769,7 +9769,7 @@ function renderAvatar(el,user,size=38){
   const _av=user&&typeof user.avatar==='string'?user.avatar:'';
   const safeSrc=(_av.startsWith('data:image/')||_av.startsWith('https://'))?_av:'';
   if(safeSrc){
-    el.innerHTML=`<img src="${esc(safeSrc)}" onerror="avatarFallback(this,${esc(JSON.stringify(letter))})" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+    el.innerHTML=`<img src="${esc(safeSrc)}" data-letter="${esc(letter)}" onerror="avatarFallback(this,this.dataset.letter)" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
     el.style.background='';
   }else{
     el.innerHTML='';el.textContent=letter;
@@ -10470,7 +10470,7 @@ async function _origOpenChat(c){
   // Header
   const _bizUser = c.type!=='group'&&c.number ? lookupUser(c.number) : null;
   const _bizActive = _bizUser && _bizUser.bizProfile && _bizUser.bizProfile.enabled;
-  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number)+equippedBadgeHtml(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" onclick="openBizViewModal(lookupUser('+c.number+'))">BIZ</span>' : '');
+  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number)+equippedBadgeHtml(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" data-number="'+c.number+'" onclick="openBizViewModal(lookupUser(Number(this.dataset.number)))">BIZ</span>' : '');
   // DMs: a 1-on-1 chat has no per-message sender name/avatar to click (that's
   // only shown in groups), so the header — already styled "Click for info"
   // but with nothing actually wired to it — is the one place to reach the
@@ -10693,7 +10693,7 @@ function openNewGroup(preselectContact,asServer){
   // If quick-started from a DM whose contact wasn't in the saved list for some reason, add them directly.
   if(preselectContact&&!sel.querySelector(`[data-num="${preselectContact.number}"]`)){
     const chip=document.createElement('div');chip.className='chip';chip.dataset.num=preselectContact.number;
-    chip.innerHTML=esc(preselectContact.name)+' <span class="chip-remove" onclick="removeMember('+preselectContact.number+')">×</span>';
+    chip.innerHTML=esc(preselectContact.name)+' <span class="chip-remove" onclick="removeMember(this.closest(\'.chip\').dataset.num)">×</span>';
     sel.appendChild(chip);
   }
   openModal('group-modal');
@@ -10718,7 +10718,7 @@ async function addMemberByNumber(num,err){
     if(!user) return {ok:false,reason:'unregistered'};
     const name=dec(user.name)||('#'+num);
     const chip=document.createElement('div');chip.className='chip';chip.dataset.num=num;
-    chip.innerHTML=esc(name)+' <span class="chip-remove" onclick="removeMember('+num+')">×</span>';
+    chip.innerHTML=esc(name)+' <span class="chip-remove" onclick="removeMember(this.closest(\'.chip\').dataset.num)">×</span>';
     sel.appendChild(chip);
     const pick=document.getElementById('member-pick-list');
     const row=pick&&[...pick.children].find(r=>String(r.dataset.rowNum)===String(num));
@@ -10761,7 +10761,7 @@ function toggleMember(c,row){
   if(existing){existing.remove();row.style.background='';}
   else{
     const chip=document.createElement('div');chip.className='chip';chip.dataset.num=c.number;
-    chip.innerHTML=esc(c.name)+' <span class="chip-remove" onclick="removeMember('+c.number+')">×</span>';
+    chip.innerHTML=esc(c.name)+' <span class="chip-remove" onclick="removeMember(this.closest(\'.chip\').dataset.num)">×</span>';
     sel.appendChild(chip);row.style.background='var(--bg3)';row.dataset.rowNum=c.number;
   }
 }
@@ -11069,7 +11069,7 @@ function linkifySegment(rawText){
     if(reasons.length){
       const id='rl'+(_riskyLinkId++);
       _riskyLinks[id]={url,reasons};
-      out+='<a href="'+safeUrl+'" target="_blank" rel="noopener" class="msg-link risky-link" onclick="confirmRiskyLinkClick(event,\''+id+'\')" title="This link looks suspicious">'+safeUrl+' ⚠️</a>';
+      out+='<a href="'+safeUrl+'" target="_blank" rel="noopener" class="msg-link risky-link" data-id="'+id+'" onclick="confirmRiskyLinkClick(event,this.dataset.id)" title="This link looks suspicious">'+safeUrl+' ⚠️</a>';
     }else{
       out+='<a href="'+safeUrl+'" target="_blank" rel="noopener" class="msg-link">'+safeUrl+'</a>';
     }
@@ -11544,14 +11544,13 @@ function renderChannelBar(c){
     const countBadge=ch.type==='voice'?'<span class="ch-voice-count" data-ch="'+ch.id+'" style="opacity:.7"></span>':'';
     let adminBtns='';
     if(admin){
-      adminBtns='<span class="ch-mini-btn" onclick="event.stopPropagation();moveChannel(\''+ch.id+'\',-1)" title="Move left">◀</span>'
-        +'<span class="ch-mini-btn" onclick="event.stopPropagation();moveChannel(\''+ch.id+'\',1)" title="Move right">▶</span>'
-        +'<span class="ch-mini-btn" onclick="event.stopPropagation();changeChannelIcon(\''+ch.id+'\')" title="Change icon">🎨</span>'
-        +'<span class="ch-mini-btn" onclick="event.stopPropagation();renameChannelPrompt(\''+ch.id+'\')" title="Rename">✏️</span>'
-        +(chans.length>1?'<span class="ch-mini-btn" onclick="event.stopPropagation();deleteChannelConfirm(\''+ch.id+'\')" title="Delete">🗑️</span>':'');
+      adminBtns='<span class="ch-mini-btn" data-ch-id="'+ch.id+'" onclick="event.stopPropagation();moveChannel(this.dataset.chId,-1)" title="Move left">◀</span>'
+        +'<span class="ch-mini-btn" data-ch-id="'+ch.id+'" onclick="event.stopPropagation();moveChannel(this.dataset.chId,1)" title="Move right">▶</span>'
+        +'<span class="ch-mini-btn" data-ch-id="'+ch.id+'" onclick="event.stopPropagation();changeChannelIcon(this.dataset.chId)" title="Change icon">🎨</span>'
+        +'<span class="ch-mini-btn" data-ch-id="'+ch.id+'" onclick="event.stopPropagation();renameChannelPrompt(this.dataset.chId)" title="Rename">✏️</span>'
+        +(chans.length>1?'<span class="ch-mini-btn" data-ch-id="'+ch.id+'" onclick="event.stopPropagation();deleteChannelConfirm(this.dataset.chId)" title="Delete">🗑️</span>':'');
     }
-    const clickFn=ch.type==='voice'?'joinVoiceChannel(\''+ch.id+'\')':'switchChannel(\''+ch.id+'\')';
-    return '<span class="channel-group"><span class="channel-pill'+(active?' active':'')+'" data-ch-id="'+ch.id+'" onclick="'+clickFn+'">'+icon+' '+esc(ch.name)+countBadge+'</span>'+adminBtns+'</span>';
+    return '<span class="channel-group"><span class="channel-pill'+(active?' active':'')+'" data-ch-id="'+ch.id+'" data-ch-type="'+ch.type+'" onclick="(this.dataset.chType===\'voice\'?joinVoiceChannel:switchChannel)(this.dataset.chId)">'+icon+' '+esc(ch.name)+countBadge+'</span>'+adminBtns+'</span>';
   }).join('')
   + (admin?'<span class="channel-add-btn" onclick="openAddChannelModal()" title="Add channel">+</span>':'');
 }
