@@ -6577,21 +6577,54 @@ async function _fbReadWithFallback(path,label){
 // -- USERS ---------------------------------------------------------------------
 async function getUsers(){
   const val=await _fbReadWithFallback(USERS_BIN,'Loading accounts');
-  if(!val) return (usersCache=[]);
+  if(!val){ usersCache=[]; _usersCacheSnapshot=[]; return usersCache; }
   // Support both legacy monolithic format {users:[...]} and new per-number format {<number>:{...}}
   if(val&&val.users!==undefined){
     usersCache=(Array.isArray(val.users)?val.users:Object.values(val.users||{})).filter(Boolean);
   } else {
     usersCache=Object.values(val||{}).filter(u=>u&&u.number!=null);
   }
+  // Callers mutate the objects in usersCache directly (fetch, change one
+  // field, save back), so usersCache itself can't serve as the "what did
+  // this look like before" baseline for saveUsers() — by the time save
+  // runs, the live objects already reflect the caller's own edit. Keep a
+  // deep-cloned snapshot frozen at fetch time instead.
+  _usersCacheSnapshot=JSON.parse(JSON.stringify(usersCache));
   return usersCache;
 }
+let _usersCacheSnapshot=[];
 async function saveUsers(u){
+  // Guard against a cold/never-primed cache silently degrading this into a
+  // blanket write again (every record looking "new" with no prior baseline
+  // to diff against) — fetch a real baseline first in that case.
+  if(!usersCache||!usersCache.length) await getUsers();
+  const prevByNum=new Map((_usersCacheSnapshot||[]).filter(x=>x&&x.number!=null).map(x=>[x.number,x]));
   usersCache=u;
   const valid=u.filter(x=>x&&x.number!=null);
-  // Write per-number keyed object — replaces the old monolithic {users:[...]} blob.
-  // First write migrates any existing legacy format automatically.
-  await fbdb.ref(USERS_BIN).set(Object.fromEntries(valid.map(x=>[x.number,x])));
+  // Write only the records that actually changed, as a scoped multi-path
+  // update — NOT a single .set() over the whole table. The write rule for
+  // users/$uid lets an ordinary caller touch only their own record (or an
+  // unchanged one, as a no-op bypass); a blanket .set() bundles every
+  // OTHER cached user's record into that same atomic write, and since
+  // other users' records keep changing server-side between this caller's
+  // last getUsers() and now (lastSeen, shadow-mute, lockouts, etc.), those
+  // records almost never still match live data by the time this fires —
+  // failing their half of the rule and getting the ENTIRE write rejected,
+  // including the caller's own change. Scoping to just the changed
+  // records sidesteps that staleness entirely.
+  const updates={};
+  const seenNumbers=new Set();
+  for(const x of valid){
+    seenNumbers.add(x.number);
+    const before=prevByNum.get(x.number);
+    if(!before||JSON.stringify(before)!==JSON.stringify(x)) updates[USERS_BIN+'/'+x.number]=x;
+  }
+  for(const before of prevByNum.values()){
+    if(!seenNumbers.has(before.number)) updates[USERS_BIN+'/'+before.number]=null;
+  }
+  if(!Object.keys(updates).length) return;
+  await fbdb.ref().update(updates);
+  _usersCacheSnapshot=JSON.parse(JSON.stringify(usersCache));
 }
 async function getReports(){
   const d=await getBin('reports');
@@ -6605,15 +6638,37 @@ async function getReports(){
   }else{
     reportsCache=Object.values(d||{}).filter(r=>r&&r.id);
   }
+  // See getUsers()'s matching comment: callers mutate reportsCache's
+  // objects in place, so it can't double as saveReports()'s "before"
+  // baseline — keep a separate deep-cloned snapshot frozen at fetch time.
+  _reportsCacheSnapshot=JSON.parse(JSON.stringify(reportsCache));
   return reportsCache;
 }
+let _reportsCacheSnapshot=[];
 async function saveReports(r){
+  // Same fix as saveUsers(): write only the reports that actually changed,
+  // not the whole table in one .set() — an ordinary user filing a new
+  // report would otherwise need every OTHER cached report to still exactly
+  // match live data (reports/$reportId's write rule has the same
+  // unchanged-record bypass, for the same reason), which breaks as soon as
+  // an admin has resolved/edited any report since this client last fetched.
+  if(!reportsCache||!reportsCache.length) await getReports();
+  const prevById=new Map((_reportsCacheSnapshot||[]).filter(x=>x&&x.id).map(x=>[x.id,x]));
   reportsCache=r;
   const valid=r.filter(x=>x&&x.id);
-  // Write per-report-id keyed object — replaces the old monolithic
-  // {reports:[...]} blob. First write migrates any existing legacy format
-  // automatically (same as saveUsers()).
-  await fbdb.ref('reports').set(Object.fromEntries(valid.map(x=>[x.id,x])));
+  const updates={};
+  const seenIds=new Set();
+  for(const x of valid){
+    seenIds.add(x.id);
+    const before=prevById.get(x.id);
+    if(!before||JSON.stringify(before)!==JSON.stringify(x)) updates['reports/'+x.id]=x;
+  }
+  for(const before of prevById.values()){
+    if(!seenIds.has(before.id)) updates['reports/'+before.id]=null;
+  }
+  if(!Object.keys(updates).length) return;
+  await fbdb.ref().update(updates);
+  _reportsCacheSnapshot=JSON.parse(JSON.stringify(reportsCache));
 }
 // -- MULTI-DEVICE SESSIONS -----------------------------------------------------
 function getDeviceLabel(){
