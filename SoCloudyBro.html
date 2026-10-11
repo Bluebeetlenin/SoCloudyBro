@@ -6761,7 +6761,7 @@ function renderSessionsList(){
     return `<div class="settings-row">
       <div class="settings-row-main"><div class="settings-row-label">${esc(d.label||'Unknown device')}${isThis?' <span style="color:var(--accent,#0078d4);font-weight:500">&#9679; this device</span>':''}${isNew?' <span style="font-size:10px;font-weight:700;color:#fff;background:var(--warn);border-radius:8px;padding:1px 6px;margin-left:4px">New</span>':''}</div>
       <div class="settings-row-sub">${d.os?esc(d.os)+' · ':''}First seen ${esc(fmtTime(d.firstSeen))} · Last active ${esc(ago)}${sessionCount?' · '+sessionCount+' login'+(sessionCount===1?'':'s'):''}</div></div>
-      ${isThis?'':`<div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="removeSessionEntry('${esc(id)}')">Remove</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="remoteWipeSessionEntry('${esc(id)}',${esc(JSON.stringify(d.label||'that device'))})">🗑️ Wipe</button></div>`}
+      ${isThis?'':`<div class="settings-row-actions"><button class="btn btn-ghost btn-sm" data-id="${esc(id)}" onclick="removeSessionEntry(this.dataset.id)">Remove</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-id="${esc(id)}" data-label="${esc(d.label||'that device')}" onclick="remoteWipeSessionEntry(this.dataset.id,this.dataset.label)">🗑️ Wipe</button></div>`}
     </div>`;
   }).join('') || '<div class="settings-row"><div class="settings-row-main settings-row-sub">No devices found</div></div>';
   localStorage.setItem('cc_sessions_last_checked',String(Date.now()));
@@ -7823,7 +7823,7 @@ function renderTrustedDevicesList(){
   const u=(usersCache||[]).find(x=>x.number===me.number);
   const list=(Array.isArray(u&&u.trustedDevices)?u.trustedDevices:[]).filter(d=>d&&d.expiresAt>Date.now());
   el.innerHTML=list.length
-    ? list.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12px"><span>💻 ${esc(d.label||'Device')} · expires ${new Date(d.expiresAt).toLocaleDateString()}</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="revokeTrustedDevice('${esc(d.hash.slice(0,12))}')">Revoke</button></div>`).join('')
+    ? list.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12px"><span>💻 ${esc(d.label||'Device')} · expires ${new Date(d.expiresAt).toLocaleDateString()}</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-hash="${esc(d.hash.slice(0,12))}" onclick="revokeTrustedDevice(this.dataset.hash)">Revoke</button></div>`).join('')
     : '<div style="font-size:12px;color:var(--muted)">No trusted devices.</div>';
 }
 
@@ -8846,7 +8846,7 @@ function renderSecurityPasskeysList(){
   const u=(usersCache||[]).find(x=>x.number===me.number);
   const list=Array.isArray(u&&u.passkeys)?u.passkeys:[];
   el.innerHTML=list.length
-    ? list.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12px"><span>🔑 ${esc(p.name||'Device')} · added ${new Date(p.createdAt||0).toLocaleDateString()}</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="removePasskey('${esc(p.id)}')">Remove</button></div>`).join('')
+    ? list.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12px"><span>🔑 ${esc(p.name||'Device')} · added ${new Date(p.createdAt||0).toLocaleDateString()}</span><button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-id="${esc(p.id)}" onclick="removePasskey(this.dataset.id)">Remove</button></div>`).join('')
     : '<div style="font-size:12px;color:var(--muted)">No passkeys added yet.</div>';
 }
 // Verify a WebAuthn assertion entirely client-side against a stored SPKI
@@ -10579,7 +10579,7 @@ function updateGroupDescBanner(c){
   if(!banner) return;
   const info=(c&&c.type==='group')?(c.info||'').trim():'';
   if(!info||_dismissedGroupDescBanners[c.key]){ banner.style.display='none'; return; }
-  banner.innerHTML=`<span>ℹ️</span><span>${esc(info)}</span><span class="gdb-close" onclick="dismissGroupDescBanner('${esc(c.key)}')">✕</span>`;
+  banner.innerHTML=`<span>ℹ️</span><span>${esc(info)}</span><span class="gdb-close" data-key="${esc(c.key)}" onclick="dismissGroupDescBanner(this.dataset.key)">✕</span>`;
   banner.style.display='flex';
 }
 let _dismissedGroupDescBanners={};
