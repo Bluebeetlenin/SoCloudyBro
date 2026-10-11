@@ -14041,7 +14041,7 @@ function renderWidgetTray(){
   if(!available.length){ tray.innerHTML='<div class="dash-widget-empty">All widgets are placed — remove one to add something else.</div>'; return; }
   tray.innerHTML=available.map(id=>{
     const def=DASHBOARD_WIDGETS[id];
-    return '<div class="tray-item" onclick="addWidgetToLayout(\''+id+'\')">'+def.icon+' '+def.label+' <span style="opacity:.6">+ Add</span></div>';
+    return '<div class="tray-item" data-id="'+esc(id)+'" onclick="addWidgetToLayout(this.dataset.id)">'+def.icon+' '+def.label+' <span style="opacity:.6">+ Add</span></div>';
   }).join('');
 }
 function addWidgetToLayout(id){
@@ -21607,7 +21607,7 @@ renderSidebar = function(){
       div.innerHTML='<div class="call-log-icon" style="'+color+'">'+icon+'</div>'
         +'<div class="call-log-info"><div class="call-log-name" style="'+color+'">'+esc(name)+'</div>'
         +'<div class="call-log-meta">'+esc(metaStr)+'</div></div>'
-        +'<button class="call-log-callback" onclick="(function(){const c=contacts.find(x=>x.type!==\'group\'&&String(x.number)===\''+num+'\');if(c)startDirectCall(c);else showToast(\'Not in contacts\',\'\');})()">'+esc(scbT('call_back'))+'</button>';
+        +'<button class="call-log-callback" data-number="'+num+'" onclick="(function(btn){const c=contacts.find(x=>x.type!==\'group\'&&String(x.number)===btn.dataset.number);if(c)startDirectCall(c);else showToast(\'Not in contacts\',\'\');})(this)">'+esc(scbT('call_back'))+'</button>';
       list.appendChild(div);
     });
     return;
@@ -26854,7 +26854,7 @@ async function exportE2EKey(){
     +'<div style="font-weight:700;margin-bottom:8px;font-size:15px">🔑 Your Decryption Key</div>'
     +'<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">This key lets any device read your messages. Keep it private — treat it like a password.</p>'
     +'<textarea readonly onclick="this.select()" style="width:100%;height:100px;font-size:11px;font-family:monospace;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);resize:none;box-sizing:border-box">'+bundle+'</textarea>'
-    +'<div style="display:flex;gap:8px;margin-top:12px"><button onclick="navigator.clipboard.writeText(\''+bundle+'\').then(()=>showToast(\'Copied!\',\'\'));this.closest(\'div[style*=fixed]\').remove()" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer">Copy & Close</button><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--text)">Close</button></div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px"><button onclick="navigator.clipboard.writeText(this.closest(\'div[style*=fixed]\').querySelector(\'textarea\').value).then(()=>showToast(\'Copied!\',\'\'));this.closest(\'div[style*=fixed]\').remove()" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer">Copy & Close</button><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--text)">Close</button></div>'
     +'</div>';
   document.body.appendChild(txt);
 }
@@ -26904,7 +26904,7 @@ document.addEventListener('click', function(e){
     <p style="font-size:12px;margin:0 0 16px">This link goes outside SoCloudyBro. Only open it if you trust the sender.</p>
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost btn-sm" style="flex:1" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
-      <button class="btn btn-sm" style="flex:1" onclick="window.open(${esc(JSON.stringify(href))},'_blank','noopener,noreferrer');this.closest('div[style*=fixed]').remove()">Open anyway</button>
+      <button class="btn btn-sm" style="flex:1" data-href="${esc(href)}" onclick="window.open(this.dataset.href,'_blank','noopener,noreferrer');this.closest('div[style*=fixed]').remove()">Open anyway</button>
     </div>
   </div>`;
   document.body.appendChild(dlg);
@@ -27116,7 +27116,7 @@ function renderKeyChangeBanner(number){
   if(!el) return;
   if(!activeConvo||activeConvo.type==='group'||activeConvo.number!==number){ el.style.display='none'; return; }
   el.style.display='flex';
-  el.innerHTML='⚠️ This contact\'s encryption key changed. <button onclick="hideHeaderMenu();openSafetyNumbers()" style="margin-left:6px;text-decoration:underline;background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0">Verify now</button><button onclick="dismissKeyChangeBanner('+number+')" style="margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;font-size:14px;padding:0">✕</button>';
+  el.innerHTML='⚠️ This contact\'s encryption key changed. <button onclick="hideHeaderMenu();openSafetyNumbers()" style="margin-left:6px;text-decoration:underline;background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0">Verify now</button><button data-number="'+number+'" onclick="dismissKeyChangeBanner(this.dataset.number)" style="margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;font-size:14px;padding:0">✕</button>';
 }
 function dismissKeyChangeBanner(number){
   try{ sessionStorage.removeItem('cc_key_changed_'+number); }catch(e){}
