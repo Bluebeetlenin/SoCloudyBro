@@ -22,7 +22,7 @@
 
 const ALLOWED_ORIGIN = 'https://socloudybro.vercel.app';
 const GOOGLE_CLIENT_ID = '838238846995-462tmfqv9p4mthurorumg30d2uq4qin1.apps.googleusercontent.com';
-const FACE_MATCH_THRESHOLD = 0.48;
+const FACE_MATCH_THRESHOLD = 0.42;
 
 let _jwksCache = null;
 let _jwksCacheAt = 0;
@@ -63,6 +63,9 @@ export default {
       }
       if (path === '/verify-otp' && req.method === 'POST') {
         return await handleVerifyOtp(req, env, corsHeaders);
+      }
+      if (path === '/passkey-challenge' && req.method === 'GET') {
+        return await handlePasskeyChallenge(req, env, corsHeaders);
       }
       if (path === '/report' && req.method === 'POST') {
         return await handleReport(req, env, corsHeaders);
@@ -194,7 +197,7 @@ async function handleMintToken(req, env, corsHeaders) {
     }
   }
 
-  const verified = user ? await verifyMintProof(user, { password, googleCredential, passkeyAssertion, faceDescriptor, backupPin, secAnswers }) : false;
+  const verified = user ? await verifyMintProof(user, { password, googleCredential, passkeyAssertion, faceDescriptor, backupPin, secAnswers }, env) : false;
 
   if (!verified) {
     const count = (attempts && attempts.count || 0) + 1;
@@ -300,14 +303,14 @@ async function handleCspReport(req, env, corsHeaders) {
   return new Response(null, { status: 204, headers: corsHeaders });
 }
 
-async function verifyMintProof(user, { password, googleCredential, passkeyAssertion, faceDescriptor, backupPin, secAnswers }) {
+async function verifyMintProof(user, { password, googleCredential, passkeyAssertion, faceDescriptor, backupPin, secAnswers }, env) {
   try {
     if (typeof googleCredential === 'string' && googleCredential) {
       if (!user.googleSub) return false;
       const claims = await verifyGoogleIdToken(googleCredential);
       return claims.sub === user.googleSub;
     } else if (passkeyAssertion && typeof passkeyAssertion === 'object') {
-      return await verifyPasskeyAssertionServer(passkeyAssertion, user);
+      return await verifyPasskeyAssertionServer(passkeyAssertion, user, env);
     } else if (isValidFaceDescriptor(faceDescriptor)) {
       if (!Array.isArray(user.faceDescriptor) || !user.faceDescriptor.length) return false;
       const dist = euclideanDistance(faceDescriptor, user.faceDescriptor);
@@ -506,9 +509,54 @@ function derToRawEcdsaSig(derBuf) {
   const r = readInt(), s = readInt();
   return new Uint8Array(r.concat(s)).buffer;
 }
-async function verifyPasskeyAssertionServer(assertion, user) {
+// GET /passkey-challenge — issues a one-time 32-byte challenge signed with an
+// HMAC token (60-second TTL). The client passes the token back in the
+// /mint-token body alongside the assertion so the Worker can verify the
+// challenge was freshly issued by itself and not replayed.
+const PASSKEY_CHALLENGE_TTL_MS = 60 * 1000;
+async function handlePasskeyChallenge(req, env, corsHeaders) {
+  const challengeBytes = crypto.getRandomValues(new Uint8Array(32));
+  const challengeB64u = b64u(challengeBytes.buffer);
+  const exp = Date.now() + PASSKEY_CHALLENGE_TTL_MS;
+  const challengeToken = await signPasskeyChallenge(env, { challengeB64u, exp });
+  return jsonResp({ challenge: challengeB64u, challengeToken }, 200, corsHeaders);
+}
+
+async function getPasskeyChallengeKey(env) {
+  const sa = parseServiceAccount(env.SERVICE_ACCOUNT_JSON);
+  const keyMaterial = new TextEncoder().encode('scb-passkey-challenge-v1:' + sa.private_key);
+  return crypto.subtle.importKey('raw', keyMaterial, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+async function signPasskeyChallenge(env, payload) {
+  const key = await getPasskeyChallengeKey(env);
+  const payloadB64 = b64u(JSON.stringify(payload));
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadB64));
+  return `${payloadB64}.${b64u(sig)}`;
+}
+async function verifyPasskeyChallengeToken(env, token) {
+  const parts = token.split('.');
+  if (parts.length !== 2) throw new Error('Malformed challenge token');
+  const [payloadB64, sigB64] = parts;
+  const key = await getPasskeyChallengeKey(env);
+  const sig = base64urlDecodeToBuffer(sigB64);
+  const valid = await crypto.subtle.verify('HMAC', key, sig, new TextEncoder().encode(payloadB64));
+  if (!valid) throw new Error('Invalid challenge token signature');
+  const payload = JSON.parse(base64urlDecodeToString(payloadB64));
+  if (Date.now() > payload.exp) throw new Error('Challenge token expired');
+  return payload;
+}
+
+async function verifyPasskeyAssertionServer(assertion, user, env) {
   if (typeof assertion.credentialId !== 'string' || typeof assertion.clientDataJSON !== 'string' ||
       typeof assertion.authenticatorData !== 'string' || typeof assertion.signature !== 'string') {
+    return false;
+  }
+  // Verify the server-issued challenge token — prevents replay of captured assertions.
+  if (typeof assertion.challengeToken !== 'string') return false;
+  let challengePayload;
+  try {
+    challengePayload = await verifyPasskeyChallengeToken(env, assertion.challengeToken);
+  } catch (e) {
     return false;
   }
   const passkeys = Array.isArray(user.passkeys) ? user.passkeys : [];
@@ -521,6 +569,8 @@ async function verifyPasskeyAssertionServer(assertion, user) {
   const clientData = JSON.parse(new TextDecoder().decode(clientDataBuf));
   if (clientData.type !== 'webauthn.get') return false;
   if (clientData.origin !== ALLOWED_ORIGIN) return false;
+  // Verify the challenge in clientDataJSON matches what the Worker issued.
+  if (clientData.challenge !== challengePayload.challengeB64u) return false;
   const pubKey = await crypto.subtle.importKey('spki', spkiBuf, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
   const clientDataHash = await crypto.subtle.digest('SHA-256', clientDataBuf);
   const signedData = new Uint8Array(authDataBuf.byteLength + clientDataHash.byteLength);

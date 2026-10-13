@@ -1,0 +1,35 @@
+name: Refresh SRI hashes
+
+on:
+  schedule:
+    # Runs nightly at 02:17 UTC
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refresh SRI hashes and CSP
+        id: refresh
+        run: python3 .github/scripts/refresh_sri.py
+
+      - name: Commit and push if changed
+        if: steps.refresh.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add SoCloudyBro.html vercel.json
+          git commit -m "chore(security): auto-refresh SRI hashes + CSP
+
+          One or more CDN scripts changed since the last run.
+          Updated integrity= attributes and recomputed CSP hashes.
+
+          Scripts refreshed:
+          ${{ steps.refresh.outputs.changed_scripts }}"
+          git push
