@@ -19,8 +19,8 @@
      token it returns is actually *verified* depends on GOOGLE_VERIFY_ENDPOINT in
      that same block (the google-verify-proxy/ Worker); while that is empty the
      UI says so out loud instead of implying verification. -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer integrity="sha384-tQi+wmmnvhgSPy2lZAOXzZ6UCeE7NMBxzurzTniHRT6tpNkRzk3ciJxUAsH8KPcY" crossorigin="anonymous"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer integrity="sha384-atpOMQEE6BpVvX/gJ4opeACh3M/SPia1QVsvFl1zEhC3r4t+gsy4X8nXa3HDbus6" crossorigin="anonymous"></script>
 <!-- Syntax Account SDK (the shared account system behind Cube Leap, Jumpa! and
      Ultimo Chess). Used by Settings → Connected Accounts to let someone link an
      existing Syntax Account to this SoCloudyBro account, which is what makes the
@@ -425,6 +425,274 @@
 // face-api.js is loaded lazily from CDN only when face MFA is actually used.
 // Call _ensureFaceApi() before any faceapi.* access.
 </script>
+<style id="scb-utility-classes">
+/* SoCloudyBro utility classes — auto-generated from inline style attrs */
+.scb-u-1 { width:80px;height:80px;font-size:30px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;margin:0 auto 18px; }
+.scb-u-2 { font-size: 36px; font-weight: 700; text-align: center; line-height: 1.3; }
+.scb-u-3 { color: var(--accent); }
+.scb-u-4 { font-size:48px;margin-bottom:16px;opacity:0.6; }
+.scb-u-5 { margin-bottom: 32px; font-size:12px; color:var(--muted); }
+.scb-u-6 { text-align:center }
+.scb-u-7 { margin-top:8px }
+.scb-u-8 { display:none;position:fixed;inset:0;background:var(--bg);z-index:600;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px }
+.scb-u-9 { font-size:48px;margin-bottom:16px }
+.scb-u-10 { margin-bottom:8px }
+.scb-u-11 { color:var(--muted);max-width:420px;margin-bottom:20px }
+.scb-u-12 { color:var(--muted);max-width:420px;margin-bottom:20px;display:none }
+.scb-u-13 { display:flex;flex-direction:column;align-items:center;gap:8px }
+.scb-u-14 { color:var(--muted);max-width:380px;margin-bottom:6px }
+.scb-u-15 { width:100%;max-width:300px;margin-top:10px }
+.scb-u-16 { margin-bottom:10px }
+.scb-u-17 { display:none;width:100%;max-width:300px;margin-top:10px }
+.scb-u-18 { font-size:13px;color:var(--muted);margin-bottom:10px }
+.scb-u-19 { margin-bottom:10px;text-align:center;letter-spacing:4px;font-size:20px }
+.scb-u-20 { font-size:12px;color:var(--muted);max-width:360px;margin:10px 0 0 }
+.scb-u-21 { margin:6px 0 }
+.scb-u-22 { margin-top:14px;max-width:360px }
+.scb-u-23 { cursor:pointer;font-size:12px;color:var(--muted) }
+.scb-u-24 { display:flex;justify-content:center;margin:14px 0 }
+.scb-u-25 { display:none }
+.scb-u-26 { display:none;font-size:12px;color:var(--muted);max-width:360px;margin-bottom:10px }
+.scb-u-27 { display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:14px }
+.scb-u-28 { max-width:420px }
+.scb-u-29 { padding-bottom:14px }
+.scb-u-30 { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:700;align-items:center;justify-content:center;padding:20px }
+.scb-u-31 { background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-card);max-width:380px;width:100%;padding:24px;text-align:center }
+.scb-u-32 { font-size:40px;margin-bottom:12px }
+.scb-u-33 { margin:0 0 8px }
+.scb-u-34 { color:var(--muted);font-size:13px;margin:0 0 18px }
+.scb-u-35 { display:flex;justify-content:center;gap:6px;margin-bottom:16px }
+.scb-u-36 { display:flex;gap:8px }
+.scb-u-37 { flex:1 }
+.scb-u-38 { flex-shrink:0 }
+.scb-u-39 { display:none;margin-left:auto;-webkit-app-region:no-drag;position:relative }
+.scb-u-40 { position:absolute;top:-3px;right:-3px;background:#e74c3c;color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px;line-height:1.4;pointer-events:none }
+.scb-u-41 { background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff }
+.scb-u-42 { color:var(--success) }
+.scb-u-43 { display:none;flex-direction:column;max-height:300px;overflow-y:auto;border-bottom:1px solid var(--border);padding:4px 8px }
+.scb-u-44 { align-self:flex-start }
+.scb-u-45 { background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;width:36px;height:36px;font-size:13px }
+.scb-u-46 { cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px }
+.scb-u-47 { color:var(--danger) }
+.scb-u-48 { display:none;align-items:center;gap:8px;padding:8px 12px;background:var(--warn-soft,rgba(230,159,0,0.16));color:var(--warn-text,#8a5d00);font-size:12px;flex-shrink:0 }
+.scb-u-49 { display:none;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0 }
+.scb-u-50 { font-size:11px;color:var(--muted);white-space:nowrap;min-width:50px;text-align:center }
+.scb-u-51 { background:var(--danger) }
+.scb-u-52 { font-size:15px;font-weight:600;margin-left:4px }
+.scb-u-53 { margin:12px 16px 16px }
+.scb-u-54 { font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;border-top:1px solid var(--border);padding-top:12px }
+.scb-u-55 { font-size:12px;color:var(--muted);padding:4px 0 }
+.scb-u-56 { margin:10px 0 0;width:100%;box-sizing:border-box }
+.scb-u-57 { width:110px }
+.scb-u-58 { color:var(--muted) }
+.scb-u-59 { margin:0 16px 8px;padding:14px 16px;background:linear-gradient(135deg,var(--accent,#6b5de8),#4f46e5);border-radius:var(--r-sm,10px);color:#fff;display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none }
+.scb-u-60 { font-size:30px;font-weight:800;line-height:1;min-width:40px;text-align:center }
+.scb-u-61 { flex:1;min-width:0 }
+.scb-u-62 { font-size:13px;font-weight:600 }
+.scb-u-63 { font-size:11px;opacity:0.82;margin-top:2px }
+.scb-u-64 { font-size:22px;opacity:0.9 }
+.scb-u-65 { cursor:pointer }
+.scb-u-66 { padding:0 16px 8px }
+.scb-u-67 { display:none;font-size:10px;font-weight:700;color:#fff;background:var(--warn);border-radius:8px;padding:1px 6px;margin-left:4px;vertical-align:middle }
+.scb-u-68 { color:var(--success,#4caf50);font-size:13px }
+.scb-u-69 { color:var(--muted);font-size:13px }
+.scb-u-70 { display:flex;align-items:center;gap:8px }
+.scb-u-71 { max-width:360px }
+.scb-u-72 { max-width:380px }
+.scb-u-73 { padding-bottom:4px }
+.scb-u-74 { gap:8px }
+.scb-u-75 { position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);z-index:300;min-width:180px;padding:4px;display:none;animation:modalIn 0.16s cubic-bezier(0.16,1,0.3,1) }
+.scb-u-76 { display:none;position:fixed;inset:0;z-index:500;overflow-y:auto;background:var(--bg);color:var(--text);font-family:inherit }
+.scb-u-77 { display:flex;flex-direction:column;gap:8px }
+.scb-u-78 { display:flex;align-items:center;gap:10px;font-size:13.5px }
+.scb-u-79 { font-size:18px }
+.scb-u-80 { font-size:10px;color:var(--muted);margin-bottom:4px;border-left:2px solid var(--accent);padding-left:6px }
+.scb-u-81 { margin-top:4px }
+.scb-u-82 { order:1 }
+.scb-u-83 { background:linear-gradient(135deg,#1a1a2e,#16213e);border:none }
+.scb-u-84 { flex:1;text-align:center }
+.scb-u-85 { font-size:12px;color:#a0aec0;margin-bottom:4px }
+.scb-u-86 { font-size:14px;font-weight:700;color:#fff }
+.scb-u-87 { background:#0f172a;align-items:center;justify-content:center;gap:16px;padding:28px }
+.scb-u-88 { width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6b5de8,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;font-weight:700;border:3px solid rgba(107,93,232,0.5) }
+.scb-u-89 { height:6px }
+.scb-u-90 { height:12px }
+.scb-u-91 { height:18px }
+.scb-u-92 { height:10px }
+.scb-u-93 { height:14px }
+.scb-u-94 { height:20px }
+.scb-u-95 { height:8px }
+.scb-u-96 { height:16px }
+.scb-u-97 { display:flex;gap:12px;margin-top:8px }
+.scb-u-98 { width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer }
+.scb-u-99 { width:42px;height:42px;border-radius:50%;background:#e53e3e;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer }
+.scb-u-100 { order:0 }
+.scb-u-101 { border-radius:10px }
+.scb-u-102 { font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px }
+.scb-u-103 { font-size:11px;color:var(--muted) }
+.scb-u-104 { font-size:11.5px }
+.scb-u-105 { text-align:center;margin-bottom:32px }
+.scb-u-106 { justify-content:center;display:flex }
+.scb-u-107 { font-size:14px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.6 }
+.scb-u-108 { text-align:center;margin-top:40px }
+.scb-u-109 { font-size:20px;margin-bottom:8px }
+.scb-u-110 { font-weight:700;margin-bottom:8px }
+.scb-u-111 { margin:0 0 12px }
+.scb-u-112 { display:flex;justify-content:center;gap:16px;flex-wrap:wrap }
+.scb-u-113 { max-height:85vh;overflow-y:auto }
+.scb-u-114 { position:sticky;top:0;background:var(--surface);z-index:1 }
+.scb-u-115 { font-size:14px;line-height:1.7;color:var(--text) }
+.scb-u-116 { color:var(--muted);font-size:12px }
+.scb-u-117 { font-size:15px;margin:20px 0 8px }
+.scb-u-118 { padding-left:20px;margin:0 }
+.scb-u-119 { color:var(--accent) }
+.scb-u-120 { max-width:480px }
+.scb-u-121 { padding-bottom:8px }
+.scb-u-122 { font-size:13px;color:var(--muted);margin:0 0 16px }
+.scb-u-123 { max-width:520px }
+.scb-u-124 { font-size:13px;color:var(--muted);margin:0 0 12px }
+.scb-u-125 { font-size:13px;color:var(--text2);margin:0 0 14px;padding-left:20px;line-height:1.6 }
+.scb-u-126 { background:var(--surface2,rgba(127,127,127,.07));border:1px solid var(--border);border-radius:var(--r-sm,10px);padding:12px 14px;margin-bottom:10px }
+.scb-u-127 { font-weight:600;font-size:14px;margin-bottom:6px }
+.scb-u-128 { display:flex;align-items:center;gap:6px;margin-bottom:8px }
+.scb-u-129 { font-size:12px;color:var(--text2) }
+.scb-u-130 { padding:2px 7px;font-size:11px }
+.scb-u-131 { font-size:12px;padding:4px 12px }
+.scb-u-132 { font-size:12px;color:var(--muted);margin:0 }
+.scb-u-133 { padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border) }
+.scb-u-134 { font-size:15px;font-weight:600 }
+.scb-u-135 { display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border) }
+.scb-u-136 { padding-top:14px;padding-bottom:14px }
+.scb-u-137 { max-width:500px }
+.scb-u-138 { padding-top:10px;padding-bottom:10px }
+.scb-u-139 { margin-bottom:12px }
+.scb-u-140 { background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px }
+.scb-u-141 { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px }
+.scb-u-142 { display:flex;gap:8px;align-items:center }
+.scb-u-143 { margin-top:12px }
+.scb-u-144 { max-width:460px;max-height:88vh }
+.scb-u-145 { padding-bottom:10px }
+.scb-u-146 { display:flex;align-items:center;gap:10px }
+.scb-u-147 { width:52px;height:52px;font-size:20px;flex-shrink:0 }
+.scb-u-148 { font-size:16px;font-weight:700 }
+.scb-u-149 { font-size:12px;color:var(--muted) }
+.scb-u-150 { font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:8px }
+.scb-u-151 { font-size:12px;color:var(--accent);word-break:break-all;display:none }
+.scb-u-152 { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:14px 0 8px }
+.scb-u-153 { padding-bottom:14px; padding-top:14px; }
+.scb-u-154 { font-size:12px; color:var(--muted); margin-bottom:16px; }
+.scb-u-155 { display:none;margin-bottom:14px;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r-sm);background:var(--surface2) }
+.scb-u-156 { font-size:12px;font-weight:600 }
+.scb-u-157 { font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45 }
+.scb-u-158 { text-align:center;margin-bottom:16px }
+.scb-u-159 { width:64px;height:64px;font-size:24px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;margin:0 auto;cursor:pointer }
+.scb-u-160 { font-size:11px;color:var(--muted);margin-top:5px }
+.scb-u-161 { display:none;flex-wrap:wrap;gap:6px;margin-top:6px }
+.scb-u-162 { position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none }
+.scb-u-163 { margin-top:14px }
+.scb-u-164 { display:flex;align-items:center;gap:10px;margin-bottom:10px }
+.scb-u-165 { flex:1;height:1px;background:var(--border) }
+.scb-u-166 { display:flex;justify-content:center }
+.scb-u-167 { display:none;font-size:11px;color:var(--muted);margin-top:7px;line-height:1.45;text-align:center }
+.scb-u-168 { text-align:center;margin-top:10px }
+.scb-u-169 { font-size:12px;color:var(--accent) }
+.scb-u-170 { text-align:center;margin-top:6px }
+.scb-u-171 { text-align:center;padding:10px 0 4px;font-size:11px;color:var(--muted) }
+.scb-u-172 { display:none;padding-bottom:14px;padding-top:14px; }
+.scb-u-173 { display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:2px 0 10px;cursor:pointer }
+.scb-u-174 { width:15px;height:15px;cursor:pointer }
+.scb-u-175 { font-size:12px; color:var(--muted); margin-bottom:12px; }
+.scb-u-176 { margin-top:6px;display:none }
+.scb-u-177 { margin-top:6px }
+.scb-u-178 { padding-bottom:14px;display:none }
+.scb-u-179 { max-width:420px;display:flex;flex-direction:column;max-height:82vh }
+.scb-u-180 { flex-shrink:0;padding-bottom:12px }
+.scb-u-181 { margin-bottom:0 }
+.scb-u-182 { padding:0 22px 12px;border-bottom:1px solid var(--border);flex-shrink:0 }
+.scb-u-183 { flex:1;overflow-y:auto;padding:12px 22px;min-height:120px }
+.scb-u-184 { display:flex;gap:8px;padding:12px 22px;border-top:1px solid var(--border);flex-shrink:0 }
+.scb-u-185 { padding-bottom:20px;text-align:center }
+.scb-u-186 { width:84px;height:84px;margin:0 auto 12px }
+.scb-u-187 { font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px }
+.scb-u-188 { font-size:12px;color:var(--muted);margin-top:2px }
+.scb-u-189 { font-size:12px;margin-top:6px }
+.scb-u-190 { font-size:13px;color:var(--text2);margin-top:14px;line-height:1.5 }
+.scb-u-191 { font-size:11px;color:var(--muted);margin-top:10px }
+.scb-u-192 { margin-top:18px }
+.scb-u-193 { width:52px;height:52px;flex-shrink:0 }
+.scb-u-194 { min-width:0;flex:1 }
+.scb-u-195 { font-size:14px;font-weight:700;display:flex;align-items:center;gap:4px }
+.scb-u-196 { font-size:11px;margin-top:2px }
+.scb-u-197 { font-size:12px;color:var(--text2);margin-top:6px;line-height:1.4 }
+.scb-u-198 { margin-top:8px;padding:4px 12px;font-size:11px }
+.scb-u-199 { text-align:center;margin-bottom:10px }
+.scb-u-200 { display:none;margin-top:16px }
+.scb-u-201 { display:block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px }
+.scb-u-202 { display:flex;flex-direction:column;gap:4px }
+.scb-u-203 { text-align:center;margin-bottom:12px }
+.scb-u-204 { width:56px;height:56px;font-size:22px;background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;margin:0 auto;cursor:pointer;border-radius:12px }
+.scb-u-205 { display:flex;gap:8px;margin-bottom:8px }
+.scb-u-206 { display:inline-flex;cursor:pointer }
+.scb-u-207 { font-size:11px;color:var(--muted);margin-left:6px }
+.scb-u-208 { max-width:340px }
+.scb-u-209 { text-transform:uppercase;letter-spacing:2px;text-align:center;font-weight:700 }
+.scb-u-210 { font-size:11px;color:var(--muted);margin-top:4px }
+.scb-u-211 { max-width:320px;text-align:center }
+.scb-u-212 { display:none;gap:6px;justify-content:center;margin-bottom:12px }
+.scb-u-213 { display:flex;align-items:center;gap:12px;margin-bottom:12px }
+.scb-u-214 { width:52px;height:52px;font-size:20px;background:var(--accent);color:#fff }
+.scb-u-215 { font-size:16px;font-weight:600 }
+.scb-u-216 { display:none;margin-top:4px }
+.scb-u-217 { font-size:11px;color:var(--muted);margin-top:2px }
+.scb-u-218 { display:none;font-size:11px;color:var(--text2);margin-top:4px;max-width:260px }
+.scb-u-219 { width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;resize:vertical }
+.scb-u-220 { flex-wrap:wrap;gap:6px }
+.scb-u-221 { max-width:440px }
+.scb-u-222 { display:flex;align-items:center;gap:12px;margin-bottom:4px }
+.scb-u-223 { width:52px;height:52px;font-size:22px;background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;border-radius:12px;cursor:pointer }
+.scb-u-224 { font-size:11px;color:var(--muted2) }
+.scb-u-225 { font-size:11px;color:var(--accent);margin-bottom:8px }
+.scb-u-226 { display:none;margin-bottom:10px }
+.scb-u-227 { display:none;margin-bottom:12px }
+.scb-u-228 { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px }
+.scb-u-229 { flex:1;background:var(--surface2);border-radius:var(--r-sm);padding:8px 10px;font-size:15px;letter-spacing:2px;text-align:center;font-weight:700 }
+.scb-u-230 { display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:8px }
+.scb-u-231 { display:none;margin-top:6px }
+.scb-u-232 { position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);z-index:400;min-width:180px;padding:4px;display:none }
+.scb-u-233 { height:1px;background:var(--border);margin:3px 0 }
+.scb-u-234 { max-width:320px }
+.scb-u-235 { margin-bottom:6px }
+.scb-u-236 { display:none;position:absolute;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:40;max-height:300px;overflow-y:auto;box-shadow:var(--shadow) }
+.scb-u-237 { max-width:460px }
+.scb-u-238 { font-family:monospace;letter-spacing:1px }
+.scb-u-239 { padding:28px 20px }
+.scb-u-240 { font-size:40px;margin-bottom:10px }
+.scb-u-241 { font-size:15px;font-weight:600;margin-bottom:4px }
+.scb-u-242 { font-size:12px;color:var(--muted);margin-bottom:20px }
+.scb-u-243 { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:10px }
+.scb-u-244 { max-height:260px;overflow-y:auto }
+.scb-u-245 { max-width:520px;height:min(620px,86vh);padding:0;overflow:hidden;display:flex;flex-direction:column }
+.scb-u-246 { padding:18px 20px 12px }
+.scb-u-247 { flex:1;overflow-y:auto;padding:0 20px 14px }
+.scb-u-248 { max-width:860px;height:min(640px,86vh);padding:0;overflow:hidden }
+.scb-u-249 { padding:20px 20px 14px }
+.scb-u-250 { font-size:13px;color:var(--text2);line-height:1.55;margin:0 0 10px }
+.scb-u-251 { font-size:12px;color:var(--text2);line-height:1.6;background:var(--surface2,rgba(127,127,127,.08));border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px }
+.scb-u-252 { font-weight:600;margin-bottom:4px }
+.scb-u-253 { font-weight:600;margin:8px 0 4px }
+.scb-u-254 { display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;cursor:pointer }
+.scb-u-255 { margin-top:2px;flex-shrink:0 }
+.scb-u-256 { display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px;cursor:pointer }
+.scb-u-257 { max-width:640px }
+.scb-u-258 { font-size:12px;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.04em }
+.scb-u-259 { position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:30px;box-shadow:var(--shadow-lg);z-index:350;padding:6px 10px;display:none;gap:4px;font-size:22px }
+.scb-u-260 { display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;cursor:zoom-out }
+.scb-u-261 { max-width:90vw;max-height:90vh;border-radius:50%;object-fit:cover;box-shadow:0 8px 40px rgba(0,0,0,0.6) }
+.scb-u-262 { display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px }
+.scb-u-263 { background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace }
+.scb-u-264 { padding-bottom:10px;max-height:60vh;overflow-y:auto }
+.scb-u-265 { width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px }
+</style>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1927,92 +2195,92 @@ body.device-tablet .msg-body{max-width:74%}
 
 <div id="lock-screen">
   <div id="lock-left">
-    <div id="lock-avatar" class="avatar" style="width:80px;height:80px;font-size:30px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;margin:0 auto 18px;"></div>
-    <h2 style="font-size: 36px; font-weight: 700; text-align: center; line-height: 1.3;">Welcome back, <br><span id="lock-name" style="color: var(--accent);">User</span></h2>
+    <div id="lock-avatar" class="avatar scb-u-1"></div>
+    <h2> class="scb-u-2"Welcome back, <br><span class="scb-u-3" id="lock-name">User</span></h2>
   </div>
   <div id="lock-right">
-    <div class="lock-icon" style="font-size:48px;margin-bottom:16px;opacity:0.6;">🔒</div>
-    <p style="margin-bottom: 32px; font-size:12px; color:var(--muted);">Enter your PIN to continue</p>
+    <div class="lock-icon scb-u-4">🔒</div>
+    <p> class="scb-u-5"Enter your PIN to continue</p>
     <div class="pin-row" id="lock-pin-row">
       <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'lock')"/>
       <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'lock')"/>
       <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'lock')"/>
       <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'lock')"/>
     </div>
-    <div id="lock-error" class="error-text" style="text-align:center"></div>
-    <button class="btn btn-ghost btn-sm" onclick="lockForgotPin()" style="margin-top:8px">Forgot PIN?</button>
+    <div id="lock-error" class="error-text scb-u-6"></div>
+    <button class="btn btn-ghost btn-sm scb-u-7" onclick="lockForgotPin()">Forgot PIN?</button>
   </div>
 </div>
 
-<div id="parental-pending-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:600;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px">
-  <div style="font-size:48px;margin-bottom:16px">🔒</div>
-  <h2 style="margin-bottom:8px" id="parental-pending-title">Waiting for parent approval</h2>
-  <p style="color:var(--muted);max-width:420px;margin-bottom:20px" id="parental-pending-body">
+<div class="scb-u-8" id="parental-pending-screen">
+  <div> class="scb-u-9"🔒</div>
+  <h2 class="scb-u-10" id="parental-pending-title">Waiting for parent approval</h2>
+  <p class="scb-u-11" id="parental-pending-body">
     Since you're under 18, a parent or guardian needs to approve your account before you can use SoCloudyBro.
     Have them create their own account (or log into one they already have) using
     <strong id="parental-pending-email"></strong> — they'll see your request waiting there.
   </p>
-  <p style="color:var(--muted);max-width:420px;margin-bottom:20px;display:none" id="parental-denied-body">
+  <p class="scb-u-12" id="parental-denied-body">
     Your parent or guardian did not approve this account. Contact them if you think this is a mistake.
   </p>
-  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+  <div> class="scb-u-13"
     <button class="btn" onclick="checkParentalConsentStatus()">Check again</button>
     <button class="btn btn-ghost" onclick="logOut()">Log out</button>
   </div>
 </div>
 
-<div id="email-verify-gate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:600;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px">
-  <div style="font-size:48px;margin-bottom:16px">📧</div>
-  <h2 style="margin-bottom:8px">Confirm your email to continue</h2>
-  <p style="color:var(--muted);max-width:380px;margin-bottom:6px">
+<div class="scb-u-8" id="email-verify-gate">
+  <div> class="scb-u-9"📧</div>
+  <h2> class="scb-u-10"Confirm your email to continue</h2>
+  <p> class="scb-u-14"
     SoCloudyBro needs your email confirmed before you can use your account. We'll send a 6-digit code to your email.
   </p>
 
-  <div id="email-otp-step-email" style="width:100%;max-width:300px;margin-top:10px">
-    <input type="email" id="email-otp-address" placeholder="your@email.com" autocomplete="email" style="margin-bottom:10px">
+  <div class="scb-u-15" id="email-otp-step-email">
+    <input class="scb-u-16" type="email" id="email-otp-address" placeholder="your@email.com" autocomplete="email">
     <button class="btn btn-full" id="email-otp-send-btn" onclick="sendEmailOtp()">Send code</button>
   </div>
 
-  <div id="email-otp-step-code" style="display:none;width:100%;max-width:300px;margin-top:10px">
-    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Code sent to <strong id="email-otp-sent-to"></strong>. Enter it below.</p>
-    <input type="text" id="email-otp-code" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="margin-bottom:10px;text-align:center;letter-spacing:4px;font-size:20px">
+  <div class="scb-u-17" id="email-otp-step-code">
+    <p> class="scb-u-18"Code sent to <strong id="email-otp-sent-to"></strong>. Enter it below.</p>
+    <input class="scb-u-19" type="text" id="email-otp-code" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
     <button class="btn btn-full" id="email-otp-verify-btn" onclick="verifyEmailOtp()">Verify</button>
-    <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="resetEmailOtpStep()">Use a different email / resend</button>
+    <button class="btn btn-ghost btn-sm scb-u-7" onclick="resetEmailOtpStep()">Use a different email / resend</button>
   </div>
 
-  <p id="email-otp-note" style="font-size:12px;color:var(--muted);max-width:360px;margin:10px 0 0"></p>
-  <div class="error-text" id="email-verify-error" style="margin:6px 0"></div>
+  <p class="scb-u-20" id="email-otp-note"></p>
+  <div class="error-text scb-u-21" id="email-verify-error"></div>
 
-  <details style="margin-top:14px;max-width:360px">
-    <summary style="cursor:pointer;font-size:12px;color:var(--muted)">Or verify with Google instead</summary>
-    <div id="google-btn-emailverify" style="display:flex;justify-content:center;margin:14px 0"></div>
-    <button class="btn" id="email-verify-fallback" style="display:none" disabled>Google sign-in unavailable</button>
-    <p id="email-verify-note" style="display:none;font-size:12px;color:var(--muted);max-width:360px;margin-bottom:10px"></p>
+  <details> class="scb-u-22"
+    <summary> class="scb-u-23"Or verify with Google instead</summary>
+    <div class="scb-u-24" id="google-btn-emailverify"></div>
+    <button class="btn scb-u-25" id="email-verify-fallback" disabled>Google sign-in unavailable</button>
+    <p class="scb-u-26" id="email-verify-note"></p>
   </details>
 
-  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:14px">
+  <div> class="scb-u-27"
     <button class="btn btn-ghost btn-sm" onclick="checkEmailVerifyStatus()">Check again</button>
     <button class="btn btn-ghost btn-sm" onclick="logOut()">Log out</button>
   </div>
 </div>
 
 <div class="overlay" id="parental-approval-modal">
-  <div class="modal" style="max-width:420px">
+  <div class="modal scb-u-28">
     <div class="modal-header"><h2>👪 Approve account</h2><p>Someone signed up using your email as their parent/guardian contact.</p></div>
-    <div class="modal-body" style="padding-bottom:14px" id="parental-approval-list"></div>
+    <div class="modal-body scb-u-29" id="parental-approval-list"></div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('parental-approval-modal')">Remind me later</button></div>
   </div>
 </div>
 
-<div id="tutorial-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:700;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-card);max-width:380px;width:100%;padding:24px;text-align:center">
-    <div id="tutorial-step-icon" style="font-size:40px;margin-bottom:12px"></div>
-    <h3 id="tutorial-step-title" style="margin:0 0 8px"></h3>
-    <p id="tutorial-step-body" style="color:var(--muted);font-size:13px;margin:0 0 18px"></p>
-    <div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px" id="tutorial-dots"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost btn-sm" onclick="skipTutorial()" style="flex:1">Skip</button>
-      <button class="btn btn-sm" onclick="tutorialNext()" id="tutorial-next-btn" style="flex:1">Next</button>
+<div class="scb-u-30" id="tutorial-overlay">
+  <div> class="scb-u-31"
+    <div class="scb-u-32" id="tutorial-step-icon"></div>
+    <h3 class="scb-u-33" id="tutorial-step-title"></h3>
+    <p class="scb-u-34" id="tutorial-step-body"></p>
+    <div class="scb-u-35" id="tutorial-dots"></div>
+    <div> class="scb-u-36"
+      <button class="btn btn-ghost btn-sm scb-u-37" onclick="skipTutorial()">Skip</button>
+      <button class="btn btn-sm scb-u-37" onclick="tutorialNext()" id="tutorial-next-btn">Next</button>
     </div>
   </div>
 </div>
@@ -2020,27 +2288,27 @@ body.device-tablet .msg-body{max-width:74%}
 <button id="sb-restore-btn" onclick="toggleFocusMode()" title="Show sidebar (Ctrl+B)">&#x276F;</button>
 <div id="shell">
   <div id="sidebar">
-    <div id="sb-titlebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><defs><linearGradient id="scb-logo-grad" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f8ef7"/><stop offset="0.5" stop-color="#6b5de8"/><stop offset="1" stop-color="#8b3fbd"/></linearGradient></defs><path d="M7 17a4 4 0 1 1 .3-7.98A5.5 5.5 0 0 1 18 10.5a4 4 0 0 1-.6 7.5H7z" fill="url(#scb-logo-grad)"/><path d="M9.4 18.2l-1.9 3 3.5-1.5z" fill="url(#scb-logo-grad)"/></svg><span>SoCloudyBro</span><button id="admin-dash-btn" class="icon-btn" onclick="openAdminDashboard()" title="Admin Dashboard" style="display:none;margin-left:auto;-webkit-app-region:no-drag;position:relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z"/></svg><span id="admin-err-badge" hidden style="position:absolute;top:-3px;right:-3px;background:#e74c3c;color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px;line-height:1.4;pointer-events:none"></span></button></div>
+    <div id="sb-titlebar"><svg class="scb-u-38" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="scb-logo-grad" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f8ef7"/><stop offset="0.5" stop-color="#6b5de8"/><stop offset="1" stop-color="#8b3fbd"/></linearGradient></defs><path d="M7 17a4 4 0 1 1 .3-7.98A5.5 5.5 0 0 1 18 10.5a4 4 0 0 1-.6 7.5H7z" fill="url(#scb-logo-grad)"/><path d="M9.4 18.2l-1.9 3 3.5-1.5z" fill="url(#scb-logo-grad)"/></svg><span>SoCloudyBro</span><button id="admin-dash-btn" class="icon-btn scb-u-39" onclick="openAdminDashboard()" title="Admin Dashboard"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z"/></svg><span class="scb-u-40" id="admin-err-badge" hidden></span></button></div>
     <div id="sb-head">
       <div id="my-card" onclick="showSettings()">
         <div id="my-avatar-wrap">
-          <div class="avatar" id="my-avatar" style="background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff">?</div>
+          <div class="avatar scb-u-41" id="my-avatar">?</div>
           <div class="online-ring"></div>
         </div>
         <div id="my-info">
           <div id="my-name">Set up account</div>
-          <div id="my-status-text"><span style="color:var(--success)">●</span> Online</div>
+          <div id="my-status-text"><span> class="scb-u-42"●</span> Online</div>
         </div>
       </div>
     </div>
     <div id="sb-search">
   <!-- Honeypot inputs: Chrome targets named inputs for autofill; these absorb
        any email/password fill-attempts before they reach the search field. -->
-  <input type="text" name="fakeusername_sbsearch" style="display:none" tabindex="-1" aria-hidden="true" autocomplete="username">
-  <input type="password" name="fakepassword_sbsearch" style="display:none" tabindex="-1" aria-hidden="true" autocomplete="current-password">
+  <input class="scb-u-25" type="text" name="fakeusername_sbsearch" tabindex="-1" aria-hidden="true" autocomplete="username">
+  <input class="scb-u-25" type="password" name="fakepassword_sbsearch" tabindex="-1" aria-hidden="true" autocomplete="current-password">
   <input type="search" id="sb-search-input" placeholder="🔍  Search…" oninput="onSearchInput(this.value)" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"/>
 </div>
-<div id="search-results" style="display:none;flex-direction:column;max-height:300px;overflow-y:auto;border-bottom:1px solid var(--border);padding:4px 8px"></div>
+<div class="scb-u-43" id="search-results"></div>
     <div class="sb-tabs-wrap">
       <div id="sb-tabs">
         <button class="sb-tab active" id="sb-tab-chats" data-tab="chats" draggable="true" onclick="switchTab('chats',this)">Chats</button>
@@ -2077,7 +2345,7 @@ body.device-tablet .msg-body{max-width:74%}
   <div id="main">
     <div id="main-empty">
       <div id="dashboard-header">
-        <button class="icon-btn" id="home-back-btn" onclick="closeHomeToSidebar()" title="Back to chats" style="align-self:flex-start">←</button>
+        <button class="icon-btn scb-u-44" id="home-back-btn" onclick="closeHomeToSidebar()" title="Back to chats">←</button>
         <div class="hero-icon">☁</div>
         <h2>SoCloudyBro</h2>
         <p>Select a conversation, or check what's happening below.</p>
@@ -2088,16 +2356,16 @@ body.device-tablet .msg-body{max-width:74%}
     <div id="chat-panel">
       <div id="chat-header">
         <button class="icon-btn" id="chat-back-btn" onclick="closeChatToSidebar()" title="Back to chats">←</button>
-        <div id="chat-header-av" class="avatar" style="background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;width:36px;height:36px;font-size:13px">?</div>
+        <div id="chat-header-av" class="avatar scb-u-45">?</div>
         <div id="chat-header-info">
-          <div id="chat-header-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" title="Click for info">—</div>
+          <div class="scb-u-46" id="chat-header-name" title="Click for info">—</div>
           <div id="chat-header-sub">offline</div>
         </div>
         <div class="header-actions">
           <button class="icon-btn" onclick="toggleMsgSearch()" title="Search in chat" id="msg-search-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
-          <button class="icon-btn" onclick="startDirectCall(activeConvo)" title="Voice call" id="call-btn" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94m-1 7.98v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
-          <button class="icon-btn" onclick="quickGroupWithContact()" title="Create group with this contact" id="quick-group-btn" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></button>
-          <button class="icon-btn" onclick="quickAddMember()" title="Add member" id="add-member-btn" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <button class="icon-btn scb-u-25" onclick="startDirectCall(activeConvo)" title="Voice call" id="call-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94m-1 7.98v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+          <button class="icon-btn scb-u-25" onclick="quickGroupWithContact()" title="Create group with this contact" id="quick-group-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></button>
+          <button class="icon-btn scb-u-25" onclick="quickAddMember()" title="Add member" id="add-member-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
           <button class="icon-btn" onclick="lockChatToggle()" title="Lock chat" id="lock-chat-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></button>
           <button class="icon-btn" onclick="toggleHeaderMenu(event)" title="More options">⋯</button>
         </div>
@@ -2106,40 +2374,40 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="ctx-item" onclick="hideHeaderMenu();archiveToggle()" id="archive-menu-item">📁 Archive</div>
           <div class="ctx-item" onclick="hideHeaderMenu();muteToggle()" id="mute-menu-item">🔕 Mute notifications</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openDisappearingMenu()" id="disappear-menu-item">⏱ Disappearing messages</div>
-          <div class="ctx-item" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item" style="display:none">🔐 Verify security</div>
+          <div class="ctx-item scb-u-25" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item">🔐 Verify security</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openChatWallpaperPicker()">🖼️ Wallpaper for this chat</div>
-          <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockUser()" id="block-menu-item" style="display:none">⛔ Block</div>
-          <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockCallsOnly()" id="block-calls-menu-item" style="display:none">📵 Block calls only</div>
-          <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockMessagesOnly()" id="block-messages-menu-item" style="display:none">🔇 Block messages only</div>
-          <div class="ctx-item" onclick="hideHeaderMenu();openReport()" style="color:var(--danger)">🚩 Report</div>
+          <div class="ctx-item scb-u-25" onclick="hideHeaderMenu();toggleBlockUser()" id="block-menu-item">⛔ Block</div>
+          <div class="ctx-item scb-u-25" onclick="hideHeaderMenu();toggleBlockCallsOnly()" id="block-calls-menu-item">📵 Block calls only</div>
+          <div class="ctx-item scb-u-25" onclick="hideHeaderMenu();toggleBlockMessagesOnly()" id="block-messages-menu-item">🔇 Block messages only</div>
+          <div class="ctx-item scb-u-47" onclick="hideHeaderMenu();openReport()">🚩 Report</div>
         </div>
       </div>
-      <div id="channel-bar" style="display:none"></div>
-      <div id="key-change-banner" style="display:none;align-items:center;gap:8px;padding:8px 12px;background:var(--warn-soft,rgba(230,159,0,0.16));color:var(--warn-text,#8a5d00);font-size:12px;flex-shrink:0"></div>
-      <div id="cross-channel-typing" style="display:none"></div>
-      <div id="voice-bar" style="display:none"></div>
-      <div id="msg-search-bar" style="display:none;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
-        <input type="text" id="msg-search-input" placeholder="Search in this chat…" oninput="msgSearchInput(this.value)" onkeydown="msgSearchKeydown(event)" style="flex:1"/>
-        <span id="msg-search-count" style="font-size:11px;color:var(--muted);white-space:nowrap;min-width:50px;text-align:center">0 / 0</span>
+      <div class="scb-u-25" id="channel-bar"></div>
+      <div class="scb-u-48" id="key-change-banner"></div>
+      <div class="scb-u-25" id="cross-channel-typing"></div>
+      <div class="scb-u-25" id="voice-bar"></div>
+      <div class="scb-u-49" id="msg-search-bar">
+        <input class="scb-u-37" type="text" id="msg-search-input" placeholder="Search in this chat…" oninput="msgSearchInput(this.value)" onkeydown="msgSearchKeydown(event)"/>
+        <span class="scb-u-50" id="msg-search-count">0 / 0</span>
         <button class="icon-btn" onclick="msgSearchNav(-1)" title="Previous match">↑</button>
         <button class="icon-btn" onclick="msgSearchNav(1)" title="Next match">↓</button>
         <button class="icon-btn" onclick="toggleMsgSearch()" title="Close search">✕</button>
       </div>
       <div id="chat-bg-wrapper">
         <div id="chat-anim-overlay"></div>
-        <div id="group-desc-banner" style="display:none"></div>
-        <div id="pinned-banner" onclick="scrollToPinned()" style="display:none"></div>
+        <div class="scb-u-25" id="group-desc-banner"></div>
+        <div class="scb-u-25" id="pinned-banner" onclick="scrollToPinned()"></div>
         <div id="messages-wrap"></div>
-        <button id="jump-to-bottom-btn" onclick="jumpToBottom()" title="Jump to latest message" style="display:none">
+        <button class="scb-u-25" id="jump-to-bottom-btn" onclick="jumpToBottom()" title="Jump to latest message">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
         </button>
         <div id="chat-drop-overlay"><div id="chat-drop-overlay-inner">📎 Drop to send</div></div>
       </div>
-      <div id="msg-select-bar" style="display:none">
+      <div class="scb-u-25" id="msg-select-bar">
         <span id="msg-select-count">0 selected</span>
         <div id="msg-select-actions">
           <button class="btn btn-ghost btn-sm" onclick="msgSelectForward()">↪ Forward</button>
-          <button class="btn btn-sm" style="background:var(--danger)" onclick="msgSelectDelete()">🗑 Delete</button>
+          <button class="btn btn-sm scb-u-51" onclick="msgSelectDelete()">🗑 Delete</button>
           <button class="btn btn-ghost btn-sm" onclick="exitMsgSelectMode()">Cancel</button>
         </div>
       </div>
@@ -2152,9 +2420,9 @@ body.device-tablet .msg-body{max-width:74%}
             <button class="gif-picker-tab" data-tab="emoji" onclick="switchGifPickerTab('emoji')">😀 Emoji</button>
           </div>
           <div id="gif-grid"></div>
-          <div id="emoji-grid" style="display:none"></div>
+          <div class="scb-u-25" id="emoji-grid"></div>
         </div>
-        <div id="reply-preview-row" style="display:none">
+        <div class="scb-u-25" id="reply-preview-row">
           <div id="reply-preview-text"></div>
           <span id="reply-preview-cancel" onclick="cancelReply()" title="Cancel reply">✕</span>
         </div>
@@ -2171,16 +2439,16 @@ body.device-tablet .msg-body{max-width:74%}
           <!-- Action buttons row -->
           <div id="compose-actions">
             <button class="compose-btn" onclick="openAttachPicker()" title="Attach file (max 50MB)">📎</button>
-            <input type="file" id="file-attach-input" style="display:none" onchange="handleFileAttach(this)"/>
-            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleCameraCapture(this)"/>
+            <input class="scb-u-25" type="file" id="file-attach-input" onchange="handleFileAttach(this)"/>
+            <input class="scb-u-25" type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleCameraCapture(this)"/>
             <button class="compose-btn gif-btn" onclick="toggleGif()" title="GIF">GIF</button>
             <button class="compose-btn" onclick="openCameraCapture()" title="Take photo">📷</button>
-            <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none">📊</button>
+            <button class="compose-btn scb-u-25" id="poll-compose-btn" onclick="openPollModal()" title="Poll">📊</button>
             <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game">🎮</button>
             <button class="compose-btn" id="self-destruct-btn" onclick="sendSelfDestructMsg()" title="View-once message">💣</button>
             <button class="compose-btn" id="schedule-msg-btn" onclick="openScheduleMsg()" title="Schedule this message">🕐</button>
             <button class="compose-btn" id="voice-msg-btn" onclick="toggleVoiceMsgRecording()" title="Record voice message">🎙️</button>
-            <button class="compose-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text" style="display:none">🎤</button>
+            <button class="compose-btn scb-u-25" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text">🎤</button>
           </div>
           <!-- Input + send row -->
           <div id="compose-input-row">
@@ -2188,7 +2456,7 @@ body.device-tablet .msg-body{max-width:74%}
             <button id="send-btn" onclick="sendMsg()">➤</button>
           </div>
         </div>
-        <div id="upload-progress-row" style="display:none">
+        <div class="scb-u-25" id="upload-progress-row">
           <div id="upload-progress-name"></div>
           <div id="upload-progress-track"><div id="upload-progress-fill"></div></div>
           <div id="upload-progress-pct"></div>
@@ -2197,9 +2465,9 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
 
     <div id="settings-panel">
-      <div id="settings-header" style="flex-shrink:0">
+      <div class="scb-u-38" id="settings-header">
         <button class="icon-btn" onclick="hideSettings()">←</button>
-        <div style="font-size:15px;font-weight:600;margin-left:4px">Settings</div>
+        <div> class="scb-u-52"Settings</div>
       </div>
       <div id="settings-tab-bar">
         <button class="stab active" data-tab="profile" onclick="switchSettingsTab('profile')"><span class="stab-icon">👤</span>Profile</button>
@@ -2221,10 +2489,10 @@ body.device-tablet .msg-body{max-width:74%}
             </div>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="openEditProfile()">Edit Profile</button>
-          <div id="scb-accounts-section" style="margin:12px 16px 16px">
-            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;border-top:1px solid var(--border);padding-top:12px">Saved Accounts</div>
-            <div id="scb-accounts-list"><div style="font-size:12px;color:var(--muted);padding:4px 0">No other accounts saved.</div></div>
-            <button class="btn btn-ghost btn-sm" style="margin:10px 0 0;width:100%;box-sizing:border-box" onclick="addAnotherAccount()">+ Add Account</button>
+          <div class="scb-u-53" id="scb-accounts-section">
+            <div> class="scb-u-54"Saved Accounts</div>
+            <div id="scb-accounts-list"><div> class="scb-u-55"No other accounts saved.</div></div>
+            <button class="btn btn-ghost btn-sm scb-u-56" onclick="addAnotherAccount()">+ Add Account</button>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="looks">
@@ -2255,15 +2523,15 @@ body.device-tablet .msg-body{max-width:74%}
               <button class="btn btn-ghost btn-sm" onclick="setTheme('schedule')" id="theme-schedule-btn">🕒 Schedule</button>
             </div>
           </div>
-          <div class="settings-row" id="theme-schedule-row" style="display:none">
+          <div class="settings-row scb-u-25" id="theme-schedule-row">
             <div class="settings-row-main"><div class="settings-row-label">Dark mode hours</div><div class="settings-row-sub">Switches automatically at these times each day</div></div>
             <div class="settings-row-actions">
-              <input type="time" id="theme-schedule-start" value="20:00" onchange="saveThemeSchedule()" style="width:110px">
-              <span style="color:var(--muted)">to</span>
-              <input type="time" id="theme-schedule-end" value="07:00" onchange="saveThemeSchedule()" style="width:110px">
+              <input class="scb-u-57" type="time" id="theme-schedule-start" value="20:00" onchange="saveThemeSchedule()">
+              <span> class="scb-u-58"to</span>
+              <input class="scb-u-57" type="time" id="theme-schedule-end" value="07:00" onchange="saveThemeSchedule()">
             </div>
           </div>
-          <div class="settings-row" id="fullscreen-row" style="display:none">
+          <div class="settings-row scb-u-25" id="fullscreen-row">
             <div class="settings-row-main"><div class="settings-row-label">Fullscreen</div><div class="settings-row-sub">More screen space, fewer browser distractions</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="toggleFullscreen()" id="fullscreen-toggle-btn">⛶ Toggle</button></div>
           </div>
@@ -2352,15 +2620,15 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div class="settings-section" data-settings-tab="security">
           <h3>Security</h3>
-          <div id="security-score-card" onclick="openSecurityLog()" style="margin:0 16px 8px;padding:14px 16px;background:linear-gradient(135deg,var(--accent,#6b5de8),#4f46e5);border-radius:var(--r-sm,10px);color:#fff;display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none">
-            <div style="font-size:30px;font-weight:800;line-height:1;min-width:40px;text-align:center" id="sec-score-num">—</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600" id="sec-score-label">Security score</div>
-              <div style="font-size:11px;opacity:0.82;margin-top:2px" id="sec-score-sub">Loading…</div>
+          <div class="scb-u-59" id="security-score-card" onclick="openSecurityLog()">
+            <div class="scb-u-60" id="sec-score-num">—</div>
+            <div> class="scb-u-61"
+              <div class="scb-u-62" id="sec-score-label">Security score</div>
+              <div class="scb-u-63" id="sec-score-sub">Loading…</div>
             </div>
-            <div style="font-size:22px;opacity:0.9" id="sec-score-icon">🔒</div>
+            <div class="scb-u-64" id="sec-score-icon">🔒</div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="openChangePassword()">
+          <div class="settings-row scb-u-65" onclick="openChangePassword()">
             <div class="settings-row-main"><div class="settings-row-label">Change Password</div><div class="settings-row-sub">Update your account password</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Change</button></div>
           </div>
@@ -2368,38 +2636,38 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Passkeys</div><div class="settings-row-sub">Sign in on this device without a password, using Face/Touch ID or a security key</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="registerPasskey()">+ Add</button></div>
           </div>
-          <div id="scb-passkeys-list" style="padding:0 16px 8px"></div>
-          <div class="settings-row" style="cursor:pointer" onclick="openBackupPinSetup()">
+          <div class="scb-u-66" id="scb-passkeys-list"></div>
+          <div class="settings-row scb-u-65" onclick="openBackupPinSetup()">
             <div class="settings-row-main"><div class="settings-row-label">Backup PIN</div><div class="settings-row-sub" id="backup-pin-status-text">Not set</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="backup-pin-btn-text">Set PIN</button></div>
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Trusted Devices</div><div class="settings-row-sub">Devices that skip the 2FA code for 30 days after you check "Trust this device"</div></div>
           </div>
-          <div id="scb-trusted-devices-list" style="padding:0 16px 8px"></div>
-          <div class="settings-row" style="cursor:pointer" onclick="openPinSetup()">
+          <div class="scb-u-66" id="scb-trusted-devices-list"></div>
+          <div class="settings-row scb-u-65" onclick="openPinSetup()">
             <div class="settings-row-main"><div class="settings-row-label">PIN Lock</div><div class="settings-row-sub" id="pin-status-text">Not set</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="pin-btn-text">Set PIN</button></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="onToggleTotpClick()">
-            <div class="settings-row-main"><div class="settings-row-label">Two-Factor Authentication <span id="totp-nudge-badge" style="display:none;font-size:10px;font-weight:700;color:#fff;background:var(--warn);border-radius:8px;padding:1px 6px;margin-left:4px;vertical-align:middle">Recommended</span></div><div class="settings-row-sub" id="totp-status-text">Off — use an authenticator app for an extra login step</div></div>
+          <div class="settings-row scb-u-65" onclick="onToggleTotpClick()">
+            <div class="settings-row-main"><div class="settings-row-label">Two-Factor Authentication <span class="scb-u-67" id="totp-nudge-badge">Recommended</span></div><div class="settings-row-sub" id="totp-status-text">Off — use an authenticator app for an extra login step</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="totp-btn-text">Enable</button></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="onToggleFaceMfaClick()">
+          <div class="settings-row scb-u-65" onclick="onToggleFaceMfaClick()">
             <div class="settings-row-main"><div class="settings-row-label">Face Recognition (MFA)</div><div class="settings-row-sub" id="face-mfa-status-text">Off — an alternative to an authenticator app, using your camera</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="face-mfa-btn-text">Enable</button></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="openSecurityQuestionsSetup()">
+          <div class="settings-row scb-u-65" onclick="openSecurityQuestionsSetup()">
             <div class="settings-row-main"><div class="settings-row-label">Security Questions</div><div class="settings-row-sub" id="secq-status-text">Not set — the only way to recover your account if you forget your password</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="secq-btn-text">Set Up</button></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="rotateE2EKeys()">
+          <div class="settings-row scb-u-65" onclick="rotateE2EKeys()">
             <div class="settings-row-main"><div class="settings-row-label">Rotate Encryption Keys</div><div class="settings-row-sub">Generates a new E2E keypair now — future messages use the new keys. Also happens automatically every 90 days.</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Rotate</button></div>
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Cross-Device Encryption</div><div class="settings-row-sub">Your decryption key syncs automatically — just log in on any device to read your messages</div></div>
-            <div class="settings-row-actions"><span style="color:var(--success,#4caf50);font-size:13px">Auto ✓</span></div>
+            <div class="settings-row-actions"><span> class="scb-u-68"Auto ✓</span></div>
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Self-Destruct Account</div><div class="settings-row-sub">Automatically delete this account after a period of inactivity. Logging in at all resets the clock.</div></div>
@@ -2412,13 +2680,13 @@ body.device-tablet .msg-body{max-width:74%}
               </select>
             </div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="openLoginHistory()">
+          <div class="settings-row scb-u-65" onclick="openLoginHistory()">
             <div class="settings-row-main"><div class="settings-row-label">Login History</div><div class="settings-row-sub">See your last 5 logins and the device used</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="openSecurityLog()">
+          <div class="settings-row scb-u-65" onclick="openSecurityLog()">
             <div class="settings-row-main"><div class="settings-row-label">Security Log</div><div class="settings-row-sub" id="sec-log-sub">Recent logins, password changes, and 2FA events</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="security">
@@ -2466,7 +2734,7 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div class="settings-section" data-settings-tab="looks">
           <h3>Home Screen</h3>
-          <div class="settings-row" style="cursor:pointer" onclick="openCustomizeUI()">
+          <div class="settings-row scb-u-65" onclick="openCustomizeUI()">
             <div class="settings-row-main"><div class="settings-row-label">Customize UI</div><div class="settings-row-sub">Add, remove, drag, and resize widgets on your home screen</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Open Editor</button></div>
           </div>
@@ -2493,54 +2761,54 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Devices signed in</div><div class="settings-row-sub">A list of devices that have used your account. Remove entries you don't recognize.</div></div>
           </div>
           <div id="sessions-list"></div>
-          <div class="settings-row" style="cursor:pointer" onclick="logOutOtherSessions()">
+          <div class="settings-row scb-u-65" onclick="logOutOtherSessions()">
             <div class="settings-row-main"><div class="settings-row-label">Clear other devices</div><div class="settings-row-sub">Remove every entry except this device from the list</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Clear Others</button></div>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="more">
           <h3>Feedback &amp; Support</h3>
-          <div class="settings-row" style="cursor:pointer" onclick="openFeedbackModal('rate')">
+          <div class="settings-row scb-u-65" onclick="openFeedbackModal('rate')">
             <div class="settings-row-main"><div class="settings-row-label">⭐ Rate the App</div><div class="settings-row-sub">Tell us how you'd rate SoCloudyBro</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="openFeedbackModal('feedback')">
+          <div class="settings-row scb-u-65" onclick="openFeedbackModal('feedback')">
             <div class="settings-row-main"><div class="settings-row-label">💬 Send Feedback</div><div class="settings-row-sub">Share ideas, suggestions, or general thoughts</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="openFeedbackModal('bug')">
+          <div class="settings-row scb-u-65" onclick="openFeedbackModal('bug')">
             <div class="settings-row-main"><div class="settings-row-label">🐛 Report a Bug</div><div class="settings-row-sub">Found something broken? Let us know</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="openContactUs()">
+          <div class="settings-row scb-u-65" onclick="openContactUs()">
             <div class="settings-row-main"><div class="settings-row-label">📞 Contact Us</div><div class="settings-row-sub">Get help directly from an SCB admin</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
           </div>
-          <div class="settings-row" style="cursor:pointer" onclick="openSecurityDisclosure()">
+          <div class="settings-row scb-u-65" onclick="openSecurityDisclosure()">
             <div class="settings-row-main"><div class="settings-row-label">🛡 Report a Security Vulnerability</div><div class="settings-row-sub">Found a security issue? Report it responsibly — not as a public bug report</div></div>
-            <div class="settings-row-actions"><span style="color:var(--muted);font-size:13px">›</span></div>
+            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
           </div>
         </div>
         <!-- BUSINESS ACCOUNT SETTINGS -->
         <div class="settings-section" id="biz-settings-section" data-settings-tab="business">
           <h3>Business Account</h3>
-          <div class="settings-row" style="cursor:pointer" onclick="toggleBizMode()">
+          <div class="settings-row scb-u-65" onclick="toggleBizMode()">
             <div class="settings-row-main">
-              <div class="settings-row-label">Business Mode <span id="biz-mode-badge" style="display:none" class="biz-badge">BIZ</span></div>
+              <div class="settings-row-label">Business Mode <span id="biz-mode-badge" class="biz-badge scb-u-25">BIZ</span></div>
               <div class="settings-row-sub" id="biz-mode-sub">Turn your profile into a business page with product/website showcase</div>
             </div>
             <div class="settings-row-actions"><button class="btn btn-sm" id="biz-mode-btn">Enable</button></div>
           </div>
-          <div id="biz-settings-expanded" style="display:none">
-            <div class="settings-row" style="cursor:pointer" onclick="openBizProfileEditor()">
+          <div class="scb-u-25" id="biz-settings-expanded">
+            <div class="settings-row scb-u-65" onclick="openBizProfileEditor()">
               <div class="settings-row-main"><div class="settings-row-label">Business Profile</div><div class="settings-row-sub">Edit your business name, description and logo</div></div>
               <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Edit</button></div>
             </div>
-            <div class="settings-row" style="cursor:pointer" onclick="openBizProductsEditor()">
+            <div class="settings-row scb-u-65" onclick="openBizProductsEditor()">
               <div class="settings-row-main"><div class="settings-row-label">Products &amp; Links</div><div class="settings-row-sub" id="biz-products-sub">No products added yet</div></div>
               <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Manage</button></div>
             </div>
-            <div class="settings-row" style="cursor:pointer" onclick="openBizBotEditor()">
+            <div class="settings-row scb-u-65" onclick="openBizBotEditor()">
               <div class="settings-row-main"><div class="settings-row-label">Auto-reply Bot</div><div class="settings-row-sub" id="biz-bot-sub">Automatically reply to DMs with keyword-based answers</div></div>
               <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="biz-bot-toggle-btn">Off</button></div>
             </div>
@@ -2548,12 +2816,12 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div class="settings-section" data-settings-tab="profile">
           <h3>Account</h3>
-          <div class="settings-row" style="cursor:pointer" onclick="logOut()">
+          <div class="settings-row scb-u-65" onclick="logOut()">
             <div class="settings-row-main"><div class="settings-row-label">Log Out</div><div class="settings-row-sub">Sign out of your account on this device</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Log Out</button></div>
           </div>
           <div class="settings-row">
-            <div class="settings-row-main"><div class="settings-row-label" style="color:var(--danger)">Delete Account</div><div class="settings-row-sub" id="delete-account-sub">Permanently remove your account and data</div></div>
+            <div class="settings-row-main"><div class="settings-row-label scb-u-47">Delete Account</div><div class="settings-row-sub" id="delete-account-sub">Permanently remove your account and data</div></div>
             <div class="settings-row-actions"><button class="btn btn-danger btn-sm" id="delete-account-btn" onclick="deleteMyAccountStep1()">Delete</button></div>
           </div>
         </div>
@@ -2562,7 +2830,7 @@ body.device-tablet .msg-body{max-width:74%}
 
     <div id="updates-panel">
       <div id="updates-header">
-        <div style="display:flex;align-items:center;gap:8px">
+        <div> class="scb-u-70"
           <button class="icon-btn" onclick="hideUpdates()">←</button>
           <h2>Game Updates</h2>
         </div>
@@ -2582,21 +2850,21 @@ body.device-tablet .msg-body{max-width:74%}
 <div id="toast"><div id="toast-title"></div><div id="toast-body"></div></div>
 
 <div class="overlay" id="forward-modal">
-  <div class="modal" style="max-width:360px">
+  <div class="modal scb-u-71">
     <div class="modal-header"><h2>Forward message</h2><p>Choose who to forward this to.</p></div>
-    <div class="modal-body" style="padding-bottom:14px" id="forward-list"></div>
+    <div class="modal-body scb-u-29" id="forward-list"></div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('forward-modal')">Cancel</button></div>
   </div>
 </div>
 
 <div class="overlay" id="feedback-modal">
-  <div class="modal" style="max-width:380px">
+  <div class="modal scb-u-72">
     <div class="modal-header">
       <h2 id="feedback-modal-title">Feedback</h2>
       <p id="feedback-modal-sub">Help us improve SoCloudyBro</p>
     </div>
-    <div class="modal-body" id="feedback-modal-body" style="padding-bottom:4px"></div>
-    <div class="modal-footer" style="gap:8px">
+    <div class="modal-body scb-u-73" id="feedback-modal-body"></div>
+    <div class="modal-footer scb-u-74">
       <button class="btn btn-ghost" onclick="closeModal('feedback-modal')">Cancel</button>
       <button class="btn" id="feedback-submit-btn" onclick="submitFeedback()">Send</button>
     </div>
@@ -2604,9 +2872,9 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <div class="overlay" id="tryit-chat-modal">
-  <div class="modal" style="max-width:360px">
+  <div class="modal scb-u-71">
     <div class="modal-header"><h2>Try it out</h2><p>Pick a chat to try this feature in.</p></div>
-    <div class="modal-body" style="padding-bottom:14px" id="tryit-chat-list"></div>
+    <div class="modal-body scb-u-29" id="tryit-chat-list"></div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('tryit-chat-modal')">Cancel</button></div>
   </div>
 </div>
@@ -2625,12 +2893,12 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="ctx-item danger" onclick="ctxAction('delete')">🗑 Delete</div>
 </div>
 
-<div id="contact-ctx-menu" style="position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);z-index:300;min-width:180px;padding:4px;display:none;animation:modalIn 0.16s cubic-bezier(0.16,1,0.3,1)">
+<div class="scb-u-75" id="contact-ctx-menu">
   <div class="ctx-item danger" onclick="removeContact()">🗑 Remove Contact</div>
 </div>
 
 <!-- PUBLIC LANDING PAGE — visible before login, satisfies Google OAuth verification -->
-<div id="landing-page" style="display:none;position:fixed;inset:0;z-index:500;overflow-y:auto;background:var(--bg);color:var(--text);font-family:inherit">
+<div class="scb-u-76" id="landing-page">
   <style>
     .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid transparent;position:sticky;top:0;background:var(--bg);background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);z-index:10;gap:12px;transition:background .25s,border-color .25s,box-shadow .25s}
     .lp-nav.lp-nav-scrolled{border-bottom-color:var(--border);box-shadow:0 4px 24px rgba(0,0,0,.08)}
@@ -2722,12 +2990,12 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="lp-section-label">Private Messaging</div>
         <h2>Real conversations, real privacy.</h2>
         <p class="lead">Every message is end-to-end encrypted on your device before it leaves. React, reply, pin, and search — everything you love in a modern chat.</p>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">↩️</span> Reply to any message in a thread</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">❤️</span> React with emoji — see who reacted</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📌</span> Pin important messages for everyone</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🔍</span> Full-text message search</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">💣</span> View-once self-destructing messages</div>
+        <div> class="scb-u-77"
+          <div> class="scb-u-78"<span> class="scb-u-79"↩️</span> Reply to any message in a thread</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"❤️</span> React with emoji — see who reacted</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"📌</span> Pin important messages for everyone</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"🔍</span> Full-text message search</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"💣</span> View-once self-destructing messages</div>
         </div>
       </div>
       <div class="lp-mock">
@@ -2739,11 +3007,11 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="lp-mock-bubble them">Hey! Did you see what happened today? 👀</div>
           <div class="lp-mock-bubble me">No way, tell me everything 😭</div>
           <div class="lp-mock-bubble them">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;border-left:2px solid var(--accent);padding-left:6px">↩ Replying to: No way, tell me everything</div>
+            <div> class="scb-u-80"↩ Replying to: No way, tell me everything</div>
             OK so basically…
           </div>
           <div class="lp-mock-reactions"><span class="lp-mock-chip">😂 2</span><span class="lp-mock-chip">❤️ 1</span></div>
-          <div class="lp-mock-bubble me" style="margin-top:4px">🎙️</div>
+          <div class="lp-mock-bubble me scb-u-81">🎙️</div>
         </div>
       </div>
     </div>
@@ -2754,35 +3022,35 @@ body.device-tablet .msg-body{max-width:74%}
   <!-- FEATURE HIGHLIGHT: CALLS -->
   <div class="lp-section lp-reveal">
     <div class="lp-split">
-      <div class="lp-mock" style="order:1">
-        <div class="lp-mock-header" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:none">
-          <div style="flex:1;text-align:center">
-            <div style="font-size:12px;color:#a0aec0;margin-bottom:4px">Voice call · 2:34</div>
-            <div style="font-size:14px;font-weight:700;color:#fff">🎙️ Marcus &amp; You</div>
+      <div class="lp-mock scb-u-82">
+        <div class="lp-mock-header scb-u-83">
+          <div> class="scb-u-84"
+            <div> class="scb-u-85"Voice call · 2:34</div>
+            <div> class="scb-u-86"🎙️ Marcus &amp; You</div>
           </div>
         </div>
-        <div class="lp-mock-body" style="background:#0f172a;align-items:center;justify-content:center;gap:16px;padding:28px">
-          <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6b5de8,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;font-weight:700;border:3px solid rgba(107,93,232,0.5)">M</div>
+        <div class="lp-mock-body scb-u-87">
+          <div> class="scb-u-88"M</div>
           <div class="lp-wave-bar">
-            <span style="height:6px"></span><span style="height:12px"></span><span style="height:18px"></span><span style="height:10px"></span><span style="height:14px"></span><span style="height:20px"></span><span style="height:8px"></span><span style="height:16px"></span><span style="height:6px"></span><span style="height:14px"></span>
+            <span> class="scb-u-89"</span><span> class="scb-u-90"</span><span> class="scb-u-91"</span><span> class="scb-u-92"</span><span> class="scb-u-93"</span><span> class="scb-u-94"</span><span> class="scb-u-95"</span><span> class="scb-u-96"</span><span> class="scb-u-89"</span><span> class="scb-u-93"</span>
           </div>
-          <div style="display:flex;gap:12px;margin-top:8px">
-            <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">🎙️</div>
-            <div style="width:42px;height:42px;border-radius:50%;background:#e53e3e;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">📵</div>
-            <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">🖥️</div>
+          <div> class="scb-u-97"
+            <div> class="scb-u-98"🎙️</div>
+            <div> class="scb-u-99"📵</div>
+            <div> class="scb-u-98"🖥️</div>
           </div>
         </div>
       </div>
-      <div style="order:0">
+      <div> class="scb-u-100"
         <div class="lp-section-label">Voice &amp; Video Calls</div>
         <h2>Call anyone, anytime. No installs needed.</h2>
         <p class="lead">Browser-based WebRTC calls — no app download required. Voice call your friends, video chat with family, or host a group meeting. All encrypted.</p>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📞</span> Instant 1-on-1 voice calls</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📹</span> Video calls and group meetings</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🖥️</span> Screen sharing during calls</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🎙️</span> Voice messages you can record and send</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📋</span> Full call history</div>
+        <div> class="scb-u-77"
+          <div> class="scb-u-78"<span> class="scb-u-79"📞</span> Instant 1-on-1 voice calls</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"📹</span> Video calls and group meetings</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"🖥️</span> Screen sharing during calls</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"🎙️</span> Voice messages you can record and send</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"📋</span> Full call history</div>
         </div>
       </div>
     </div>
@@ -2797,24 +3065,24 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="lp-section-label">Groups &amp; Communities</div>
         <h2>Your crew. Your channels.</h2>
         <p class="lead">Create group spaces with channels, polls, and pinned messages. Perfect for friend groups, families, clubs, and communities of any size.</p>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">#</span> Multiple channels within one group</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📊</span> Live polls your friends can vote on</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🗣️</span> @mention any member</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">🎮</span> Built-in games and fun stuff</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="font-size:18px">📢</span> Announcements &amp; community updates</div>
+        <div> class="scb-u-77"
+          <div> class="scb-u-78"<span> class="scb-u-79"#</span> Multiple channels within one group</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"📊</span> Live polls your friends can vote on</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"🗣️</span> @mention any member</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"🎮</span> Built-in games and fun stuff</div>
+          <div> class="scb-u-78"<span> class="scb-u-79"📢</span> Announcements &amp; community updates</div>
         </div>
       </div>
       <div class="lp-mock">
         <div class="lp-mock-header">
-          <div class="lp-mock-av" style="border-radius:10px">👥</div>
+          <div class="lp-mock-av scb-u-101">👥</div>
           <div><div class="lp-mock-name">The Squad 🔥</div><div class="lp-mock-status">5 members · # general</div></div>
         </div>
         <div class="lp-mock-body">
-          <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px">— Today —</div>
-          <div class="lp-mock-bubble them"><b>📊 Poll:</b> Where are we going Friday?<br><span style="font-size:11px;color:var(--muted)">🍕 Pizza — 3 votes<br>🎬 Cinema — 1 vote</span></div>
+          <div> class="scb-u-102"— Today —</div>
+          <div class="lp-mock-bubble them"><b>📊 Poll:</b> Where are we going Friday?<br><span> class="scb-u-103"🍕 Pizza — 3 votes<br>🎬 Cinema — 1 vote</span></div>
           <div class="lp-mock-bubble me">Pizza obviously 🍕🍕</div>
-          <div class="lp-mock-bubble them" style="font-size:11.5px">📌 <b>@everyone</b> Meet at 7pm!</div>
+          <div class="lp-mock-bubble them scb-u-104">📌 <b>@everyone</b> Meet at 7pm!</div>
         </div>
       </div>
     </div>
@@ -2824,10 +3092,10 @@ body.device-tablet .msg-body{max-width:74%}
 
   <!-- ALL FEATURES GRID -->
   <div class="lp-section lp-reveal">
-    <div style="text-align:center;margin-bottom:32px">
-      <div class="lp-section-label" style="justify-content:center;display:flex">Everything included</div>
-      <h2 style="margin-bottom:8px">Packed with features. Zero cost.</h2>
-      <p style="font-size:14px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.6">Everything you need to stay connected — no subscriptions, no ads, no data selling.</p>
+    <div> class="scb-u-105"
+      <div class="lp-section-label scb-u-106">Everything included</div>
+      <h2> class="scb-u-10"Packed with features. Zero cost.</h2>
+      <p> class="scb-u-107"Everything you need to stay connected — no subscriptions, no ads, no data selling.</p>
     </div>
     <div class="lp-feat-grid">
       <div class="lp-feat-card"><div class="lp-feat-icon">🔒</div><div class="lp-feat-title">End-to-End Encryption</div><p class="lp-feat-desc">Messages are encrypted on your device. Nobody but you and the recipient can read them.</p></div>
@@ -2846,8 +3114,8 @@ body.device-tablet .msg-body{max-width:74%}
 
   <!-- HOW IT WORKS -->
   <div class="lp-section lp-reveal">
-    <div style="text-align:center;margin-bottom:32px">
-      <div class="lp-section-label" style="justify-content:center;display:flex">Getting started</div>
+    <div> class="scb-u-105"
+      <div class="lp-section-label scb-u-106">Getting started</div>
       <h2>Ready in under a minute.</h2>
     </div>
     <div class="lp-how-steps">
@@ -2868,17 +3136,17 @@ body.device-tablet .msg-body{max-width:74%}
         <div><div class="lp-step-title">Start chatting</div><p class="lp-step-desc">Message, call, react, and share — everything works right in your browser, no app needed.</p></div>
       </div>
     </div>
-    <div style="text-align:center;margin-top:40px">
+    <div> class="scb-u-108"
       <button class="lp-btn-lg primary" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Join SoCloudyBro →</button>
     </div>
   </div>
 
   <!-- FOOTER -->
   <div class="lp-footer">
-    <div style="font-size:20px;margin-bottom:8px">☁️</div>
-    <div style="font-weight:700;margin-bottom:8px">SoCloudyBro</div>
-    <p style="margin:0 0 12px">Private messaging for everyone.</p>
-    <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
+    <div> class="scb-u-109"☁️</div>
+    <div> class="scb-u-110"SoCloudyBro</div>
+    <p> class="scb-u-111"Private messaging for everyone.</p>
+    <div> class="scb-u-112"
       <a href="#" onclick="showPrivacyPolicy();return false">Privacy Policy</a>
       <a href="#" onclick="openContactUs();return false">Contact</a>
     </div>
@@ -2907,50 +3175,50 @@ body.device-tablet .msg-body{max-width:74%}
 </script>
 
 <!-- PRIVACY POLICY MODAL -->
-<div class="overlay" id="privacy-modal" style="display:none">
-  <div class="modal" style="max-height:85vh;overflow-y:auto">
-    <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:1">
+<div class="overlay scb-u-25" id="privacy-modal">
+  <div class="modal scb-u-113">
+    <div class="modal-header scb-u-114">
       <h2>Privacy Policy</h2>
       <button class="modal-close" onclick="closeModal('privacy-modal')">✕</button>
     </div>
-    <div class="modal-body" style="font-size:14px;line-height:1.7;color:var(--text)">
-      <p style="color:var(--muted);font-size:12px">Last updated: September 2026</p>
+    <div class="modal-body scb-u-115">
+      <p> class="scb-u-116"Last updated: September 2026</p>
 
-      <h3 style="font-size:15px;margin:20px 0 8px">What SoCloudyBro is</h3>
+      <h3> class="scb-u-117"What SoCloudyBro is</h3>
       <p>SoCloudyBro is a private, invite-based messaging platform. It lets registered users send end-to-end encrypted messages, make voice and video calls, and share updates within a trusted community.</p>
 
-      <h3 style="font-size:15px;margin:20px 0 8px">What data we collect</h3>
-      <ul style="padding-left:20px;margin:0">
+      <h3> class="scb-u-117"What data we collect</h3>
+      <ul> class="scb-u-118"
         <li><strong>Account data:</strong> Your name, a user number, and optionally an email address and profile photo.</li>
         <li><strong>Messages:</strong> Stored encrypted in Firebase. Content is only readable on your device with your encryption key.</li>
         <li><strong>Usage data:</strong> Basic connection metadata (timestamps, online status) to deliver messages.</li>
         <li><strong>Google sign-in:</strong> If you sign in with Google, we receive your Google account name and email. We do not store your Google password.</li>
       </ul>
 
-      <h3 style="font-size:15px;margin:20px 0 8px">How we use your data</h3>
+      <h3> class="scb-u-117"How we use your data</h3>
       <p>Your data is used solely to operate SoCloudyBro. We do not sell, share, or use your data for advertising. Messages are end-to-end encrypted and we cannot read them.</p>
 
-      <h3 style="font-size:15px;margin:20px 0 8px">Data storage</h3>
+      <h3> class="scb-u-117"Data storage</h3>
       <p>Data is stored in Google Firebase (Europe West region). We do not operate our own servers. Firebase's data processing terms apply.</p>
 
-      <h3 style="font-size:15px;margin:20px 0 8px">Your rights</h3>
+      <h3> class="scb-u-117"Your rights</h3>
       <p>You can delete your account at any time from Settings. This removes your profile and messages from our database.</p>
 
-      <h3 style="font-size:15px;margin:20px 0 8px">Contact</h3>
-      <p>Questions? Email <a href="mailto:support@socloudybro.vercel.app" style="color:var(--accent)">support@socloudybro.vercel.app</a></p>
+      <h3> class="scb-u-117"Contact</h3>
+      <p>Questions? Email <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a></p>
     </div>
   </div>
 </div>
 
 <!-- CONTACT US MODAL -->
 <div class="overlay" id="contact-us-modal">
-  <div class="modal" style="max-width:480px">
+  <div class="modal scb-u-120">
     <div class="modal-header">
       <h2>📞 Contact Us</h2>
       <button class="modal-close" onclick="closeModal('contact-us-modal')">✕</button>
     </div>
-    <div class="modal-body" style="padding-bottom:8px">
-      <p style="font-size:13px;color:var(--muted);margin:0 0 16px">Reach out to an SCB admin directly. Tap an SCB Number to open a chat, or copy an email address.</p>
+    <div class="modal-body scb-u-121">
+      <p> class="scb-u-122"Reach out to an SCB admin directly. Tap an SCB Number to open a chat, or copy an email address.</p>
       <div id="contact-us-list"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('contact-us-modal')">Close</button></div>
@@ -2959,57 +3227,57 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- SECURITY VULNERABILITY DISCLOSURE MODAL -->
 <div class="overlay" id="security-disclosure-modal">
-  <div class="modal" style="max-width:520px">
+  <div class="modal scb-u-123">
     <div class="modal-header">
       <h2>🛡 Report a Security Vulnerability</h2>
       <button class="modal-close" onclick="closeModal('security-disclosure-modal')">✕</button>
     </div>
-    <div class="modal-body" style="padding-bottom:8px">
-      <p style="font-size:13px;color:var(--muted);margin:0 0 12px">Found a genuine security issue — a way to bypass auth, read someone else's messages, escalate admin access, or similar? Please report it privately here rather than as a public bug report or on social media, so it can be fixed before anyone else finds it.</p>
-      <ul style="font-size:13px;color:var(--text2);margin:0 0 14px;padding-left:20px;line-height:1.6">
+    <div class="modal-body scb-u-121">
+      <p> class="scb-u-124"Found a genuine security issue — a way to bypass auth, read someone else's messages, escalate admin access, or similar? Please report it privately here rather than as a public bug report or on social media, so it can be fixed before anyone else finds it.</p>
+      <ul> class="scb-u-125"
         <li>Give us a reasonable chance to fix it before any public disclosure.</li>
         <li>Don't access, modify, or delete data beyond what's needed to demonstrate the issue.</li>
         <li>Never test against other users' real accounts — use test accounts only.</li>
         <li>Include steps to reproduce, impact, and affected version/URL if known.</li>
       </ul>
-      <div style="background:var(--surface2,rgba(127,127,127,.07));border:1px solid var(--border);border-radius:var(--r-sm,10px);padding:12px 14px;margin-bottom:10px">
-        <div style="font-weight:600;font-size:14px;margin-bottom:6px">Security Contact</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          <span style="font-size:12px;color:var(--text2)" id="security-disclosure-email">security@socloudybro.vercel.app</span>
-          <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" onclick="navigator.clipboard.writeText('security@socloudybro.vercel.app').then(()=>showToast('Copied','Security contact email copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: security@socloudybro.vercel.app'))">Copy</button>
+      <div> class="scb-u-126"
+        <div> class="scb-u-127"Security Contact</div>
+        <div> class="scb-u-128"
+          <span class="scb-u-129" id="security-disclosure-email">security@socloudybro.vercel.app</span>
+          <button class="btn btn-ghost btn-sm scb-u-130" onclick="navigator.clipboard.writeText('security@socloudybro.vercel.app').then(()=>showToast('Copied','Security contact email copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: security@socloudybro.vercel.app'))">Copy</button>
         </div>
-        <button class="btn btn-sm" style="font-size:12px;padding:4px 12px" onclick="closeModal('security-disclosure-modal');_openDmWithAdmin(2015)">💬 Message #2015 (Head Admin)</button>
+        <button class="btn btn-sm scb-u-131" onclick="closeModal('security-disclosure-modal');_openDmWithAdmin(2015)">💬 Message #2015 (Head Admin)</button>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin:0">We don't currently run a paid bug bounty program, but we credit researchers (with permission) once a reported issue is fixed, and take every genuine report seriously.</p>
+      <p> class="scb-u-132"We don't currently run a paid bug bounty program, but we credit researchers (with permission) once a reported issue is fixed, and take every genuine report seriously.</p>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('security-disclosure-modal')">Close</button></div>
   </div>
 </div>
 
 <!-- CAMERA CAPTURE MODAL -->
-<div class="overlay" id="camera-modal" style="display:none">
+<div class="overlay scb-u-25" id="camera-modal">
   <div id="camera-modal-inner">
-    <div class="modal-header" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
-      <span style="font-size:15px;font-weight:600">Take a Photo</span>
+    <div class="modal-header scb-u-133">
+      <span> class="scb-u-134"Take a Photo</span>
       <button class="modal-close" onclick="closeCameraModal()">✕</button>
     </div>
     <video id="camera-preview" autoplay playsinline muted></video>
     <canvas id="camera-canvas"></canvas>
-    <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)">
+    <div> class="scb-u-135"
       <button class="btn btn-ghost btn-sm" onclick="closeCameraModal()">Cancel</button>
-      <button class="btn btn-sm" style="flex:1" onclick="snapAndSendPhoto()">📷 Capture &amp; Send</button>
+      <button class="btn btn-sm scb-u-37" onclick="snapAndSendPhoto()">📷 Capture &amp; Send</button>
     </div>
   </div>
 </div>
 
 <!-- CUSTOM BG PHOTO INPUT (hidden) -->
-<input type="file" id="custom-bg-input" accept="image/*" style="display:none" onchange="applyCustomBgPhoto(this)"/>
+<input class="scb-u-25" type="file" id="custom-bg-input" accept="image/*" onchange="applyCustomBgPhoto(this)"/>
 
 <!-- BIZ PROFILE EDITOR -->
-<div class="overlay" id="biz-profile-modal" style="display:none">
+<div class="overlay scb-u-25" id="biz-profile-modal">
   <div class="modal">
     <div class="modal-header"><h2>Business Profile</h2><p>This info appears on your profile for everyone to see</p></div>
-    <div class="modal-body" style="padding-top:14px;padding-bottom:14px">
+    <div class="modal-body scb-u-136">
       <div class="field"><label>Business Name</label><input type="text" id="biz-name-input" maxlength="60" placeholder="e.g. Acme Co."/></div>
       <div class="field"><label>Category</label><input type="text" id="biz-category-input" maxlength="40" placeholder="e.g. Clothing, Tech, Services…"/></div>
       <div class="field"><label>Description</label><textarea id="biz-desc-input" maxlength="300" rows="3" placeholder="What does your business do?"></textarea></div>
@@ -3020,21 +3288,21 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <!-- BIZ PRODUCTS EDITOR -->
-<div class="overlay" id="biz-products-modal" style="display:none">
-  <div class="modal" style="max-width:500px">
+<div class="overlay scb-u-25" id="biz-products-modal">
+  <div class="modal scb-u-137">
     <div class="modal-header"><h2>Products &amp; Links</h2><p>Showcase products, services or websites on your profile</p></div>
-    <div class="modal-body" style="padding-top:10px;padding-bottom:10px">
-      <div id="biz-products-list" style="margin-bottom:12px"></div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px">Add Item</div>
+    <div class="modal-body scb-u-138">
+      <div class="scb-u-139" id="biz-products-list"></div>
+      <div> class="scb-u-140"
+        <div> class="scb-u-141"Add Item</div>
         <div class="field"><label>Name</label><input type="text" id="biz-new-prod-name" maxlength="60" placeholder="Product or website name"/></div>
         <div class="field"><label>Description</label><input type="text" id="biz-new-prod-desc" maxlength="120" placeholder="Short description"/></div>
         <div class="field"><label>Link (optional)</label><input type="text" id="biz-new-prod-url" maxlength="300" placeholder="https://…"/></div>
         <div class="field"><label>Image (optional)</label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="file" id="biz-new-prod-img-input" accept="image/*" style="display:none" onchange="bizProductImgSelected(this)"/>
+          <div> class="scb-u-142"
+            <input class="scb-u-25" type="file" id="biz-new-prod-img-input" accept="image/*" onchange="bizProductImgSelected(this)"/>
             <button class="btn btn-ghost btn-sm" onclick="document.getElementById('biz-new-prod-img-input').click()">📷 Choose Image</button>
-            <span id="biz-new-prod-img-name" style="font-size:11px;color:var(--muted)">None</span>
+            <span class="scb-u-103" id="biz-new-prod-img-name">None</span>
           </div>
         </div>
         <button class="btn btn-sm btn-full" onclick="addBizProduct()">+ Add</button>
@@ -3045,18 +3313,18 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <!-- BIZ BOT EDITOR -->
-<div class="overlay" id="biz-bot-modal" style="display:none">
+<div class="overlay scb-u-25" id="biz-bot-modal">
   <div class="modal">
     <div class="modal-header"><h2>Auto-reply Bot</h2><p>When someone DMs you with a matching keyword, the bot replies automatically</p></div>
-    <div class="modal-body" style="padding-top:10px;padding-bottom:10px">
-      <div id="biz-bot-rules-list" style="margin-bottom:12px"></div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px">Add Rule</div>
+    <div class="modal-body scb-u-138">
+      <div class="scb-u-139" id="biz-bot-rules-list"></div>
+      <div> class="scb-u-140"
+        <div> class="scb-u-141"Add Rule</div>
         <div class="field"><label>Keyword (or phrase)</label><input type="text" id="biz-bot-kw-input" maxlength="80" placeholder="e.g. price, hours, order…"/></div>
         <div class="field"><label>Auto-reply</label><textarea id="biz-bot-reply-input" maxlength="500" rows="2" placeholder="The message the bot sends back…"></textarea></div>
         <button class="btn btn-sm btn-full" onclick="addBizBotRule()">+ Add Rule</button>
       </div>
-      <div class="field" style="margin-top:12px">
+      <div class="field scb-u-143">
         <label>Welcome message (sent on first DM)</label>
         <textarea id="biz-bot-welcome-input" maxlength="400" rows="2" placeholder="Hi! Thanks for reaching out. How can I help?"></textarea>
       </div>
@@ -3066,24 +3334,24 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <!-- BIZ PUBLIC PROFILE VIEW -->
-<div class="overlay" id="biz-view-modal" style="display:none">
-  <div class="modal" style="max-width:460px;max-height:88vh">
-    <div class="modal-header" style="padding-bottom:10px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div id="biz-view-avatar" class="avatar" style="width:52px;height:52px;font-size:20px;flex-shrink:0"></div>
+<div class="overlay scb-u-25" id="biz-view-modal">
+  <div class="modal scb-u-144">
+    <div class="modal-header scb-u-145">
+      <div> class="scb-u-146"
+        <div id="biz-view-avatar" class="avatar scb-u-147"></div>
         <div>
-          <div style="font-size:16px;font-weight:700" id="biz-view-name">Business</div>
-          <div style="font-size:12px;color:var(--muted)" id="biz-view-category"></div>
+          <div class="scb-u-148" id="biz-view-name">Business</div>
+          <div class="scb-u-149" id="biz-view-category"></div>
           <span class="biz-badge">BIZ</span>
         </div>
       </div>
       <button class="modal-close" onclick="closeModal('biz-view-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <p id="biz-view-desc" style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:8px"></p>
-      <a id="biz-view-website" href="#" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent);word-break:break-all;display:none"></a>
-      <div id="biz-view-products-section" style="display:none">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:14px 0 8px">Products &amp; Services</div>
+      <p class="scb-u-150" id="biz-view-desc"></p>
+      <a class="scb-u-151" id="biz-view-website" href="#" target="_blank" rel="noopener"></a>
+      <div class="scb-u-25" id="biz-view-products-section">
+        <div> class="scb-u-152"Products &amp; Services</div>
         <div class="biz-product-grid" id="biz-view-product-grid"></div>
       </div>
     </div>
@@ -3101,91 +3369,91 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
     </div>
     
-    <div class="modal-body" id="signup-view" style="padding-bottom:14px; padding-top:14px;">
-      <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Create your account. Pick any unused 4–5 digit number (1000–99999) — it's your permanent handle. Email is required for login and recovery.</p>
+    <div class="modal-body scb-u-153" id="signup-view">
+      <p> class="scb-u-154"Create your account. Pick any unused 4–5 digit number (1000–99999) — it's your permanent handle. Email is required for login and recovery.</p>
       <!-- Shown only while a Google sign-up is in progress (see
            handleGoogleCredentialResponse): the Google account had no SoCloudyBro
            account linked to it yet, so the normal sign-up form is reused with the
            name/email prefilled. Reusing this form is deliberate — it keeps one
            copy of the number-availability check, the age tiering and the
            parental-consent rules instead of a second, drifting Google-only one. -->
-      <div id="google-signup-banner" style="display:none;margin-bottom:14px;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r-sm);background:var(--surface2)">
-        <div style="font-size:12px;font-weight:600">Continuing with Google</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45" id="google-signup-banner-sub"></div>
-        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="cancelGoogleSignup()">Use a different method</button>
+      <div class="scb-u-155" id="google-signup-banner">
+        <div> class="scb-u-156"Continuing with Google</div>
+        <div class="scb-u-157" id="google-signup-banner-sub"></div>
+        <button type="button" class="btn btn-ghost btn-sm scb-u-7" onclick="cancelGoogleSignup()">Use a different method</button>
       </div>
-      <div style="text-align:center;margin-bottom:16px">
-        <div class="avatar" id="setup-av-preview" onclick="openAvatarEditor(true)" style="width:64px;height:64px;font-size:24px;background:linear-gradient(135deg,#0078d4,#6264a0);color:#fff;margin:0 auto;cursor:pointer" title="Click to choose avatar">?</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:5px">Click to choose avatar</div>
+      <div> class="scb-u-158"
+        <div class="avatar scb-u-159" id="setup-av-preview" onclick="openAvatarEditor(true)" title="Click to choose avatar">?</div>
+        <div> class="scb-u-160"Click to choose avatar</div>
       </div>
       <div class="field"><label>Display name</label><input type="text" id="setup-name" placeholder="e.g. Alex" maxlength="24"/></div>
       <div class="field"><label>Email</label><input type="email" id="setup-email" placeholder="you@example.com"/></div>
       <div class="field"><label>Your number</label><input type="number" id="setup-number" placeholder="e.g. 4821" min="1000" max="99999" oninput="checkNumberAvailability(this.value)"/><div class="field-hint" id="setup-number-hint">1000–99999 · must be unique · this is your permanent handle</div></div>
-      <div id="setup-number-suggestions" style="display:none;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+      <div class="scb-u-161" id="setup-number-suggestions"></div>
       <div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="setup-password" placeholder="Create a password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('setup-password',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="field"><label>Date of birth</label><input type="date" id="setup-birthdate" onchange="checkSetupAgeForParentField()"/><div class="field-hint">Used to verify you meet our minimum age requirement</div></div>
-      <div class="field" id="setup-parent-email-field" style="display:none">
+      <div class="field scb-u-25" id="setup-parent-email-field">
         <label>Parent/guardian email</label>
         <input type="email" id="setup-parent-email" placeholder="parent@example.com"/>
         <div class="field-hint">Since you're under 18, a parent or guardian needs to approve your account. Have them create their own SoCloudyBro account (or log into one they already have) using this same email — they'll see your request waiting for them there.</div>
       </div>
-      <div class="field"><label>Bio <span style="color:var(--muted)">(optional)</span></label><textarea id="setup-bio" placeholder="I love Roblox! 🎮" maxlength="120" rows="2"></textarea></div>
+      <div class="field"><label>Bio <span> class="scb-u-58"(optional)</span></label><textarea id="setup-bio" placeholder="I love Roblox! 🎮" maxlength="120" rows="2"></textarea></div>
       <div class="field" id="setup-captcha-field">
-        <div id="scb-turnstile" class="cf-turnstile" data-sitekey="0x4AAAAAAFFStZC8pQFYnMWn" data-theme="auto" data-callback="onTurnstileSuccess" data-expired-callback="onTurnstileExpired" style="margin-top:4px"></div>
+        <div id="scb-turnstile" class="cf-turnstile scb-u-81" data-sitekey="0x4AAAAAAFFStZC8pQFYnMWn" data-theme="auto" data-callback="onTurnstileSuccess" data-expired-callback="onTurnstileExpired"></div>
       </div>
       <!-- honeypot: bots fill this, humans don't see it -->
-      <input type="text" name="website" id="hp-website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none" aria-hidden="true"/>
+      <input class="scb-u-162" type="text" name="website" id="hp-website" tabindex="-1" autocomplete="off" aria-hidden="true"/>
       <div class="error-text" id="setup-error"></div>
       <button class="btn btn-full" onclick="submitSetup()">Get Started ↗</button>
-      <div class="google-auth-block" id="google-auth-block-signup" style="margin-top:14px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:11px;color:var(--muted)">or</span><div style="flex:1;height:1px;background:var(--border)"></div></div>
+      <div class="google-auth-block scb-u-163" id="google-auth-block-signup">
+        <div> class="scb-u-164"<div> class="scb-u-165"</div><span> class="scb-u-103"or</span><div> class="scb-u-165"</div></div>
         <!-- Google renders its own official button into this container (that is
              the only button style Google's terms allow, and the only one whose
              click reliably opens the account chooser). -->
-        <div class="google-btn-holder" id="google-btn-signup" style="display:flex;justify-content:center"></div>
+        <div class="google-btn-holder scb-u-166" id="google-btn-signup"></div>
         <!-- Shown instead of the above when Google sign-in isn't configured or
              its script didn't load, so the state is never a silent no-op. -->
-        <button type="button" class="btn btn-ghost btn-full google-fallback-btn" id="google-fallback-signup" style="display:none" disabled>Sign in with Google</button>
-        <div class="google-auth-note" id="google-note-signup" style="display:none;font-size:11px;color:var(--muted);margin-top:7px;line-height:1.45;text-align:center"></div>
+        <button type="button" class="btn btn-ghost btn-full google-fallback-btn scb-u-25" id="google-fallback-signup" disabled>Sign in with Google</button>
+        <div class="google-auth-note scb-u-167" id="google-note-signup"></div>
       </div>
     </div>
 
-    <div class="modal-body" id="login-view" style="padding-bottom:14px; padding-top:14px;">
-      <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Log in with your email and password. If you signed up before email was added, use the number option below.</p>
+    <div class="modal-body scb-u-153" id="login-view">
+      <p> class="scb-u-154"Log in with your email and password. If you signed up before email was added, use the number option below.</p>
       <div class="field"><label id="login-identity-label">Email</label><input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()"/></div>
       <div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="login-password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')submitLogin()"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('login-password',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="error-text" id="login-error"></div>
       <button class="btn btn-full" id="login-btn" onclick="submitLogin()">Log In ↗</button>
-      <div style="text-align:center;margin-top:10px"><a href="#" id="login-forgot-password-link" onclick="openRecoverAccount();return false;" style="font-size:12px;color:var(--accent)">Forgot password?</a></div>
-      <div style="text-align:center;margin-top:6px"><a href="#" id="login-mode-toggle" onclick="toggleLoginMode();return false;" style="font-size:12px;color:var(--accent)">Signed up before email was added? Log in with your number</a></div>
-      <div style="text-align:center;margin-top:6px"><a href="#" id="login-passkey-link" onclick="loginWithPasskey();return false;" style="font-size:12px;color:var(--accent)">🔑 Sign in with a passkey</a></div>
-      <div class="google-auth-block" id="google-auth-block-login" style="margin-top:14px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:11px;color:var(--muted)">or</span><div style="flex:1;height:1px;background:var(--border)"></div></div>
-        <div class="google-btn-holder" id="google-btn-login" style="display:flex;justify-content:center"></div>
-        <button type="button" class="btn btn-ghost btn-full google-fallback-btn" id="google-fallback-login" style="display:none" disabled>Sign in with Google</button>
-        <div class="google-auth-note" id="google-note-login" style="display:none;font-size:11px;color:var(--muted);margin-top:7px;line-height:1.45;text-align:center"></div>
+      <div> class="scb-u-168"<a class="scb-u-169" href="#" id="login-forgot-password-link" onclick="openRecoverAccount();return false;">Forgot password?</a></div>
+      <div> class="scb-u-170"<a class="scb-u-169" href="#" id="login-mode-toggle" onclick="toggleLoginMode();return false;">Signed up before email was added? Log in with your number</a></div>
+      <div> class="scb-u-170"<a class="scb-u-169" href="#" id="login-passkey-link" onclick="loginWithPasskey();return false;">🔑 Sign in with a passkey</a></div>
+      <div class="google-auth-block scb-u-163" id="google-auth-block-login">
+        <div> class="scb-u-164"<div> class="scb-u-165"</div><span> class="scb-u-103"or</span><div> class="scb-u-165"</div></div>
+        <div class="google-btn-holder scb-u-166" id="google-btn-login"></div>
+        <button type="button" class="btn btn-ghost btn-full google-fallback-btn scb-u-25" id="google-fallback-login" disabled>Sign in with Google</button>
+        <div class="google-auth-note scb-u-167" id="google-note-login"></div>
       </div>
-      <div style="text-align:center;padding:10px 0 4px;font-size:11px;color:var(--muted)">
-        By signing up you agree to our <a href="#" onclick="showPrivacyPolicy();return false" style="color:var(--accent)">Privacy Policy</a>
+      <div> class="scb-u-171"
+        By signing up you agree to our <a class="scb-u-119" href="#" onclick="showPrivacyPolicy();return false">Privacy Policy</a>
       </div>
     </div>
 
-    <div class="modal-body" id="login-set-email-view" style="display:none;padding-bottom:14px;padding-top:14px;">
-      <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Your account doesn't have an email on file yet — add one now so you can log in with it going forward.</p>
+    <div class="modal-body scb-u-172" id="login-set-email-view">
+      <p> class="scb-u-154"Your account doesn't have an email on file yet — add one now so you can log in with it going forward.</p>
       <div class="field"><label>Email</label><input type="email" id="login-set-email-input" placeholder="you@example.com" onkeydown="if(event.key==='Enter')submitLoginSetEmail()"/></div>
       <div class="error-text" id="login-set-email-error"></div>
       <button class="btn btn-full" onclick="submitLoginSetEmail()">Save & Continue ↗</button>
     </div>
 
-    <div class="modal-body" id="login-2fa-view" style="display:none;padding-bottom:14px;padding-top:14px;">
-      <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Enter the 6-digit code from your authenticator app.</p>
+    <div class="modal-body scb-u-172" id="login-2fa-view">
+      <p> class="scb-u-154"Enter the 6-digit code from your authenticator app.</p>
       <div class="field"><label>Verification code</label><input type="text" id="login-2fa-code" maxlength="6" inputmode="numeric" placeholder="123456" onkeydown="if(event.key==='Enter')submit2faCode()"/></div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:2px 0 10px;cursor:pointer"><input type="checkbox" id="login-2fa-trust-device" style="width:15px;height:15px;cursor:pointer"/> Trust this device for 30 days — skip this step next time</label>
+      <label> class="scb-u-173"<input class="scb-u-174" type="checkbox" id="login-2fa-trust-device"/> Trust this device for 30 days — skip this step next time</label>
       <div class="error-text" id="login-2fa-error"></div>
       <button class="btn btn-full" id="login-2fa-btn" onclick="submit2faCode()">Verify ↗</button>
     </div>
-    <div class="modal-body" id="login-face-view" style="display:none;padding-bottom:14px;padding-top:14px;">
-      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Look at your camera — you'll be verified automatically.</p>
+    <div class="modal-body scb-u-172" id="login-face-view">
+      <p> class="scb-u-175"Look at your camera — you'll be verified automatically.</p>
       <div class="face-scan-wrap">
         <video id="login-face-video" autoplay muted playsinline></video>
         <canvas id="login-face-canvas"></canvas>
@@ -3194,23 +3462,23 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="face-scan-success">✅</div>
       </div>
       <div class="face-scan-status" id="login-face-status">Center your face in frame…</div>
-      <div class="error-text" id="login-face-error" style="text-align:center"></div>
+      <div class="error-text scb-u-6" id="login-face-error"></div>
       <button class="btn btn-full" id="login-face-btn" onclick="submitFaceLogin()">Verify with Face ↗</button>
-      <div style="text-align:center;margin-top:10px"><a href="#" onclick="useFaceViewPasskeyFallback();return false;" style="font-size:12px;color:var(--accent)">🔑 No camera? Use a passkey instead</a></div>
-      <div style="text-align:center;margin-top:6px"><a href="#" onclick="showLoginBackupPinView();return false;" style="font-size:12px;color:var(--accent)">🔢 Use your backup PIN instead</a></div>
-      <div style="text-align:center;margin-top:6px"><a href="#" onclick="recoverFromFaceView();return false;" style="font-size:12px;color:var(--accent)">Can't verify any other way? Recover your account</a></div>
-      <button class="btn btn-ghost btn-full" onclick="cancelFaceLoginView()" style="margin-top:8px">Cancel</button>
+      <div> class="scb-u-168"<a class="scb-u-169" href="#" onclick="useFaceViewPasskeyFallback();return false;">🔑 No camera? Use a passkey instead</a></div>
+      <div> class="scb-u-170"<a class="scb-u-169" href="#" onclick="showLoginBackupPinView();return false;">🔢 Use your backup PIN instead</a></div>
+      <div> class="scb-u-170"<a class="scb-u-169" href="#" onclick="recoverFromFaceView();return false;">Can't verify any other way? Recover your account</a></div>
+      <button class="btn btn-ghost btn-full scb-u-7" onclick="cancelFaceLoginView()">Cancel</button>
     </div>
-    <div class="modal-body" id="login-backup-pin-view" style="display:none;padding-bottom:14px;padding-top:14px;">
-      <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Enter your 4-digit backup PIN.</p>
+    <div class="modal-body scb-u-172" id="login-backup-pin-view">
+      <p> class="scb-u-154"Enter your 4-digit backup PIN.</p>
       <div class="pin-row" id="login-backup-pin-row">
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'backuplogin')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'backuplogin')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'backuplogin')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'backuplogin')"/>
       </div>
-      <div class="error-text" id="login-backup-pin-error" style="text-align:center"></div>
-      <button class="btn btn-ghost btn-full" onclick="cancelFaceLoginView()" style="margin-top:8px">Cancel</button>
+      <div class="error-text scb-u-6" id="login-backup-pin-error"></div>
+      <button class="btn btn-ghost btn-full scb-u-7" onclick="cancelFaceLoginView()">Cancel</button>
     </div>
   </div>
 </div>
@@ -3218,7 +3486,7 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="face-mfa-setup-modal">
   <div class="modal">
     <div class="modal-header"><h2>📷 Set Up Face Recognition</h2><p>This captures a face descriptor (a set of measurements) — not a photo — stored on your account for login verification.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="face-scan-wrap">
         <video id="face-enroll-video" autoplay muted playsinline></video>
         <canvas id="face-enroll-canvas"></canvas>
@@ -3226,7 +3494,7 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="face-scan-line"></div>
         <div class="face-scan-success">✅</div>
       </div>
-      <div class="error-text" id="face-enroll-error" style="text-align:center"></div>
+      <div class="error-text scb-u-6" id="face-enroll-error"></div>
       <div class="face-scan-status" id="face-enroll-status">Loading…</div>
       <button class="btn btn-full" id="face-enroll-btn" onclick="captureFaceEnrollment()">Capture My Face ↗</button>
     </div>
@@ -3237,7 +3505,7 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="secq-setup-modal">
   <div class="modal">
     <div class="modal-header"><h2>🔑 Security Questions</h2><p>Used only to recover your account if you forget your password. Answers are hashed, not stored as plain text.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="field">
         <label>Question 1</label>
         <select id="secq-q1" onchange="onSecqSelectChange('secq-q1','secq-q1-custom')">
@@ -3258,8 +3526,8 @@ body.device-tablet .msg-body{max-width:74%}
           <option value="holiday">What was your favourite holiday destination as a child?</option>
           <option value="custom">✏️ Write my own question…</option>
         </select>
-        <input type="text" id="secq-q1-custom" placeholder="Type your own question" style="margin-top:6px;display:none"/>
-        <input type="text" id="secq-a1" placeholder="Your answer" style="margin-top:6px"/>
+        <input class="scb-u-176" type="text" id="secq-q1-custom" placeholder="Type your own question"/>
+        <input class="scb-u-177" type="text" id="secq-a1" placeholder="Your answer"/>
       </div>
       <div class="field">
         <label>Question 2</label>
@@ -3281,8 +3549,8 @@ body.device-tablet .msg-body{max-width:74%}
           <option value="holiday">What was your favourite holiday destination as a child?</option>
           <option value="custom">✏️ Write my own question…</option>
         </select>
-        <input type="text" id="secq-q2-custom" placeholder="Type your own question" style="margin-top:6px;display:none"/>
-        <input type="text" id="secq-a2" placeholder="Your answer" style="margin-top:6px"/>
+        <input class="scb-u-176" type="text" id="secq-q2-custom" placeholder="Type your own question"/>
+        <input class="scb-u-177" type="text" id="secq-a2" placeholder="Your answer"/>
       </div>
       <div class="error-text" id="secq-error"></div>
     </div>
@@ -3293,16 +3561,16 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="recover-account-modal">
   <div class="modal">
     <div class="modal-header"><h2>Recover Account</h2><p id="recover-account-sub">Enter your account number to begin.</p></div>
-    <div class="modal-body" style="padding-bottom:14px" id="recover-step-number">
+    <div class="modal-body scb-u-29" id="recover-step-number">
       <div class="field"><label>Account number</label><input type="number" id="recover-number-input" placeholder="e.g. 4821"/></div>
       <div class="error-text" id="recover-number-error"></div>
     </div>
-    <div class="modal-body" style="padding-bottom:14px;display:none" id="recover-step-questions">
+    <div class="modal-body scb-u-178" id="recover-step-questions">
       <div class="field"><label id="recover-q1-label"></label><input type="text" id="recover-a1-input" placeholder="Your answer"/></div>
       <div class="field"><label id="recover-q2-label"></label><input type="text" id="recover-a2-input" placeholder="Your answer"/></div>
       <div class="error-text" id="recover-answers-error"></div>
     </div>
-    <div class="modal-body" style="padding-bottom:14px;display:none" id="recover-step-newpass">
+    <div class="modal-body scb-u-178" id="recover-step-newpass">
       <div class="field"><label>New password</label><div class="pwd-field-wrap"><input type="password" id="recover-newpass-input" placeholder="At least 8 characters"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('recover-newpass-input',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="error-text" id="recover-newpass-error"></div>
     </div>
@@ -3316,7 +3584,7 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="change-password-modal">
   <div class="modal">
     <div class="modal-header"><h2>🔑 Change Password</h2></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="field"><label>Current password</label><div class="pwd-field-wrap"><input type="password" id="chpwd-current" placeholder="Current password" autocomplete="current-password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('chpwd-current',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="field"><label>New password</label><div class="pwd-field-wrap"><input type="password" id="chpwd-new" placeholder="At least 8 characters" autocomplete="new-password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('chpwd-new',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="field"><label>Confirm new password</label><div class="pwd-field-wrap"><input type="password" id="chpwd-confirm" placeholder="Repeat new password" autocomplete="new-password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('chpwd-confirm',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
@@ -3331,8 +3599,8 @@ body.device-tablet .msg-body{max-width:74%}
 
 <div class="overlay" id="delete-account-modal">
   <div class="modal">
-    <div class="modal-header"><h2 style="color:var(--danger)">⚠️ Delete Account</h2><p>This immediately and permanently deletes your account. Your profile and login are removed at once — messages you've sent will show as "Deleted User". <strong>This cannot be undone.</strong></p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-header"><h2> class="scb-u-47"⚠️ Delete Account</h2><p>This immediately and permanently deletes your account. Your profile and login are removed at once — messages you've sent will show as "Deleted User". <strong>This cannot be undone.</strong></p></div>
+    <div class="modal-body scb-u-29">
       <div class="field"><label>Type your account number (<span id="delete-account-num-hint"></span>) to confirm</label><input type="text" id="delete-account-confirm-input" placeholder="e.g. 4821"/></div>
       <div class="field">
         <label>Enter your PIN to confirm it's really you</label>
@@ -3352,19 +3620,19 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="pin-modal">
   <div class="modal">
     <div class="modal-header"><h2 id="pin-modal-title">Set PIN</h2><p id="pin-modal-desc">Choose a 4-digit PIN to secure your account.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="pin-row" id="pin-input-row">
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'set')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'set')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'set')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'set')"/>
       </div>
-      <div class="error-text" id="pin-error" style="text-align:center"></div>
+      <div class="error-text scb-u-6" id="pin-error"></div>
     </div>
     <div class="modal-footer">
       <button class="btn" id="pin-confirm-btn" onclick="confirmPin()">Confirm PIN</button>
       <button class="btn btn-ghost" onclick="closeModal('pin-modal')">Cancel</button>
-      <button class="btn btn-danger" id="pin-remove-btn" onclick="removePin()" style="display:none">Remove PIN</button>
+      <button class="btn btn-danger scb-u-25" id="pin-remove-btn" onclick="removePin()">Remove PIN</button>
     </div>
   </div>
 </div>
@@ -3372,68 +3640,68 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="backup-pin-modal">
   <div class="modal">
     <div class="modal-header"><h2 id="backup-pin-modal-title">Set Backup PIN</h2><p id="backup-pin-modal-desc">Choose a 4-digit PIN you can use to sign in if your camera or passkey aren't available.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="pin-row" id="backup-pin-input-row">
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'backupset')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'backupset')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'backupset')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'backupset')"/>
       </div>
-      <div class="error-text" id="backup-pin-error" style="text-align:center"></div>
+      <div class="error-text scb-u-6" id="backup-pin-error"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('backup-pin-modal')">Cancel</button>
-      <button class="btn btn-danger" id="backup-pin-remove-btn" onclick="removeBackupPin()" style="display:none">Remove Backup PIN</button>
+      <button class="btn btn-danger scb-u-25" id="backup-pin-remove-btn" onclick="removeBackupPin()">Remove Backup PIN</button>
     </div>
   </div>
 </div>
 
 <div class="overlay" id="thread-modal">
-  <div class="modal" style="max-width:420px;display:flex;flex-direction:column;max-height:82vh">
-    <div class="modal-header" style="flex-shrink:0;padding-bottom:12px">
-      <h2 style="margin-bottom:0">🧵 Thread</h2>
+  <div class="modal scb-u-179">
+    <div class="modal-header scb-u-180">
+      <h2> class="scb-u-181"🧵 Thread</h2>
       <button class="modal-close" onclick="closeThreadPanel()">✕</button>
     </div>
-    <div id="thread-parent-quote" style="padding:0 22px 12px;border-bottom:1px solid var(--border);flex-shrink:0"></div>
-    <div id="thread-messages-wrap" style="flex:1;overflow-y:auto;padding:12px 22px;min-height:120px"></div>
-    <div style="display:flex;gap:8px;padding:12px 22px;border-top:1px solid var(--border);flex-shrink:0">
-      <input type="text" id="thread-reply-input" placeholder="Reply in thread…" style="flex:1" onkeydown="if(event.key==='Enter')sendThreadReply()"/>
+    <div class="scb-u-182" id="thread-parent-quote"></div>
+    <div class="scb-u-183" id="thread-messages-wrap"></div>
+    <div> class="scb-u-184"
+      <input class="scb-u-37" type="text" id="thread-reply-input" placeholder="Reply in thread…" onkeydown="if(event.key==='Enter')sendThreadReply()"/>
       <button class="btn btn-sm" onclick="sendThreadReply()">Send</button>
     </div>
   </div>
 </div>
 
 <div class="overlay" id="user-profile-modal">
-  <div class="modal" style="max-width:360px">
+  <div class="modal scb-u-71">
     <div class="modal-header"><button class="modal-close" onclick="closeModal('user-profile-modal')">✕</button></div>
-    <div class="modal-body" style="padding-bottom:20px;text-align:center">
-      <div id="user-profile-avatar" style="width:84px;height:84px;margin:0 auto 12px"></div>
-      <div id="user-profile-name" style="font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px"></div>
-      <div id="user-profile-number" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
-      <div id="user-profile-status" style="font-size:12px;margin-top:6px"></div>
-      <div id="user-profile-bio" style="font-size:13px;color:var(--text2);margin-top:14px;line-height:1.5"></div>
-      <div id="user-profile-joined" style="font-size:11px;color:var(--muted);margin-top:10px"></div>
-      <button class="btn btn-full" id="user-profile-msg-btn" style="margin-top:18px" onclick="quickMessageUser(_userProfileTarget)">💬 Message</button>
+    <div class="modal-body scb-u-185">
+      <div class="scb-u-186" id="user-profile-avatar"></div>
+      <div class="scb-u-187" id="user-profile-name"></div>
+      <div class="scb-u-188" id="user-profile-number"></div>
+      <div class="scb-u-189" id="user-profile-status"></div>
+      <div class="scb-u-190" id="user-profile-bio"></div>
+      <div class="scb-u-191" id="user-profile-joined"></div>
+      <button class="btn btn-full scb-u-192" id="user-profile-msg-btn" onclick="quickMessageUser(_userProfileTarget)">💬 Message</button>
     </div>
   </div>
 </div>
 
 <div id="user-hover-card">
-  <div id="user-hover-card-avatar" style="width:52px;height:52px;flex-shrink:0"></div>
-  <div style="min-width:0;flex:1">
-    <div id="user-hover-card-name" style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:4px"></div>
-    <div id="user-hover-card-status" style="font-size:11px;margin-top:2px"></div>
-    <div id="user-hover-card-bio" style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.4"></div>
-    <button class="btn btn-sm" id="user-hover-card-msg-btn" style="margin-top:8px;padding:4px 12px;font-size:11px" onclick="quickMessageUser(_userHoverCardTarget)">💬 Message</button>
+  <div class="scb-u-193" id="user-hover-card-avatar"></div>
+  <div> class="scb-u-194"
+    <div class="scb-u-195" id="user-hover-card-name"></div>
+    <div class="scb-u-196" id="user-hover-card-status"></div>
+    <div class="scb-u-197" id="user-hover-card-bio"></div>
+    <button class="btn btn-sm scb-u-198" id="user-hover-card-msg-btn" onclick="quickMessageUser(_userHoverCardTarget)">💬 Message</button>
   </div>
 </div>
 
 <div class="overlay" id="avatar-modal">
   <div class="modal">
     <div class="modal-header"><h2 id="avatar-modal-title">Choose Avatar</h2><p>Pick a preset or upload your own image.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div id="avatar-presets"></div>
-      <div style="text-align:center;margin-bottom:10px"><label class="btn btn-ghost btn-sm" style="cursor:pointer">📁 Upload Image<input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(this)"/></label></div>
+      <div> class="scb-u-199"<label class="btn btn-ghost btn-sm scb-u-65">📁 Upload Image<input class="scb-u-25" type="file" accept="image/*" onchange="uploadAvatar(this)"/></label></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('avatar-modal')">Close</button></div>
   </div>
@@ -3442,7 +3710,7 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="edit-profile-modal">
   <div class="modal">
     <div class="modal-header"><h2>Edit Profile</h2><p>Update your display name and bio.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="field"><label>Display name</label><input type="text" id="edit-name" maxlength="24"/></div>
       <div class="field"><label>Bio</label><textarea id="edit-bio" maxlength="120" rows="3" placeholder="Tell people about yourself…"></textarea></div>
       <div class="field"><label>Status</label><input type="text" id="edit-status" maxlength="40" placeholder="e.g. 🎮 Gaming, 📚 Studying…"/></div>
@@ -3455,12 +3723,12 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="add-modal">
   <div class="modal">
     <div class="modal-header"><h2>New Chat</h2><p>Enter someone's number to start a conversation.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="field"><label>Their number</label><input type="number" id="add-num" placeholder="e.g. 4821" onkeydown="if(event.key==='Enter')submitAdd()"/></div>
       <div class="error-text" id="add-error"></div>
-      <div id="suggested-friends-section" style="display:none;margin-top:16px">
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">People you may know</label>
-        <div id="suggested-friends-list" style="display:flex;flex-direction:column;gap:4px"></div>
+      <div class="scb-u-200" id="suggested-friends-section">
+        <label> class="scb-u-201"People you may know</label>
+        <div class="scb-u-202" id="suggested-friends-list"></div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="submitAdd()">Start Chat</button><button class="btn btn-ghost" onclick="closeModal('add-modal')">Cancel</button></div>
@@ -3470,29 +3738,29 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="group-modal">
   <div class="modal">
     <div class="modal-header"><h2 id="group-modal-title">New Group</h2><p id="group-modal-desc">Create a group chat and invite your contacts.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
-      <div style="text-align:center;margin-bottom:12px">
-        <div class="group-avatar" id="grp-av-preview" onclick="openAvatarEditor(false,true)" style="width:56px;height:56px;font-size:22px;background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;margin:0 auto;cursor:pointer;border-radius:12px" title="Click to choose group avatar">👥</div>
+    <div class="modal-body scb-u-29">
+      <div> class="scb-u-203"
+        <div class="group-avatar scb-u-204" id="grp-av-preview" onclick="openAvatarEditor(false,true)" title="Click to choose group avatar">👥</div>
       </div>
       <div class="field"><label id="grp-name-label">Group name</label><input type="text" id="grp-name" maxlength="40" placeholder="e.g. Game Night"/></div>
       <div class="field"><label id="grp-info-label">Group info</label><textarea id="grp-info" maxlength="120" rows="2" placeholder="What's this group about?"></textarea></div>
       <div class="field">
-        <label class="settings-check-label" style="display:flex;align-items:center;gap:8px">
+        <label class="settings-check-label scb-u-70">
           <input type="checkbox" id="grp-is-server"/> 🖥️ Make this a Server (multi-channel community with an invite code)
         </label>
       </div>
       <div class="field">
         <label>Add members</label>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div> class="scb-u-205"
           <input type="number" id="grp-add-by-num" placeholder="Add by number, e.g. 4821" onkeydown="if(event.key==='Enter'){event.preventDefault();grpAddByNumber();}"/>
           <button class="btn btn-ghost btn-sm" onclick="grpAddByNumber()">Add</button>
         </div>
-        <div style="margin-bottom:8px">
-          <label class="btn btn-ghost btn-sm" style="display:inline-flex;cursor:pointer">
+        <div> class="scb-u-10"
+          <label class="btn btn-ghost btn-sm scb-u-206">
             📄 Import from CSV
-            <input type="file" accept=".csv,text/csv" style="display:none" onchange="importGroupMembersCsv(this)"/>
+            <input class="scb-u-25" type="file" accept=".csv,text/csv" onchange="importGroupMembersCsv(this)"/>
           </label>
-          <span style="font-size:11px;color:var(--muted);margin-left:6px">A list of numbers, one per line or comma-separated</span>
+          <span> class="scb-u-207"A list of numbers, one per line or comma-separated</span>
         </div>
         <div id="selected-members"></div>
         <div id="member-pick-list"></div>
@@ -3504,10 +3772,10 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <div class="overlay" id="join-server-modal">
-  <div class="modal" style="max-width:340px">
+  <div class="modal scb-u-208">
     <div class="modal-header"><h2>🔗 Join a Server</h2><p>Enter an invite code — an admin will need to approve your request.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
-      <div class="field"><label>Invite code</label><input type="text" id="join-server-code" maxlength="6" placeholder="e.g. 7K2NPX" style="text-transform:uppercase;letter-spacing:2px;text-align:center;font-weight:700" onkeydown="if(event.key==='Enter')submitJoinServer()"/></div>
+    <div class="modal-body scb-u-29">
+      <div class="field"><label>Invite code</label><input class="scb-u-209" type="text" id="join-server-code" maxlength="6" placeholder="e.g. 7K2NPX" onkeydown="if(event.key==='Enter')submitJoinServer()"/></div>
       <div class="error-text" id="join-server-error"></div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="submitJoinServer()">Request to Join</button><button class="btn btn-ghost" onclick="closeModal('join-server-modal')">Cancel</button></div>
@@ -3517,7 +3785,7 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="report-modal">
   <div class="modal">
     <div class="modal-header"><h2>Report User</h2><p>This will send an email report for review.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="field"><label>Category</label>
         <select id="report-category">
           <option value="spam">Spam</option>
@@ -3529,7 +3797,7 @@ body.device-tablet .msg-body{max-width:74%}
         </select>
       </div>
       <div class="field"><label>Reason</label><textarea id="report-reason" rows="3" placeholder="Describe the issue…" maxlength="300"></textarea></div>
-      <div class="field-hint" style="font-size:11px;color:var(--muted);margin-top:4px">The last few messages in this chat will be attached as evidence for the reviewer.</div>
+      <div class="field-hint scb-u-210">The last few messages in this chat will be attached as evidence for the reviewer.</div>
       <div class="error-text" id="report-error"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-danger" onclick="submitReport()">Send Report</button><button class="btn btn-ghost" onclick="closeModal('report-modal')">Cancel</button></div>
@@ -3537,18 +3805,18 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <div class="overlay" id="msg-info-overlay">
-  <div class="modal" style="max-width:340px">
+  <div class="modal scb-u-208">
     <div class="modal-header"><h2>Message Info</h2></div>
-    <div class="modal-body" style="padding-bottom:14px" id="msg-info-body"></div>
+    <div class="modal-body scb-u-29" id="msg-info-body"></div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('msg-info-overlay')">Close</button></div>
   </div>
 </div>
 
 <div class="overlay" id="chat-lock-overlay">
-  <div class="modal" style="max-width:320px;text-align:center">
+  <div class="modal scb-u-211">
     <div class="modal-header"><h2>🔒 Chat Locked</h2><p id="chat-lock-desc">Enter your PIN to unlock this chat.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
-      <div id="chat-lock-method-tabs" style="display:none;gap:6px;justify-content:center;margin-bottom:12px">
+    <div class="modal-body scb-u-29">
+      <div class="scb-u-212" id="chat-lock-method-tabs">
         <button class="btn btn-ghost btn-sm chat-lock-tab" id="chat-lock-tab-pin" onclick="switchChatLockMethod('pin')">🔢 PIN</button>
         <button class="btn btn-ghost btn-sm chat-lock-tab" id="chat-lock-tab-face" onclick="switchChatLockMethod('face')">📷 Face</button>
       </div>
@@ -3560,7 +3828,7 @@ body.device-tablet .msg-body{max-width:74%}
           <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'chat')"/>
         </div>
       </div>
-      <div id="chat-lock-face-pane" style="display:none">
+      <div class="scb-u-25" id="chat-lock-face-pane">
         <div class="face-scan-wrap compact">
           <video id="chat-lock-face-video" autoplay muted playsinline></video>
           <canvas id="chat-lock-face-canvas"></canvas>
@@ -3570,7 +3838,7 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div class="face-scan-status" id="chat-lock-face-status"></div>
       </div>
-      <div class="error-text" id="chat-lock-error" style="text-align:center"></div>
+      <div class="error-text scb-u-6" id="chat-lock-error"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeChatLockOverlay()">Cancel</button></div>
   </div>
@@ -3579,34 +3847,34 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- CONTACT INFO PANEL -->
 <div class="overlay" id="contact-panel-overlay">
-  <div class="modal" style="max-width:380px">
+  <div class="modal scb-u-72">
     <div class="modal-header">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-        <div class="avatar" id="cp-avatar" style="width:52px;height:52px;font-size:20px;background:var(--accent);color:#fff">?</div>
+      <div> class="scb-u-213"
+        <div class="avatar scb-u-214" id="cp-avatar">?</div>
         <div>
-          <div id="cp-name" style="font-size:16px;font-weight:600"></div>
-          <div id="cp-nowplaying" style="display:none;margin-top:4px"></div>
-          <div id="cp-music" style="display:none;margin-top:4px"></div>
-          <div id="cp-number" style="font-size:12px;color:var(--accent)"></div>
-          <div id="cp-bio" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
-          <div id="cp-status" style="font-size:11px;margin-top:2px"></div>
-          <div id="cp-mutual" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
-          <div id="cp-mutual-friends" onclick="toggleMutualFriendsList()" style="display:none"></div>
-          <div id="cp-mutual-friends-list" style="display:none;font-size:11px;color:var(--text2);margin-top:4px;max-width:260px"></div>
+          <div class="scb-u-215" id="cp-name"></div>
+          <div class="scb-u-216" id="cp-nowplaying"></div>
+          <div class="scb-u-216" id="cp-music"></div>
+          <div class="scb-u-169" id="cp-number"></div>
+          <div class="scb-u-188" id="cp-bio"></div>
+          <div class="scb-u-196" id="cp-status"></div>
+          <div class="scb-u-217" id="cp-mutual"></div>
+          <div class="scb-u-25" id="cp-mutual-friends" onclick="toggleMutualFriendsList()"></div>
+          <div class="scb-u-218" id="cp-mutual-friends-list"></div>
         </div>
       </div>
     </div>
-    <div class="modal-body" style="padding-bottom:10px">
+    <div class="modal-body scb-u-145">
       <div class="field">
-        <label>Nickname <span style="color:var(--muted)">(only you see this)</span></label>
+        <label>Nickname <span> class="scb-u-58"(only you see this)</span></label>
         <input type="text" id="cp-nickname" placeholder="Add a nickname…" maxlength="24"/>
       </div>
       <div class="field">
-        <label>Notes <span style="color:var(--muted)">(only you see this)</span></label>
-        <textarea id="cp-notes" placeholder="Add a private note…" rows="2" maxlength="300" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;resize:vertical"></textarea>
+        <label>Notes <span> class="scb-u-58"(only you see this)</span></label>
+        <textarea class="scb-u-219" id="cp-notes" placeholder="Add a private note…" rows="2" maxlength="300"></textarea>
       </div>
     </div>
-    <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
+    <div class="modal-footer scb-u-220">
       <button class="btn btn-sm" onclick="saveCpNickname()">Save</button>
       <button class="btn btn-ghost btn-sm" id="cp-ping-btn" onclick="sendPing()">🔔 Ping</button>
       <button class="btn btn-ghost btn-sm" onclick="archiveToggle();closeModal('contact-panel-overlay')">📁 Archive</button>
@@ -3618,68 +3886,68 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- GROUP INFO PANEL -->
 <div class="overlay" id="group-panel-overlay">
-  <div class="modal" style="max-width:440px">
+  <div class="modal scb-u-221">
     <div class="modal-header">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
-        <div class="group-avatar" id="gp-avatar" style="width:52px;height:52px;font-size:22px;background:linear-gradient(135deg,#ca5010,#6264a0);color:#fff;border-radius:12px;cursor:pointer" onclick="if(isGroupAdmin())openAvatarEditor(false,true)">👥</div>
-        <div style="flex:1">
-          <div id="gp-name" style="font-size:16px;font-weight:600"></div>
-          <div id="gp-info-text" style="font-size:12px;color:var(--muted)"></div>
-          <div id="gp-member-count" style="font-size:11px;color:var(--muted2)"></div>
+      <div> class="scb-u-222"
+        <div class="group-avatar scb-u-223" id="gp-avatar" onclick="if(isGroupAdmin())openAvatarEditor(false,true)">👥</div>
+        <div> class="scb-u-37"
+          <div class="scb-u-215" id="gp-name"></div>
+          <div class="scb-u-149" id="gp-info-text"></div>
+          <div class="scb-u-224" id="gp-member-count"></div>
         </div>
       </div>
-      <div id="gp-admin-note" style="font-size:11px;color:var(--accent);margin-bottom:8px"></div>
+      <div class="scb-u-225" id="gp-admin-note"></div>
     </div>
-    <div class="modal-body" style="padding-bottom:10px">
-      <div id="gp-name-edit" style="display:none;margin-bottom:10px">
+    <div class="modal-body scb-u-145">
+      <div class="scb-u-226" id="gp-name-edit">
         <div class="field"><label>Group name</label><input type="text" id="gp-name-input" maxlength="40"/></div>
         <div class="field"><label>Group info</label><textarea id="gp-info-input" maxlength="120" rows="2"></textarea></div>
         <button class="btn btn-sm" onclick="saveGroupInfo()">Save</button>
       </div>
       <!-- Invite code (servers only) -->
-      <div id="gp-invite-section" style="display:none;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Invite Code</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <code id="gp-invite-code" style="flex:1;background:var(--surface2);border-radius:var(--r-sm);padding:8px 10px;font-size:15px;letter-spacing:2px;text-align:center;font-weight:700"></code>
+      <div class="scb-u-227" id="gp-invite-section">
+        <div> class="scb-u-228"Invite Code</div>
+        <div> class="scb-u-70"
+          <code class="scb-u-229" id="gp-invite-code"></code>
           <button class="btn btn-ghost btn-sm" onclick="copyServerInviteCode()">📋 Copy</button>
-          <button class="btn btn-ghost btn-sm" id="gp-invite-regen-btn" style="display:none" onclick="regenerateServerInviteCode()">🔄</button>
+          <button class="btn btn-ghost btn-sm scb-u-25" id="gp-invite-regen-btn" onclick="regenerateServerInviteCode()">🔄</button>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Anyone with this code can request to join — an admin must approve.</div>
+        <div> class="scb-u-210"Anyone with this code can request to join — an admin must approve.</div>
       </div>
       <!-- Pending join requests (server admins only) -->
-      <div id="gp-join-requests-section" style="display:none;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Pending Join Requests</div>
+      <div class="scb-u-227" id="gp-join-requests-section">
+        <div> class="scb-u-228"Pending Join Requests</div>
         <div id="gp-join-requests-list"></div>
       </div>
       <!-- Quarantine new members (security feature 29/32), admin only -->
-      <div id="gp-quarantine-section" style="display:none;margin-bottom:12px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:8px">
-          <input type="checkbox" id="gp-quarantine-toggle" onchange="toggleGroupQuarantine(this.checked)" style="width:15px;height:15px;cursor:pointer"/>
+      <div class="scb-u-227" id="gp-quarantine-section">
+        <label> class="scb-u-230"
+          <input class="scb-u-174" type="checkbox" id="gp-quarantine-toggle" onchange="toggleGroupQuarantine(this.checked)"/>
           🚦 Quarantine new members' messages until a mod approves them
         </label>
-        <div id="gp-quarantine-pending-wrap" style="display:none">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Awaiting Approval</div>
+        <div class="scb-u-25" id="gp-quarantine-pending-wrap">
+          <div> class="scb-u-228"Awaiting Approval</div>
           <div id="gp-quarantine-pending-list"></div>
         </div>
       </div>
       <!-- Roles section (admin only) -->
-      <div id="gp-roles-section" style="display:none;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Roles</div>
+      <div class="scb-u-227" id="gp-roles-section">
+        <div> class="scb-u-228"Roles</div>
         <div id="gp-roles-list"></div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="openCreateRole()">+ Create Role</button>
+        <button class="btn btn-ghost btn-sm scb-u-177" onclick="openCreateRole()">+ Create Role</button>
       </div>
       <!-- Badges section (servers only — every member can see it and equip
            what they've earned; only server admins can create/manage) -->
-      <div id="gp-badges-section" style="display:none;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Badges</div>
+      <div class="scb-u-227" id="gp-badges-section">
+        <div> class="scb-u-228"Badges</div>
         <div id="gp-badges-list"></div>
-        <button id="gp-badges-create-btn" class="btn btn-ghost btn-sm" style="display:none;margin-top:6px" onclick="openCreateBadge()">+ Create Badge</button>
+        <button id="gp-badges-create-btn" class="btn btn-ghost btn-sm scb-u-231" onclick="openCreateBadge()">+ Create Badge</button>
       </div>
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Members</div>
+      <div> class="scb-u-228"Members</div>
       <div id="gp-members-list"></div>
     </div>
-    <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
-      <button id="gp-edit-btn" class="btn btn-ghost btn-sm" style="display:none" onclick="toggleGpEdit()">✏️ Edit</button>
+    <div class="modal-footer scb-u-220">
+      <button id="gp-edit-btn" class="btn btn-ghost btn-sm scb-u-25" onclick="toggleGpEdit()">✏️ Edit</button>
       <button class="btn btn-danger btn-sm" onclick="leaveGroup()">Leave Group</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('group-panel-overlay')">Close</button>
     </div>
@@ -3687,21 +3955,21 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <!-- MEMBER CONTEXT MENU -->
-<div id="member-ctx-menu" style="position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);z-index:400;min-width:180px;padding:4px;display:none">
+<div class="scb-u-232" id="member-ctx-menu">
   <div class="ctx-item" onclick="memberCtxAction('message')">💬 Message</div>
   <div class="ctx-item" onclick="memberCtxAction('coadmin')">⭐ Make Co-Admin</div>
   <div class="ctx-item" onclick="memberCtxAction('admin')">👑 Make Admin</div>
   <div class="ctx-item" onclick="memberCtxAction('role')">🏷 Assign Role</div>
-  <div style="height:1px;background:var(--border);margin:3px 0"></div>
-  <div class="ctx-item" style="color:var(--danger)" onclick="memberCtxAction('remove')">🚫 Kick</div>
-  <div class="ctx-item" style="color:var(--danger)" onclick="memberCtxAction('ban')">⛔ Ban + Kick</div>
+  <div> class="scb-u-233"</div>
+  <div class="ctx-item scb-u-47" onclick="memberCtxAction('remove')">🚫 Kick</div>
+  <div class="ctx-item scb-u-47" onclick="memberCtxAction('ban')">⛔ Ban + Kick</div>
 </div>
 
 <!-- CREATE ROLE MODAL -->
 <div class="overlay" id="role-modal">
-  <div class="modal" style="max-width:340px">
+  <div class="modal scb-u-208">
     <div class="modal-header"><h2>Create Role</h2><p>Define a role for group members.</p></div>
-    <div class="modal-body" style="padding-bottom:10px">
+    <div class="modal-body scb-u-145">
       <div class="field"><label>Role name</label><input type="text" id="role-name-input" maxlength="20" placeholder="e.g. Moderator"/></div>
       <div class="field"><label>Icon (emoji)</label><input type="text" id="role-icon-input" maxlength="4" placeholder="🛡"/></div>
       <div class="field"><label>Description</label><input type="text" id="role-desc-input" maxlength="80" placeholder="What does this role do?"/></div>
@@ -3717,9 +3985,9 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- ASSIGN ROLE MODAL -->
 <div class="overlay" id="assign-role-modal">
-  <div class="modal" style="max-width:320px">
+  <div class="modal scb-u-234">
     <div class="modal-header"><h2>Assign Role</h2><p id="assign-role-desc"></p></div>
-    <div class="modal-body" style="padding-bottom:10px">
+    <div class="modal-body scb-u-145">
       <div id="assign-role-list"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('assign-role-modal')">Cancel</button></div>
@@ -3728,9 +3996,9 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- CREATE BADGE MODAL -->
 <div class="overlay" id="badge-modal">
-  <div class="modal" style="max-width:340px">
+  <div class="modal scb-u-208">
     <div class="modal-header"><h2>Create Badge</h2><p>Members who earn this can display it on their profile.</p></div>
-    <div class="modal-body" style="padding-bottom:10px">
+    <div class="modal-body scb-u-145">
       <div class="field"><label>Badge name</label><input type="text" id="badge-name-input" maxlength="24" placeholder="e.g. Founding Member"/></div>
       <div class="field"><label>Icon (emoji)</label><input type="text" id="badge-icon-input" maxlength="4" placeholder="🏅"/></div>
       <div class="field"><label>Requirement (shown to members)</label><input type="text" id="badge-desc-input" maxlength="80" placeholder="e.g. Helped moderate during beta"/></div>
@@ -3742,7 +4010,7 @@ body.device-tablet .msg-body{max-width:74%}
           <option value="message_count">Automatic — messages sent in this server</option>
         </select>
       </div>
-      <div class="field" id="badge-criteria-days-field" style="display:none">
+      <div class="field scb-u-25" id="badge-criteria-days-field">
         <label id="badge-criteria-days-label">Days</label>
         <input type="number" id="badge-criteria-days" min="1" value="30"/>
       </div>
@@ -3757,9 +4025,9 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- MANAGE BADGE MEMBERS MODAL (manual grant/revoke) -->
 <div class="overlay" id="badge-members-modal">
-  <div class="modal" style="max-width:340px">
+  <div class="modal scb-u-208">
     <div class="modal-header"><h2 id="badge-members-title">Manage Badge</h2><p>Grant or revoke this badge for individual members.</p></div>
-    <div class="modal-body" style="padding-bottom:10px">
+    <div class="modal-body scb-u-145">
       <div id="badge-members-list"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('badge-members-modal')">Close</button></div>
@@ -3768,17 +4036,17 @@ body.device-tablet .msg-body{max-width:74%}
 
 <!-- POLL MODAL -->
 <div class="overlay" id="poll-modal">
-  <div class="modal" style="max-width:380px">
+  <div class="modal scb-u-72">
     <div class="modal-header"><h2>Create Poll</h2><p>Ask your group a question.</p></div>
-    <div class="modal-body" style="padding-bottom:10px">
+    <div class="modal-body scb-u-145">
       <div class="field"><label>Question</label><input type="text" id="poll-question" maxlength="120" placeholder="e.g. What game should we play?"/></div>
       <div class="field">
         <label>Options</label>
         <div id="poll-options-wrap">
-          <input type="text" class="poll-opt" maxlength="60" placeholder="Option 1" style="margin-bottom:6px"/>
-          <input type="text" class="poll-opt" maxlength="60" placeholder="Option 2" style="margin-bottom:6px"/>
+          <input type="text" class="poll-opt scb-u-235" maxlength="60" placeholder="Option 1"/>
+          <input type="text" class="poll-opt scb-u-235" maxlength="60" placeholder="Option 2"/>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="addPollOption()" style="margin-top:4px">+ Add Option</button>
+        <button class="btn btn-ghost btn-sm scb-u-81" onclick="addPollOption()">+ Add Option</button>
       </div>
       <div class="error-text" id="poll-error"></div>
     </div>
@@ -3794,7 +4062,7 @@ body.device-tablet .msg-body{max-width:74%}
 
 
 <!-- MESSAGE SEARCH RESULTS -->
-<div id="msg-search-results" style="display:none;position:absolute;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:40;max-height:300px;overflow-y:auto;box-shadow:var(--shadow)"></div>
+<div class="scb-u-236" id="msg-search-results"></div>
 
 <!-- CryptoJS 4.2.0 — AES-256 used for profile field obfuscation (enc/dec).
      Was previously inlined; now loaded from CDN to keep file size small.
@@ -25957,22 +26225,22 @@ init();
 
 <!-- ADMIN PANEL (only for admin #2015) -->
 <div class="overlay" id="admin-panel-modal">
-  <div class="modal" style="max-width:460px">
+  <div class="modal scb-u-237">
     <div class="modal-header"><h2>⚡ Admin Panel</h2><p>Manage reported users.</p></div>
-    <div class="modal-body" id="admin-panel-body" style="padding-bottom:14px"></div>
+    <div class="modal-body scb-u-29" id="admin-panel-body"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('admin-panel-modal')">Close</button></div>
   </div>
 </div>
 
 <!-- 2FA SETUP -->
 <div class="overlay" id="totp-setup-modal">
-  <div class="modal" style="max-width:380px">
+  <div class="modal scb-u-72">
     <div class="modal-header"><h2>🔐 Set Up Two-Factor Authentication</h2><p>Scan or enter this into an authenticator app (Google Authenticator, Authy, etc).</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="field">
         <label>Secret key (manual entry)</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="text" id="totp-secret-display" readonly style="font-family:monospace;letter-spacing:1px"/>
+        <div> class="scb-u-142"
+          <input class="scb-u-238" type="text" id="totp-secret-display" readonly/>
           <button class="btn btn-ghost btn-sm" onclick="copyTotpSecret()">Copy</button>
         </div>
         <div class="field-hint">In your authenticator app: Add account → Enter setup key manually → paste this, account name SoCloudyBro.</div>
@@ -25986,11 +26254,11 @@ init();
 
 <!-- OUTGOING CALL -->
 <div class="overlay" id="outgoing-call-modal">
-  <div class="modal" style="max-width:320px;text-align:center">
-    <div class="modal-body" style="padding:28px 20px">
-      <div style="font-size:40px;margin-bottom:10px">📞</div>
-      <div style="font-size:15px;font-weight:600;margin-bottom:4px">Calling <span id="outgoing-call-name"></span>…</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Ringing</div>
+  <div class="modal scb-u-211">
+    <div class="modal-body scb-u-239">
+      <div> class="scb-u-240"📞</div>
+      <div> class="scb-u-241"Calling <span id="outgoing-call-name"></span>…</div>
+      <div> class="scb-u-242"Ringing</div>
       <button class="btn btn-danger btn-full" onclick="cancelOutgoingCall()">Cancel</button>
     </div>
   </div>
@@ -25998,7 +26266,7 @@ init();
 
 <!-- INCOMING CALL -->
 <div class="overlay" id="incoming-call-modal">
-  <div class="modal" style="max-width:320px;text-align:center">
+  <div class="modal scb-u-211">
     <div class="modal-body">
       <div class="call-avatar-ring">📞</div>
       <div class="call-caller-name"><span id="incoming-call-name"></span></div>
@@ -26013,11 +26281,11 @@ init();
 
 <!-- ADD GROUP MEMBER -->
 <div class="overlay" id="add-group-member-modal">
-  <div class="modal" style="max-width:380px">
+  <div class="modal scb-u-72">
     <div class="modal-header"><h2>Add Members</h2><p>Choose contacts to add to this group.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
-      <div id="add-group-member-selected" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:10px"></div>
-      <div id="add-group-member-pick-list" style="max-height:260px;overflow-y:auto"></div>
+    <div class="modal-body scb-u-29">
+      <div class="scb-u-243" id="add-group-member-selected"></div>
+      <div class="scb-u-244" id="add-group-member-pick-list"></div>
       <div class="error-text" id="add-group-member-error"></div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="submitAddGroupMembers()">Add</button><button class="btn btn-ghost" onclick="closeModal('add-group-member-modal')">Cancel</button></div>
@@ -26026,9 +26294,9 @@ init();
 
 <!-- ADD CHANNEL -->
 <div class="overlay" id="add-channel-modal">
-  <div class="modal" style="max-width:360px">
+  <div class="modal scb-u-71">
     <div class="modal-header"><h2>Add Channel</h2></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div class="field"><label>Channel name</label><input type="text" id="add-channel-name" placeholder="e.g. announcements" maxlength="30"/></div>
       <div class="field"><label>Type</label><select id="add-channel-type"><option value="text">Text</option><option value="voice">Voice</option></select></div>
       <div class="error-text" id="add-channel-error"></div>
@@ -26039,16 +26307,16 @@ init();
 
 <!-- ADMIN DASHBOARD (only for admin #2015) -->
 <div class="overlay" id="admin-user-record-modal">
-  <div class="modal" style="max-width:520px;height:min(620px,86vh);padding:0;overflow:hidden;display:flex;flex-direction:column">
-    <div class="modal-header" style="padding:18px 20px 12px"><h2 id="admin-record-title">📋 User Record</h2><p>Full account record, reports, and flags</p></div>
-    <div class="modal-body" id="admin-record-body" style="flex:1;overflow-y:auto;padding:0 20px 14px"></div>
+  <div class="modal scb-u-245">
+    <div class="modal-header scb-u-246"><h2 id="admin-record-title">📋 User Record</h2><p>Full account record, reports, and flags</p></div>
+    <div class="modal-body scb-u-247" id="admin-record-body"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('admin-user-record-modal')">Close</button></div>
   </div>
 </div>
 
 <div class="overlay" id="admin-dashboard-modal">
-  <div class="modal" style="max-width:860px;height:min(640px,86vh);padding:0;overflow:hidden">
-    <div class="modal-header" style="padding:20px 20px 14px"><h2>🛡️ Admin Dashboard</h2><p>Overview · Moderation · Feedback · Engineering</p></div>
+  <div class="modal scb-u-248">
+    <div class="modal-header scb-u-249"><h2>🛡️ Admin Dashboard</h2><p>Overview · Moderation · Feedback · Engineering</p></div>
     <div class="admin-dash-layout">
       <div class="admin-dash-sidebar">
         <div class="admin-dash-search-wrap">
@@ -26071,7 +26339,7 @@ init();
           <button class="admin-dash-tab" data-tab="diagnostics" data-keywords="diagnostics health check clean firebase data" onclick="switchAdminTab('diagnostics')">🔍 Diagnostics</button>
           <button class="admin-dash-tab admin-dash-tab-owner" data-tab="ownertools" data-keywords="owner tools danger zone rules nuclear reset" onclick="switchAdminTab('ownertools')" title="Owner-only">👑 Owner Tools</button>
         </div>
-        <div class="admin-dash-nav-empty" id="admin-dash-nav-empty" style="display:none">No matching sections</div>
+        <div class="admin-dash-nav-empty scb-u-25" id="admin-dash-nav-empty">No matching sections</div>
       </div>
       <div class="admin-dash-content" id="admin-dashboard-body"></div>
     </div>
@@ -26081,26 +26349,26 @@ init();
 
 <!-- ADMIN: RESET ACCOUNT (see adminResetAccount / submitAdminResetAccount) -->
 <div class="overlay" id="admin-reset-modal">
-  <div class="modal" style="max-width:460px">
+  <div class="modal scb-u-237">
     <div class="modal-header"><h2>🔄 Reset account</h2><p>Give <b id="admin-reset-who"></b> a fresh profile without losing anything they've said.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
-      <p id="admin-reset-summary" style="font-size:13px;color:var(--text2);line-height:1.55;margin:0 0 10px"></p>
-      <div style="font-size:12px;color:var(--text2);line-height:1.6;background:var(--surface2,rgba(127,127,127,.08));border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px">
-        <div style="font-weight:600;margin-bottom:4px">Cleared</div>
+    <div class="modal-body scb-u-29">
+      <p class="scb-u-250" id="admin-reset-summary"></p>
+      <div> class="scb-u-251"
+        <div> class="scb-u-252"Cleared</div>
         Name (becomes “Reset User #number”), bio, custom status, avatar, theme colours, large-text setting.
-        <div style="font-weight:600;margin:8px 0 4px">Kept</div>
+        <div> class="scb-u-253"Kept</div>
         Their account number, password, email, sign-in and two-factor setup, <b>any connected Google account and linked Syntax Account</b> (so those stay working as ways to sign in and keep their “Playing…” badge), account creation date, blocked list, signed-in devices, and every message, chat and group they're part of.
       </div>
-      <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;cursor:pointer">
-        <input type="checkbox" id="admin-reset-keys" style="margin-top:2px;flex-shrink:0"/>
+      <label> class="scb-u-254"
+        <input class="scb-u-255" type="checkbox" id="admin-reset-keys"/>
         <span><b>Also regenerate encryption keys.</b> Only do this if their keys are actually corrupted. Their new keys are created on their own device the next time they open the app — until then nobody can send them new encrypted messages. And because a shared chat key is derived from their old public key, <b>past messages in their chats will stop being readable for everyone they've talked to, permanently.</b> Key derivation is not retroactive, so this cannot be undone.</span>
       </label>
-      <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px;cursor:pointer">
-        <input type="checkbox" id="admin-reset-pwd" style="margin-top:2px;flex-shrink:0"/>
+      <label> class="scb-u-256"
+        <input class="scb-u-255" type="checkbox" id="admin-reset-pwd"/>
         <span><b>Also require a new password.</b> Their current password keeps working, and they're asked to choose a new one the next time they open the app. Their password is never removed — an account with no password could be taken over by anyone who knows its number.</span>
       </label>
-      <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;cursor:pointer">
-        <input type="checkbox" id="admin-reset-mfa" style="margin-top:2px;flex-shrink:0"/>
+      <label> class="scb-u-254"
+        <input class="scb-u-255" type="checkbox" id="admin-reset-mfa"/>
         <span><b>Also clear two-factor/face sign-in.</b> Only do this if they're actually locked out — no camera, no passkey, and no backup PIN or security questions set up. Turns off authenticator-app codes and face verification so they can sign in with just their password; their backup PIN and security questions (if any) are left as they are so they still work once they're back in.</span>
       </label>
       <div class="error-text" id="admin-reset-error"></div>
@@ -26114,11 +26382,11 @@ init();
 
 <!-- CUSTOMIZE UI -->
 <div class="overlay" id="customize-ui-modal">
-  <div class="modal" style="max-width:640px">
+  <div class="modal scb-u-257">
     <div class="modal-header"><h2>🎨 Customize UI</h2><p>Drag widgets to move them, drag the ↘ corner to resize, tap ✕ to remove.</p></div>
-    <div class="modal-body" style="padding-bottom:14px">
+    <div class="modal-body scb-u-29">
       <div id="editor-grid"></div>
-      <h3 style="font-size:12px;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.04em">Add a widget</h3>
+      <h3> class="scb-u-258"Add a widget</h3>
       <div id="widget-tray"></div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeCustomizeUI()">Done</button></div>
@@ -26127,15 +26395,15 @@ init();
 
 <!-- GAME MENU -->
 <div class="overlay" id="game-menu-modal">
-  <div class="modal" style="max-width:360px">
+  <div class="modal scb-u-71">
     <div class="modal-header"><h2>🎮 Play a Game</h2><p>Pick a minigame to start here.</p></div>
-    <div class="modal-body" id="game-menu-body" style="padding-bottom:14px"></div>
+    <div class="modal-body scb-u-29" id="game-menu-body"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('game-menu-modal')">Cancel</button></div>
   </div>
 </div>
 
 <!-- REACTION PICKER -->
-<div id="reaction-picker" style="position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:30px;box-shadow:var(--shadow-lg);z-index:350;padding:6px 10px;display:none;gap:4px;font-size:22px">
+<div class="scb-u-259" id="reaction-picker">
 </div>
 
 <script>
@@ -27737,24 +28005,24 @@ window._sendToCloudyChat = _sendToCloudyChat;
 </script>
 
 <!-- Avatar zoom overlay -->
-<div id="avatar-zoom-overlay" onclick="closeAvatarZoom()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;cursor:zoom-out">
-  <img id="avatar-zoom-img" src="" alt="Profile photo" style="max-width:90vw;max-height:90vh;border-radius:50%;object-fit:cover;box-shadow:0 8px 40px rgba(0,0,0,0.6)"/>
+<div class="scb-u-260" id="avatar-zoom-overlay" onclick="closeAvatarZoom()">
+  <img class="scb-u-261" id="avatar-zoom-img" src="" alt="Profile photo"/>
 </div>
 
 <!-- Keyboard shortcut panel -->
 <div class="overlay" id="shortcuts-modal">
-  <div class="modal" style="max-width:420px">
+  <div class="modal scb-u-28">
     <div class="modal-header"><h2>⌨️ Keyboard Shortcuts</h2></div>
-    <div class="modal-body" style="padding-bottom:10px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px">
-        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Enter</kbd></div><div style="color:var(--muted)">Send message</div>
-        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Shift+Enter</kbd></div><div style="color:var(--muted)">New line</div>
-        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Esc</kbd></div><div style="color:var(--muted)">Close modals / cancel reply</div>
-        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">?</kbd></div><div style="color:var(--muted)">Show this panel</div>
-        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Ctrl+K</kbd></div><div style="color:var(--muted)">Search messages</div>
-        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Ctrl+,</kbd></div><div style="color:var(--muted)">Open settings</div>
-        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">Ctrl+B</kbd></div><div style="color:var(--muted)">Toggle sidebar</div>
-        <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace">↑</kbd></div><div style="color:var(--muted)">Edit last message (when input empty)</div>
+    <div class="modal-body scb-u-145">
+      <div> class="scb-u-262"
+        <div><kbd> class="scb-u-263"Enter</kbd></div><div> class="scb-u-58"Send message</div>
+        <div><kbd> class="scb-u-263"Shift+Enter</kbd></div><div> class="scb-u-58"New line</div>
+        <div><kbd> class="scb-u-263"Esc</kbd></div><div> class="scb-u-58"Close modals / cancel reply</div>
+        <div><kbd> class="scb-u-263"?</kbd></div><div> class="scb-u-58"Show this panel</div>
+        <div><kbd> class="scb-u-263"Ctrl+K</kbd></div><div> class="scb-u-58"Search messages</div>
+        <div><kbd> class="scb-u-263"Ctrl+,</kbd></div><div> class="scb-u-58"Open settings</div>
+        <div><kbd> class="scb-u-263"Ctrl+B</kbd></div><div> class="scb-u-58"Toggle sidebar</div>
+        <div><kbd> class="scb-u-263"↑</kbd></div><div> class="scb-u-58"Edit last message (when input empty)</div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('shortcuts-modal')">Close</button></div>
@@ -27762,9 +28030,9 @@ window._sendToCloudyChat = _sendToCloudyChat;
 </div>
 
 <div class="overlay" id="chat-wallpaper-modal">
-  <div class="modal" style="max-width:460px">
+  <div class="modal scb-u-237">
     <div class="modal-header"><h2>🖼️ Wallpaper for this chat</h2></div>
-    <div class="modal-body" style="padding-bottom:10px">
+    <div class="modal-body scb-u-145">
       <div class="bg-options" id="chat-wallpaper-options"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('chat-wallpaper-modal')">Close</button></div>
@@ -27772,25 +28040,25 @@ window._sendToCloudyChat = _sendToCloudyChat;
 </div>
 
 <div class="overlay" id="changelog-modal">
-  <div class="modal" style="max-width:460px">
+  <div class="modal scb-u-237">
     <div class="modal-header"><h2>🆕 What's New</h2></div>
-    <div class="modal-body" id="changelog-body" style="padding-bottom:10px;max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-body scb-u-264" id="changelog-body"></div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('changelog-modal')">Close</button></div>
   </div>
 </div>
 
 <!-- Schedule message modal -->
 <div class="overlay" id="schedule-msg-modal">
-  <div class="modal" style="max-width:340px">
+  <div class="modal scb-u-208">
     <div class="modal-header"><h2>🕐 Schedule Message</h2><p>Your message will be sent at the time you pick.</p></div>
-    <div class="modal-body" style="padding-bottom:10px">
+    <div class="modal-body scb-u-145">
       <div class="field">
         <label>Send at</label>
-        <input type="datetime-local" id="schedule-dt-input" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px"/>
+        <input class="scb-u-265" type="datetime-local" id="schedule-dt-input"/>
       </div>
       <div class="error-text" id="schedule-error"></div>
     </div>
-    <div class="modal-footer" style="gap:8px">
+    <div class="modal-footer scb-u-74">
       <button class="btn" onclick="confirmScheduleMsg()">Schedule ↗</button>
       <button class="btn btn-ghost" onclick="closeModal('schedule-msg-modal')">Cancel</button>
     </div>
