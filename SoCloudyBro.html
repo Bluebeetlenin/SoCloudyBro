@@ -18817,7 +18817,9 @@ async function exportEncryptedAuditLog(){
   if(!pwd||!pwd.trim()) return;
   if(pwd.length<6){ showToast('Too short','Use at least 6 characters.'); return; }
   try{
-    const snap=await fbdb.ref('admin_site/audit_log').orderByChild('at').limitToLast(1000).get();
+    // Same as renderAdminAuditLog: push() keys are chronological so
+    // limitToLast without orderByChild needs no .indexOn rule.
+    const snap=await fbdb.ref('admin_site/audit_log').limitToLast(1000).get();
     const entries=[];
     if(snap.exists()) snap.forEach(child=>entries.push({_key:child.key,...child.val()}));
     entries.sort((a,b)=>a.at-b.at);
@@ -19029,7 +19031,10 @@ async function renderAdminAuditLog(){
   if(!el) return;
   el.innerHTML='<div style="color:var(--muted)">Loading…</div>';
   try{
-    const snap=await fbdb.ref('admin_site/audit_log').orderByChild('at').limitToLast(30).get();
+    // orderByChild('at') requires a .indexOn rule — push() keys are already
+    // chronological, so limitToLast on the default key order is equivalent
+    // and needs no index. In-memory sort below handles the final ordering.
+    const snap=await fbdb.ref('admin_site/audit_log').limitToLast(30).get();
     const entries=[];
     // A malformed/null entry (e.g. a write that got interrupted mid-way)
     // used to crash the whole render via (b.at||0) on null — one bad
