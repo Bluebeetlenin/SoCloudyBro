@@ -4631,8 +4631,8 @@ const SCB_CHECKS = [
     run:()=>({pass:!!SPOTIFY_CLIENT_ID&&SPOTIFY_CLIENT_ID.length>10,detail:SPOTIFY_CLIENT_ID?'present':'MISSING'}) },
   { id:'cfg.lastfm', cat:'Config', name:'Last.fm API key present',
     run:()=>({pass:!!LASTFM_API_KEY&&LASTFM_API_KEY.length>10,detail:LASTFM_API_KEY?'present':'MISSING'}) },
-  { id:'cfg.web3forms', cat:'Config', name:'Web3Forms access key present',
-    run:()=>({pass:!!WEB3FORMS_ACCESS_KEY&&WEB3FORMS_ACCESS_KEY.length>10,detail:WEB3FORMS_ACCESS_KEY?'present':'MISSING'}) },
+  { id:'cfg.web3forms', cat:'Config', name:'Report Worker endpoint reachable',
+    run:()=>({pass:!!MINT_TOKEN_ENDPOINT,detail:MINT_TOKEN_ENDPOINT?'Worker endpoint configured (key is server-side secret)':'MISSING'}) },
 
   // ── FIREBASE ───────────────────────────────────────────────────────────────
   { id:'fb.sdk', cat:'Firebase', name:'Firebase SDK loaded',
@@ -5383,9 +5383,10 @@ const USERS_BIN     = 'users';
 const USERS_PRIVATE = 'users_private'; // pwd / backupPinHash / faceDescriptor — not publicly readable
 const CONVOS_BIN    = 'conversations';
 const UPDATES_BIN = 'updates';
-// Get a free access key at web3forms.com (enter your email, no signup) — used
-// to deliver report submissions to your inbox. Replace the placeholder below.
-const WEB3FORMS_ACCESS_KEY = '31b9b627-8b33-46ab-a02c-5ef88bb03153';
+// Web3Forms submissions are proxied through the Cloudflare Worker's /report
+// endpoint so the access key is never exposed in client source. The key has
+// been removed from the client and stored as a Worker secret (WEB3FORMS_ACCESS_KEY).
+const WEB3FORMS_ACCESS_KEY = '';
 // Get your own free key at developers.giphy.com (takes ~2 min) — a shared/demo
 // key gets rate-limited across everyone using it, which is the most likely
 // cause of GIFs silently failing to load.
@@ -6786,7 +6787,7 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
   // online status" (an unrelated privacy toggle) froze the inactivity clock
   // forever, so a fully active user could eventually have their account
   // wrongly destroyed by the inactivity sweep.
-  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',pwd:me.pwd||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked,blockedCalls,blockedMessages,lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),lastActive:Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
+  const payload={number:me.number,name:me.name||'',bio:me.bio||'',customStatus:me.customStatus||'',avatar:me.avatar||'',email:me.email||(u&&u.email)||'',birthdate:me.birthdate||'',blocked,blockedCalls,blockedMessages,lastSeen:getPrivacyPref('showOnline',true)?Date.now():(u&&u.lastSeen)||Date.now(),lastActive:Date.now(),parentEmail:me.parentEmail||(u&&u.parentEmail)||'',parentalConsentStatus:me.parentalConsentStatus||(u&&u.parentalConsentStatus)||'',createdAt:(u&&u.createdAt)||me.createdAt||Date.now()};
   me.blocked = blocked; me.blockedCalls = blockedCalls; me.blockedMessages = blockedMessages; // keep the in-memory copy consistent with what was actually just persisted
   if(_myPubJwk) payload.pubkey=_myPubJwk;
   // Per-account settings added by the feature pack. Each falls back to whatever
@@ -10140,7 +10141,7 @@ async function submitSetup(){
     // session; the Firebase rule allows anonymous creation of a record that
     // doesn't yet exist (!data.exists()). We write only the minimum here so the
     // Worker can verify the password server-side on the very next call.
-    await fbdb.ref(USERS_BIN+'/'+num).set({number:num, pwd:me.pwd, createdAt:me.createdAt});
+    await fbdb.ref(USERS_BIN+'/'+num).set({number:num, createdAt:me.createdAt});
     // Mirror pwd to the private node immediately so the Worker can verify it
     // from there even before registerOrUpdate() promotes the full profile.
     fbdb.ref(USERS_PRIVATE+'/'+num+'/pwd').set(me.pwd).catch(()=>{});
@@ -12790,14 +12791,30 @@ function _scbEmailCard(opts){
   </table>`;
 }
 async function sendWeb3Form(fields){
-  const res=await fetch('https://api.web3forms.com/submit',{
-    method:'POST',
-    headers:{'Content-Type':'application/json',Accept:'application/json'},
-    body:JSON.stringify({access_key:WEB3FORMS_ACCESS_KEY,...fields})
-  });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok||!data.success) throw new Error(data.message||'Failed to send.');
-  return data;
+  // Route through the Worker's /report endpoint so the Web3Forms access key
+  // stays server-side. Falls back to the direct Web3Forms call if the Worker
+  // is unreachable (e.g. during a Worker deploy/outage).
+  const workerBase = MINT_TOKEN_ENDPOINT.replace(/\/mint-token$/, '');
+  try {
+    const res=await fetch(workerBase+'/report',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Accept:'application/json'},
+      body:JSON.stringify(fields)
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.ok) throw new Error(data.error||'Worker report failed');
+    return data;
+  } catch(e) {
+    if(!WEB3FORMS_ACCESS_KEY) throw e;
+    const res=await fetch('https://api.web3forms.com/submit',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Accept:'application/json'},
+      body:JSON.stringify({access_key:WEB3FORMS_ACCESS_KEY,...fields})
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success) throw new Error(data.message||'Failed to send.');
+    return data;
+  }
 }
 const REPORT_CATEGORY_LABELS={spam:'Spam',harassment:'Harassment or bullying',scam:'Scam or phishing',inappropriate:'Inappropriate content',impersonation:'Impersonation',other:'Other'};
 async function submitReport(){
