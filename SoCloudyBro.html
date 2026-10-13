@@ -5379,8 +5379,9 @@ async function _submitStaleSessionUpgrade(){
 }
 
 // Realtime Database paths (each holds the same JSON blob that used to live in a JSONBin bin)
-const USERS_BIN   = 'users';
-const CONVOS_BIN  = 'conversations';
+const USERS_BIN     = 'users';
+const USERS_PRIVATE = 'users_private'; // pwd / backupPinHash / faceDescriptor — not publicly readable
+const CONVOS_BIN    = 'conversations';
 const UPDATES_BIN = 'updates';
 // Get a free access key at web3forms.com (enter your email, no signup) — used
 // to deliver report submissions to your inbox. Replace the placeholder below.
@@ -6849,6 +6850,18 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
   // Write only our own record — avoids a race where two users calling saveUsers()
   // concurrently overwrite each other's changes with stale full-array snapshots.
   await fbdb.ref(USERS_BIN+'/'+me.number).set(u);
+  // Mirror sensitive auth fields to the private node (read-restricted to the
+  // account owner and the Worker's service-account token). Kept as a fire-and-
+  // forget parallel write — never blocking the main profile write — because a
+  // transient failure here is not user-visible and the Worker falls back to the
+  // public-node copy for backward compat during the migration window.
+  {
+    const priv={};
+    if(u.pwd)           priv.pwd           = u.pwd;
+    if(u.backupPinHash) priv.backupPinHash = u.backupPinHash;
+    if(u.faceDescriptor)priv.faceDescriptor= u.faceDescriptor;
+    if(Object.keys(priv).length) fbdb.ref(USERS_PRIVATE+'/'+me.number).update(priv).catch(()=>{});
+  }
   if(isNewDevice&&!sessionStorage.getItem('cc_new_device_notice_shown')){
     sessionStorage.setItem('cc_new_device_notice_shown','1');
     setTimeout(()=>showToast('New device signed in','If this wasn\'t you, review and revoke devices in Settings → Sessions.'),1500);
@@ -10128,6 +10141,9 @@ async function submitSetup(){
     // doesn't yet exist (!data.exists()). We write only the minimum here so the
     // Worker can verify the password server-side on the very next call.
     await fbdb.ref(USERS_BIN+'/'+num).set({number:num, pwd:me.pwd, createdAt:me.createdAt});
+    // Mirror pwd to the private node immediately so the Worker can verify it
+    // from there even before registerOrUpdate() promotes the full profile.
+    fbdb.ref(USERS_PRIVATE+'/'+num+'/pwd').set(me.pwd).catch(()=>{});
     // Now upgrade to a custom auth token — the record exists, so the Worker can
     // verify the password (or Google credential) server-side. Every subsequent
     // write in registerOrUpdate() and launch() runs on the real custom session,
@@ -19399,8 +19415,11 @@ const SCB_CANONICAL_RULES = {
     ".write": false,
 
     "users": {
-      // Public read — needed for contact search/add and profile display
-      ".read": true,
+      // Requires any Firebase Auth session (anonymous or custom) — prevents
+      // unauthenticated REST dumps of the entire user table. All in-app reads
+      // already carry an anonymous or custom token, so this is backwards-
+      // compatible. Removes the ability to curl the DB without a token.
+      ".read": "auth != null",
       // Index at the users level so orderByChild('number') on fbdb.ref('users') works
       ".indexOn": ["number", "linkedSoCloudyBro"],
       "$uid": {
@@ -19472,6 +19491,21 @@ const SCB_CANONICAL_RULES = {
         "parentNumber": {
           ".write": "auth != null && auth.token.email != null && auth.token.email != '' && auth.token.email == data.parent().child('parentEmail').val() && (newData.val() + '') == auth.token.number"
         }
+      }
+    },
+
+    "users_private": {
+      // Sensitive auth credentials — password hash, backup PIN hash, face
+      // descriptor. Readable only by the account owner (custom auth token with
+      // matching number claim) or the Worker's service-account token (which
+      // bypasses client rules entirely). Writable by the owner and by new
+      // account creation (anonymous !data.exists() — same pattern as users/$uid,
+      // needed for the bootstrap write during sign-up before the custom token
+      // is minted). The Worker always uses the service-account token, so it can
+      // read from here regardless of what the client rule says.
+      "$uid": {
+        ".read":  "auth.token.number == $uid",
+        ".write": "auth.token.number == $uid || auth.token.number == '2015' || !data.exists()"
       }
     },
 
