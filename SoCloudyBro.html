@@ -7984,7 +7984,7 @@ function onToggleTotpClick(){
 // Stores an averaged 128-D descriptor (not a photo) from 5 enrollment frames.
 // Auto-captures on enrollment when face is stable; auto-verifies on login when
 // 2 consecutive frames match below the distance threshold.
-const FACE_MATCH_THRESHOLD=0.48;
+const FACE_MATCH_THRESHOLD=0.42;
 const FACE_ENROLL_SAMPLES=5;
 const FACE_MODEL_URL='https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
 let _faceApiModelsLoaded=false;
@@ -19535,8 +19535,10 @@ const SCB_CANONICAL_RULES = {
     },
 
     "conversations": {
-      // Public read — message content is E2E encrypted at the app layer
-      ".read": true,
+      // Requires any Firebase Auth session — anonymous sessions satisfy this,
+      // so every in-browser visitor can still read. Only blocks unauthenticated
+      // REST dumps. Message content is also E2E encrypted at the app layer.
+      ".read": "auth != null",
       // Writes require a REAL authenticated session (a custom auth token from
       // /mint-token — password, Google, passkey, face, or backup-PIN login all
       // mint one now), not just the anonymous session every visitor gets for
@@ -19588,8 +19590,8 @@ const SCB_CANONICAL_RULES = {
     },
 
     "updates": {
-      // Public read for the community feed
-      ".read": true,
+      // Any Firebase Auth session (anonymous or custom) — blocks unauthenticated REST dumps.
+      ".read": "auth != null",
       ".write": "auth != null",
       ".indexOn": ["at", "author"]
     },
@@ -19610,40 +19612,38 @@ const SCB_CANONICAL_RULES = {
     },
 
     "calls": {
-      // Signalling data — publicly readable for WebRTC handshake
-      ".read": true,
+      // WebRTC signalling — requires any auth session (anonymous or custom).
+      // Every in-browser visitor already has an anonymous session, so nothing breaks.
+      ".read": "auth != null",
       ".write": "auth != null"
     },
 
     "voice": {
-      ".read": true,
+      ".read": "auth != null",
       ".write": "auth != null"
     },
 
     "races": {
-      ".read": true,
+      ".read": "auth != null",
       ".write": "auth != null"
     },
 
     "syntax_meetings": {
-      ".read": true,
+      ".read": "auth != null",
       ".write": "auth != null"
     },
 
     "feedback": {
-      ".read": true,
+      ".read": "auth != null",
       ".write": "auth != null"
     },
 
     "admin_site": {
-      // Live code updater — readable by all (needed for update banner).
-      // SECURITY FIX: write used to be "auth != null" — ANY authenticated
-      // session (including the plain anonymous one every visitor gets for
-      // free) could overwrite this path, including reserved_numbers (used
-      // to stop a wiped account being silently recreated) and, as of
-      // tonight, feature_flags and the admin audit log. Tightened to match
-      // every other admin-controlled path in this file.
-      ".read": true,
+      // Requires any Firebase Auth session — blocks unauthenticated REST dumps
+      // while still allowing the in-browser update banner to load (every visitor
+      // gets an anonymous session on page load).
+      // Write is admin-only (unchanged).
+      ".read": "auth != null",
       ".write": "auth != null && (auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))"
     },
 

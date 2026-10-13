@@ -22,7 +22,7 @@
 
 const ALLOWED_ORIGIN = 'https://socloudybro.vercel.app';
 const GOOGLE_CLIENT_ID = '838238846995-462tmfqv9p4mthurorumg30d2uq4qin1.apps.googleusercontent.com';
-const FACE_MATCH_THRESHOLD = 0.48;
+const FACE_MATCH_THRESHOLD = 0.42;
 
 let _jwksCache = null;
 let _jwksCacheAt = 0;
