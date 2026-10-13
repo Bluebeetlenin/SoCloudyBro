@@ -428,7 +428,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --r-card:20px;--r:14px;--r-sm:10px;--r-xs:8px;--r-pill:999px;
+  --r-card:8px;--r:6px;--r-sm:5px;--r-xs:4px;--r-pill:999px;
   --accent:#5A52D5;--accent2:#4C46C4;--accent-hover:#6B62E0;--accent-bright:#7B74F0;
   --accent-grad:linear-gradient(135deg,#4C46C4 0%,#7C5FD4 100%);
   --success:#13a10e;--danger:#d13438;--warn:#ca5010;
@@ -442,13 +442,13 @@
   /* Default (dark) — overridden by media queries */
   --bg:#12161a;--bg2:#1a2026;--bg3:#222a33;--bg4:#2c3642;
   --surface:#1e252b;--surface2:#252d35;--surface3:#2c3642;
-  --border:rgba(107,93,232,0.15);--border2:rgba(107,93,232,0.3);
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
   --text:#f3f3f3;--text2:#c8c8c8;--muted:#9d9d9d;--muted2:#6e6e6e;
 }
 @media(prefers-color-scheme:dark){:root{
   --bg:#12161a;--bg2:#1a2026;--bg3:#222a33;--bg4:#2c3642;
   --surface:#1e252b;--surface2:#252d35;--surface3:#2c3642;
-  --border:rgba(107,93,232,0.15);--border2:rgba(107,93,232,0.3);
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
   --text:#f3f3f3;--text2:#c8c8c8;--muted:#9d9d9d;--muted2:#6e6e6e;
   --shadow:0 2px 8px rgba(0,0,0,0.4),0 0 1px rgba(0,0,0,0.3);
   --shadow-lg:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(0,0,0,0.3);
@@ -456,7 +456,7 @@
 @media(prefers-color-scheme:light){:root{
   --bg:#eef3f9;--bg2:#ffffff;--bg3:#f0f4f8;--bg4:#e1e8f0;
   --surface:#ffffff;--surface2:#f2f6fc;--surface3:#e6edf5;
-  --border:rgba(107,93,232,0.15);--border2:rgba(107,93,232,0.3);
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.16);
   --text:#1a1a1a;--text2:#3d3d3d;--muted:#6e6e6e;--muted2:#9d9d9d;
   /* Amber reads as washed-out on white, so the light theme uses a deeper tone
      for the favourite star and slightly stronger status tints. */
@@ -466,7 +466,7 @@
 [data-theme="dark"]{
   --bg:#12161a;--bg2:#1a2026;--bg3:#222a33;--bg4:#2c3642;
   --surface:#1e252b;--surface2:#252d35;--surface3:#2c3642;
-  --border:rgba(107,93,232,0.15);--border2:rgba(107,93,232,0.3);
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
   --text:#f3f3f3;--text2:#c8c8c8;--muted:#9d9d9d;--muted2:#6e6e6e;
   --shadow:0 2px 8px rgba(0,0,0,0.4),0 0 1px rgba(0,0,0,0.3);
   --shadow-lg:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(0,0,0,0.3);
@@ -474,7 +474,7 @@
 [data-theme="light"]{
   --bg:#eef3f9;--bg2:#ffffff;--bg3:#f0f4f8;--bg4:#e1e8f0;
   --surface:#ffffff;--surface2:#f2f6fc;--surface3:#e6edf5;
-  --border:rgba(107,93,232,0.15);--border2:rgba(107,93,232,0.3);
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.16);
   --text:#1a1a1a;--text2:#3d3d3d;--muted:#6e6e6e;--muted2:#9d9d9d;
   --favorite:#c98a00;--warn-text:#a8480f;
   --warn-soft:rgba(202,80,16,0.14);--danger-soft:rgba(209,52,56,0.12);--success-soft:rgba(19,161,14,0.13);
@@ -496,12 +496,7 @@ body.theme-colorblind{
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;overflow:hidden}
 
-/* ── ACRYLIC BACKGROUND ── */
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse at 20% 20%,rgba(79,142,247,0.06) 0%,transparent 60%),
-             radial-gradient(ellipse at 80% 80%,rgba(107,93,232,0.07) 0%,transparent 60%)}
 
-/* ── FLUENT-STYLE SMOOTHNESS (Windows 12 concept feel) ── */
 :root{--ease-fluent:cubic-bezier(0.16,1,0.3,1);--ease-fluent-soft:cubic-bezier(0.33,1,0.68,1)}
 *{scroll-behavior:smooth}
 /* ── KEYBOARD FOCUS ──
@@ -522,43 +517,20 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px soli
 button,.icon-btn,.compose-btn,#send-btn,.btn,.sb-item,.sb-tab,#my-card,.ctx-item,.update-ch-btn,.reaction-chip,.preset-av,.bg-option,.quick-react-btn,.settings-row,.search-result-item,.poll-option{
   transition-timing-function:var(--ease-fluent-soft);
 }
-.icon-btn,.compose-btn,#send-btn,.btn,.preset-av{transition-property:background,color,box-shadow,transform,border-color;transition-duration:0.18s}
-.icon-btn:hover,.compose-btn:hover{transform:translateY(-1px) scale(1.04)}
-.icon-btn:active,.compose-btn:active,#send-btn:active,.btn:active{transform:scale(0.92);transition-duration:0.08s}
-#send-btn:hover{transform:translateY(-1px) scale(1.06);box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 35%,transparent)}
-.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 28%,transparent)}
-.sb-item:hover,.search-result-item:hover,.settings-row:hover,.ctx-item:hover{transform:translateX(2px)}
-.sb-item,.search-result-item,.settings-row,.ctx-item,#my-card{transition-property:background,transform;transition-duration:0.2s;transition-timing-function:var(--ease-fluent-soft)}
-.reaction-chip:hover{transform:translateY(-1px) scale(1.05)}
-.preset-av:hover,.bg-option:hover{transform:scale(1.05)}
+.icon-btn,.compose-btn,#send-btn,.btn,.preset-av{transition-property:background,color,border-color,opacity;transition-duration:0.12s}
+.icon-btn:hover,.compose-btn:hover{opacity:0.85}
+.icon-btn:active,.compose-btn:active,#send-btn:active,.btn:active{opacity:0.7;transition-duration:0.06s}
+.sb-item,.search-result-item,.settings-row,.ctx-item,#my-card{transition-property:background;transition-duration:0.12s}
 img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
 #messages-wrap{scroll-behavior:smooth}
 .modal,#ctx-menu,#contact-ctx-menu,#toast{transition-timing-function:var(--ease-fluent)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}}
 
-/* ── ADVANCED UI POLISH ──
-   A cohesive pass of depth/glow/gradient touches applied to the app shell's
-   shared components, matching the treatment already given to the public
-   landing page — purely additive (shadows, accents, a subtle backdrop
-   wash), nothing here changes layout/structure so it can't affect where
-   anything sits or how big it is. */
 :focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 35%,transparent)}
-.btn{box-shadow:0 2px 10px color-mix(in srgb,var(--accent) 18%,transparent)}
-.btn-ghost,.btn-danger{box-shadow:none}
-#chat-header,#settings-header{position:relative}
-#chat-header::after,#settings-header::after,#sidebar::after{content:'';position:absolute;pointer-events:none}
-#chat-header::after,#settings-header::after{left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent) 45%,transparent) 50%,transparent)}
-#sidebar{position:relative}
-#sidebar::after{top:0;right:-1px;bottom:0;width:1px;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--accent) 30%,transparent) 30%,color-mix(in srgb,var(--accent) 30%,transparent) 70%,transparent)}
-#my-card .avatar,.sb-item .avatar{box-shadow:0 0 0 1px var(--border)}
-#my-card:hover .avatar{box-shadow:0 0 0 2px var(--accent)}
-.msg-row .bubble{box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.msg-row.me .bubble{box-shadow:0 4px 14px -4px color-mix(in srgb,var(--accent) 45%,transparent)}
-.modal{position:relative}
-.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent-grad);z-index:2}
+#chat-header,#settings-header,#sidebar{position:relative}
 
 /* ── SHELL ── */
-#shell{position:relative;z-index:1;display:flex;height:100vh;width:100%;background:var(--bg2);background-image:radial-gradient(ellipse 900px 500px at 15% -10%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 60%),radial-gradient(ellipse 700px 500px at 100% 0%,color-mix(in srgb,#a78bfa 6%,transparent),transparent 55%);box-shadow:var(--shadow-lg);padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
+#shell{position:relative;z-index:1;display:flex;height:100vh;width:100%;background:var(--bg2);padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
 
 /* ── TOP BANNER STACK ──
    One shared fixed container for every transient top-of-screen notice
@@ -712,7 +684,7 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 body.device-phone #dashboard-grid{grid-template-columns:1fr 1fr;grid-auto-rows:150px}
 body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!important}
 .dash-widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:16px;text-align:left;color:var(--text);min-height:80px;box-shadow:0 6px 24px rgba(0,0,0,0.28),0 1px 3px rgba(0,0,0,0.18);overflow:hidden;position:relative;transition:transform .18s var(--ease-fluent-soft),box-shadow .18s}
-.dash-widget:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,0.22),0 1px 3px rgba(0,0,0,0.12)}
+.dash-widget:hover{background:var(--surface2)}
 .dash-widget.hero{background:var(--accent-grad);color:#fff;border-color:transparent}
 .dash-widget.hero .dash-widget-title{color:rgba(255,255,255,0.85)}
 .dash-widget.hero .dash-widget-empty{color:rgba(255,255,255,0.75)}
@@ -771,7 +743,7 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .bubble:hover .quick-react-row{opacity:1;transform:scale(1)}
 .msg-row.me .quick-react-row{right:auto;left:-6px}
 .quick-react-btn{position:static;width:22px;height:22px;border-radius:50%;background:transparent;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;box-shadow:none;transition:transform .1s}
-.quick-react-btn:hover{transform:scale(1.25)}
+.quick-react-btn:hover{background:var(--surface3)}
 .msg-highlight .bubble{animation:msgHighlightPulse 1.2s ease}
 @keyframes msgHighlightPulse{0%{box-shadow:0 0 0 0 rgba(107,93,232,0.5)}50%{box-shadow:0 0 0 6px rgba(107,93,232,0.15)}100%{box-shadow:0 0 0 0 rgba(107,93,232,0)}}
 .mentioned-msg .bubble{border:1px solid rgba(202,80,16,0.4);box-shadow:0 0 0 2px rgba(202,80,16,0.12)}
@@ -956,7 +928,7 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 #messages-wrap{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:12px 16px;scroll-behavior:smooth;position:relative;z-index:1;background:transparent;}
 
 #jump-to-bottom-btn{position:absolute;right:18px;bottom:16px;z-index:5;width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);transition:opacity .15s,transform .15s}
-#jump-to-bottom-btn:hover{background:var(--surface3);transform:translateY(-2px)}
+#jump-to-bottom-btn:hover{background:var(--surface3)}
 
 #chat-drop-overlay{position:absolute;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(90,82,213,0.12);backdrop-filter:blur(2px);border:3px dashed var(--accent);pointer-events:none}
 #chat-drop-overlay.active{display:flex}
@@ -976,7 +948,7 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 /* bg preview swatches */
 .bg-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
 .bg-option{border-radius:10px;aspect-ratio:4/3;cursor:pointer;border:3px solid transparent;transition:all 0.2s;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);text-shadow:0 1px 3px rgba(0,0,0,0.8)}
-.bg-option:hover{transform:scale(1.04)}
+.bg-option:hover{border-color:var(--accent)}
 .bg-option.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .bg-opt-none{background:var(--surface2);color:var(--text2);}
 .bg-opt-bubbles{background:radial-gradient(circle at 22% 28%, rgba(0,150,255,0.30), transparent 45%), radial-gradient(circle at 78% 68%, rgba(139,92,246,0.28), transparent 50%), linear-gradient(160deg,#0f0c29,#302b63,#24243e);}
@@ -1035,7 +1007,7 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 .biz-profile-section{padding:14px 0 2px}
 .biz-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:10px}
 .biz-product-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;cursor:pointer;transition:transform 0.15s}
-.biz-product-card:hover{transform:translateY(-2px)}
+.biz-product-card:hover{background:var(--surface2)}
 .biz-product-img{width:100%;height:90px;object-fit:cover;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)}
 .biz-product-info{padding:7px 9px}
 .biz-product-name{font-size:12px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1140,7 +1112,7 @@ select{cursor:pointer}
 #camera-modal { z-index: 600; }
 #avatar-presets{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
 .preset-av{width:52px;height:52px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid transparent;transition:all 0.15s;overflow:hidden}
-.preset-av:hover,.preset-av.selected{border-color:var(--accent);transform:scale(1.08)}
+.preset-av:hover,.preset-av.selected{border-color:var(--accent)}
 .preset-av canvas{border-radius:50%}
 
 /* ── SETTINGS PANEL ── */
