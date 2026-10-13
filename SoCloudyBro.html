@@ -8786,31 +8786,38 @@ async function _attemptPasskeyLogin(user,pwdToStore,errElId){
   try{
     const passkeys=Array.isArray(user.passkeys)?user.passkeys:[];
     if(!passkeys.length){ if(err) err.textContent=scbErr('SCB-AUTH-19','This account has no passkeys set up yet. Log in normally, then add one in Settings → Security.'); return; }
-    const challenge=crypto.getRandomValues(new Uint8Array(32));
+    // Fetch a one-time server challenge so the Worker can verify the assertion
+    // isn't a replay of a previously captured one (60-second TTL).
+    const workerBase=MINT_TOKEN_ENDPOINT.replace(/\/mint-token$/,'');
+    const challengeRes=await fetch(workerBase+'/passkey-challenge');
+    if(!challengeRes.ok) throw new Error('Could not get passkey challenge from server');
+    const {challenge:challengeB64u,challengeToken}=await challengeRes.json();
+    // Decode the base64url challenge bytes for the WebAuthn API.
+    const challengeBytes=Uint8Array.from(atob(challengeB64u.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
     const assertion=await navigator.credentials.get({publicKey:{
-      challenge,
+      challenge:challengeBytes,
       allowCredentials:passkeys.map(p=>({type:'public-key',id:_unb64url(p.id)})),
       userVerification:'preferred',
       timeout:60000,
     }});
     if(!assertion){ if(err) err.textContent=scbErr('SCB-AUTH-20','Passkey sign-in was cancelled.'); return; }
     const matched=passkeys.find(p=>p.id===_b64url(assertion.rawId));
-    if(!matched||!(await _verifyPasskeyAssertion(assertion,matched,challenge))){
+    if(!matched||!(await _verifyPasskeyAssertion(assertion,matched,challengeBytes))){
       if(err) err.textContent=scbErr('SCB-AUTH-21','That passkey could not be verified.');
       return;
     }
     if(user.banned){ if(err) err.textContent=scbErr('SCB-AUTH-12','This account has been suspended.'); return; }
     if(user.deleted){ if(err) err.textContent=scbErr('SCB-AUTH-13','This account has been deleted.'); return; }
     // Hand the Worker everything it needs to independently re-verify this
-    // exact assertion (credential id to look up the stored public key, plus
-    // the three signed fields) — same algorithm as _verifyPasskeyAssertion
-    // above, just run server-side too before a real auth token is minted.
+    // exact assertion, plus the challengeToken proving the challenge was
+    // freshly issued by the Worker itself (prevents replay attacks).
     _loginRawPwd=null; _loginGoogleCredential=null; _loginFaceDescriptorProof=null; _loginBackupPinProof=null;
     _loginPasskeyProof={
       credentialId:_b64url(assertion.rawId),
       clientDataJSON:_b64(assertion.response.clientDataJSON),
       authenticatorData:_b64(assertion.response.authenticatorData),
       signature:_b64(assertion.response.signature),
+      challengeToken,
     };
     await finishLogin(user, pwdToStore);
   }catch(e){
