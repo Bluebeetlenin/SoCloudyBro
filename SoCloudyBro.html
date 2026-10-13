@@ -643,7 +643,7 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 .icon-btn{width:36px;height:36px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;font-size:16px;background:transparent;border:none;color:var(--text2)}
 .icon-btn:hover{background:var(--surface2)}
 .icon-btn.active{color:var(--accent)}
-#cloudy-btn.listening{background:var(--accent-grad);color:#fff;animation:cloudyPulse 1.6s ease-in-out infinite}
+#cloudy-btn.listening{background:var(--accent);color:#fff;animation:cloudyPulse 1.6s ease-in-out infinite}
 @keyframes cloudyPulse{0%,100%{box-shadow:0 0 0 0 rgba(107,93,232,0.45)}50%{box-shadow:0 0 0 8px rgba(107,93,232,0)}}
 
 /* ── FACE RECOGNITION scanner chrome — shared by login, enrollment and the
@@ -685,7 +685,7 @@ body.device-phone #dashboard-grid{grid-template-columns:1fr 1fr;grid-auto-rows:1
 body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!important}
 .dash-widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:16px;text-align:left;color:var(--text);min-height:80px;box-shadow:0 6px 24px rgba(0,0,0,0.28),0 1px 3px rgba(0,0,0,0.18);overflow:hidden;position:relative;transition:transform .18s var(--ease-fluent-soft),box-shadow .18s}
 .dash-widget:hover{background:var(--surface2)}
-.dash-widget.hero{background:var(--accent-grad);color:#fff;border-color:transparent}
+.dash-widget.hero{background:var(--accent);color:#fff;border-color:transparent}
 .dash-widget.hero .dash-widget-title{color:rgba(255,255,255,0.85)}
 .dash-widget.hero .dash-widget-empty{color:rgba(255,255,255,0.75)}
 .dash-widget.hero .dash-list-item:hover{background:rgba(255,255,255,0.12)}
@@ -752,7 +752,7 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .mention-chip{background:rgba(107,93,232,0.22);color:var(--accent);border-radius:5px;padding:0 3px;font-weight:600}
 .msg-link{color:var(--accent);text-decoration:underline;word-break:break-all}
 .msg-link.risky-link{color:var(--warn-text);text-decoration:underline wavy}
-/* Own-message bubbles are filled with var(--accent-grad) — the same purple
+/* Own-message bubbles are filled with var(--accent) — the same purple
    family as --accent — so a link/mention in your own sent message is nearly
    invisible (measured ~1.1:1 contrast, WCAG needs 4.5:1). Light-on-accent
    instead of accent-on-accent. */
@@ -828,7 +828,7 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 .bubble{padding:8px 12px;border-radius:12px;word-break:break-word;line-height:1.5;font-size:13px;position:relative;cursor:pointer}
 .msg-expand-toggle{display:block;margin-top:4px;font-size:11px;font-weight:600;color:var(--accent-bright,var(--accent));cursor:pointer;text-decoration:underline}
 .msg-row.them .bubble{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:3px}
-.msg-row.me .bubble{background:var(--accent-grad);color:#fff;border-bottom-right-radius:3px}
+.msg-row.me .bubble{background:var(--accent);color:#fff;border-bottom-right-radius:3px}
 .bubble.gif-bubble{padding:3px;background:transparent;border:none}
 .bubble.gif-bubble img{border-radius:10px;max-width:220px;max-height:180px;display:block}
 .msg-meta{font-size:10px;color:var(--muted);padding:0 4px;display:flex;align-items:center;gap:4px}
@@ -919,7 +919,7 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 .bubble.audio-bubble{padding:8px 10px;min-width:220px}
 .bubble.audio-bubble audio{width:210px;height:32px;display:block}
 @keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(231,76,60,0.45)}50%{box-shadow:0 0 0 8px rgba(231,76,60,0)}}
-#send-btn{background:var(--accent-grad);border:none;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all 0.15s;flex-shrink:0}
+#send-btn{background:var(--accent);border:none;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all 0.15s;flex-shrink:0}
 #send-btn:hover{background:var(--accent-hover)}
 #send-btn:disabled{opacity:0.4;cursor:not-allowed}
 
@@ -981,7 +981,7 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 /* Saved accounts */
 .saved-acct-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
 .saved-acct-item:last-child{border-bottom:none;}
-.saved-acct-av{width:36px;height:36px;border-radius:50%;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+.saved-acct-av{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
 .saved-acct-av img{width:100%;height:100%;object-fit:cover;}
 .saved-acct-info{flex:1;min-width:0;}
 .saved-acct-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -997,13 +997,13 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 #voice-waveform{flex:1;height:24px;display:flex;align-items:center;gap:2px;}
 #voice-waveform span{display:inline-block;width:3px;border-radius:2px;background:rgba(231,76,60,0.7);animation:waveBar 0.5s ease infinite alternate;}
 #voice-record-cancel{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 2px;line-height:1;}
-#voice-record-send{background:var(--accent-grad);border:none;border-radius:var(--r-xs);color:#fff;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;white-space:nowrap;}
+#voice-record-send{background:var(--accent);border:none;border-radius:var(--r-xs);color:#fff;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;white-space:nowrap;}
 /* Camera capture modal */
 #camera-modal-inner{background:var(--surface);border-radius:var(--r-card);overflow:hidden;width:min(400px,94vw);display:flex;flex-direction:column;}
 #camera-preview{width:100%;max-height:300px;object-fit:cover;background:#000;}
 #camera-canvas{display:none;}
 /* Business accounts */
-.biz-badge{display:inline-flex;align-items:center;gap:4px;background:var(--accent-grad);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:0.03em;vertical-align:middle;margin-left:4px}
+.biz-badge{display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:0.03em;vertical-align:middle;margin-left:4px}
 .biz-profile-section{padding:14px 0 2px}
 .biz-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:10px}
 .biz-product-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;cursor:pointer;transition:transform 0.15s}
@@ -1074,7 +1074,7 @@ input[type=checkbox],input[type=radio]{appearance:none;-webkit-appearance:none;w
 input[type=checkbox]{border-radius:5px}
 input[type=radio]{border-radius:50%}
 input[type=checkbox]:hover,input[type=radio]:hover{border-color:var(--accent)}
-input[type=checkbox]:checked,input[type=radio]:checked{background:var(--accent-grad);border-color:transparent}
+input[type=checkbox]:checked,input[type=radio]:checked{background:var(--accent);border-color:transparent}
 input[type=checkbox]:checked::after{content:'';position:absolute;left:5px;top:2px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
 input[type=radio]:checked::after{content:'';position:absolute;left:50%;top:50%;width:7px;height:7px;background:#fff;border-radius:50%;transform:translate(-50%,-50%)}
 input[type=checkbox]:disabled,input[type=radio]:disabled{opacity:.5;cursor:not-allowed}
@@ -1089,7 +1089,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 input::placeholder,textarea::placeholder{color:var(--muted2)}
 textarea{resize:vertical;min-height:60px}
 select{cursor:pointer}
-.btn{background:var(--accent-grad);border:none;border-radius:var(--r-sm);color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:9px 18px;cursor:pointer;transition:all 0.15s;white-space:nowrap;letter-spacing:0.01em}
+.btn{background:var(--accent);border:none;border-radius:var(--r-sm);color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:9px 18px;cursor:pointer;transition:all 0.15s;white-space:nowrap;letter-spacing:0.01em}
 .btn:hover{opacity:0.92}
 .btn:active{transform:scale(0.97)}
 .btn:disabled{opacity:0.35;cursor:not-allowed;transform:none}
@@ -1156,12 +1156,12 @@ select{cursor:pointer}
 #updates-feed{flex:1;overflow-y:auto;padding:16px}
 .update-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;animation:msgIn 0.32s cubic-bezier(0.16,1,0.3,1)}
 .update-card-channel{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:4px}
-.update-card-version{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--accent-grad);border-radius:8px;padding:2px 8px;margin-bottom:6px}
+.update-card-version{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--accent);border-radius:8px;padding:2px 8px;margin-bottom:6px}
 .update-card-title{font-size:14px;font-weight:600;margin-bottom:4px}
 .update-card-body{font-size:13px;color:var(--text2);line-height:1.6}
 .update-card-features{margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.7}
 .update-card-time{font-size:10px;color:var(--muted);margin-top:8px}
-.update-try-btn{display:block;width:100%;margin-top:10px;padding:8px;border:none;border-radius:var(--r-sm);background:var(--accent-grad);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.update-try-btn{display:block;width:100%;margin-top:10px;padding:8px;border:none;border-radius:var(--r-sm);background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
 .update-try-btn:hover{filter:brightness(1.08)}
 
 /* ── CONTEXT MENU ── */
@@ -1290,10 +1290,10 @@ body.device-tablet .msg-body{max-width:74%}
 .poll-question{font-size:13px;font-weight:600;margin-bottom:10px;line-height:1.4}
 .poll-opt-row{margin-bottom:6px;cursor:pointer}
 .poll-opt-bar-wrap{background:var(--bg3);border-radius:6px;height:28px;position:relative;overflow:hidden}
-.poll-opt-bar{height:100%;background:var(--accent-grad);border-radius:6px;transition:width 0.4s ease;opacity:0.7}
+.poll-opt-bar{height:100%;background:var(--accent);border-radius:6px;transition:width 0.4s ease;opacity:0.7}
 .poll-opt-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;font-size:12px;justify-content:space-between}
 .poll-opt-avatars{display:flex;margin-top:2px;gap:2px}
-.poll-opt-av{width:16px;height:16px;border-radius:50%;background:var(--accent-grad);color:#fff;font-size:8px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bg)}
+.poll-opt-av{width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bg)}
 .poll-total{font-size:10px;color:var(--muted);margin-top:6px}
 
 /* -- INFO PANEL MEMBERS -- */
@@ -1549,7 +1549,7 @@ body.device-tablet .msg-body{max-width:74%}
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  background: var(--accent-grad);
+  background: var(--accent);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -1597,7 +1597,7 @@ body.device-tablet .msg-body{max-width:74%}
 }
 .msg-row.me .bubble {
   border-bottom-right-radius: 4px;
-  background: var(--accent-grad);
+  background: var(--accent);
 }
 /* Pending message — faint while waiting for Firebase ack */
 .bubble.pending-bubble {
@@ -1735,7 +1735,7 @@ body.device-tablet .msg-body{max-width:74%}
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: var(--accent-grad);
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1857,21 +1857,12 @@ body.device-tablet .msg-body{max-width:74%}
      Shown immediately on page load (pure HTML+CSS, no JS needed to render).
      Dismissed by launch() once the app is fully initialised. ──────────── -->
 <div id="scb-splash">
-  <!-- Floating particles -->
-  <canvas id="scb-splash-canvas" style="position:absolute;inset:0;pointer-events:none"></canvas>
-  <!-- Glass card -->
   <div id="scb-splash-card">
     <div id="scb-splash-logo">☁️</div>
     <div id="scb-splash-name">SoCloudyBro</div>
-    <div id="scb-splash-sub">your messages, your world</div>
     <div id="scb-splash-dots">
       <span></span><span></span><span></span>
     </div>
-    <div id="scb-splash-tip"></div>
-  </div>
-  <!-- Progress bar -->
-  <div id="scb-splash-progress-wrap">
-    <div id="scb-splash-progress-bar"></div>
   </div>
 </div>
 <style>
@@ -1886,33 +1877,24 @@ body.device-tablet .msg-body{max-width:74%}
   position:relative;z-index:1;
   display:flex;flex-direction:column;align-items:center;
   background:rgba(255,255,255,.04);
-  border:1px solid rgba(96,165,250,.2);
-  border-radius:24px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;
   padding:40px 48px 32px;
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-  box-shadow:0 0 48px rgba(96,165,250,.12),0 8px 32px rgba(0,0,0,.4);
-  animation:scb-card-in .6s cubic-bezier(.22,1,.36,1) both;
+  animation:scb-card-in .4s ease both;
 }
-@keyframes scb-card-in{from{opacity:0;transform:scale(.94) translateY(12px)}to{opacity:1;transform:none}}
+@keyframes scb-card-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 #scb-splash-logo{
-  font-size:64px;line-height:1;
+  font-size:56px;line-height:1;
   animation:scb-float 3s ease-in-out infinite;
-  filter:drop-shadow(0 0 28px rgba(96,165,250,.7));
-  margin-bottom:18px;
+  margin-bottom:16px;
 }
 #scb-splash-name{
-  font-size:28px;font-weight:700;letter-spacing:-.5px;
-  background:linear-gradient(135deg,#60a5fa,#a78bfa);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  margin-bottom:5px;
-}
-#scb-splash-sub{
-  font-size:12px;color:rgba(255,255,255,.3);letter-spacing:.06em;text-transform:uppercase;
-  margin-bottom:28px;
+  font-size:24px;font-weight:700;letter-spacing:-.5px;
+  color:#fff;
+  margin-bottom:24px;
 }
 #scb-splash-dots{
-  display:flex;gap:8px;align-items:center;margin-bottom:18px;
+  display:flex;gap:8px;align-items:center;
 }
 #scb-splash-dots span{
   width:7px;height:7px;border-radius:50%;
@@ -1921,151 +1903,19 @@ body.device-tablet .msg-body{max-width:74%}
 }
 #scb-splash-dots span:nth-child(2){animation-delay:.18s}
 #scb-splash-dots span:nth-child(3){animation-delay:.36s}
-#scb-splash-tip{
-  font-size:11.5px;color:rgba(255,255,255,.38);text-align:center;
-  min-height:16px;letter-spacing:.01em;
-  transition:opacity .4s;
-}
-#scb-splash-progress-wrap{
-  position:fixed;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.06);z-index:100000;
-}
-#scb-splash-progress-bar{
-  height:100%;width:0%;
-  background:linear-gradient(90deg,#60a5fa,#a78bfa);
-  transition:width .4s ease;
-  border-radius:0 2px 2px 0;
-  box-shadow:0 0 8px rgba(96,165,250,.6);
-}
 @keyframes scb-float{
   0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-8px)}
+  50%{transform:translateY(-6px)}
 }
 @keyframes scb-bounce{
   0%,80%,100%{transform:scale(.75);background:rgba(255,255,255,.18)}
-  40%{transform:scale(1);background:rgba(96,165,250,.9)}
+  40%{transform:scale(1);background:rgba(90,82,213,.9)}
 }
 </style>
 <script>
 (function(){
-  // ── Particles ──────────────────────────────────────────────────────────────
-  const canvas=document.getElementById('scb-splash-canvas');
-  function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;}
-  resizeCanvas();
-  window.addEventListener('resize',resizeCanvas);
-  const ctx2=canvas.getContext('2d');
-  const SYMBOLS=['☁️','✦','·','⋆','✧'];
-  const pts=Array.from({length:22},()=>({
-    x:Math.random()*innerWidth, y:Math.random()*innerHeight,
-    sym:SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)],
-    sz:8+Math.random()*14, spd:0.2+Math.random()*0.5,
-    drift:(Math.random()-.5)*0.4, op:0.08+Math.random()*0.18,
-    oy:Math.random()*1000
-  }));
-  let _splashRaf;
-  function drawParticles(){
-    ctx2.clearRect(0,0,canvas.width,canvas.height);
-    const t=Date.now()/1000;
-    pts.forEach(p=>{
-      p.y-=p.spd; p.x+=p.drift;
-      if(p.y<-40){p.y=canvas.height+20;p.x=Math.random()*canvas.width;}
-      if(p.x<-40||p.x>canvas.width+40){p.x=Math.random()*canvas.width;}
-      const wave=Math.sin(t*0.8+p.oy)*0.04;
-      ctx2.globalAlpha=p.op+wave;
-      ctx2.font=p.sz+'px serif';
-      ctx2.fillText(p.sym,p.x,p.y);
-    });
-    ctx2.globalAlpha=1;
-    _splashRaf=requestAnimationFrame(drawParticles);
-  }
-  drawParticles();
-
-  // ── Rotating tips ──────────────────────────────────────────────────────────
-  const TIPS=[
-    'Tip: type / in any chat for quick commands',
-    'Tip: Cloudy is pinned to your sidebar — ask it anything, in plain English',
-    'Tip: /remind 5m Call Alex sets a quick reminder',
-    'Tip: long-press a message to react, pin, or forward it',
-    'Tip: /call joins a group\'s voice channel, or rings a DM contact',
-    'Tip: /poll quickly creates a poll for the group',
-    'Tip: /whisper @user sends a private message in a group chat',
-    'Tip: lock any chat behind a PIN or Face ID from its header menu',
-    'Tip: set messages to disappear after a set time, per chat',
-    'Tip: Mutual Friends shows who you both know, right in a contact\'s profile',
-    'Tip: star a chat to pin it to your Favourites tab',
-    'Tip: archive a chat to tidy your sidebar without deleting it',
-    'Tip: create a Server to organize a community into channels',
-    'Tip: ping a contact for a quick nudge — it has its own cooldown',
-    'Tip: turn on Do Not Disturb to silence notifications without muting chats',
-    'Tip: pick your own ringtone and ping sound in Settings',
-    'Tip: two-factor authentication adds a second login step for your account',
-    'Tip: the search bar finds messages across every chat, not just the open one',
-    'Tip: swipe or use the sidebar tabs to jump between Chats, Groups, and Favourites',
-    'Tip: /gif searches and sends a GIF without leaving the keyboard',
-    'Tip: hold the mic button to send a voice message',
-    'Tip: share your screen mid-call from the call toolbar',
-    'Tip: Face Recognition can replace your 2FA code at login',
-    'Tip: your Security score in Settings shows what to lock down next',
-    'Tip: export all your data as a JSON file any time, from Settings',
-    'Tip: rotate your encryption keys from Settings if you ever suspect they\'re compromised',
-    'Tip: set your bio and status with Cloudy — just say "change my bio to..."',
-    'Tip: large-text mode gives you bigger buttons and roomier spacing',
-    'Tip: customize your home dashboard — add, remove, drag, and resize widgets',
-    'Tip: join a server with an invite code from the sidebar\'s + menu',
-    'Tip: quiet hours automatically silence notifications on a schedule you set',
-    'Tip: block a contact right from their profile — it\'s reversible any time',
-    'Tip: report a message or user straight from the chat — it goes to moderators',
-    'Tip: Cloudy can do quick math, roll a dice, or flip a coin — just ask',
-    'Tip: schedule dark mode to switch on automatically at sunset',
-    'Tip: sign in with a passkey instead of a password — Face ID, Touch ID, or your device PIN',
-    'Tip: trust a device for 30 days so you\'re not asked for a 2FA code every time',
-    'Tip: block someone\'s calls or messages separately — you don\'t have to block both',
-    'Tip: set your account to self-destruct after months of inactivity, right in Settings',
-    'Tip: control who can see your SCB number and who can add you to groups in Privacy settings',
-    'Tip: a key-change banner warns you if a contact\'s encryption key suddenly changes',
-    'Tip: export an encrypted backup of all your data any time — only you hold the password',
-    'Tip: found a security bug? Report it privately from Settings instead of posting about it',
-    'Tip: links that look suspicious get flagged before you send or open them',
-  ];
-  // The splash is only up for a couple of seconds on a normal load — far
-  // less than the ~2 minutes it'd take to rotate through all of these at
-  // one every 2.8s starting from index 0. Starting at a random tip each
-  // time means every tip (including ones added later, which would
-  // otherwise sit unreachable at the end of the list) gets a real chance
-  // of being seen, not just the first handful.
-  let _tipIdx=Math.floor(Math.random()*TIPS.length);
-  const tipEl=document.getElementById('scb-splash-tip');
-  if(tipEl){
-    tipEl.textContent=TIPS[_tipIdx];
-    setInterval(()=>{
-      tipEl.style.opacity='0';
-      setTimeout(()=>{
-        _tipIdx=(_tipIdx+1)%TIPS.length;
-        tipEl.textContent=TIPS[_tipIdx];
-        tipEl.style.opacity='1';
-      },400);
-    },15000);
-  }
-
-  // ── Progress bar ──────────────────────────────────────────────────────────
-  const bar=document.getElementById('scb-splash-progress-bar');
-  function setProgress(pct){ if(bar) bar.style.width=pct+'%'; }
-  setProgress(15); // DOM ready
-  document.addEventListener('DOMContentLoaded',()=>setProgress(40));
-  // Expose so app init code can advance it
-  window._splashProgress=setProgress;
-  // Animate to 85% while Firebase loads, app will call 100 on dismiss
-  let _prog=40;
-  const _progInterval=setInterval(()=>{
-    _prog=Math.min(85,_prog+Math.random()*4);
-    setProgress(_prog);
-    if(_prog>=85) clearInterval(_progInterval);
-  },300);
-
-  // Stop particle loop when splash is removed
-  const _obs=new MutationObserver(()=>{
-    if(!document.getElementById('scb-splash')){ cancelAnimationFrame(_splashRaf); _obs.disconnect(); }
-  });
-  _obs.observe(document.body,{childList:true});
+  // no-op progress shim so app init code that calls window._splashProgress still works
+  window._splashProgress=function(){};
 })();
 </script>
 
@@ -2778,27 +2628,20 @@ body.device-tablet .msg-body{max-width:74%}
   <style>
     .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid transparent;position:sticky;top:0;background:var(--bg);background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);z-index:10;gap:12px;transition:background .25s,border-color .25s,box-shadow .25s}
     .lp-nav.lp-nav-scrolled{border-bottom-color:var(--border);box-shadow:0 4px 24px rgba(0,0,0,.08)}
-    .lp-brand{font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--accent),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
-    .lp-btn-main{background:var(--accent-grad);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;transition:opacity .15s,transform .12s,box-shadow .2s;box-shadow:0 2px 12px rgba(90,82,213,.25)}
-    .lp-btn-main:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 6px 18px rgba(90,82,213,.38)}
+    .lp-brand{font-size:18px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
+    .lp-btn-main{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.1px;transition:opacity .12s}
+    .lp-btn-main:hover{opacity:.85}
     .lp-hero{position:relative;text-align:center;padding:72px 24px 48px;max-width:660px;margin:0 auto;overflow:visible}
-    .lp-hero-glow{position:absolute;inset:-60px 0 auto;height:420px;z-index:-1;overflow:hidden;pointer-events:none}
-    .lp-orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:.45;animation:lpOrbFloat 14s ease-in-out infinite}
-    .lp-orb-1{width:280px;height:280px;left:8%;top:10px;background:radial-gradient(circle,var(--accent-bright),transparent 70%);animation-delay:0s}
-    .lp-orb-2{width:240px;height:240px;right:6%;top:40px;background:radial-gradient(circle,#a78bfa,transparent 70%);animation-delay:-5s}
-    .lp-orb-3{width:200px;height:200px;left:38%;top:120px;background:radial-gradient(circle,#7c5fd4,transparent 70%);animation-delay:-9s}
-    @keyframes lpOrbFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(18px,-14px) scale(1.08)}}
-    .lp-grid-fade{position:absolute;inset:0;background-image:linear-gradient(to right,var(--border) 1px,transparent 1px),linear-gradient(to bottom,var(--border) 1px,transparent 1px);background-size:36px 36px;opacity:.35;-webkit-mask-image:radial-gradient(ellipse 60% 60% at 50% 20%,#000 0%,transparent 75%);mask-image:radial-gradient(ellipse 60% 60% at 50% 20%,#000 0%,transparent 75%)}
     .lp-hero h1{position:relative;font-size:clamp(28px,7vw,52px);font-weight:900;margin:0 0 18px;line-height:1.1;letter-spacing:-.5px}
-    .lp-hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .lp-hero h1 em{font-style:normal;color:var(--accent)}
     .lp-hero p{position:relative;font-size:clamp(14px,2.5vw,18px);color:var(--muted);margin:0 0 32px;line-height:1.65;max-width:520px;margin-left:auto;margin-right:auto}
     .lp-cta-group{position:relative;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
     .lp-btn-lg{border:none;border-radius:12px;padding:13px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .15s,box-shadow .2s,opacity .15s,border-color .15s,color .15s}
-    .lp-btn-lg:active{transform:translateY(1px) scale(.98)}
-    .lp-btn-lg.primary{background:var(--accent-grad);color:#fff;box-shadow:0 4px 20px rgba(90,82,213,.32)}
-    .lp-btn-lg.primary:hover{opacity:.94;transform:translateY(-2px);box-shadow:0 10px 28px rgba(90,82,213,.42)}
+    .lp-btn-lg:active{opacity:.7}
+    .lp-btn-lg.primary{background:var(--accent);color:#fff;box-shadow:0 4px 20px rgba(90,82,213,.32)}
+    .lp-btn-lg.primary:hover{opacity:.85}
     .lp-btn-lg.ghost{background:var(--surface);background:color-mix(in srgb,var(--surface) 70%,transparent);border:1.5px solid var(--border);color:var(--text);backdrop-filter:blur(6px)}
-    .lp-btn-lg.ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+    .lp-btn-lg.ghost:hover{border-color:var(--accent);color:var(--accent)}
     .lp-badge-row{position:relative;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
     .lp-badge{background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:5px;transition:border-color .2s,color .2s}
     .lp-badge:hover{border-color:var(--accent);color:var(--accent)}
@@ -2808,24 +2651,23 @@ body.device-tablet .msg-body{max-width:74%}
     .lp-section p.lead{font-size:15px;color:var(--muted);line-height:1.65;margin:0 0 28px}
     .lp-reveal{opacity:0;transform:translateY(22px);transition:opacity .6s var(--ease-fluent,cubic-bezier(.16,1,.3,1)),transform .6s var(--ease-fluent,cubic-bezier(.16,1,.3,1))}
     .lp-reveal.lp-in{opacity:1;transform:translateY(0)}
-    @media(prefers-reduced-motion:reduce){.lp-reveal{opacity:1;transform:none;transition:none}.lp-orb{animation:none}}
+    @media(prefers-reduced-motion:reduce){.lp-reveal{opacity:1;transform:none;transition:none}}
     .lp-feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
     .lp-feat-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s,border-color .2s;overflow:hidden}
-    .lp-feat-card:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.14)}
-    .lp-feat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:12px;background:var(--surface2);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 18%,transparent),color-mix(in srgb,#a78bfa 18%,transparent));border:1px solid var(--border)}
+    .lp-feat-card:hover{border-color:var(--accent)}
+    .lp-feat-icon{width:44px;height:44px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border)}
     .lp-feat-title{font-size:14px;font-weight:700;margin:0 0 5px}
     .lp-feat-desc{font-size:12.5px;color:var(--muted);line-height:1.55;margin:0}
     /* mock chat UI */
-    .lp-mock{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;max-width:420px;box-shadow:0 20px 48px -12px rgba(90,82,213,.28),0 8px 24px rgba(0,0,0,.1);transition:transform .3s,box-shadow .3s}
-    .lp-mock:hover{transform:translateY(-3px);box-shadow:0 28px 56px -12px rgba(90,82,213,.36),0 8px 24px rgba(0,0,0,.12)}
+    .lp-mock{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);overflow:hidden;max-width:420px;box-shadow:var(--shadow-lg)}
     .lp-mock-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface)}
-    .lp-mock-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6b5de8,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:#fff;font-weight:700}
+    .lp-mock-av{width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:#fff;font-weight:700}
     .lp-mock-name{font-size:13px;font-weight:600}
     .lp-mock-status{font-size:11px;color:var(--muted)}
     .lp-mock-body{padding:14px;display:flex;flex-direction:column;gap:8px;min-height:180px;background:var(--bg)}
     .lp-mock-bubble{padding:9px 12px;border-radius:14px;font-size:12.5px;max-width:80%;line-height:1.5}
     .lp-mock-bubble.them{background:var(--surface);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px}
-    .lp-mock-bubble.me{background:linear-gradient(135deg,#6b5de8,#7c6ff5);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+    .lp-mock-bubble.me{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
     .lp-mock-bubble.voice{display:flex;align-items:center;gap:8px;padding:8px 12px}
     .lp-mock-wave{display:flex;align-items:center;gap:2px;height:20px}
     .lp-mock-wave span{width:3px;border-radius:2px;background:currentColor;opacity:.7}
@@ -2854,12 +2696,6 @@ body.device-tablet .msg-body{max-width:74%}
 
   <!-- HERO -->
   <div class="lp-hero">
-    <div class="lp-hero-glow" aria-hidden="true">
-      <span class="lp-orb lp-orb-1"></span>
-      <span class="lp-orb lp-orb-2"></span>
-      <span class="lp-orb lp-orb-3"></span>
-      <span class="lp-grid-fade"></span>
-    </div>
     <div class="lp-badge-row">
       <span class="lp-badge">🔒 End-to-end encrypted</span>
       <span class="lp-badge">📞 Free voice &amp; video calls</span>
@@ -2965,7 +2801,7 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
       <div class="lp-mock">
         <div class="lp-mock-header">
-          <div class="lp-mock-av" style="border-radius:10px;background:linear-gradient(135deg,#f093fb,#f5576c)">👥</div>
+          <div class="lp-mock-av" style="border-radius:10px">👥</div>
           <div><div class="lp-mock-name">The Squad 🔥</div><div class="lp-mock-status">5 members · # general</div></div>
         </div>
         <div class="lp-mock-body">
@@ -3740,7 +3576,7 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="modal" style="max-width:380px">
     <div class="modal-header">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-        <div class="avatar" id="cp-avatar" style="width:52px;height:52px;font-size:20px;background:var(--accent-grad);color:#fff">?</div>
+        <div class="avatar" id="cp-avatar" style="width:52px;height:52px;font-size:20px;background:var(--accent);color:#fff">?</div>
         <div>
           <div id="cp-name" style="font-size:16px;font-weight:600"></div>
           <div id="cp-nowplaying" style="display:none;margin-top:4px"></div>
@@ -15191,7 +15027,7 @@ function openGroupPanel() {
     row.onmouseleave = () => row.style.background = '';
     row.oncontextmenu = e => { e.preventDefault(); if (isAdmin && num !== me.number) showMemberCtxMenu(e, num); };
     const avDiv = document.createElement('div');
-    avDiv.className = 'avatar'; avDiv.style.cssText = 'width:32px;height:32px;font-size:12px;background:var(--accent-grad);color:#fff;flex-shrink:0';
+    avDiv.className = 'avatar'; avDiv.style.cssText = 'width:32px;height:32px;font-size:12px;background:var(--accent);color:#fff;flex-shrink:0';
     renderAvatar(avDiv, { name: enc(name), avatar: u.avatar || '' }, 32);
     row.appendChild(avDiv);
     const info = document.createElement('div'); info.style.flex = '1';
@@ -15991,7 +15827,7 @@ function showMsgSearchResults(results) {
   el.innerHTML = '<div style="padding:8px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)">Message Results</div>' +
     results.map((r, i) =>
       '<div class="sb-item" style="border-radius:0;padding:10px 14px;cursor:pointer" data-i="' + i + '" onclick="jumpToMessage(Number(this.dataset.i))">' +
-      '<div class="avatar" style="width:32px;height:32px;font-size:12px;background:var(--accent-grad);color:#fff">' + (r.contact.name || '?').charAt(0).toUpperCase() + '</div>' +
+      '<div class="avatar" style="width:32px;height:32px;font-size:12px;background:var(--accent);color:#fff">' + (r.contact.name || '?').charAt(0).toUpperCase() + '</div>' +
       '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">' + esc(r.contact.name) + '</div>' +
       '<div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(r.text.substring(0, 60)) + '</div></div>' +
       '<div style="font-size:10px;color:var(--muted)">' + fmtTime(r.msg.time) + '</div></div>'
@@ -16274,7 +16110,7 @@ function renderMessages(msgs) {
     if (activeConvo && activeConvo.type === 'group' && !isMe) {
       const u = lookupUser(m.from) || {};
       const avDiv = document.createElement('div'); avDiv.className = 'msg-avatar';
-      avDiv.style.cssText = 'background:var(--accent-grad);color:#fff;cursor:pointer;';
+      avDiv.style.cssText = 'background:var(--accent);color:#fff;cursor:pointer;';
       avDiv.title = 'View profile';
       avDiv.onclick = (ev) => { ev.stopPropagation(); openUserProfile(m.from); };
       avDiv.addEventListener('mouseenter', () => scheduleUserHoverCard(m.from, avDiv));
@@ -16944,7 +16780,7 @@ function setTheme(mode){
   if(el) el.textContent=labels[mode]||'Follows system';
   ['light','dark','auto','schedule'].forEach(m=>{
     const b=document.getElementById('theme-'+m+'-btn');
-    if(b) b.style.background=m===mode?'var(--accent-grad)':''
+    if(b) b.style.background=m===mode?'var(--accent)':''
     if(b) b.style.color=m===mode?'#fff':''
   });
   const scheduleRow=document.getElementById('theme-schedule-row');
@@ -17008,7 +16844,7 @@ function initTheme(){
   if(el) el.textContent=labels[saved];
   ['light','dark','auto','schedule'].forEach(m=>{
     const b=document.getElementById('theme-'+m+'-btn');
-    if(b&&m===saved){b.style.background='var(--accent-grad)';b.style.color='#fff';}
+    if(b&&m===saved){b.style.background='var(--accent)';b.style.color='#fff';}
   });
   const scheduleRow=document.getElementById('theme-schedule-row');
   if(scheduleRow) scheduleRow.style.display=saved==='schedule'?'flex':'none';
@@ -17239,7 +17075,7 @@ function openGameMenu(){
     const pool=gamePlayerPool();
     const disabled=pool.length<def.minPlayers;
     return '<div class="sb-item" style="border-radius:var(--r-sm);'+(disabled?'opacity:.4;cursor:not-allowed':'cursor:pointer')+'" '+(disabled?'':'data-id="'+esc(id)+'" onclick="pickGame(this.dataset.id)"')+'>'
-      +'<div class="avatar" style="width:34px;height:34px;font-size:16px;background:var(--accent-grad);color:#fff">'+def.icon+'</div>'
+      +'<div class="avatar" style="width:34px;height:34px;font-size:16px;background:var(--accent);color:#fff">'+def.icon+'</div>'
       +'<div class="sb-item-info"><div class="sb-item-name">'+def.label+'</div><div class="sb-item-preview">'+def.minPlayers+'+ players'+(disabled?' — not enough people here':'')+'</div></div>'
       +'</div>';
   }).join('');
@@ -17951,7 +17787,7 @@ async function openAdminPanel(reportedNum){
     const isBanned=!!(u&&u.banned);
     body.innerHTML=`
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <div class="avatar" style="width:48px;height:48px;background:var(--accent-grad);color:#fff;font-size:18px">${u?(dec(u.name)||'?').charAt(0).toUpperCase():'?'}</div>
+        <div class="avatar" style="width:48px;height:48px;background:var(--accent);color:#fff;font-size:18px">${u?(dec(u.name)||'?').charAt(0).toUpperCase():'?'}</div>
         <div>
           <div style="font-size:15px;font-weight:600">${esc(u?dec(u.name):'Unknown')}</div>
           <div style="font-size:12px;color:var(--muted)">#${reportedNum}</div>
@@ -18832,7 +18668,7 @@ async function checkForSiteUpdate(){
 function showSiteUpdateBanner(ver,note){
   if(document.getElementById('site-update-banner')) return;
   const bar=_bannerRow('site-update-banner');
-  bar.style.background='var(--accent-grad)';
+  bar.style.background='var(--accent)';
   bar.innerHTML='<span class="tbr-text">🚀 Site update v'+ver+(note?' — '+esc(note):'')+'</span>'+
     '<button onclick="applySiteUpdate()" style="background:rgba(255,255,255,0.25);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#fff;font-weight:700;font-size:11px">Reload now</button>'+
     '<button onclick="_removeBannerRow(\'site-update-banner\')" style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.7);font-size:16px;line-height:1;margin-left:4px">✕</button>';
@@ -19361,7 +19197,7 @@ async function renderAdminUsersTab(){
         const joinDate=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
         return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px">'
           +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
-          +'<div class="avatar" style="width:40px;height:40px;flex-shrink:0;background:var(--accent-grad);color:#fff;font-size:16px">'+name.charAt(0).toUpperCase()+'</div>'
+          +'<div class="avatar" style="width:40px;height:40px;flex-shrink:0;background:var(--accent);color:#fff;font-size:16px">'+name.charAt(0).toUpperCase()+'</div>'
           +'<div style="min-width:0;flex:1">'
           +'<div style="font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+name
           +(verified?' <span class="verified-badge" title="Verified">✓</span>':'')
@@ -20909,7 +20745,7 @@ async function renderNowPlayingPill(scbNumber){
   const overlay=document.getElementById('contact-panel-overlay');
   if(overlay&&!overlay.classList.contains('visible')) return;
   el.innerHTML='<span style="display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;'
-    +'background:var(--accent-grad);color:#fff">🎮 Playing '+esc(np.label)+'!</span>';
+    +'background:var(--accent);color:#fff">🎮 Playing '+esc(np.label)+'!</span>';
   el.style.display='block';
 }
 // Same patch pattern used elsewhere in this file rather than editing
@@ -21693,8 +21529,8 @@ renderSidebar = function(){
       const _liveAv0=(_freshU0&&_freshU0.avatar)||c.avatar||'';
       const hasImg=typeof _liveAv0==='string'&&(_liveAv0.startsWith('data:image/')||_liveAv0.startsWith('https://'));
       const avDiv=c.type==='group'
-        ?'<div class="group-avatar" style="background:'+(c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'var(--accent-grad)')+';color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':(c.isServer?'🖥️':'👥'))+'</div>'
-        :'<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv0)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
+        ?'<div class="group-avatar" style="background:'+(c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'var(--accent)')+';color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':(c.isServer?'🖥️':'👥'))+'</div>'
+        :'<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv0)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
       div.innerHTML=avDiv+'<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+'</span><span class="sb-item-time">'+esc(timeStr)+'</span></div>'
         +'<div class="sb-item-preview">'+esc(preview)+'</div></div>'
         +renderUnreadBadgeHtml(unread);
@@ -21740,8 +21576,8 @@ renderSidebar = function(){
     const _liveAv=(_freshU&&_freshU.avatar)||c.avatar||'';
     const hasImg = typeof _liveAv==='string' && (_liveAv.startsWith('data:image/')||_liveAv.startsWith('https://'));
     const avDiv = c.type==='group'
-      ? '<div class="group-avatar" style="background:'+(c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'var(--accent-grad)')+';color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':(c.isServer?'🖥️':'👥'))+'</div>'
-      : '<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent-grad);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
+      ? '<div class="group-avatar" style="background:'+(c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'var(--accent)')+';color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':(c.isServer?'🖥️':'👥'))+'</div>'
+      : '<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
     div.innerHTML = avDiv +
       '<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+
       (c.type!=='group'?verifiedBadge(c.number)+equippedBadgeHtml(c.number):'')+
@@ -23443,7 +23279,7 @@ scbFeatureCSS.textContent = `
   transition:background .15s var(--ease-fluent-soft),color .15s,border-color .15s,box-shadow .18s,transform .15s var(--ease-fluent-soft)}
 .scb-tab:hover{background:var(--surface3);color:var(--text);transform:translateY(-1px)}
 .scb-tab:active{transform:scale(.97);transition-duration:.08s}
-.scb-tab.active{background:var(--accent-grad);color:#fff;border-color:transparent;box-shadow:0 2px 10px rgba(107,93,232,0.28)}
+.scb-tab.active{background:var(--accent);color:#fff;border-color:transparent}
 .scb-tab.active:hover{color:#fff}
 .scb-tab-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scb-tab-close{width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
@@ -23614,7 +23450,7 @@ body.scb-large-text .scb-suggest-chip{font-size:14px;padding:6px 14px}
 body.scb-custom-colors .avatar:not(:has(img)),
 body.scb-custom-colors .group-avatar:not(:has(img)),
 body.scb-custom-colors #chat-header-av:not(:has(img)),
-body.scb-custom-colors #my-avatar:not(:has(img)){background:var(--accent-grad)!important}
+body.scb-custom-colors #my-avatar:not(:has(img)){background:var(--accent)!important}
 `;
 document.head.appendChild(scbFeatureCSS);
 
@@ -25952,7 +25788,7 @@ function initCallWidget(){
 #cw-people::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 .cw-person{display:flex;align-items:center;gap:8px;min-width:0}
 .cw-av{width:28px;height:28px;border-radius:var(--r-pill);flex-shrink:0;display:flex;align-items:center;
-  justify-content:center;font-size:11px;font-weight:600;color:#fff;background:var(--accent-grad);
+  justify-content:center;font-size:11px;font-weight:600;color:#fff;background:var(--accent);
   box-shadow:0 0 0 0 rgba(19,161,14,0);transition:box-shadow .12s linear}
 /* Speaking = live audio above the RMS threshold, not merely "connected". */
 .cw-person.speaking .cw-av{box-shadow:0 0 0 3px var(--success),0 0 12px rgba(19,161,14,.5);
