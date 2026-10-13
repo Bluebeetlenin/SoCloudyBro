@@ -5387,10 +5387,9 @@ const UPDATES_BIN = 'updates';
 // endpoint so the access key is never exposed in client source. The key has
 // been removed from the client and stored as a Worker secret (WEB3FORMS_ACCESS_KEY).
 const WEB3FORMS_ACCESS_KEY = '';
-// Get your own free key at developers.giphy.com (takes ~2 min) — a shared/demo
-// key gets rate-limited across everyone using it, which is the most likely
-// cause of GIFs silently failing to load.
-const GIPHY_KEY   = 'WDKqcSqlEfI9xFKr9WUJHHyZrqrwdJxJ';
+// Giphy requests are proxied through the Worker's /giphy endpoint so the key
+// is never exposed in client source. Add GIPHY_KEY as a Worker variable.
+const GIPHY_KEY   = '';
 const ENC_KEY     = 'cc_s3cr3t_2025';
 const POLL_MS     = 25000;
 const ADMIN_NUMBER = 2015;
@@ -11122,7 +11121,8 @@ async function loadTrendingGifs(){
   const grid=document.getElementById('gif-grid');
   grid.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px">Loading…</div>';
   try{
-    const r=await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=12&rating=g`);
+    const workerBase=MINT_TOKEN_ENDPOINT.replace(/\/mint-token$/,'');
+    const r=await fetch(`${workerBase}/giphy?endpoint=trending&limit=12&rating=g`);
     const d=await r.json();
     if(!r.ok||(d.meta&&d.meta.status&&d.meta.status>=400)) return gifLoadFailed(d.meta&&d.meta.msg);
     renderGifs(d.data);
@@ -11142,7 +11142,8 @@ function searchGifs(q){
     if(!q){loadTrendingGifs();return;}
     grid.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px">Searching…</div>';
     try{
-      const r=await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(q)}&limit=12&rating=g`);
+      const workerBase=MINT_TOKEN_ENDPOINT.replace(/\/mint-token$/,'');
+      const r=await fetch(`${workerBase}/giphy?endpoint=search&q=${encodeURIComponent(q)}&limit=12&rating=g`);
       const d=await r.json();
       if(!r.ok||(d.meta&&d.meta.status&&d.meta.status>=400)) return gifLoadFailed(d.meta&&d.meta.msg);
       renderGifs(d.data);

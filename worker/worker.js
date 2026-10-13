@@ -67,6 +67,12 @@ export default {
       if (path === '/report' && req.method === 'POST') {
         return await handleReport(req, env, corsHeaders);
       }
+      if (path === '/giphy' && req.method === 'GET') {
+        return await handleGiphy(req, env, corsHeaders);
+      }
+      if (path === '/csp-report' && req.method === 'POST') {
+        return await handleCspReport(req, env, corsHeaders);
+      }
 
       const adminNum = req.headers.get('X-Admin-Number');
       if (!adminNum || adminNum !== (env.ADMIN_NUMBER || '2015')) {
@@ -245,6 +251,53 @@ async function handleReport(req, env, corsHeaders) {
   const data = await r.json().catch(() => ({}));
   if (!r.ok || !data.success) return jsonResp({ error: data.message || 'Submission failed' }, 502, corsHeaders);
   return jsonResp({ ok: true }, 200, corsHeaders);
+}
+
+// GET /giphy?endpoint=trending|search&q=<query>&limit=<n>&rating=g
+// Proxies Giphy API requests server-side so the GIPHY_KEY secret never
+// appears in client HTML. Add GIPHY_KEY as a Worker secret (plain var is fine
+// too — it's not sensitive enough to warrant encryption, but keeping it
+// server-side prevents abuse via key scraping). Enforces rating=g always.
+async function handleGiphy(req, env, corsHeaders) {
+  if (!env.GIPHY_KEY) {
+    return jsonResp({ error: 'Giphy not configured' }, 500, corsHeaders);
+  }
+  const url = new URL(req.url);
+  const endpoint = url.searchParams.get('endpoint') === 'search' ? 'search' : 'trending';
+  const q = (url.searchParams.get('q') || '').slice(0, 200);
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '12', 10) || 12, 50);
+  const giphyUrl = new URL(`https://api.giphy.com/v1/gifs/${endpoint}`);
+  giphyUrl.searchParams.set('api_key', env.GIPHY_KEY);
+  giphyUrl.searchParams.set('limit', String(limit));
+  giphyUrl.searchParams.set('rating', 'g');
+  if (endpoint === 'search' && q) giphyUrl.searchParams.set('q', q);
+  let r;
+  try { r = await fetch(giphyUrl.toString()); } catch (e) {
+    return jsonResp({ error: 'Could not reach Giphy' }, 502, corsHeaders);
+  }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return jsonResp({ error: 'Giphy error' }, 502, corsHeaders);
+  return jsonResp(data, 200, corsHeaders);
+}
+
+// POST /csp-report — receives Content-Security-Policy violation reports from
+// browsers and logs them to the Firebase errors node for admin review.
+async function handleCspReport(req, env, corsHeaders) {
+  let body;
+  try { body = await req.json(); } catch (e) { return new Response(null, { status: 204, headers: corsHeaders }); }
+  const report = body['csp-report'] || body;
+  if (env.SERVICE_ACCOUNT_JSON && env.FIREBASE_PROJECT_ID) {
+    try {
+      const accessToken = await getAccessToken(env.SERVICE_ACCOUNT_JSON);
+      const entry = { type: 'csp-violation', at: Date.now(), report };
+      await fetch(`${dbBaseUrl(env)}/errors.json?access_token=${accessToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry)
+      });
+    } catch (e) { /* best-effort */ }
+  }
+  return new Response(null, { status: 204, headers: corsHeaders });
 }
 
 async function verifyMintProof(user, { password, googleCredential, passkeyAssertion, faceDescriptor, backupPin, secAnswers }) {
