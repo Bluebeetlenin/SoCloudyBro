@@ -3182,57 +3182,113 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="modal-close" onclick="closeModal('privacy-modal')">✕</button>
     </div>
     <div class="modal-body scb-u-115">
-      <p class="scb-u-116">Last updated: September 2026</p>
+      <p class="scb-u-116">Last updated: October 2026</p>
 
-      <h3 class="scb-u-117">What SoCloudyBro is</h3>
-      <p>SoCloudyBro is a private, invite-based messaging platform. It lets registered users send end-to-end encrypted messages, make voice and video calls, and share updates within a trusted community.</p>
+      <p>We wrote this policy to be readable, not to bury you in legal language. Here is exactly what SoCloudyBro collects, why, and what control you have over it. Short version: we collect only what we need to run the app, we never sell your data, and we never use it for advertising.</p>
 
-      <h3 class="scb-u-117">What data we collect</h3>
+      <h3 class="scb-u-117">1. What SoCloudyBro Is</h3>
+      <p>SoCloudyBro ("SCB", "we", "us") is a social messaging web app. It lets you send private messages, participate in group servers, and make voice and video calls with people you trust. This policy explains how we handle personal information collected when you use the service.</p>
+
+      <h3 class="scb-u-117">2. Who This Policy Applies To</h3>
+      <p>This policy applies to everyone who uses SoCloudyBro, including visitors, registered users, and users under 18 whose parents or guardians have provided consent. If you are under 13, you may not create an account (see Section 9 for details).</p>
+
+      <h3 class="scb-u-117">3. What Data We Collect and Why</h3>
+      <p>We only collect information that is necessary to provide the service.</p>
+
+      <p><strong>Account information</strong> — When you register, you choose a display name and receive a unique SCB Number (a numeric identifier, similar to a phone number for the app). You may optionally add a profile photo, a short bio, and your birthday. If you sign in with Google, we receive your Google display name and email address from Google — we do not store your Google password.
+      <br><em>Lawful basis (GDPR): Performance of a contract (Article 6(1)(b)).</em></p>
+
+      <p><strong>Messages and calls</strong> — Your messages are stored in Firebase Realtime Database. Voice and video call streams are routed through LiveKit in real time and are not stored on our servers after the call ends. We do not read your messages.
+      <br><em>Lawful basis: Performance of a contract.</em></p>
+
+      <p><strong>Technical and usage data</strong> — We collect basic metadata such as timestamps, online/offline status, and connection events. This is the minimum needed to deliver messages and show you who is online.
+      <br><em>Lawful basis: Legitimate interest (Article 6(1)(f)) — operating a reliable messaging service.</em></p>
+
+      <p><strong>Contact form submissions</strong> — If you use the in-app contact form, your name, email, and message are transmitted to Web3Forms to deliver your enquiry to us.
+      <br><em>Lawful basis: Consent (Article 6(1)(a)).</em></p>
+
+      <p><strong>GIF searches</strong> — When you search for GIFs, your search query is sent to the Giphy API. Giphy's own privacy policy governs how they handle that query.
+      <br><em>Lawful basis: Legitimate interest — providing in-app GIF functionality.</em></p>
+
+      <h3 class="scb-u-117">4. Biometric Data (Face Recognition MFA)</h3>
+      <p>You may optionally enable Face MFA as a second login factor. When you do, your device's camera captures an image, and a 128-dimensional facial geometry descriptor is derived from it locally. This is a set of numbers representing facial measurements — not a photograph. The image itself is discarded immediately; only the descriptor is transmitted and stored.</p>
       <ul class="scb-u-118">
-        <li><strong>Account data:</strong> Your name, a user number, and optionally an email address and profile photo. <em>Lawful basis: contract performance.</em></li>
-        <li><strong>Messages:</strong> Stored encrypted in Firebase. Content is only readable on your device with your encryption key. <em>Lawful basis: contract performance.</em></li>
-        <li><strong>Usage data:</strong> Basic connection metadata (timestamps, online status) to deliver messages. <em>Lawful basis: legitimate interest.</em></li>
-        <li><strong>Google sign-in:</strong> If you sign in with Google, we receive your Google account name and email. We do not store your Google password. <em>Lawful basis: consent.</em></li>
+        <li><strong>Purpose:</strong> The descriptor is used exclusively to verify your identity at login. It is never used for surveillance, advertising, analytics, or any other purpose.</li>
+        <li><strong>Storage:</strong> Descriptors are stored encrypted in your private account data in Firebase. They are never stored in a photo or image format.</li>
+        <li><strong>No sharing:</strong> Face descriptors are never sold, licensed, disclosed, or shared with any third party for any purpose, including law enforcement, without a valid legal order.</li>
+        <li><strong>Retention and deletion:</strong> Your face descriptor is deleted within 30 days of you disabling Face MFA or deleting your account, whichever comes first. You can request immediate deletion at any time by disabling Face MFA in Settings or contacting an SCB admin in-app.</li>
+        <li><strong>Consent:</strong> You must affirmatively opt in to Face MFA. Enrollment does not begin until you explicitly agree. You may withdraw consent and have your descriptor deleted at any time.</li>
+      </ul>
+      <p><em>Lawful basis: Explicit consent for processing biometric data (GDPR Article 9(2)(a)). This section also satisfies the Illinois Biometric Information Privacy Act (BIPA) disclosure requirements.</em></p>
+
+      <h3 class="scb-u-117">5. Cookies and Local Storage</h3>
+      <p>SoCloudyBro does not use advertising cookies or third-party tracking cookies. We use <strong>localStorage</strong> (browser storage on your device) to remember your session state, preferences such as theme and notification settings, and other conveniences. This data lives only on your device — it is not transmitted to us or any third party. You can clear it at any time through your browser settings. Cloudflare Turnstile (our CAPTCHA provider) and Cloudflare's CDN may set cookies or read browser signals for bot protection and performance purposes.</p>
+
+      <h3 class="scb-u-117">6. Third-Party Processors</h3>
+      <p>We work with a small number of trusted sub-processors to run the service. They process data only as needed to provide their respective functions, and they may not use your data for their own purposes.</p>
+      <ul class="scb-u-118">
+        <li><strong>Firebase / Google LLC</strong> — Database, authentication, and file storage. Data is stored in Google's infrastructure (US and European regions). <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase Privacy</a></li>
+        <li><strong>LiveKit</strong> — Real-time voice and video call infrastructure. Audio/video streams pass through LiveKit servers during calls but are not persistently stored. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">LiveKit Privacy</a></li>
+        <li><strong>Cloudflare</strong> — Turnstile CAPTCHA (bot protection) and CDN content delivery. Cloudflare processes IP addresses and browser signals for security and performance. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare Privacy</a></li>
+        <li><strong>Web3Forms</strong> — Contact form delivery. Your name, email, and message text are passed to Web3Forms when you submit a contact form. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Web3Forms Privacy</a></li>
+        <li><strong>Giphy</strong> — GIF search results. Your in-app GIF search queries are sent to Giphy's API. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Giphy Privacy</a></li>
+        <li><strong>Google Sign-In</strong> — Optional authentication via your Google account. Google receives your login event; we receive your Google display name and email. <a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy</a></li>
+      </ul>
+      <p>We do not use any advertising networks, data brokers, or cross-site tracking services. There are no ads on SoCloudyBro.</p>
+
+      <h3 class="scb-u-117">7. How Long We Keep Your Data</h3>
+      <ul class="scb-u-118">
+        <li><strong>Account data</strong> (display name, SCB Number, bio, profile photo, birthday): kept for as long as your account is active, then deleted within 30 days of account deletion.</li>
+        <li><strong>Messages:</strong> kept until you or the other party deletes them, or until your account is deleted.</li>
+        <li><strong>Face descriptor (biometric data):</strong> deleted within 30 days of Face MFA being disabled or account deletion.</li>
+        <li><strong>Technical/usage metadata:</strong> kept for up to 90 days for operational purposes, then deleted.</li>
+        <li><strong>Contact form data:</strong> retained only as long as needed to respond to your enquiry.</li>
       </ul>
 
-      <h3 class="scb-u-117">Biometric data</h3>
-      <p>If you enable Face MFA, we collect a 128-dimensional facial geometry descriptor derived from your camera image. This is a mathematical representation of facial measurements — not a photo. It is used solely to verify your identity at login.</p>
+      <h3 class="scb-u-117">8. International Data Transfers</h3>
+      <p>SoCloudyBro is operated from the United States and uses services (Firebase, Cloudflare, LiveKit) that may process data in the US and other countries. If you are located in the European Economic Area (EEA), UK, or Switzerland, your data may be transferred outside your jurisdiction. For transfers from the EEA, we rely on Google's and Cloudflare's Standard Contractual Clauses (SCCs) as the lawful transfer mechanism. By using SoCloudyBro, you understand that your information will be transferred to and processed in the United States.</p>
+
+      <h3 class="scb-u-117">9. Children and Parental Consent (COPPA / GDPR-K)</h3>
+      <p>SoCloudyBro requires users to be at least 13 years old. We do not knowingly collect personal information from children under 13. If we learn that a user is under 13, we will delete their account and associated data promptly.</p>
+      <p>Users between 13 and 17 may use SoCloudyBro only with verified parental or guardian consent. During registration, users who indicate they are under 18 are presented with a parental consent flow. A parent or guardian must acknowledge the consent before the account is activated. Parents and guardians may:</p>
       <ul class="scb-u-118">
-        <li>Face descriptors are stored encrypted in your account's private data in Firebase.</li>
-        <li>They are never sold, shared with third parties, or used for any purpose other than login verification.</li>
-        <li>Your face descriptor is deleted immediately when you disable Face MFA or delete your account. Any residual data is permanently destroyed within 30 days of account deletion.</li>
+        <li>Review the personal information we hold about their child by contacting an SCB admin in-app.</li>
+        <li>Request deletion of their child's account and all associated data at any time.</li>
+        <li>Revoke consent, which will result in the account being deactivated.</li>
       </ul>
-      <p><em>Lawful basis: explicit consent (you must affirmatively agree before enrollment begins).</em></p>
+      <p>We do not use children's data for advertising, profiling, or any purpose other than providing the messaging service. Biometric data (Face MFA) may only be enrolled by users 18 or older, or by a parent/guardian on behalf of a minor with explicit written consent.</p>
 
-      <h3 class="scb-u-117">How we use your data</h3>
-      <p>Your data is used solely to operate SoCloudyBro. We do not sell, share, or use your data for advertising. Messages are end-to-end encrypted and we cannot read them.</p>
-
-      <h3 class="scb-u-117">Third-party processors</h3>
-      <p>We use the following sub-processors to operate the service:</p>
+      <h3 class="scb-u-117">10. Your Rights</h3>
+      <p>Depending on where you live, you have rights over your personal data. Here is what you can do:</p>
       <ul class="scb-u-118">
-        <li><strong>Firebase (Google LLC):</strong> Database, authentication, and file storage. Data may be stored in Europe West or US regions. <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase Privacy</a></li>
-        <li><strong>LiveKit:</strong> Real-time voice and video calls. Audio/video streams are routed through LiveKit servers but are not persistently stored. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">LiveKit Privacy</a></li>
-        <li><strong>Cloudflare:</strong> Turnstile CAPTCHA (bot protection) and CDN delivery. Cloudflare may process IP addresses and browser signals. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare Privacy</a></li>
-        <li><strong>Web3Forms:</strong> Contact form submission. Your name, email, and message are transmitted to Web3Forms to deliver your enquiry. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Web3Forms Privacy</a></li>
-        <li><strong>Giphy:</strong> GIF search and sharing within chats. Search queries may be sent to Giphy's API. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Giphy Privacy</a></li>
+        <li><strong>Access:</strong> Ask us for a copy of the personal data we hold about you.</li>
+        <li><strong>Portability:</strong> Receive your data in a structured, commonly used, machine-readable format (e.g., JSON).</li>
+        <li><strong>Rectification:</strong> Correct any personal data that is inaccurate or incomplete. You can update your display name, bio, and profile photo directly in Settings.</li>
+        <li><strong>Erasure ("right to be forgotten"):</strong> Request deletion of your personal data. You can delete your account at any time from Settings &rarr; Delete Account, which removes your profile, messages, and all associated data including any biometric descriptor.</li>
+        <li><strong>Restriction:</strong> Ask us to pause processing of your data while a dispute is resolved.</li>
+        <li><strong>Objection:</strong> Object to processing based on our legitimate interest. We will stop unless we can show a compelling reason to continue.</li>
+        <li><strong>Withdraw consent:</strong> Where processing is based on consent (e.g., Face MFA, Google Sign-In), you may withdraw at any time without affecting the lawfulness of prior processing.</li>
+        <li><strong>Lodge a complaint:</strong> If you are in the EEA or UK, you have the right to lodge a complaint with your local data protection authority.</li>
       </ul>
+      <p>To exercise any of these rights, reach out to an SCB admin directly in-app via the contact form or private message.</p>
 
-      <h3 class="scb-u-117">Data storage</h3>
-      <p>Data is stored in Google Firebase (Europe West region). We do not operate our own servers. Firebase's data processing terms apply.</p>
+      <h3 class="scb-u-117">11. Data Breach Notification</h3>
+      <p>If we discover a breach that is likely to result in a risk to your rights or freedoms, we will notify affected users without undue delay, and within 72 hours where required by GDPR. We will describe what happened, what data was affected, and what steps we are taking to address it.</p>
 
-      <h3 class="scb-u-117">Your rights</h3>
-      <p>Depending on your jurisdiction, you have the following rights regarding your personal data:</p>
+      <h3 class="scb-u-117">12. No Ads, No Selling, No Tracking</h3>
+      <p>We want to be completely clear about this:</p>
       <ul class="scb-u-118">
-        <li><strong>Access:</strong> Request a copy of the personal data we hold about you.</li>
-        <li><strong>Portability:</strong> Receive your data in a structured, machine-readable format.</li>
-        <li><strong>Rectification:</strong> Correct inaccurate personal data held about you.</li>
-        <li><strong>Erasure:</strong> Request deletion of your personal data. You can delete your account at any time from Settings, which removes your profile, messages, and all associated data including biometric data.</li>
-        <li><strong>Objection:</strong> Object to processing based on legitimate interest.</li>
+        <li>We do not sell or rent your personal data to anyone, ever.</li>
+        <li>We do not show ads or use your data to target advertising.</li>
+        <li>We do not use third-party trackers, analytics pixels, or cross-site tracking technologies.</li>
+        <li>We do not build profiles of you for commercial purposes.</li>
       </ul>
-      <p>To exercise any of these rights, email us at <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a>.</p>
 
-      <h3 class="scb-u-117">Contact</h3>
-      <p>Questions? Email <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a></p>
+      <h3 class="scb-u-117">13. Changes to This Policy</h3>
+      <p>If we make material changes to this policy, we will notify you in-app before the changes take effect. The "Last updated" date at the top of this page always reflects the most recent version. Continued use of SoCloudyBro after a policy update constitutes acceptance of the revised terms.</p>
+
+      <h3 class="scb-u-117">14. Contact</h3>
+      <p>Have questions about this policy or want to exercise your rights? The best way to reach us is directly in-app — send a message to an SCB admin or use the Help &amp; Contact form in Settings. We aim to respond to all privacy requests within 30 days.</p>
     </div>
   </div>
 </div>
