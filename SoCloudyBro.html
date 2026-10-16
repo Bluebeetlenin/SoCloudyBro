@@ -15798,7 +15798,8 @@ function fmtTime(ts){
   if(d.toDateString()===now.toDateString()) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   return d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
-function openModal(id){const el=document.getElementById(id);if(!el)return;el.style.display='';el.classList.add('visible');}
+var _modalZBase=600,_modalZStack=[];
+function openModal(id){const el=document.getElementById(id);if(!el)return;el.style.display='';el.classList.add('visible');var z=_modalZBase+(_modalZStack.length+1)*10;el.style.zIndex=z;_modalZStack.push({id:id,z:z});}
 function showPrivacyPolicy(){openModal('privacy-modal');}
 function showTermsOfService(){openModal('tos-modal');}
 
@@ -15839,7 +15840,7 @@ function _openDmWithAdmin(num){
   const c = { type:'dm', number:num, name:(u&&u.name?dec(u.name):'Admin #'+num), avatar:(u&&u.avatar)||'', key:'dm_'+[me.number,num].sort((a,b)=>a-b).join('_') };
   contacts.push(c); saveStorage(); openChat(c);
 }
-function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('visible');}
+function closeModal(id){const el=document.getElementById(id);if(!el)return;el.classList.remove('visible');el.style.zIndex='';_modalZStack=_modalZStack.filter(function(e){return e.id!==id;});}
 function renderContacts(){renderSidebar();}
 var toastTimer=null;
 function showToast(title,body){
@@ -28071,11 +28072,13 @@ document.addEventListener('click', function(e){
     <p style="font-size:12px;color:var(--muted);margin:0 0 12px;word-break:break-all">${esc(href)}</p>
     <p style="font-size:12px;margin:0 0 16px">This link goes outside SoCloudyBro. Only open it if you trust the sender.</p>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
-      <button class="btn btn-sm" style="flex:1" data-href="${esc(href)}" onclick="window.open(this.dataset.href,'_blank','noopener,noreferrer');this.closest('div[style*=fixed]').remove()">Open anyway</button>
+      <button class="btn btn-ghost btn-sm" id="_extlnk_cancel" style="flex:1">Cancel</button>
+      <button class="btn btn-sm" id="_extlnk_open" style="flex:1">Open anyway</button>
     </div>
   </div>`;
   document.body.appendChild(dlg);
+  dlg.querySelector('#_extlnk_cancel').addEventListener('click',function(){dlg.remove();});
+  dlg.querySelector('#_extlnk_open').addEventListener('click',function(){window.open(href,'_blank','noopener,noreferrer');dlg.remove();});
 }, true);
 
 /* ===== LAST LOGIN NOTIFICATION ===== */
