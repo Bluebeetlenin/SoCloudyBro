@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover"/>
 <title>SoCloudyBro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -197,8 +197,8 @@
       return (await hashPasswordV2(p, salt, iterations)) === stored;
     }
     if(stored.indexOf('$') === -1) {
-      // Legacy unhashed / plain password support (will be transparently upgraded on login)
-      return p === stored;
+      // Plaintext password fallback removed — accounts with unhashed passwords must reset.
+      return false;
     }
     const salt = stored.split('$')[0];
     return (await hashPassword(p, salt)) === stored;
@@ -3189,20 +3189,95 @@ body.device-tablet .msg-body{max-width:74%}
 
       <h3 class="scb-u-117">What data we collect</h3>
       <ul class="scb-u-118">
-        <li><strong>Account data:</strong> Your name, a user number, and optionally an email address and profile photo.</li>
-        <li><strong>Messages:</strong> Stored encrypted in Firebase. Content is only readable on your device with your encryption key.</li>
-        <li><strong>Usage data:</strong> Basic connection metadata (timestamps, online status) to deliver messages.</li>
-        <li><strong>Google sign-in:</strong> If you sign in with Google, we receive your Google account name and email. We do not store your Google password.</li>
+        <li><strong>Account data:</strong> Your name, a user number, and optionally an email address and profile photo. <em>Lawful basis: contract performance.</em></li>
+        <li><strong>Messages:</strong> Stored encrypted in Firebase. Content is only readable on your device with your encryption key. <em>Lawful basis: contract performance.</em></li>
+        <li><strong>Usage data:</strong> Basic connection metadata (timestamps, online status) to deliver messages. <em>Lawful basis: legitimate interest.</em></li>
+        <li><strong>Google sign-in:</strong> If you sign in with Google, we receive your Google account name and email. We do not store your Google password. <em>Lawful basis: consent.</em></li>
       </ul>
+
+      <h3 class="scb-u-117">Biometric data</h3>
+      <p>If you enable Face MFA, we collect a 128-dimensional facial geometry descriptor derived from your camera image. This is a mathematical representation of facial measurements — not a photo. It is used solely to verify your identity at login.</p>
+      <ul class="scb-u-118">
+        <li>Face descriptors are stored encrypted in your account's private data in Firebase.</li>
+        <li>They are never sold, shared with third parties, or used for any purpose other than login verification.</li>
+        <li>Your face descriptor is deleted immediately when you disable Face MFA or delete your account. Any residual data is permanently destroyed within 30 days of account deletion.</li>
+      </ul>
+      <p><em>Lawful basis: explicit consent (you must affirmatively agree before enrollment begins).</em></p>
 
       <h3 class="scb-u-117">How we use your data</h3>
       <p>Your data is used solely to operate SoCloudyBro. We do not sell, share, or use your data for advertising. Messages are end-to-end encrypted and we cannot read them.</p>
+
+      <h3 class="scb-u-117">Third-party processors</h3>
+      <p>We use the following sub-processors to operate the service:</p>
+      <ul class="scb-u-118">
+        <li><strong>Firebase (Google LLC):</strong> Database, authentication, and file storage. Data may be stored in Europe West or US regions. <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase Privacy</a></li>
+        <li><strong>LiveKit:</strong> Real-time voice and video calls. Audio/video streams are routed through LiveKit servers but are not persistently stored. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">LiveKit Privacy</a></li>
+        <li><strong>Cloudflare:</strong> Turnstile CAPTCHA (bot protection) and CDN delivery. Cloudflare may process IP addresses and browser signals. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare Privacy</a></li>
+        <li><strong>Web3Forms:</strong> Contact form submission. Your name, email, and message are transmitted to Web3Forms to deliver your enquiry. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Web3Forms Privacy</a></li>
+        <li><strong>Giphy:</strong> GIF search and sharing within chats. Search queries may be sent to Giphy's API. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Giphy Privacy</a></li>
+      </ul>
 
       <h3 class="scb-u-117">Data storage</h3>
       <p>Data is stored in Google Firebase (Europe West region). We do not operate our own servers. Firebase's data processing terms apply.</p>
 
       <h3 class="scb-u-117">Your rights</h3>
-      <p>You can delete your account at any time from Settings. This removes your profile and messages from our database.</p>
+      <p>Depending on your jurisdiction, you have the following rights regarding your personal data:</p>
+      <ul class="scb-u-118">
+        <li><strong>Access:</strong> Request a copy of the personal data we hold about you.</li>
+        <li><strong>Portability:</strong> Receive your data in a structured, machine-readable format.</li>
+        <li><strong>Rectification:</strong> Correct inaccurate personal data held about you.</li>
+        <li><strong>Erasure:</strong> Request deletion of your personal data. You can delete your account at any time from Settings, which removes your profile, messages, and all associated data including biometric data.</li>
+        <li><strong>Objection:</strong> Object to processing based on legitimate interest.</li>
+      </ul>
+      <p>To exercise any of these rights, email us at <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a>.</p>
+
+      <h3 class="scb-u-117">Contact</h3>
+      <p>Questions? Email <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- TERMS OF SERVICE MODAL -->
+<div class="overlay scb-u-25" id="tos-modal">
+  <div class="modal scb-u-113">
+    <div class="modal-header scb-u-114">
+      <h2>Terms of Service</h2>
+      <button class="modal-close" onclick="closeModal('tos-modal')">✕</button>
+    </div>
+    <div class="modal-body scb-u-115">
+      <p class="scb-u-116">Last updated: October 2026</p>
+
+      <h3 class="scb-u-117">1. Acceptable Use</h3>
+      <p>By using SoCloudyBro you agree to use it only for lawful, non-harmful purposes. You must not use the service to harass, threaten, impersonate, or harm others.</p>
+
+      <h3 class="scb-u-117">2. Prohibited Content</h3>
+      <p>The following content is strictly prohibited on SoCloudyBro:</p>
+      <ul class="scb-u-118">
+        <li>Child sexual abuse material (CSAM) or any content that sexualises minors.</li>
+        <li>Content that incites violence, hatred, or discrimination based on protected characteristics.</li>
+        <li>Spam, phishing, or unsolicited commercial messages.</li>
+        <li>Malware, viruses, or any code designed to disrupt or damage systems.</li>
+        <li>Content that infringes any third party's intellectual property rights.</li>
+        <li>Content that violates any applicable law or regulation.</li>
+      </ul>
+
+      <h3 class="scb-u-117">3. Account Termination</h3>
+      <p>We reserve the right to suspend or terminate accounts that violate these Terms, without prior notice. You may delete your own account at any time from Settings. Upon termination, your access to the service ends and your data is deleted in accordance with our Privacy Policy.</p>
+
+      <h3 class="scb-u-117">4. No Warranty</h3>
+      <p>SoCloudyBro is provided "as is" without warranties of any kind, express or implied, including but not limited to merchantability, fitness for a particular purpose, or non-infringement. We do not guarantee uninterrupted, error-free, or secure operation of the service.</p>
+
+      <h3 class="scb-u-117">5. Limitation of Liability</h3>
+      <p>To the maximum extent permitted by applicable law, SoCloudyBro and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of or inability to use the service, even if advised of the possibility of such damages. Our total liability to you for any claim shall not exceed USD $100.</p>
+
+      <h3 class="scb-u-117">6. DMCA / Copyright</h3>
+      <p>If you believe content on SoCloudyBro infringes your copyright, you may submit a DMCA takedown notice to <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a>. Your notice must include: identification of the copyrighted work, identification of the infringing material and its location, your contact information, a statement of good-faith belief, and a statement of accuracy under penalty of perjury.</p>
+
+      <h3 class="scb-u-117">7. Governing Law</h3>
+      <p>These Terms are governed by the laws of the United States. Any disputes shall be resolved in the federal or state courts located in the United States, and you consent to the personal jurisdiction of such courts.</p>
+
+      <h3 class="scb-u-117">8. Changes to These Terms</h3>
+      <p>We may update these Terms from time to time. Continued use of SoCloudyBro after changes are posted constitutes acceptance of the revised Terms.</p>
 
       <h3 class="scb-u-117">Contact</h3>
       <p>Questions? Email <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a></p>
@@ -3434,7 +3509,7 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="google-auth-note scb-u-167" id="google-note-login"></div>
       </div>
       <div class="scb-u-171">
-        By signing up you agree to our <a class="scb-u-119" href="#" onclick="showPrivacyPolicy();return false">Privacy Policy</a>
+        By signing up you agree to our <a class="scb-u-119" href="#" onclick="showPrivacyPolicy();return false">Privacy Policy</a> and <a class="scb-u-119" href="#" onclick="showTermsOfService();return false">Terms of Service</a>
       </div>
     </div>
 
@@ -3486,7 +3561,19 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="face-mfa-setup-modal">
   <div class="modal">
     <div class="modal-header"><h2>📷 Set Up Face Recognition</h2><p>This captures a face descriptor (a set of measurements) — not a photo — stored on your account for login verification.</p></div>
-    <div class="modal-body scb-u-29">
+    <div class="modal-body scb-u-29" id="face-enroll-consent-view">
+      <h3 style="margin:0 0 8px">Biometric Data Consent</h3>
+      <p style="margin:0 0 12px">Before your camera is activated, please read and agree to the following:</p>
+      <ul style="margin:0 0 16px;padding-left:20px;line-height:1.6">
+        <li><strong>What is collected:</strong> 128-dimensional facial geometry measurements derived from your camera image. This is a mathematical descriptor — not a photograph.</li>
+        <li><strong>Why it is collected:</strong> Login verification only. Your face descriptor is used solely to confirm your identity when you sign in with Face MFA.</li>
+        <li><strong>How long it is stored:</strong> Until you disable Face MFA or delete your account. It is permanently deleted within 30 days of account deletion.</li>
+        <li><strong>Sharing:</strong> Your face descriptor is never sold, shared with third parties, or used for any purpose other than login verification.</li>
+      </ul>
+      <p style="margin:0 0 16px">You can disable Face MFA and remove your face data at any time from Settings → Security.</p>
+      <button class="btn btn-full" onclick="acceptFaceEnrollmentConsent()">I Agree — Start Camera ↗</button>
+    </div>
+    <div class="modal-body scb-u-29" id="face-enroll-scan-view" style="display:none">
       <div class="face-scan-wrap">
         <video id="face-enroll-video" autoplay muted playsinline></video>
         <canvas id="face-enroll-canvas"></canvas>
@@ -4081,7 +4168,7 @@ body.device-tablet .msg-body{max-width:74%}
      missing/blocked CDN degrades rather than breaks. The UMD bundle exposes the
      global `LivekitClient` (note the lowercase k). Pinned to an exact version
      (was a floating @2 tag) + SRI, same rationale as above. -->
-<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js" integrity="sha384-MveBYLjjZe2VXnKzvBbPfyh5MEbiqNDeta9nzIGbtqnXmC+CwX/mLE5+M9PDIcPy" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js" integrity="sha384-MveBYLjjZe2VXnKzvBbPfyh5MEbiqNDeta9nzIGbtqnXmC+CwX/mLE5+M9PDIcPy" crossorigin="anonymous"></script>
 <script>
 // -- CONFIG -------------------------------------------------------------------
 // Firebase project: SoCloudyBro (socloudybro-b8606)
@@ -4093,7 +4180,6 @@ const firebaseConfig = {
   storageBucket: "socloudybro-b8606.firebasestorage.app",
   messagingSenderId: "1003311021367",
   appId: "1:1003311021367:web:53e06af5bcdde14fc1aeb2",
-  measurementId: "G-5DZZSN57WL"
 };
 firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
@@ -8228,7 +8314,7 @@ async function recoverSubmitStep(){
       closeModal('recover-account-modal');
       showToast('Password reset','You can now log in with your new password.');
       _recoverState=null;
-    }catch(e){ err.textContent=scbErr('SCB-RECOV-11','Your new password couldn\'t be saved — the server rejected the update.',e.message); }
+    }catch(e){ _loginRawPwd=null; err.textContent=scbErr('SCB-RECOV-11','Your new password couldn\'t be saved — the server rejected the update.',e.message); }
   }
 }
 
@@ -8347,10 +8433,22 @@ function onToggleFaceMfaClick(){
 // ── Enrollment ────────────────────────────────────────────────────────────────
 let _faceEnrollStream=null, _faceEnrollLoopTimer=null, _faceEnrollAutoActive=false;
 async function startFaceEnrollment(){
+  // Show the consent view first; camera does not start until the user clicks I Agree
+  _faceEnrollAutoActive=false;
+  const consentView=document.getElementById('face-enroll-consent-view');
+  const scanView=document.getElementById('face-enroll-scan-view');
+  if(consentView) consentView.style.display='';
+  if(scanView) scanView.style.display='none';
+  openModal('face-mfa-setup-modal');
+}
+async function acceptFaceEnrollmentConsent(){
+  const consentView=document.getElementById('face-enroll-consent-view');
+  const scanView=document.getElementById('face-enroll-scan-view');
+  if(consentView) consentView.style.display='none';
+  if(scanView) scanView.style.display='';
   const statusEl=document.getElementById('face-enroll-status');
   const errEl=document.getElementById('face-enroll-error');
-  errEl.textContent=''; _faceEnrollAutoActive=false;
-  openModal('face-mfa-setup-modal');
+  errEl.textContent='';
   statusEl.textContent='⏳ Loading face detection models…';
   try{
     await loadFaceApiModels();
@@ -8805,6 +8903,7 @@ async function submitLogin() {
       await finishLogin(user, pwdToStore);
     }
   } catch(e) {
+    _loginRawPwd = null; // clear sensitive credential on any error path
     selfHeal('SCB-AUTH-15', e, { context: 'finishLogin' });
     err.textContent = scbErr('SCB-AUTH-15','Log-in couldn\'t be completed — the server rejected or failed the sign-in request.',e.message);
   } finally {
@@ -9973,7 +10072,7 @@ function avatarFallback(img,letter){
 }
 
 // -- AGE GATE / DEVICE BLACKLIST ------------------------------------------------
-const MIN_SIGNUP_AGE = 8;
+const MIN_SIGNUP_AGE = 13;
 const PARENTAL_CONSENT_MAX_AGE = 17; // ages MIN_SIGNUP_AGE..this require an
 // approving parent/guardian account before the app unlocks. 18+ signs up
 // normally with no consent gate.
@@ -10431,6 +10530,7 @@ async function submitSetup(){
     try{ await sendWelcomeMessage(); }catch{}
     closeModal('setup-modal');await launch();
   }catch(e){
+    _loginRawPwd = null; // clear sensitive credential on any error path
     selfHeal('SCB-SIGNUP-15', e, { context: 'signUp' });
     err.textContent=scbErr('SCB-SIGNUP-15','Your account couldn\'t be created — the server rejected the sign-up.',e.message);
   }
@@ -13212,32 +13312,88 @@ function initAnimBg(type){
     return;
   }
   if(type==='stars'){
-    const starColors=['rgba(255,255,255,{o})','rgba(200,220,255,{o})','rgba(255,250,200,{o})','rgba(220,200,255,{o})','rgba(180,220,255,{o})'];
-    for(let i=0;i<160;i++){
-      const p=document.createElement('div');
-      p.className='anim-particle';
-      const sz=0.8+Math.random()*3.2;
-      const col=starColors[Math.floor(Math.random()*starColors.length)].replace('{o}',(0.4+Math.random()*0.6).toFixed(2));
-      const animV=Math.random()<0.5?'starTwinkle':'starTwinkle2';
-      const dur=(1.2+Math.random()*4).toFixed(2);
-      const delay=(-Math.random()*5).toFixed(2);
-      p.style.cssText=`width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px;border-radius:50%;background:${col};`+
-        `left:${(Math.random()*100).toFixed(1)}%;top:${(Math.random()*100).toFixed(1)}%;`+
-        `box-shadow:0 0 ${(sz*2).toFixed(1)}px ${col};`+
-        `animation:${animV} ${dur}s ${delay}s ease-in-out infinite;`;
-      ov.appendChild(p);
+    // Canvas-based stars: single DOM node instead of 160+ divs, no layout thrashing
+    const cvs=document.createElement('canvas');
+    cvs.style.cssText='position:absolute;inset:0;width:100%;height:100%;';
+    ov.appendChild(cvs);
+    const starBaseColors=[[255,255,255],[200,220,255],[255,250,200],[220,200,255],[180,220,255]];
+    // Build star data once
+    const stars=Array.from({length:160},()=>{
+      const c=starBaseColors[Math.floor(Math.random()*starBaseColors.length)];
+      return {
+        x:Math.random(), y:Math.random(),
+        r:0.4+Math.random()*1.6,
+        r2:c, // color components
+        baseAlpha:0.4+Math.random()*0.6,
+        speed:1.2+Math.random()*4,
+        phase:Math.random()*Math.PI*2,
+        twinkleType:Math.random()<0.5?0:1
+      };
+    });
+    // Shooting stars data
+    const shoots=Array.from({length:4},()=>({
+      x:Math.random()*0.6, y:Math.random()*0.4,
+      dur:8+Math.random()*14,
+      phase:Math.random()*Math.PI*2
+    }));
+    let rafId;
+    function resizeCvs(){
+      cvs.width=ov.offsetWidth||window.innerWidth;
+      cvs.height=ov.offsetHeight||window.innerHeight;
     }
-    // Occasional shooting stars
-    for(let i=0;i<4;i++){
-      const s=document.createElement('div');
-      s.className='anim-particle';
-      const delay=(-Math.random()*20).toFixed(2);
-      s.style.cssText=`width:2px;height:2px;border-radius:50%;background:#fff;`+
-        `left:${(Math.random()*60).toFixed(1)}%;top:${(Math.random()*40).toFixed(1)}%;`+
-        `box-shadow:0 0 4px #fff,0 0 8px rgba(200,220,255,0.8);`+
-        `animation:shootStar ${(8+Math.random()*14).toFixed(1)}s ${delay}s linear infinite;`;
-      ov.appendChild(s);
+    resizeCvs();
+    const ro=new ResizeObserver(resizeCvs);
+    ro.observe(ov);
+    function drawStars(ts){
+      const t=ts/1000;
+      const w=cvs.width, h=cvs.height;
+      const ctx=cvs.getContext('2d');
+      ctx.clearRect(0,0,w,h);
+      for(const s of stars){
+        // twinkle: oscillate alpha
+        const wave=s.twinkleType===0
+          ? 0.5+0.5*Math.sin(t*((2*Math.PI)/s.speed)+s.phase)
+          : 0.5+0.5*(Math.sin(t*((2*Math.PI)/s.speed)+s.phase)*Math.cos(t*1.3+s.phase));
+        const alpha=Math.max(0.05, s.baseAlpha*(0.3+0.7*wave));
+        const [cr,cg,cb]=s.r2;
+        const px=s.x*w, py=s.y*h;
+        ctx.beginPath();
+        ctx.arc(px,py,s.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(${cr},${cg},${cb},${alpha.toFixed(2)})`;
+        ctx.fill();
+        // glow
+        if(s.r>1){
+          const grd=ctx.createRadialGradient(px,py,0,px,py,s.r*3);
+          grd.addColorStop(0,`rgba(${cr},${cg},${cb},${(alpha*0.4).toFixed(2)})`);
+          grd.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.beginPath();
+          ctx.arc(px,py,s.r*3,0,Math.PI*2);
+          ctx.fillStyle=grd;
+          ctx.fill();
+        }
+      }
+      // Shooting stars: trail from left-to-right diagonal
+      for(const ss of shoots){
+        const prog=((t/ss.dur)+ss.phase/(2*Math.PI))%1;
+        const sx=(ss.x+prog*1.2)*w, sy=(ss.y+prog*0.5)*h;
+        const len=60, angle=Math.PI/6;
+        const ex=sx-Math.cos(angle)*len, ey=sy-Math.sin(angle)*len;
+        const grd=ctx.createLinearGradient(ex,ey,sx,sy);
+        grd.addColorStop(0,'rgba(255,255,255,0)');
+        grd.addColorStop(1,'rgba(255,255,255,0.9)');
+        ctx.beginPath();
+        ctx.moveTo(ex,ey);
+        ctx.lineTo(sx,sy);
+        ctx.strokeStyle=grd;
+        ctx.lineWidth=1.5;
+        ctx.stroke();
+      }
+      rafId=requestAnimationFrame(drawStars);
     }
+    rafId=requestAnimationFrame(drawStars);
+    // Store cleanup on the overlay so _clearAnimBg can stop the loop
+    ov._starsRaf=rafId;
+    ov._starsCleanup=()=>{ cancelAnimationFrame(ov._starsRaf); ro.disconnect(); };
     return;
   }
   if(type==='leaves'){
@@ -14864,6 +15020,7 @@ function fmtTime(ts){
 }
 function openModal(id){const el=document.getElementById(id);if(!el)return;el.style.display='';el.classList.add('visible');}
 function showPrivacyPolicy(){openModal('privacy-modal');}
+function showTermsOfService(){openModal('tos-modal');}
 
 /* ===== CONTACT US ===== */
 const _SCB_ADMINS = [
@@ -18991,6 +19148,10 @@ function showSiteUpdateBanner(ver,note){
 function applySiteUpdate(){
   const html=localStorage.getItem('scb_site_html');
   if(!html){ location.reload(); return; }
+  // Integrity check: only write HTML that looks like the expected app page.
+  // Rejects arbitrary localStorage content that could be injected by XSS.
+  const looksLikeApp = html.startsWith('<!DOCTYPE html') && html.includes('SoCloudyBro');
+  if(!looksLikeApp){ location.reload(); return; }
   try{
     document.open('text/html','replace');
     document.write(html);
