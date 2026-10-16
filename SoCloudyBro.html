@@ -2972,7 +2972,7 @@ body.device-tablet .msg-body{max-width:74%}
   <!-- NAV -->
   <nav class="lp-nav" id="lp-nav">
     <div class="lp-brand">☁️ SoCloudyBro</div>
-    <button class="lp-btn-main" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Sign In / Sign Up</button>
+    <button class="lp-btn-main" id="lp-signin-btn">Sign In / Sign Up</button>
   </nav>
 
   <!-- HERO -->
@@ -2986,8 +2986,8 @@ body.device-tablet .msg-body{max-width:74%}
     <h1>Chat with anyone.<br><em>Privately.</em></h1>
     <p>SoCloudyBro is the messaging app for friends, families, and communities. Encrypted chats, voice and video calls, group spaces, and more — right in your browser, totally free.</p>
     <div class="lp-cta-group">
-      <button class="lp-btn-lg primary" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Get Started — it's free</button>
-      <button class="lp-btn-lg ghost" onclick="scrollToLpSection('lp-features')">See what's inside ↓</button>
+      <button class="lp-btn-lg primary" id="lp-getstarted-btn">Get Started — it's free</button>
+      <button class="lp-btn-lg ghost" id="lp-scroll-btn">See what's inside ↓</button>
     </div>
   </div>
 
@@ -3145,7 +3145,7 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
     </div>
     <div class="scb-u-108">
-      <button class="lp-btn-lg primary" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Join SoCloudyBro →</button>
+      <button class="lp-btn-lg primary" id="lp-join-btn">Join SoCloudyBro →</button>
     </div>
   </div>
 
@@ -3156,23 +3156,27 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="scb-u-110">SoCloudyBro</div>
     <p class="scb-u-111">Private messaging for everyone.</p>
     <div class="scb-u-112">
-      <a href="#" onclick="showPrivacyPolicy();return false">Privacy Policy</a>
-      <a href="#" onclick="showTermsOfService();return false">Terms of Service</a>
-      <a href="#" onclick="openModal('accessibility-modal');return false">Accessibility</a>
-      <a href="#" onclick="openContactUs();return false">Contact</a>
+      <a href="javascript:;" id="lp-footer-privacy">Privacy Policy</a>
+      <a href="javascript:;" id="lp-footer-tos">Terms of Service</a>
+      <a href="javascript:;" id="lp-footer-a11y">Accessibility</a>
+      <a href="javascript:;" id="lp-footer-contact">Contact</a>
     </div>
   </footer>
 </div>
 <script>
-// Landing-page polish: sticky-nav scroll shadow + scroll-reveal for sections.
+// Landing-page polish: sticky-nav, scroll-reveal, and all LP button/link bindings.
 // Scoped entirely to #landing-page elements; harmless no-op once it's hidden.
 (function(){
   const scroller=document.getElementById('landing-page');
   const nav=document.getElementById('lp-nav');
   if(!scroller||!nav) return;
+
+  // Sticky nav shadow on scroll
   scroller.addEventListener('scroll',()=>{
     nav.classList.toggle('lp-nav-scrolled',scroller.scrollTop>4);
   },{passive:true});
+
+  // Scroll-reveal sections
   const revealEls=scroller.querySelectorAll('.lp-reveal');
   if('IntersectionObserver' in window && revealEls.length){
     const io=new IntersectionObserver((entries)=>{
@@ -3182,6 +3186,33 @@ body.device-tablet .msg-body{max-width:74%}
   }else{
     revealEls.forEach(el=>el.classList.add('lp-in'));
   }
+
+  // CTA / nav buttons — wired here so onclick= is not needed (CSP hash covers this block)
+  function lpEnterApp(){
+    document.getElementById('landing-page').style.display='none';
+    document.getElementById('shell').style.display='';
+    if(typeof openModal==='function') openModal('setup-modal');
+  }
+  ['lp-signin-btn','lp-getstarted-btn','lp-join-btn'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('click',lpEnterApp);
+  });
+  const scrollBtn=document.getElementById('lp-scroll-btn');
+  if(scrollBtn) scrollBtn.addEventListener('click',function(){
+    if(typeof scrollToLpSection==='function') scrollToLpSection('lp-features');
+  });
+
+  // Footer links
+  const footerMap={
+    'lp-footer-privacy': function(){ if(typeof showPrivacyPolicy==='function') showPrivacyPolicy(); },
+    'lp-footer-tos':     function(){ if(typeof showTermsOfService==='function') showTermsOfService(); },
+    'lp-footer-a11y':    function(){ if(typeof openModal==='function') openModal('accessibility-modal'); },
+    'lp-footer-contact': function(){ if(typeof openContactUs==='function') openContactUs(); }
+  };
+  Object.keys(footerMap).forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('click',footerMap[id]);
+  });
 })();
 </script>
 
