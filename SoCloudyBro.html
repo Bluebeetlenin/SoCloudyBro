@@ -692,6 +692,13 @@
 .scb-u-263 { background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;font-family:monospace }
 .scb-u-264 { padding-bottom:10px;max-height:60vh;overflow-y:auto }
 .scb-u-265 { width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px }
+
+.pp-lang-tabs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0 14px;border-bottom:1px solid rgba(128,128,128,.2);margin-bottom:14px}
+.pp-lang-tab{background:rgba(128,128,128,.12);border:none;border-radius:999px;padding:4px 11px;font-size:.8rem;cursor:pointer;color:inherit;transition:background .15s}
+.pp-lang-tab.active{background:#5b6af5;color:#fff}
+.pp-lang-tab:hover:not(.active){background:rgba(128,128,128,.22)}
+.pp-lang-section[hidden]{display:none!important}
+
 </style>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -3182,6 +3189,20 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="modal-close" onclick="closeModal('privacy-modal')">✕</button>
     </div>
     <div class="modal-body scb-u-115">
+<div class="pp-lang-tabs" role="tablist" aria-label="Select language">
+  <button class="pp-lang-tab active" onclick="ppLang('en')" role="tab" aria-selected="true">🇺🇸 English</button>
+  <button class="pp-lang-tab" onclick="ppLang('es')" role="tab">🇪🇸 Español</button>
+  <button class="pp-lang-tab" onclick="ppLang('fr')" role="tab">🇫🇷 Français</button>
+  <button class="pp-lang-tab" onclick="ppLang('de')" role="tab">🇩🇪 Deutsch</button>
+  <button class="pp-lang-tab" onclick="ppLang('pt')" role="tab">🇧🇷 Português</button>
+  <button class="pp-lang-tab" onclick="ppLang('ar')" role="tab">🇸🇦 العربية</button>
+  <button class="pp-lang-tab" onclick="ppLang('zh')" role="tab">🇨🇳 中文</button>
+  <button class="pp-lang-tab" onclick="ppLang('ja')" role="tab">🇯🇵 日本語</button>
+  <button class="pp-lang-tab" onclick="ppLang('hi')" role="tab">🇮🇳 हिन्दी</button>
+  <button class="pp-lang-tab" onclick="ppLang('ru')" role="tab">🇷🇺 Русский</button>
+</div>
+<div id="pp-lang-en" class="pp-lang-section">
+
       <p class="scb-u-116">Last updated: October 2026</p>
 
       <p>We wrote this policy to be readable, not to bury you in legal language. Here is exactly what SoCloudyBro collects, why, and what control you have over it. Short version: we collect only what we need to run the app, we never sell your data, and we never use it for advertising.</p>
@@ -3290,6 +3311,611 @@ body.device-tablet .msg-body{max-width:74%}
       <h3 class="scb-u-117">14. Contact</h3>
       <p>Have questions about this policy or want to exercise your rights? The best way to reach us is directly in-app — send a message to an SCB admin or use the Help &amp; Contact form in Settings. We aim to respond to all privacy requests within 30 days.</p>
     </div>
+<div id="pp-lang-es" class="pp-lang-section" hidden>
+<p class="scb-u-116">Última actualización: octubre de 2026</p>
+<p>Escribimos esta política para que sea legible, no para sepultarte en lenguaje legal. Aquí encontrarás exactamente qué recopila SoCloudyBro, por qué y qué control tienes sobre ello. Resumen: solo recopilamos lo necesario para operar la app, nunca vendemos tus datos ni los usamos para publicidad.</p>
+<h3 class="scb-u-117">1. Qué es SoCloudyBro</h3>
+<p>SoCloudyBro ("SCB", "nosotros") es una aplicación web de mensajería social. Te permite enviar mensajes privados, participar en servidores de grupo y realizar llamadas de voz y video con personas de confianza.</p>
+<h3 class="scb-u-117">2. A quién aplica esta política</h3>
+<p>Esta política aplica a todos los usuarios de SoCloudyBro: visitantes, usuarios registrados y menores de 18 años con consentimiento parental. Si tienes menos de 13 años, no puedes crear una cuenta (ver Sección 9).</p>
+<h3 class="scb-u-117">3. Qué datos recopilamos y por qué</h3>
+<p><strong>Información de cuenta</strong> — nombre de pantalla, Número SCB, foto de perfil opcional, biografía y fecha de nacimiento. Si usas Google Sign-In, recibimos tu nombre de Google y correo electrónico.<br><em>Base legal (RGPD): ejecución de contrato (Art. 6(1)(b)).</em></p>
+<p><strong>Mensajes y llamadas</strong> — tus mensajes se almacenan en Firebase. Las llamadas de voz/video se enrutan a través de LiveKit en tiempo real y no se guardan. No leemos tus mensajes.<br><em>Base legal: ejecución de contrato.</em></p>
+<p><strong>Datos técnicos</strong> — marcas de tiempo, estado en línea/desconectado y eventos de conexión.<br><em>Base legal: interés legítimo (Art. 6(1)(f)).</em></p>
+<p><strong>Formulario de contacto</strong> — nombre, correo y mensaje transmitidos a Web3Forms.<br><em>Base legal: consentimiento (Art. 6(1)(a)).</em></p>
+<p><strong>Búsquedas de GIFs</strong> — tu consulta se envía a la API de Giphy, sujeta a su propia política de privacidad.</p>
+<h3 class="scb-u-117">4. Datos biométricos (Face MFA)</h3>
+<p>Puedes activar opcionalmente el Face MFA. Se genera un descriptor facial de 128 dimensiones (no una fotografía) que se descarta inmediatamente; solo se transmite y almacena el descriptor.</p>
+<ul class="scb-u-118">
+<li><strong>Propósito:</strong> verificación de identidad en el inicio de sesión, exclusivamente.</li>
+<li><strong>Sin compartir:</strong> los descriptores nunca se venden ni comparten con terceros.</li>
+<li><strong>Retención:</strong> el descriptor se elimina en un plazo de 30 días tras desactivar el Face MFA o eliminar la cuenta.</li>
+<li><strong>Consentimiento:</strong> debes aceptar expresamente. Puedes retirar el consentimiento en cualquier momento desde Configuración.</li>
+</ul>
+<p><em>Base legal: consentimiento explícito para datos biométricos (Art. 9(2)(a) RGPD). Esta sección cumple los requisitos de la Ley de Privacidad de Información Biométrica de Illinois (BIPA).</em></p>
+<h3 class="scb-u-117">5. Cookies y almacenamiento local</h3>
+<p>No usamos cookies publicitarias ni de seguimiento de terceros. Usamos localStorage para recordar tu sesión y preferencias. Cloudflare Turnstile puede establecer cookies para protección contra bots.</p>
+<h3 class="scb-u-117">6. Procesadores externos</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — base de datos y autenticación. <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Política Firebase</a></li>
+<li><strong>LiveKit</strong> — infraestructura de llamadas. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">Política LiveKit</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA y CDN. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Política Cloudflare</a></li>
+<li><strong>Web3Forms</strong> — formulario de contacto. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Política Web3Forms</a></li>
+<li><strong>Giphy</strong> — búsqueda de GIFs. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Política Giphy</a></li>
+<li><strong>Google Sign-In</strong> — autenticación opcional. <a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Política Google</a></li>
+</ul>
+<h3 class="scb-u-117">7. Cuánto tiempo conservamos tus datos</h3>
+<ul class="scb-u-118">
+<li><strong>Datos de cuenta:</strong> mientras la cuenta esté activa; eliminados en 30 días tras su eliminación.</li>
+<li><strong>Mensajes:</strong> hasta que tú u otro participante los elimine, o hasta la eliminación de la cuenta.</li>
+<li><strong>Descriptor facial:</strong> eliminado en 30 días tras desactivar Face MFA o eliminar la cuenta.</li>
+<li><strong>Metadatos técnicos:</strong> hasta 90 días con fines operativos.</li>
+</ul>
+<h3 class="scb-u-117">8. Transferencias internacionales</h3>
+<p>SoCloudyBro opera desde Estados Unidos. Si te encuentras en el EEE, Reino Unido o Suiza, tus datos pueden transferirse a EE. UU. mediante las Cláusulas Contractuales Tipo (CCT) de Google y Cloudflare.</p>
+<h3 class="scb-u-117">9. Menores y consentimiento parental (COPPA / RGPD-K)</h3>
+<p>Los usuarios deben tener al menos 13 años. Los usuarios de 13 a 17 años necesitan consentimiento parental verificado. Los padres y tutores pueden revisar y eliminar los datos de sus hijos contactando a un administrador de SCB en la app. Los datos biométricos están restringidos a mayores de 18 años o con consentimiento parental expreso.</p>
+<h3 class="scb-u-117">10. Tus derechos</h3>
+<ul class="scb-u-118">
+<li><strong>Acceso:</strong> solicita una copia de tus datos.</li>
+<li><strong>Portabilidad:</strong> recibe tus datos en formato JSON.</li>
+<li><strong>Rectificación:</strong> corrige datos inexactos desde Configuración.</li>
+<li><strong>Supresión:</strong> elimina tu cuenta desde Configuración → Eliminar cuenta.</li>
+<li><strong>Restricción y oposición:</strong> contáctanos a través de la app.</li>
+<li><strong>Retirar consentimiento:</strong> en cualquier momento para Face MFA o Google Sign-In.</li>
+<li><strong>Reclamación:</strong> ante tu autoridad de protección de datos local (si estás en el EEE/Reino Unido).</li>
+</ul>
+<h3 class="scb-u-117">11. Notificación de brechas</h3>
+<p>Si detectamos una brecha que pueda afectar tus derechos, te notificaremos sin demora indebida y dentro de las 72 horas exigidas por el RGPD.</p>
+<h3 class="scb-u-117">12. Sin publicidad, sin venta de datos, sin rastreo</h3>
+<ul class="scb-u-118">
+<li>Nunca vendemos ni alquilamos tus datos personales.</li>
+<li>No mostramos publicidad ni usamos tus datos para segmentarla.</li>
+<li>No utilizamos rastreadores de terceros ni píxeles de seguimiento.</li>
+</ul>
+<h3 class="scb-u-117">13. Cambios en esta política</h3>
+<p>Si realizamos cambios sustanciales, te avisaremos dentro de la app antes de que entren en vigor. La fecha de "última actualización" siempre refleja la versión más reciente.</p>
+<h3 class="scb-u-117">14. Contacto</h3>
+<p>¿Tienes preguntas o deseas ejercer tus derechos? Contáctanos directamente en la app enviando un mensaje a un administrador de SCB o usando el formulario de Ayuda y Contacto en Configuración.</p>
+</div>
+<div id="pp-lang-fr" class="pp-lang-section" hidden>
+<p class="scb-u-116">Dernière mise à jour : octobre 2026</p>
+<p>Nous avons rédigé cette politique pour qu'elle soit lisible, et non pour vous noyer dans du jargon juridique. Voici exactement ce que SoCloudyBro collecte, pourquoi, et le contrôle que vous avez sur ces données. En bref : nous ne collectons que le strict nécessaire, nous ne vendons jamais vos données et ne les utilisons pas à des fins publicitaires.</p>
+<h3 class="scb-u-117">1. Qu'est-ce que SoCloudyBro</h3>
+<p>SoCloudyBro (« SCB », « nous ») est une application web de messagerie sociale permettant d'envoyer des messages privés, de participer à des serveurs de groupe et de passer des appels vocaux et vidéo.</p>
+<h3 class="scb-u-117">2. À qui s'applique cette politique</h3>
+<p>Cette politique s'applique à tous les utilisateurs de SoCloudyBro, y compris les visiteurs, les utilisateurs enregistrés et les mineurs de 18 ans dont les parents ont donné leur consentement. Si vous avez moins de 13 ans, vous ne pouvez pas créer de compte (voir Section 9).</p>
+<h3 class="scb-u-117">3. Données collectées et raisons</h3>
+<p><strong>Informations de compte</strong> — pseudo, Numéro SCB, photo de profil optionnelle, biographie et date de naissance.<br><em>Base légale (RGPD) : exécution d'un contrat (Art. 6(1)(b)).</em></p>
+<p><strong>Messages et appels</strong> — vos messages sont stockés dans Firebase. Les appels sont acheminés via LiveKit en temps réel et ne sont pas conservés. Nous ne lisons pas vos messages.<br><em>Base légale : exécution d'un contrat.</em></p>
+<p><strong>Données techniques</strong> — horodatages, statut en ligne/hors ligne et événements de connexion.<br><em>Base légale : intérêt légitime (Art. 6(1)(f)).</em></p>
+<p><strong>Formulaire de contact</strong> — nom, e-mail et message transmis à Web3Forms.<br><em>Base légale : consentement (Art. 6(1)(a)).</em></p>
+<p><strong>Recherches de GIFs</strong> — vos requêtes sont envoyées à l'API Giphy, régie par leur propre politique de confidentialité.</p>
+<h3 class="scb-u-117">4. Données biométriques (Face MFA)</h3>
+<p>Vous pouvez activer optionnellement le Face MFA. Un descripteur facial à 128 dimensions (pas une photo) est généré et transmis ; l'image est immédiatement supprimée.</p>
+<ul class="scb-u-118">
+<li><strong>Finalité :</strong> vérification d'identité lors de la connexion uniquement.</li>
+<li><strong>Pas de partage :</strong> les descripteurs ne sont jamais vendus ni partagés avec des tiers.</li>
+<li><strong>Conservation :</strong> le descripteur est supprimé dans les 30 jours suivant la désactivation du Face MFA ou la suppression du compte.</li>
+<li><strong>Consentement :</strong> vous devez donner votre accord explicite. Vous pouvez le retirer à tout moment dans les Paramètres.</li>
+</ul>
+<p><em>Base légale : consentement explicite pour les données biométriques (Art. 9(2)(a) RGPD). Cette section satisfait également aux exigences du BIPA (Illinois).</em></p>
+<h3 class="scb-u-117">5. Cookies et stockage local</h3>
+<p>Nous n'utilisons pas de cookies publicitaires ni de traceurs tiers. Nous utilisons localStorage pour mémoriser votre session et vos préférences. Cloudflare Turnstile peut déposer des cookies à des fins de protection contre les bots.</p>
+<h3 class="scb-u-117">6. Sous-traitants tiers</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — base de données et authentification. <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Politique Firebase</a></li>
+<li><strong>LiveKit</strong> — infrastructure d'appels. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">Politique LiveKit</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA et CDN. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Politique Cloudflare</a></li>
+<li><strong>Web3Forms</strong> — formulaire de contact. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Politique Web3Forms</a></li>
+<li><strong>Giphy</strong> — recherche de GIFs. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Politique Giphy</a></li>
+<li><strong>Google Sign-In</strong> — authentification optionnelle. <a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Politique Google</a></li>
+</ul>
+<h3 class="scb-u-117">7. Durée de conservation</h3>
+<ul class="scb-u-118">
+<li><strong>Données de compte :</strong> conservées le temps de l'activité du compte, supprimées dans les 30 jours suivant sa suppression.</li>
+<li><strong>Messages :</strong> jusqu'à leur suppression par l'une des parties ou la suppression du compte.</li>
+<li><strong>Descripteur facial :</strong> supprimé dans les 30 jours suivant la désactivation du Face MFA ou la suppression du compte.</li>
+<li><strong>Métadonnées techniques :</strong> conservées jusqu'à 90 jours à des fins opérationnelles.</li>
+</ul>
+<h3 class="scb-u-117">8. Transferts internationaux</h3>
+<p>SoCloudyBro est exploité depuis les États-Unis. Si vous vous trouvez dans l'EEE, au Royaume-Uni ou en Suisse, vos données peuvent être transférées aux États-Unis via les Clauses Contractuelles Types (CCT) de Google et Cloudflare.</p>
+<h3 class="scb-u-117">9. Mineurs et consentement parental (COPPA / RGPD-K)</h3>
+<p>SoCloudyBro est réservé aux personnes de 13 ans et plus. Les 13-17 ans nécessitent un consentement parental vérifié. Les parents peuvent consulter et supprimer les données de leur enfant en contactant un administrateur SCB dans l'application. Les données biométriques sont réservées aux majeurs ou aux mineurs avec consentement parental explicite.</p>
+<h3 class="scb-u-117">10. Vos droits</h3>
+<ul class="scb-u-118">
+<li><strong>Accès :</strong> demandez une copie de vos données.</li>
+<li><strong>Portabilité :</strong> recevez vos données au format JSON.</li>
+<li><strong>Rectification :</strong> corrigez vos données depuis les Paramètres.</li>
+<li><strong>Effacement :</strong> supprimez votre compte depuis Paramètres → Supprimer le compte.</li>
+<li><strong>Limitation et opposition :</strong> contactez-nous via l'application.</li>
+<li><strong>Retrait du consentement :</strong> à tout moment pour le Face MFA ou Google Sign-In.</li>
+<li><strong>Réclamation :</strong> auprès de votre autorité de protection des données locale (EEE/Royaume-Uni).</li>
+</ul>
+<h3 class="scb-u-117">11. Notification de violation</h3>
+<p>En cas de violation susceptible d'affecter vos droits, nous vous en informerons sans délai et dans les 72 heures requises par le RGPD.</p>
+<h3 class="scb-u-117">12. Pas de publicité, pas de vente, pas de traçage</h3>
+<ul class="scb-u-118">
+<li>Nous ne vendons ni ne louons jamais vos données personnelles.</li>
+<li>Nous n'affichons pas de publicités et n'utilisons pas vos données à des fins publicitaires.</li>
+<li>Nous n'utilisons pas de traceurs tiers ni de pixels de suivi.</li>
+</ul>
+<h3 class="scb-u-117">13. Modifications de cette politique</h3>
+<p>En cas de modifications importantes, nous vous en informerons dans l'application avant leur entrée en vigueur. La date de « dernière mise à jour » reflète toujours la version la plus récente.</p>
+<h3 class="scb-u-117">14. Contact</h3>
+<p>Des questions ou souhaitez exercer vos droits ? Contactez-nous directement dans l'application en envoyant un message à un administrateur SCB ou via le formulaire Aide et contact dans les Paramètres.</p>
+</div>
+<div id="pp-lang-de" class="pp-lang-section" hidden>
+<p class="scb-u-116">Zuletzt aktualisiert: Oktober 2026</p>
+<p>Wir haben diese Richtlinie so geschrieben, dass sie lesbar ist – keine rechtlichen Endlostexte. Hier steht genau, was SoCloudyBro erfasst, warum und welche Kontrolle du darüber hast. Kurzfassung: Wir erfassen nur das Nötigste, verkaufen deine Daten nie und nutzen sie nicht für Werbung.</p>
+<h3 class="scb-u-117">1. Was ist SoCloudyBro</h3>
+<p>SoCloudyBro („SCB", „wir") ist eine soziale Messaging-Web-App. Du kannst Privatnachrichten senden, an Gruppenservern teilnehmen und Sprach- und Videoanrufe tätigen.</p>
+<h3 class="scb-u-117">2. Für wen gilt diese Richtlinie</h3>
+<p>Diese Richtlinie gilt für alle Nutzer von SoCloudyBro: Besucher, registrierte Nutzer und Minderjährige unter 18 Jahren mit elterlicher Einwilligung. Bist du unter 13 Jahre alt, darfst du kein Konto erstellen (siehe Abschnitt 9).</p>
+<h3 class="scb-u-117">3. Welche Daten wir erfassen und warum</h3>
+<p><strong>Kontoinformationen</strong> — Anzeigename, SCB-Nummer, optionales Profilbild, Biografie und Geburtstag.<br><em>Rechtsgrundlage (DSGVO): Vertragserfüllung (Art. 6(1)(b)).</em></p>
+<p><strong>Nachrichten und Anrufe</strong> — Deine Nachrichten werden in Firebase gespeichert. Sprach-/Videoanrufe werden über LiveKit in Echtzeit übertragen und nicht gespeichert. Wir lesen deine Nachrichten nicht.<br><em>Rechtsgrundlage: Vertragserfüllung.</em></p>
+<p><strong>Technische Daten</strong> — Zeitstempel, Online-/Offline-Status und Verbindungsereignisse.<br><em>Rechtsgrundlage: berechtigtes Interesse (Art. 6(1)(f)).</em></p>
+<p><strong>Kontaktformular</strong> — Name, E-Mail und Nachricht werden über Web3Forms übermittelt.<br><em>Rechtsgrundlage: Einwilligung (Art. 6(1)(a)).</em></p>
+<p><strong>GIF-Suche</strong> — Deine Suchanfragen werden an die Giphy-API gesendet, die ihrer eigenen Datenschutzrichtlinie unterliegt.</p>
+<h3 class="scb-u-117">4. Biometrische Daten (Face MFA)</h3>
+<p>Du kannst optional Face MFA aktivieren. Dabei wird ein 128-dimensionaler Gesichtsdeskriptor (kein Foto) erzeugt; das Bild wird sofort verworfen, nur der Deskriptor wird übertragen und gespeichert.</p>
+<ul class="scb-u-118">
+<li><strong>Zweck:</strong> ausschließlich Identitätsprüfung beim Login.</li>
+<li><strong>Kein Teilen:</strong> Deskriptoren werden nie verkauft oder an Dritte weitergegeben.</li>
+<li><strong>Aufbewahrung:</strong> Der Deskriptor wird innerhalb von 30 Tagen nach Deaktivierung des Face MFA oder Kontolöschung gelöscht.</li>
+<li><strong>Einwilligung:</strong> Du musst aktiv zustimmen. Du kannst deine Einwilligung jederzeit in den Einstellungen widerrufen.</li>
+</ul>
+<p><em>Rechtsgrundlage: ausdrückliche Einwilligung für biometrische Daten (Art. 9(2)(a) DSGVO). Dieser Abschnitt erfüllt zudem die Anforderungen des Illinois BIPA.</em></p>
+<h3 class="scb-u-117">5. Cookies und lokaler Speicher</h3>
+<p>Wir verwenden keine Werbe- oder Drittanbieter-Tracking-Cookies. Wir nutzen localStorage für Sitzungsstatus und Einstellungen. Cloudflare Turnstile kann Cookies zum Schutz vor Bots setzen.</p>
+<h3 class="scb-u-117">6. Drittanbieter-Dienstleister</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — Datenbank und Authentifizierung. <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase-Datenschutz</a></li>
+<li><strong>LiveKit</strong> — Anrufinfrastruktur. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">LiveKit-Datenschutz</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA und CDN. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare-Datenschutz</a></li>
+<li><strong>Web3Forms</strong> — Kontaktformular. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Web3Forms-Datenschutz</a></li>
+<li><strong>Giphy</strong> — GIF-Suche. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Giphy-Datenschutz</a></li>
+<li><strong>Google Sign-In</strong> — optionale Authentifizierung. <a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google-Datenschutz</a></li>
+</ul>
+<h3 class="scb-u-117">7. Wie lange wir deine Daten aufbewahren</h3>
+<ul class="scb-u-118">
+<li><strong>Kontodaten:</strong> solange das Konto aktiv ist; Löschung innerhalb von 30 Tagen nach Kontolöschung.</li>
+<li><strong>Nachrichten:</strong> bis zur Löschung durch eine Partei oder zur Kontolöschung.</li>
+<li><strong>Gesichtsdeskriptor:</strong> Löschung innerhalb von 30 Tagen nach Deaktivierung oder Kontolöschung.</li>
+<li><strong>Technische Metadaten:</strong> bis zu 90 Tage für Betriebszwecke.</li>
+</ul>
+<h3 class="scb-u-117">8. Internationale Datenübertragungen</h3>
+<p>SoCloudyBro wird aus den USA betrieben. Wenn du dich im EWR, im Vereinigten Königreich oder in der Schweiz befindest, können deine Daten in die USA übertragen werden – auf Grundlage der Standardvertragsklauseln (SCC) von Google und Cloudflare.</p>
+<h3 class="scb-u-117">9. Minderjährige und elterliche Einwilligung (COPPA / DSGVO-K)</h3>
+<p>SoCloudyBro setzt ein Mindestalter von 13 Jahren voraus. 13- bis 17-Jährige benötigen eine verifizierte elterliche Einwilligung. Eltern können die Daten ihres Kindes über einen SCB-Admin in der App einsehen und löschen lassen. Biometrische Daten sind auf Personen ab 18 Jahren oder Minderjährige mit ausdrücklicher elterlicher Einwilligung beschränkt.</p>
+<h3 class="scb-u-117">10. Deine Rechte</h3>
+<ul class="scb-u-118">
+<li><strong>Auskunft:</strong> Fordere eine Kopie deiner Daten an.</li>
+<li><strong>Portabilität:</strong> Erhalte deine Daten im JSON-Format.</li>
+<li><strong>Berichtigung:</strong> Korrigiere deine Daten in den Einstellungen.</li>
+<li><strong>Löschung:</strong> Lösche dein Konto unter Einstellungen → Konto löschen.</li>
+<li><strong>Einschränkung und Widerspruch:</strong> Kontaktiere uns über die App.</li>
+<li><strong>Einwilligung widerrufen:</strong> Jederzeit für Face MFA oder Google Sign-In möglich.</li>
+<li><strong>Beschwerde:</strong> Bei deiner lokalen Datenschutzbehörde (EWR/UK).</li>
+</ul>
+<h3 class="scb-u-117">11. Meldung von Datenpannen</h3>
+<p>Wenn wir eine Datenpanne entdecken, die deine Rechte gefährdet, informieren wir dich unverzüglich und innerhalb der von der DSGVO geforderten 72 Stunden.</p>
+<h3 class="scb-u-117">12. Keine Werbung, kein Datenverkauf, kein Tracking</h3>
+<ul class="scb-u-118">
+<li>Wir verkaufen oder vermieten deine personenbezogenen Daten nie.</li>
+<li>Wir zeigen keine Werbung und nutzen deine Daten nicht zur Anzeigensteuerung.</li>
+<li>Wir verwenden keine Drittanbieter-Tracker oder Tracking-Pixel.</li>
+</ul>
+<h3 class="scb-u-117">13. Änderungen dieser Richtlinie</h3>
+<p>Bei wesentlichen Änderungen informieren wir dich in der App, bevor sie in Kraft treten. Das Datum „Zuletzt aktualisiert" spiegelt immer die aktuelle Version wider.</p>
+<h3 class="scb-u-117">14. Kontakt</h3>
+<p>Fragen oder möchtest du deine Rechte ausüben? Wende dich direkt in der App an einen SCB-Admin oder nutze das Hilfe-und-Kontakt-Formular in den Einstellungen.</p>
+</div>
+<div id="pp-lang-pt" class="pp-lang-section" hidden>
+<p class="scb-u-116">Última atualização: outubro de 2026</p>
+<p>Escrevemos esta política para ser legível, não para te afogar em linguagem jurídica. Aqui está exatamente o que o SoCloudyBro coleta, por quê e que controle você tem sobre isso. Resumo: coletamos apenas o necessário, nunca vendemos seus dados e não os usamos para publicidade.</p>
+<h3 class="scb-u-117">1. O que é o SoCloudyBro</h3>
+<p>SoCloudyBro ("SCB", "nós") é um aplicativo web de mensagens sociais. Permite enviar mensagens privadas, participar de servidores de grupo e fazer chamadas de voz e vídeo.</p>
+<h3 class="scb-u-117">2. A quem esta política se aplica</h3>
+<p>Esta política aplica-se a todos os usuários do SoCloudyBro: visitantes, usuários registrados e menores de 18 anos com consentimento dos pais. Se você tiver menos de 13 anos, não pode criar uma conta (ver Seção 9).</p>
+<h3 class="scb-u-117">3. Quais dados coletamos e por quê</h3>
+<p><strong>Informações de conta</strong> — nome de exibição, Número SCB, foto de perfil opcional, biografia e data de nascimento.<br><em>Base legal (LGPD/GDPR): execução de contrato (Art. 6(1)(b)).</em></p>
+<p><strong>Mensagens e chamadas</strong> — suas mensagens são armazenadas no Firebase. Chamadas de voz/vídeo são roteadas pelo LiveKit em tempo real e não são armazenadas. Não lemos suas mensagens.<br><em>Base legal: execução de contrato.</em></p>
+<p><strong>Dados técnicos</strong> — registros de tempo, status online/offline e eventos de conexão.<br><em>Base legal: interesse legítimo (Art. 6(1)(f)).</em></p>
+<p><strong>Formulário de contato</strong> — nome, e-mail e mensagem transmitidos ao Web3Forms.<br><em>Base legal: consentimento (Art. 6(1)(a)).</em></p>
+<p><strong>Pesquisas de GIFs</strong> — suas consultas são enviadas à API do Giphy, sujeita à própria política de privacidade deles.</p>
+<h3 class="scb-u-117">4. Dados biométricos (Face MFA)</h3>
+<p>Você pode ativar opcionalmente o Face MFA. Um descritor facial de 128 dimensões (não uma foto) é gerado; a imagem é descartada imediatamente e apenas o descritor é transmitido e armazenado.</p>
+<ul class="scb-u-118">
+<li><strong>Finalidade:</strong> verificação de identidade no login exclusivamente.</li>
+<li><strong>Sem compartilhamento:</strong> descritores nunca são vendidos ou compartilhados com terceiros.</li>
+<li><strong>Retenção:</strong> o descritor é excluído em até 30 dias após desativar o Face MFA ou excluir a conta.</li>
+<li><strong>Consentimento:</strong> você deve concordar explicitamente. Pode revogar a qualquer momento nas Configurações.</li>
+</ul>
+<p><em>Base legal: consentimento explícito para dados biométricos (Art. 9(2)(a) GDPR). Esta seção também atende aos requisitos do BIPA (Illinois).</em></p>
+<h3 class="scb-u-117">5. Cookies e armazenamento local</h3>
+<p>Não usamos cookies de publicidade ou rastreamento de terceiros. Usamos localStorage para lembrar sua sessão e preferências. O Cloudflare Turnstile pode definir cookies para proteção contra bots.</p>
+<h3 class="scb-u-117">6. Processadores terceirizados</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — banco de dados e autenticação. <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Política Firebase</a></li>
+<li><strong>LiveKit</strong> — infraestrutura de chamadas. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">Política LiveKit</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA e CDN. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Política Cloudflare</a></li>
+<li><strong>Web3Forms</strong> — formulário de contato. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Política Web3Forms</a></li>
+<li><strong>Giphy</strong> — pesquisa de GIFs. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Política Giphy</a></li>
+<li><strong>Google Sign-In</strong> — autenticação opcional. <a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Política Google</a></li>
+</ul>
+<h3 class="scb-u-117">7. Por quanto tempo mantemos seus dados</h3>
+<ul class="scb-u-118">
+<li><strong>Dados de conta:</strong> mantidos enquanto a conta estiver ativa; excluídos em 30 dias após a exclusão.</li>
+<li><strong>Mensagens:</strong> até você ou outra parte excluí-las, ou até a exclusão da conta.</li>
+<li><strong>Descritor facial:</strong> excluído em 30 dias após desativar o Face MFA ou excluir a conta.</li>
+<li><strong>Metadados técnicos:</strong> até 90 dias para fins operacionais.</li>
+</ul>
+<h3 class="scb-u-117">8. Transferências internacionais</h3>
+<p>O SoCloudyBro opera nos Estados Unidos. Se você estiver no EEE, Reino Unido ou Suíça, seus dados podem ser transferidos para os EUA com base nas Cláusulas Contratuais Padrão (SCCs) do Google e Cloudflare.</p>
+<h3 class="scb-u-117">9. Menores e consentimento parental (COPPA / LGPD)</h3>
+<p>O SoCloudyBro requer idade mínima de 13 anos. Usuários de 13 a 17 anos precisam de consentimento parental verificado. Pais e responsáveis podem revisar e excluir os dados de seus filhos contatando um admin SCB no app. Dados biométricos são restritos a maiores de 18 anos ou menores com consentimento parental explícito.</p>
+<h3 class="scb-u-117">10. Seus direitos</h3>
+<ul class="scb-u-118">
+<li><strong>Acesso:</strong> solicite uma cópia dos seus dados.</li>
+<li><strong>Portabilidade:</strong> receba seus dados em formato JSON.</li>
+<li><strong>Retificação:</strong> corrija dados nas Configurações.</li>
+<li><strong>Exclusão:</strong> exclua sua conta em Configurações → Excluir conta.</li>
+<li><strong>Restrição e oposição:</strong> entre em contato pelo app.</li>
+<li><strong>Revogar consentimento:</strong> a qualquer momento para Face MFA ou Google Sign-In.</li>
+<li><strong>Reclamação:</strong> junto à sua autoridade de proteção de dados local (EEE/UK).</li>
+</ul>
+<h3 class="scb-u-117">11. Notificação de violação</h3>
+<p>Se descobrirmos uma violação que possa afetar seus direitos, notificaremos os usuários afetados sem demora indevida e dentro de 72 horas conforme exigido pelo GDPR.</p>
+<h3 class="scb-u-117">12. Sem publicidade, sem venda de dados, sem rastreamento</h3>
+<ul class="scb-u-118">
+<li>Nunca vendemos ou alugamos seus dados pessoais.</li>
+<li>Não exibimos anúncios nem usamos seus dados para segmentação publicitária.</li>
+<li>Não usamos rastreadores de terceiros ou pixels de rastreamento.</li>
+</ul>
+<h3 class="scb-u-117">13. Alterações nesta política</h3>
+<p>Se fizermos alterações materiais, notificaremos você no app antes que entrem em vigor. A data de "Última atualização" sempre reflete a versão mais recente.</p>
+<h3 class="scb-u-117">14. Contato</h3>
+<p>Dúvidas ou quer exercer seus direitos? Fale conosco diretamente no app enviando uma mensagem a um admin SCB ou usando o formulário de Ajuda e Contato nas Configurações.</p>
+</div>
+<div id="pp-lang-ar" class="pp-lang-section" hidden dir="rtl">
+<p class="scb-u-116">آخر تحديث: أكتوبر 2026</p>
+<p>كتبنا هذه السياسة لتكون مقروءة وواضحة، لا لنُغرقك في لغة قانونية. إليك بالضبط ما يجمعه SoCloudyBro، ولماذا، وما هو حقك في التحكم به. ملخص: نجمع فقط ما هو ضروري لتشغيل التطبيق، ولا نبيع بياناتك أبدًا، ولا نستخدمها للإعلانات.</p>
+<h3 class="scb-u-117">١. ما هو SoCloudyBro</h3>
+<p>SoCloudyBro ("SCB"، "نحن") تطبيق ويب للتواصل الاجتماعي يتيح لك إرسال رسائل خاصة، والمشاركة في مجموعات، وإجراء مكالمات صوتية ومرئية مع الأشخاص الذين تثق بهم.</p>
+<h3 class="scb-u-117">٢. من تنطبق عليه هذه السياسة</h3>
+<p>تنطبق هذه السياسة على جميع مستخدمي SoCloudyBro: الزوار، والمستخدمين المسجلين، والمستخدمين دون سن 18 عامًا الذين حصلوا على موافقة أولياء أمورهم. إذا كنت دون 13 عامًا، لا يحق لك إنشاء حساب (انظر القسم ٩).</p>
+<h3 class="scb-u-117">٣. البيانات التي نجمعها ولماذا</h3>
+<p><strong>معلومات الحساب</strong> — اسم العرض، رقم SCB، صورة الملف الشخصي الاختيارية، النبذة التعريفية، وتاريخ الميلاد.<br><em>الأساس القانوني (GDPR): تنفيذ عقد (المادة 6(1)(ب)).</em></p>
+<p><strong>الرسائل والمكالمات</strong> — تُخزَّن رسائلك في Firebase. تُوجَّه مكالمات الصوت/الفيديو عبر LiveKit في الوقت الفعلي ولا تُحفظ. نحن لا نقرأ رسائلك.<br><em>الأساس القانوني: تنفيذ عقد.</em></p>
+<p><strong>البيانات التقنية</strong> — الطوابع الزمنية وحالة الاتصال/عدم الاتصال وأحداث الشبكة.<br><em>الأساس القانوني: مصلحة مشروعة (المادة 6(1)(و)).</em></p>
+<p><strong>نموذج الاتصال</strong> — اسمك وبريدك الإلكتروني ورسالتك تُرسَل عبر Web3Forms.<br><em>الأساس القانوني: موافقة (المادة 6(1)(أ)).</em></p>
+<p><strong>البحث عن GIFs</strong> — تُرسَل استعلاماتك إلى واجهة برمجة تطبيقات Giphy، وتخضع لسياسة الخصوصية الخاصة بها.</p>
+<h3 class="scb-u-117">٤. البيانات البيومترية (Face MFA)</h3>
+<p>يمكنك تفعيل ميزة التعرف على الوجه بشكل اختياري. يُولَّد وصف وجهي من 128 بُعدًا (وليس صورة فوتوغرافية)؛ تُحذف الصورة فورًا ويُخزَّن الوصف فقط.</p>
+<ul class="scb-u-118">
+<li><strong>الغرض:</strong> التحقق من الهوية عند تسجيل الدخول فقط.</li>
+<li><strong>عدم المشاركة:</strong> لا تُباع أوصاف الوجه ولا تُشارَك مع أي طرف ثالث.</li>
+<li><strong>الاحتفاظ:</strong> يُحذف الوصف خلال 30 يومًا من تعطيل Face MFA أو حذف الحساب.</li>
+<li><strong>الموافقة:</strong> يجب عليك الموافقة صراحةً. يمكنك سحب موافقتك في أي وقت من الإعدادات.</li>
+</ul>
+<p><em>الأساس القانوني: موافقة صريحة على معالجة البيانات البيومترية (المادة 9(2)(أ) من GDPR). يستوفي هذا القسم أيضًا متطلبات قانون BIPA في إيلينوي.</em></p>
+<h3 class="scb-u-117">٥. ملفات تعريف الارتباط والتخزين المحلي</h3>
+<p>لا نستخدم ملفات تعريف ارتباط إعلانية أو تتبعًا من أطراف ثالثة. نستخدم localStorage لحفظ جلستك وتفضيلاتك. قد يضع Cloudflare Turnstile ملفات تعريف ارتباط لأغراض الحماية من الروبوتات.</p>
+<h3 class="scb-u-117">٦. مزودو الخدمة الخارجيون</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — قاعدة البيانات والمصادقة. <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">سياسة Firebase</a></li>
+<li><strong>LiveKit</strong> — بنية تحتية للمكالمات. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">سياسة LiveKit</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA وشبكة توصيل المحتوى. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">سياسة Cloudflare</a></li>
+<li><strong>Web3Forms</strong> — نموذج الاتصال. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">سياسة Web3Forms</a></li>
+<li><strong>Giphy</strong> — البحث عن GIFs. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">سياسة Giphy</a></li>
+<li><strong>Google Sign-In</strong> — مصادقة اختيارية. <a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">سياسة Google</a></li>
+</ul>
+<h3 class="scb-u-117">٧. مدة الاحتفاظ بالبيانات</h3>
+<ul class="scb-u-118">
+<li><strong>بيانات الحساب:</strong> طالما الحساب نشطًا؛ تُحذف خلال 30 يومًا من حذف الحساب.</li>
+<li><strong>الرسائل:</strong> حتى يحذفها أحد الطرفين أو يُحذف الحساب.</li>
+<li><strong>وصف الوجه:</strong> يُحذف خلال 30 يومًا من تعطيل Face MFA أو حذف الحساب.</li>
+<li><strong>البيانات التقنية:</strong> حتى 90 يومًا لأغراض تشغيلية.</li>
+</ul>
+<h3 class="scb-u-117">٨. النقل الدولي للبيانات</h3>
+<p>يعمل SoCloudyBro من الولايات المتحدة. إذا كنت في المنطقة الاقتصادية الأوروبية أو المملكة المتحدة أو سويسرا، قد تُنقل بياناتك إلى الولايات المتحدة استنادًا إلى بنود العقود النموذجية (SCCs) من Google وCloudflare.</p>
+<h3 class="scb-u-117">٩. القاصرون وموافقة الوالدين</h3>
+<p>يشترط SoCloudyBro الحد الأدنى من العمر 13 عامًا. يحتاج المستخدمون من 13 إلى 17 عامًا إلى موافقة أولياء أمور موثَّقة. يمكن لأولياء الأمور مراجعة بيانات أطفالهم وطلب حذفها عبر التواصل مع مشرف SCB في التطبيق. البيانات البيومترية مقتصرة على من بلغوا 18 عامًا أو القاصرين بموافقة صريحة من ولي الأمر.</p>
+<h3 class="scb-u-117">١٠. حقوقك</h3>
+<ul class="scb-u-118">
+<li><strong>الوصول:</strong> اطلب نسخة من بياناتك.</li>
+<li><strong>قابلية النقل:</strong> احصل على بياناتك بصيغة JSON.</li>
+<li><strong>التصحيح:</strong> صحِّح بياناتك من الإعدادات.</li>
+<li><strong>الحذف:</strong> احذف حسابك من الإعدادات ← حذف الحساب.</li>
+<li><strong>التقييد والاعتراض:</strong> تواصل معنا عبر التطبيق.</li>
+<li><strong>سحب الموافقة:</strong> في أي وقت لـ Face MFA أو Google Sign-In.</li>
+<li><strong>تقديم شكوى:</strong> لدى هيئة حماية البيانات المحلية (المنطقة الاقتصادية الأوروبية/المملكة المتحدة).</li>
+</ul>
+<h3 class="scb-u-117">١١. الإخطار بالانتهاكات</h3>
+<p>إذا اكتشفنا انتهاكًا قد يؤثر على حقوقك، سنُخطر المستخدمين المتضررين دون إبطاء، وفي غضون 72 ساعة وفقًا لمتطلبات GDPR.</p>
+<h3 class="scb-u-117">١٢. لا إعلانات، لا بيع بيانات، لا تتبع</h3>
+<ul class="scb-u-118">
+<li>لا نبيع بياناتك الشخصية أو نؤجرها أبدًا.</li>
+<li>لا نعرض إعلانات ولا نستخدم بياناتك لاستهدافها.</li>
+<li>لا نستخدم أدوات تتبع من طرف ثالث أو بكسلات تتبع.</li>
+</ul>
+<h3 class="scb-u-117">١٣. التغييرات على هذه السياسة</h3>
+<p>إذا أجرينا تغييرات جوهرية، سنُخطرك داخل التطبيق قبل سريانها. تاريخ "آخر تحديث" يعكس دائمًا النسخة الأحدث.</p>
+<h3 class="scb-u-117">١٤. التواصل معنا</h3>
+<p>هل لديك أسئلة أو تريد ممارسة حقوقك؟ تواصل معنا مباشرةً داخل التطبيق عبر إرسال رسالة لمشرف SCB أو استخدام نموذج المساعدة والتواصل في الإعدادات.</p>
+</div>
+<div id="pp-lang-zh" class="pp-lang-section" hidden>
+<p class="scb-u-116">最后更新：2026年10月</p>
+<p>我们撰写本政策是为了让它易于阅读，而非将您淹没在法律语言中。以下是 SoCloudyBro 收集的内容、原因以及您对此拥有的控制权。简而言之：我们只收集运营应用所需的最少信息，绝不出售您的数据，也不将其用于广告目的。</p>
+<h3 class="scb-u-117">1. 什么是 SoCloudyBro</h3>
+<p>SoCloudyBro（"SCB"，"我们"）是一款社交即时通讯网页应用，支持发送私信、参与群组服务器以及进行语音和视频通话。</p>
+<h3 class="scb-u-117">2. 本政策适用对象</h3>
+<p>本政策适用于所有 SoCloudyBro 用户，包括访客、注册用户以及已获得父母或监护人同意的18岁以下用户。如果您未满13岁，则不得创建账户（详见第9条）。</p>
+<h3 class="scb-u-117">3. 我们收集哪些数据及原因</h3>
+<p><strong>账户信息</strong> — 显示名称、SCB编号、可选头像、简介及生日。如您使用 Google 登录，我们将收到您的 Google 显示名称和电子邮件。<br><em>法律依据（GDPR）：履行合同（第6(1)(b)条）。</em></p>
+<p><strong>消息和通话</strong> — 您的消息存储在 Firebase 中。语音/视频通话通过 LiveKit 实时路由，不予保存。我们不读取您的消息。<br><em>法律依据：履行合同。</em></p>
+<p><strong>技术数据</strong> — 时间戳、在线/离线状态及连接事件。<br><em>法律依据：合法利益（第6(1)(f)条）。</em></p>
+<p><strong>联系表单</strong> — 您的姓名、邮箱和消息通过 Web3Forms 传输。<br><em>法律依据：同意（第6(1)(a)条）。</em></p>
+<p><strong>GIF搜索</strong> — 您的搜索词将发送至 Giphy API，受其自身隐私政策约束。</p>
+<h3 class="scb-u-117">4. 生物特征数据（人脸识别 MFA）</h3>
+<p>您可以选择性地启用人脸 MFA。系统会生成128维人脸特征描述符（而非照片）；图像立即丢弃，仅传输并存储描述符。</p>
+<ul class="scb-u-118">
+<li><strong>用途：</strong>仅用于登录时的身份验证。</li>
+<li><strong>不共享：</strong>描述符绝不出售或与任何第三方共享。</li>
+<li><strong>保留：</strong>描述符将在禁用人脸 MFA 或删除账户后30天内删除。</li>
+<li><strong>同意：</strong>您必须明确同意方可注册。您可随时在"设置"中撤回同意。</li>
+</ul>
+<p><em>法律依据：处理生物特征数据的明确同意（GDPR第9(2)(a)条）。本条款亦满足伊利诺伊州 BIPA 的披露要求。</em></p>
+<h3 class="scb-u-117">5. Cookie 与本地存储</h3>
+<p>我们不使用广告 Cookie 或第三方跟踪 Cookie。我们使用 localStorage 记住您的会话状态和偏好设置。Cloudflare Turnstile 可能设置 Cookie 用于机器人防护。</p>
+<h3 class="scb-u-117">6. 第三方处理商</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — 数据库和身份验证。<a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase 隐私政策</a></li>
+<li><strong>LiveKit</strong> — 通话基础设施。<a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">LiveKit 隐私政策</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA 和 CDN。<a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare 隐私政策</a></li>
+<li><strong>Web3Forms</strong> — 联系表单。<a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Web3Forms 隐私政策</a></li>
+<li><strong>Giphy</strong> — GIF搜索。<a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Giphy 隐私政策</a></li>
+<li><strong>Google 登录</strong> — 可选身份验证。<a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google 隐私政策</a></li>
+</ul>
+<h3 class="scb-u-117">7. 数据保留期限</h3>
+<ul class="scb-u-118">
+<li><strong>账户数据：</strong>账户活跃期间保留；删除账户后30天内删除。</li>
+<li><strong>消息：</strong>直至您或对方删除，或账户被删除。</li>
+<li><strong>人脸描述符：</strong>禁用人脸 MFA 或删除账户后30天内删除。</li>
+<li><strong>技术元数据：</strong>出于运营目的保留最多90天。</li>
+</ul>
+<h3 class="scb-u-117">8. 国际数据传输</h3>
+<p>SoCloudyBro 在美国运营。如果您位于欧洲经济区、英国或瑞士，您的数据可能通过 Google 和 Cloudflare 的标准合同条款（SCC）传输至美国。</p>
+<h3 class="scb-u-117">9. 未成年人与家长同意（COPPA）</h3>
+<p>SoCloudyBro 要求用户至少年满13岁。13至17岁用户须经过经过验证的家长同意。家长和监护人可联系应用内 SCB 管理员查看和删除子女数据。生物特征数据仅限18岁以上用户，或经家长明确书面同意的未成年人使用。</p>
+<h3 class="scb-u-117">10. 您的权利</h3>
+<ul class="scb-u-118">
+<li><strong>访问权：</strong>申请您的个人数据副本。</li>
+<li><strong>可携带权：</strong>以 JSON 格式接收您的数据。</li>
+<li><strong>更正权：</strong>在"设置"中更正不准确的数据。</li>
+<li><strong>删除权：</strong>在"设置"→"删除账户"中删除您的账户。</li>
+<li><strong>限制处理权和反对权：</strong>通过应用与我们联系。</li>
+<li><strong>撤回同意：</strong>随时可就人脸 MFA 或 Google 登录撤回同意。</li>
+<li><strong>投诉权：</strong>向当地数据保护机构（欧洲经济区/英国）提出投诉。</li>
+</ul>
+<h3 class="scb-u-117">11. 数据泄露通知</h3>
+<p>如发现可能影响您权利的数据泄露，我们将及时通知受影响用户，并按 GDPR 要求在72小时内完成通知。</p>
+<h3 class="scb-u-117">12. 无广告、不出售数据、不追踪</h3>
+<ul class="scb-u-118">
+<li>我们绝不出售或出租您的个人数据。</li>
+<li>我们不展示广告，也不将您的数据用于广告定向。</li>
+<li>我们不使用第三方追踪器或追踪像素。</li>
+</ul>
+<h3 class="scb-u-117">13. 本政策的变更</h3>
+<p>如有重大变更，我们将在变更生效前通过应用内通知告知您。"最后更新"日期始终反映最新版本。</p>
+<h3 class="scb-u-117">14. 联系我们</h3>
+<p>如有疑问或希望行使您的权利，请直接在应用内联系 SCB 管理员，或使用"设置"中的帮助与联系表单。</p>
+</div>
+<div id="pp-lang-ja" class="pp-lang-section" hidden>
+<p class="scb-u-116">最終更新：2026年10月</p>
+<p>このプライバシーポリシーは、法律用語を避け、わかりやすく書かれています。SoCloudyBro が収集するデータ、その理由、そしてあなたのコントロール権について正確にご説明します。要約：私たちはアプリの運営に必要な最小限のデータのみを収集し、データの販売や広告への利用は一切行いません。</p>
+<h3 class="scb-u-117">1. SoCloudyBro とは</h3>
+<p>SoCloudyBro（"SCB"、"私たち"）は、プライベートメッセージ送信、グループサーバーへの参加、音声・ビデオ通話ができるソーシャルメッセージング Web アプリです。</p>
+<h3 class="scb-u-117">2. このポリシーの適用対象</h3>
+<p>このポリシーは SoCloudyBro のすべてのユーザーに適用されます。訪問者、登録ユーザー、保護者の同意を得た 18 歳未満のユーザーを含みます。13 歳未満の方はアカウントを作成できません（第 9 条参照）。</p>
+<h3 class="scb-u-117">3. 収集するデータとその理由</h3>
+<p><strong>アカウント情報</strong> — 表示名、SCB番号、任意のプロフィール写真、自己紹介、誕生日。Google ログインを使用する場合は、Google の表示名とメールアドレスを受け取ります。<br><em>法的根拠（GDPR）：契約の履行（第6条(1)(b)）。</em></p>
+<p><strong>メッセージと通話</strong> — メッセージは Firebase に保存されます。音声・ビデオ通話は LiveKit 経由でリアルタイム処理され、保存されません。私たちはメッセージを読みません。<br><em>法的根拠：契約の履行。</em></p>
+<p><strong>技術データ</strong> — タイムスタンプ、オンライン/オフライン状態、接続イベント。<br><em>法的根拠：正当な利益（第6条(1)(f)）。</em></p>
+<p><strong>お問い合わせフォーム</strong> — 氏名、メールアドレス、メッセージが Web3Forms を通じて送信されます。<br><em>法的根拠：同意（第6条(1)(a)）。</em></p>
+<p><strong>GIF 検索</strong> — 検索クエリは Giphy API に送信され、同社のプライバシーポリシーが適用されます。</p>
+<h3 class="scb-u-117">4. 生体認証データ（顔認証 MFA）</h3>
+<p>任意で顔認証 MFA を有効にできます。128次元の顔特徴記述子（写真ではありません）が生成され、画像は即座に破棄されます。記述子のみが送信・保存されます。</p>
+<ul class="scb-u-118">
+<li><strong>目的：</strong>ログイン時の本人確認のみ。</li>
+<li><strong>非共有：</strong>記述子はいかなる第三者にも販売・共有されません。</li>
+<li><strong>保持期間：</strong>顔認証 MFA の無効化またはアカウント削除後 30 日以内に削除されます。</li>
+<li><strong>同意：</strong>明示的な同意が必要です。設定からいつでも撤回できます。</li>
+</ul>
+<p><em>法的根拠：生体認証データ処理に対する明示的同意（GDPR第9条(2)(a)）。本条はイリノイ州 BIPA の開示要件も満たします。</em></p>
+<h3 class="scb-u-117">5. Cookie とローカルストレージ</h3>
+<p>広告 Cookie やサードパーティトラッキング Cookie は使用しません。セッション状態や設定の記憶に localStorage を使用します。Cloudflare Turnstile はボット対策目的で Cookie を設定する場合があります。</p>
+<h3 class="scb-u-117">6. 第三者委託先</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — データベースと認証。<a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase プライバシー</a></li>
+<li><strong>LiveKit</strong> — 通話インフラ。<a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">LiveKit プライバシー</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA と CDN。<a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare プライバシー</a></li>
+<li><strong>Web3Forms</strong> — お問い合わせフォーム。<a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Web3Forms プライバシー</a></li>
+<li><strong>Giphy</strong> — GIF 検索。<a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Giphy プライバシー</a></li>
+<li><strong>Google ログイン</strong> — 任意の認証。<a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシー</a></li>
+</ul>
+<h3 class="scb-u-117">7. データの保持期間</h3>
+<ul class="scb-u-118">
+<li><strong>アカウントデータ：</strong>アカウントが有効な間保持され、削除後 30 日以内に削除されます。</li>
+<li><strong>メッセージ：</strong>いずれかの当事者が削除するか、アカウントが削除されるまで。</li>
+<li><strong>顔記述子：</strong>顔認証 MFA の無効化またはアカウント削除後 30 日以内に削除。</li>
+<li><strong>技術メタデータ：</strong>運用目的で最大 90 日間保持。</li>
+</ul>
+<h3 class="scb-u-117">8. 国際データ移転</h3>
+<p>SoCloudyBro は米国を拠点として運営されています。EEA、英国、スイスにお住まいの場合、Google および Cloudflare の標準契約条項（SCC）に基づき、データが米国に転送される場合があります。</p>
+<h3 class="scb-u-117">9. 未成年者と保護者同意（COPPA）</h3>
+<p>SoCloudyBro は 13 歳以上を対象としています。13〜17 歳のユーザーには検証済みの保護者同意が必要です。保護者はアプリ内の SCB 管理者に連絡して子供のデータを確認・削除できます。生体認証データは 18 歳以上、または保護者の明示的な書面による同意を得た未成年者のみ利用可能です。</p>
+<h3 class="scb-u-117">10. あなたの権利</h3>
+<ul class="scb-u-118">
+<li><strong>アクセス権：</strong>保有データのコピーを請求できます。</li>
+<li><strong>データポータビリティ：</strong>JSON 形式でデータを受け取れます。</li>
+<li><strong>訂正権：</strong>設定から不正確なデータを修正できます。</li>
+<li><strong>削除権：</strong>設定→アカウント削除からアカウントを削除できます。</li>
+<li><strong>制限・異議申し立て：</strong>アプリ内でお問い合わせください。</li>
+<li><strong>同意の撤回：</strong>顔認証 MFA や Google ログインへの同意をいつでも撤回できます。</li>
+<li><strong>苦情申立て：</strong>EEA・英国の場合、地元のデータ保護機関に苦情を申し立てられます。</li>
+</ul>
+<h3 class="scb-u-117">11. データ侵害の通知</h3>
+<p>あなたの権利に影響を与える可能性のある侵害を発見した場合、遅滞なく、GDPR の要件に基づき 72 時間以内に通知します。</p>
+<h3 class="scb-u-117">12. 広告なし・データ販売なし・追跡なし</h3>
+<ul class="scb-u-118">
+<li>個人データを販売・貸し出すことは一切ありません。</li>
+<li>広告の表示やデータを広告ターゲティングに使用することはありません。</li>
+<li>サードパーティトラッカーやトラッキングピクセルは使用しません。</li>
+</ul>
+<h3 class="scb-u-117">13. ポリシーの変更</h3>
+<p>重要な変更を行う場合は、発効前にアプリ内でお知らせします。「最終更新」日は常に最新版を反映しています。</p>
+<h3 class="scb-u-117">14. お問い合わせ</h3>
+<p>ご質問や権利の行使をご希望の場合は、アプリ内で SCB 管理者にメッセージを送るか、設定のヘルプ＆お問い合わせフォームをご利用ください。</p>
+</div>
+<div id="pp-lang-hi" class="pp-lang-section" hidden>
+<p class="scb-u-116">अंतिम अपडेट: अक्टूबर 2026</p>
+<p>हमने यह नीति पढ़ने योग्य भाषा में लिखी है, कानूनी शब्दजाल में नहीं। यहाँ बिल्कुल स्पष्ट बताया गया है कि SoCloudyBro क्या जानकारी इकट्ठा करता है, क्यों, और आपका उस पर कितना नियंत्रण है। संक्षेप में: हम केवल वही डेटा इकट्ठा करते हैं जो ऐप चलाने के लिए ज़रूरी है, आपका डेटा कभी नहीं बेचते, और विज्ञापनों के लिए कभी नहीं इस्तेमाल करते।</p>
+<h3 class="scb-u-117">1. SoCloudyBro क्या है</h3>
+<p>SoCloudyBro ("SCB", "हम") एक सोशल मैसेजिंग वेब ऐप है। यह आपको निजी संदेश भेजने, ग्रुप सर्वर में भाग लेने और वॉइस व वीडियो कॉल करने की सुविधा देता है।</p>
+<h3 class="scb-u-117">2. यह नीति किन पर लागू होती है</h3>
+<p>यह नीति SoCloudyBro के सभी उपयोगकर्ताओं पर लागू होती है: विज़िटर, पंजीकृत उपयोगकर्ता, और 18 वर्ष से कम आयु के वे उपयोगकर्ता जिनके माता-पिता या अभिभावक ने सहमति दी हो। यदि आपकी आयु 13 वर्ष से कम है, तो आप अकाउंट नहीं बना सकते (अनुभाग 9 देखें)।</p>
+<h3 class="scb-u-117">3. हम क्या डेटा इकट्ठा करते हैं और क्यों</h3>
+<p><strong>खाता जानकारी</strong> — प्रदर्शन नाम, SCB नंबर, वैकल्पिक प्रोफ़ाइल फ़ोटो, बायो और जन्मतिथि।<br><em>कानूनी आधार (GDPR): अनुबंध की पूर्ति (अनुच्छेद 6(1)(b))।</em></p>
+<p><strong>संदेश और कॉल</strong> — आपके संदेश Firebase में संग्रहीत होते हैं। वॉइस/वीडियो कॉल LiveKit के ज़रिए रियल-टाइम में रूट होते हैं और सहेजे नहीं जाते। हम आपके संदेश नहीं पढ़ते।<br><em>कानूनी आधार: अनुबंध की पूर्ति।</em></p>
+<p><strong>तकनीकी डेटा</strong> — टाइमस्टैम्प, ऑनलाइन/ऑफलाइन स्थिति और कनेक्शन इवेंट।<br><em>कानूनी आधार: वैध हित (अनुच्छेद 6(1)(f))।</em></p>
+<p><strong>संपर्क फ़ॉर्म</strong> — नाम, ईमेल और संदेश Web3Forms के ज़रिए भेजे जाते हैं।<br><em>कानूनी आधार: सहमति (अनुच्छेद 6(1)(a))।</em></p>
+<p><strong>GIF खोज</strong> — आपकी खोज Giphy API को भेजी जाती है, जो उनकी अपनी गोपनीयता नीति के अधीन है।</p>
+<h3 class="scb-u-117">4. बायोमेट्रिक डेटा (फेस MFA)</h3>
+<p>आप वैकल्पिक रूप से फेस MFA सक्षम कर सकते हैं। 128-आयामी चेहरे का विवरणक (फ़ोटो नहीं) बनाया जाता है; छवि तुरंत हटा दी जाती है, केवल विवरणक संचारित और संग्रहीत होता है।</p>
+<ul class="scb-u-118">
+<li><strong>उद्देश्य:</strong> केवल लॉगिन पर पहचान सत्यापन।</li>
+<li><strong>साझाकरण नहीं:</strong> विवरणक किसी भी तीसरे पक्ष को कभी नहीं बेचे या साझा किए जाते।</li>
+<li><strong>अवधारण:</strong> फेस MFA अक्षम करने या खाता हटाने के 30 दिनों के भीतर विवरणक हटा दिया जाता है।</li>
+<li><strong>सहमति:</strong> आपको स्पष्ट रूप से सहमत होना होगा। आप सेटिंग में कभी भी सहमति वापस ले सकते हैं।</li>
+</ul>
+<p><em>कानूनी आधार: बायोमेट्रिक डेटा प्रसंस्करण के लिए स्पष्ट सहमति (GDPR अनुच्छेद 9(2)(a))। यह अनुभाग Illinois BIPA की आवश्यकताओं को भी पूरा करता है।</em></p>
+<h3 class="scb-u-117">5. कुकीज़ और लोकल स्टोरेज</h3>
+<p>हम विज्ञापन कुकीज़ या तृतीय-पक्ष ट्रैकिंग कुकीज़ का उपयोग नहीं करते। हम सत्र और प्राथमिकताएं याद रखने के लिए localStorage का उपयोग करते हैं। Cloudflare Turnstile बॉट सुरक्षा के लिए कुकीज़ सेट कर सकता है।</p>
+<h3 class="scb-u-117">6. तृतीय-पक्ष प्रोसेसर</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — डेटाबेस और प्रमाणीकरण। <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase गोपनीयता</a></li>
+<li><strong>LiveKit</strong> — कॉल इन्फ्रास्ट्रक्चर। <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">LiveKit गोपनीयता</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA और CDN। <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare गोपनीयता</a></li>
+<li><strong>Web3Forms</strong> — संपर्क फ़ॉर्म। <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Web3Forms गोपनीयता</a></li>
+<li><strong>Giphy</strong> — GIF खोज। <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Giphy गोपनीयता</a></li>
+<li><strong>Google Sign-In</strong> — वैकल्पिक प्रमाणीकरण। <a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google गोपनीयता</a></li>
+</ul>
+<h3 class="scb-u-117">7. हम डेटा कितने समय तक रखते हैं</h3>
+<ul class="scb-u-118">
+<li><strong>खाता डेटा:</strong> खाता सक्रिय रहने तक; हटाने के 30 दिनों के भीतर मिटाया जाता है।</li>
+<li><strong>संदेश:</strong> जब तक आप या दूसरा पक्ष न मिटाए, या खाता हटाया न जाए।</li>
+<li><strong>चेहरा विवरणक:</strong> फेस MFA अक्षम करने या खाता हटाने के 30 दिनों के भीतर।</li>
+<li><strong>तकनीकी मेटाडेटा:</strong> परिचालन उद्देश्यों के लिए अधिकतम 90 दिन।</li>
+</ul>
+<h3 class="scb-u-117">8. अंतर्राष्ट्रीय डेटा स्थानांतरण</h3>
+<p>SoCloudyBro अमेरिका से संचालित होता है। यदि आप EEA, UK, या स्विट्ज़रलैंड में हैं, तो Google और Cloudflare के मानक संविदात्मक खंडों (SCC) के आधार पर आपका डेटा अमेरिका में स्थानांतरित हो सकता है।</p>
+<h3 class="scb-u-117">9. बच्चे और माता-पिता की सहमति (COPPA)</h3>
+<p>SoCloudyBro के लिए न्यूनतम आयु 13 वर्ष है। 13 से 17 वर्ष के उपयोगकर्ताओं को सत्यापित माता-पिता की सहमति की आवश्यकता है। माता-पिता और अभिभावक ऐप में SCB एडमिन से संपर्क करके अपने बच्चे का डेटा देख और हटवा सकते हैं। बायोमेट्रिक डेटा केवल 18 वर्ष या उससे अधिक आयु के लोगों के लिए, या माता-पिता की स्पष्ट लिखित सहमति वाले नाबालिगों के लिए उपलब्ध है।</p>
+<h3 class="scb-u-117">10. आपके अधिकार</h3>
+<ul class="scb-u-118">
+<li><strong>पहुँच:</strong> अपने डेटा की प्रति माँगें।</li>
+<li><strong>पोर्टेबिलिटी:</strong> JSON प्रारूप में डेटा प्राप्त करें।</li>
+<li><strong>सुधार:</strong> सेटिंग में गलत डेटा सुधारें।</li>
+<li><strong>मिटाने का अधिकार:</strong> सेटिंग → खाता हटाएँ से खाता हटाएं।</li>
+<li><strong>प्रतिबंध और आपत्ति:</strong> ऐप के ज़रिए हमसे संपर्क करें।</li>
+<li><strong>सहमति वापस लें:</strong> फेस MFA या Google Sign-In के लिए कभी भी।</li>
+<li><strong>शिकायत:</strong> अपने स्थानीय डेटा सुरक्षा प्राधिकरण (EEA/UK) से।</li>
+</ul>
+<h3 class="scb-u-117">11. डेटा उल्लंघन की सूचना</h3>
+<p>यदि हमें कोई ऐसा उल्लंघन मिलता है जो आपके अधिकारों को प्रभावित कर सकता है, तो हम बिना अनुचित देरी के और GDPR की आवश्यकता के अनुसार 72 घंटों के भीतर प्रभावित उपयोगकर्ताओं को सूचित करेंगे।</p>
+<h3 class="scb-u-117">12. कोई विज्ञापन नहीं, डेटा बिक्री नहीं, ट्रैकिंग नहीं</h3>
+<ul class="scb-u-118">
+<li>हम कभी भी आपका व्यक्तिगत डेटा नहीं बेचते या किराये पर देते।</li>
+<li>हम विज्ञापन नहीं दिखाते और न ही आपके डेटा का उपयोग विज्ञापन लक्ष्यीकरण के लिए करते।</li>
+<li>हम तृतीय-पक्ष ट्रैकर या ट्रैकिंग पिक्सेल का उपयोग नहीं करते।</li>
+</ul>
+<h3 class="scb-u-117">13. इस नीति में बदलाव</h3>
+<p>यदि हम महत्वपूर्ण बदलाव करते हैं, तो हम लागू होने से पहले ऐप में आपको सूचित करेंगे। "अंतिम अपडेट" तारीख हमेशा नवीनतम संस्करण दर्शाती है।</p>
+<h3 class="scb-u-117">14. संपर्क</h3>
+<p>प्रश्न हैं या अधिकारों का उपयोग करना चाहते हैं? ऐप में SCB एडमिन को संदेश भेजें या सेटिंग में सहायता और संपर्क फ़ॉर्म का उपयोग करें।</p>
+</div>
+<div id="pp-lang-ru" class="pp-lang-section" hidden>
+<p class="scb-u-116">Последнее обновление: октябрь 2026 г.</p>
+<p>Мы написали эту политику простым языком — без юридических дебрей. Здесь подробно описано, какие данные собирает SoCloudyBro, зачем и какой контроль вы над ними имеете. Коротко: мы собираем лишь то, что необходимо для работы приложения, никогда не продаём ваши данные и не используем их в рекламных целях.</p>
+<h3 class="scb-u-117">1. Что такое SoCloudyBro</h3>
+<p>SoCloudyBro («SCB», «мы») — социальный мессенджер в виде веб-приложения. Он позволяет отправлять личные сообщения, участвовать в групповых серверах и совершать голосовые и видеозвонки.</p>
+<h3 class="scb-u-117">2. На кого распространяется эта политика</h3>
+<p>Политика применяется ко всем пользователям SoCloudyBro: посетителям, зарегистрированным пользователям и лицам до 18 лет, получившим согласие родителей или опекунов. Если вам нет 13 лет, создание аккаунта запрещено (см. раздел 9).</p>
+<h3 class="scb-u-117">3. Какие данные мы собираем и зачем</h3>
+<p><strong>Данные аккаунта</strong> — отображаемое имя, номер SCB, необязательное фото профиля, краткое описание и дата рождения.<br><em>Правовое основание (GDPR): исполнение договора (ст. 6(1)(b)).</em></p>
+<p><strong>Сообщения и звонки</strong> — ваши сообщения хранятся в Firebase. Голосовые и видеозвонки маршрутизируются через LiveKit в режиме реального времени и не сохраняются. Мы не читаем ваши сообщения.<br><em>Правовое основание: исполнение договора.</em></p>
+<p><strong>Технические данные</strong> — отметки времени, статус онлайн/офлайн и события подключения.<br><em>Правовое основание: законный интерес (ст. 6(1)(f)).</em></p>
+<p><strong>Форма обратной связи</strong> — имя, адрес электронной почты и сообщение передаются через Web3Forms.<br><em>Правовое основание: согласие (ст. 6(1)(a)).</em></p>
+<p><strong>Поиск GIF</strong> — ваши запросы отправляются в API Giphy и регулируются их собственной политикой конфиденциальности.</p>
+<h3 class="scb-u-117">4. Биометрические данные (Face MFA)</h3>
+<p>Вы можете по желанию включить Face MFA. Генерируется 128-мерный дескриптор лица (не фотография); изображение немедленно удаляется, передаётся и хранится только дескриптор.</p>
+<ul class="scb-u-118">
+<li><strong>Цель:</strong> исключительно проверка личности при входе в систему.</li>
+<li><strong>Без передачи:</strong> дескрипторы никогда не продаются и не передаются третьим лицам.</li>
+<li><strong>Хранение:</strong> дескриптор удаляется в течение 30 дней после отключения Face MFA или удаления аккаунта.</li>
+<li><strong>Согласие:</strong> требуется явное согласие. Его можно отозвать в любой момент в настройках.</li>
+</ul>
+<p><em>Правовое основание: явное согласие на обработку биометрических данных (ст. 9(2)(a) GDPR). Этот раздел также соответствует требованиям Illinois BIPA.</em></p>
+<h3 class="scb-u-117">5. Файлы cookie и локальное хранилище</h3>
+<p>Мы не используем рекламные cookie или сторонние трекеры. Мы применяем localStorage для запоминания сессии и настроек. Cloudflare Turnstile может устанавливать cookie для защиты от ботов.</p>
+<h3 class="scb-u-117">6. Сторонние обработчики данных</h3>
+<ul class="scb-u-118">
+<li><strong>Firebase / Google LLC</strong> — база данных и аутентификация. <a class="scb-u-119" href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Политика Firebase</a></li>
+<li><strong>LiveKit</strong> — инфраструктура звонков. <a class="scb-u-119" href="https://livekit.io/privacy" target="_blank" rel="noopener">Политика LiveKit</a></li>
+<li><strong>Cloudflare</strong> — CAPTCHA и CDN. <a class="scb-u-119" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Политика Cloudflare</a></li>
+<li><strong>Web3Forms</strong> — форма обратной связи. <a class="scb-u-119" href="https://web3forms.com/privacy" target="_blank" rel="noopener">Политика Web3Forms</a></li>
+<li><strong>Giphy</strong> — поиск GIF. <a class="scb-u-119" href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Политика Giphy</a></li>
+<li><strong>Google Sign-In</strong> — необязательная аутентификация. <a class="scb-u-119" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Политика Google</a></li>
+</ul>
+<h3 class="scb-u-117">7. Сроки хранения данных</h3>
+<ul class="scb-u-118">
+<li><strong>Данные аккаунта:</strong> хранятся, пока аккаунт активен; удаляются в течение 30 дней после его удаления.</li>
+<li><strong>Сообщения:</strong> до их удаления одной из сторон или удаления аккаунта.</li>
+<li><strong>Дескриптор лица:</strong> удаляется в течение 30 дней после отключения Face MFA или удаления аккаунта.</li>
+<li><strong>Технические метаданные:</strong> до 90 дней в операционных целях.</li>
+</ul>
+<h3 class="scb-u-117">8. Международная передача данных</h3>
+<p>SoCloudyBro работает из США. Если вы находитесь в ЕЭЗ, Великобритании или Швейцарии, ваши данные могут передаваться в США на основании стандартных договорных положений (SCC) Google и Cloudflare.</p>
+<h3 class="scb-u-117">9. Несовершеннолетние и родительское согласие (COPPA)</h3>
+<p>Минимальный возраст для использования SoCloudyBro — 13 лет. Пользователи от 13 до 17 лет должны иметь подтверждённое родительское согласие. Родители и опекуны могут просматривать и удалять данные своего ребёнка, обратившись к администратору SCB в приложении. Биометрические данные доступны только лицам от 18 лет или несовершеннолетним при наличии явного письменного согласия родителей.</p>
+<h3 class="scb-u-117">10. Ваши права</h3>
+<ul class="scb-u-118">
+<li><strong>Доступ:</strong> запросите копию своих данных.</li>
+<li><strong>Переносимость:</strong> получите данные в формате JSON.</li>
+<li><strong>Исправление:</strong> откорректируйте данные в настройках.</li>
+<li><strong>Удаление:</strong> удалите аккаунт через Настройки → Удалить аккаунт.</li>
+<li><strong>Ограничение и возражение:</strong> свяжитесь с нами через приложение.</li>
+<li><strong>Отзыв согласия:</strong> в любой момент для Face MFA или Google Sign-In.</li>
+<li><strong>Жалоба:</strong> в местный орган по защите данных (ЕЭЗ/Великобритания).</li>
+</ul>
+<h3 class="scb-u-117">11. Уведомление об утечках данных</h3>
+<p>Если мы обнаружим утечку, которая может затронуть ваши права, мы уведомим пострадавших пользователей без промедления и в течение 72 часов согласно требованиям GDPR.</p>
+<h3 class="scb-u-117">12. Никакой рекламы, никакой продажи данных, никакой слежки</h3>
+<ul class="scb-u-118">
+<li>Мы никогда не продаём и не сдаём в аренду ваши персональные данные.</li>
+<li>Мы не показываем рекламу и не используем ваши данные для рекламного таргетинга.</li>
+<li>Мы не используем сторонние трекеры или пиксели отслеживания.</li>
+</ul>
+<h3 class="scb-u-117">13. Изменения в политике</h3>
+<p>При существенных изменениях мы уведомим вас в приложении до их вступления в силу. Дата «Последнего обновления» всегда отражает актуальную версию.</p>
+<h3 class="scb-u-117">14. Контакты</h3>
+<p>Есть вопросы или хотите воспользоваться своими правами? Напишите администратору SCB прямо в приложении или воспользуйтесь формой «Помощь и контакты» в настройках.</p>
+</div>
+<script>function ppLang(l){document.querySelectorAll('.pp-lang-section').forEach(function(d){d.hidden=d.id!=='pp-lang-'+l});document.querySelectorAll('.pp-lang-tab').forEach(function(b){var m=b.getAttribute('onclick');b.classList.toggle('active',m&&m.indexOf("'"+l+"'")>-1);b.setAttribute('aria-selected',m&&m.indexOf("'"+l+"'")>-1?'true':'false')})}</script>
+</div>
   </div>
 </div>
 
