@@ -28233,5 +28233,37 @@ window._sendToCloudyChat = _sendToCloudyChat;
     </div>
   </div>
 </div>
+<!-- ── Cookie / storage consent banner ─────────────────────────────────── -->
+<div id="scb-cookie-banner" role="dialog" aria-label="Cookie and storage consent" aria-live="polite" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99999;background:var(--bg2,#1e1e2e);border-top:1px solid var(--border,#333);padding:14px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:13px;color:var(--text,#cdd6f4);box-shadow:0 -2px 12px rgba(0,0,0,.4)">
+  <span style="flex:1;min-width:220px">🍪 SoCloudyBro uses <strong>local storage</strong> to save your session, preferences, and cached messages. No tracking cookies, no ads. By continuing you accept our <button onclick="showPrivacyPolicy()" style="background:none;border:none;color:var(--accent,#89b4fa);text-decoration:underline;cursor:pointer;font-size:inherit;padding:0">Privacy Policy</button> and <button onclick="showTermsOfService()" style="background:none;border:none;color:var(--accent,#89b4fa);text-decoration:underline;cursor:pointer;font-size:inherit;padding:0">Terms of Service</button>.</span>
+  <div style="display:flex;gap:8px;flex-shrink:0">
+    <button onclick="scbAcceptCookies()" style="background:var(--accent,#89b4fa);color:var(--base,#1e1e2e);border:none;border-radius:6px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer">Accept</button>
+    <button onclick="scbDeclineCookies()" style="background:none;border:1px solid var(--border,#555);color:var(--text,#cdd6f4);border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer">Decline</button>
+  </div>
+</div>
+<script>
+(function(){
+  var CONSENT_KEY='scb_storage_consent';
+  var banner=document.getElementById('scb-cookie-banner');
+  var stored=null;
+  try{ stored=localStorage.getItem(CONSENT_KEY); }catch(e){}
+  if(!stored && banner){ banner.style.display='flex'; }
+
+  window.scbAcceptCookies=function(){
+    try{ localStorage.setItem(CONSENT_KEY,'accepted'); }catch(e){}
+    if(banner) banner.style.display='none';
+  };
+  window.scbDeclineCookies=function(){
+    // Decline: hide banner, clear all SCB storage, reload to a clean state.
+    try{
+      Object.keys(localStorage).filter(function(k){ return k.startsWith('scb'); })
+        .forEach(function(k){ localStorage.removeItem(k); });
+    }catch(e){}
+    if(banner) banner.style.display='none';
+    // Set session-only flag so banner does not flash again this tab.
+    try{ sessionStorage.setItem(CONSENT_KEY,'declined'); }catch(e){}
+  };
+})();
+</script>
 </body>
 </html>
