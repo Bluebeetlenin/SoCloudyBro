@@ -9388,6 +9388,13 @@ async function performScheduledAccountDeletion(){
       googleSub:null,googleEmail:'',linkedSyntaxAccount:null,linkedSyntaxAccountName:''
     };
     await saveUsers(users);
+    // Erase biometric (face descriptor) data from the private node.
+    // users_private/<number>/faceDescriptor is not covered by the public user
+    // record wipe above, so we must remove it explicitly to honour the privacy
+    // policy commitment that face data is destroyed on account deletion.
+    try{
+      if(fbdb) await fbdb.ref(USERS_PRIVATE+'/'+me.number+'/faceDescriptor').remove();
+    }catch(faceErr){ console.error('performScheduledAccountDeletion: could not remove faceDescriptor:',faceErr); }
   }catch(e){ console.error('performScheduledAccountDeletion failed:',e); }
   clearLocalSessionPreservingE2EKeys();
   location.reload();
@@ -13293,11 +13300,12 @@ const ANIM_BG_TYPES=new Set(['rain','snow','stars','leaves']);
 
 function clearAnimBg(){
   const ov=document.getElementById('chat-anim-overlay');
-  if(ov){ ov.innerHTML=''; ov.style.display='none'; }
+  if(ov){ if(typeof ov._starsCleanup==='function'){ ov._starsCleanup(); ov._starsCleanup=null; } ov.innerHTML=''; ov.style.display='none'; }
 }
 function initAnimBg(type){
   const ov=document.getElementById('chat-anim-overlay');
   if(!ov) return;
+  if(typeof ov._starsCleanup==='function'){ ov._starsCleanup(); ov._starsCleanup=null; }
   ov.innerHTML=''; ov.style.display='block';
   if(type==='rain'){
     // Video background
@@ -28167,7 +28175,7 @@ window._sendToCloudyChat = _sendToCloudyChat;
 
 <!-- Avatar zoom overlay -->
 <div class="scb-u-260" id="avatar-zoom-overlay" onclick="closeAvatarZoom()">
-  <img class="scb-u-261" id="avatar-zoom-img" src="" alt="Profile photo"/>
+  <img class="scb-u-261" id="avatar-zoom-img" src="" alt="Profile photo" loading="lazy"/>
 </div>
 
 <!-- Keyboard shortcut panel -->
