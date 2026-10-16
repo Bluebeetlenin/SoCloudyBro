@@ -2196,11 +2196,11 @@ body.device-tablet .msg-body{max-width:74%}
 <div id="lock-screen">
   <div id="lock-left">
     <div id="lock-avatar" class="avatar scb-u-1"></div>
-    <h2> class="scb-u-2"Welcome back, <br><span class="scb-u-3" id="lock-name">User</span></h2>
+    <h2 class="scb-u-2">Welcome back, <br><span class="scb-u-3" id="lock-name">User</span></h2>
   </div>
   <div id="lock-right">
     <div class="lock-icon scb-u-4">🔒</div>
-    <p> class="scb-u-5"Enter your PIN to continue</p>
+    <p class="scb-u-5">Enter your PIN to continue</p>
     <div class="pin-row" id="lock-pin-row">
       <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'lock')"/>
       <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'lock')"/>
@@ -2213,7 +2213,7 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <div class="scb-u-8" id="parental-pending-screen">
-  <div> class="scb-u-9"🔒</div>
+  <div class="scb-u-9">🔒</div>
   <h2 class="scb-u-10" id="parental-pending-title">Waiting for parent approval</h2>
   <p class="scb-u-11" id="parental-pending-body">
     Since you're under 18, a parent or guardian needs to approve your account before you can use SoCloudyBro.
@@ -2223,16 +2223,16 @@ body.device-tablet .msg-body{max-width:74%}
   <p class="scb-u-12" id="parental-denied-body">
     Your parent or guardian did not approve this account. Contact them if you think this is a mistake.
   </p>
-  <div> class="scb-u-13"
+  <div class="scb-u-13">
     <button class="btn" onclick="checkParentalConsentStatus()">Check again</button>
     <button class="btn btn-ghost" onclick="logOut()">Log out</button>
   </div>
 </div>
 
 <div class="scb-u-8" id="email-verify-gate">
-  <div> class="scb-u-9"📧</div>
-  <h2> class="scb-u-10"Confirm your email to continue</h2>
-  <p> class="scb-u-14"
+  <div class="scb-u-9">📧</div>
+  <h2 class="scb-u-10">Confirm your email to continue</h2>
+  <p class="scb-u-14">
     SoCloudyBro needs your email confirmed before you can use your account. We'll send a 6-digit code to your email.
   </p>
 
@@ -2242,7 +2242,7 @@ body.device-tablet .msg-body{max-width:74%}
   </div>
 
   <div class="scb-u-17" id="email-otp-step-code">
-    <p> class="scb-u-18"Code sent to <strong id="email-otp-sent-to"></strong>. Enter it below.</p>
+    <p class="scb-u-18">Code sent to <strong id="email-otp-sent-to"></strong>. Enter it below.</p>
     <input class="scb-u-19" type="text" id="email-otp-code" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
     <button class="btn btn-full" id="email-otp-verify-btn" onclick="verifyEmailOtp()">Verify</button>
     <button class="btn btn-ghost btn-sm scb-u-7" onclick="resetEmailOtpStep()">Use a different email / resend</button>
@@ -2251,14 +2251,14 @@ body.device-tablet .msg-body{max-width:74%}
   <p class="scb-u-20" id="email-otp-note"></p>
   <div class="error-text scb-u-21" id="email-verify-error"></div>
 
-  <details> class="scb-u-22"
-    <summary> class="scb-u-23"Or verify with Google instead</summary>
+  <details class="scb-u-22">
+    <summary class="scb-u-23">Or verify with Google instead</summary>
     <div class="scb-u-24" id="google-btn-emailverify"></div>
     <button class="btn scb-u-25" id="email-verify-fallback" disabled>Google sign-in unavailable</button>
     <p class="scb-u-26" id="email-verify-note"></p>
   </details>
 
-  <div> class="scb-u-27"
+  <div class="scb-u-27">
     <button class="btn btn-ghost btn-sm" onclick="checkEmailVerifyStatus()">Check again</button>
     <button class="btn btn-ghost btn-sm" onclick="logOut()">Log out</button>
   </div>
@@ -2273,12 +2273,12 @@ body.device-tablet .msg-body{max-width:74%}
 </div>
 
 <div class="scb-u-30" id="tutorial-overlay">
-  <div> class="scb-u-31"
+  <div class="scb-u-31">
     <div class="scb-u-32" id="tutorial-step-icon"></div>
     <h3 class="scb-u-33" id="tutorial-step-title"></h3>
     <p class="scb-u-34" id="tutorial-step-body"></p>
     <div class="scb-u-35" id="tutorial-dots"></div>
-    <div> class="scb-u-36"
+    <div class="scb-u-36">
       <button class="btn btn-ghost btn-sm scb-u-37" onclick="skipTutorial()">Skip</button>
       <button class="btn btn-sm scb-u-37" onclick="tutorialNext()" id="tutorial-next-btn">Next</button>
     </div>
@@ -2297,7 +2297,7 @@ body.device-tablet .msg-body{max-width:74%}
         </div>
         <div id="my-info">
           <div id="my-name">Set up account</div>
-          <div id="my-status-text"><span> class="scb-u-42"●</span> Online</div>
+          <div id="my-status-text"><span class="scb-u-42">●</span> Online</div>
         </div>
       </div>
     </div>
@@ -2467,7 +2467,7 @@ body.device-tablet .msg-body{max-width:74%}
     <div id="settings-panel">
       <div class="scb-u-38" id="settings-header">
         <button class="icon-btn" onclick="hideSettings()">←</button>
-        <div> class="scb-u-52"Settings</div>
+        <div class="scb-u-52">Settings</div>
       </div>
       <div id="settings-tab-bar">
         <button class="stab active" data-tab="profile" onclick="switchSettingsTab('profile')"><span class="stab-icon">👤</span>Profile</button>
@@ -2490,8 +2490,8 @@ body.device-tablet .msg-body{max-width:74%}
           </div>
           <button class="btn btn-ghost btn-sm" onclick="openEditProfile()">Edit Profile</button>
           <div class="scb-u-53" id="scb-accounts-section">
-            <div> class="scb-u-54"Saved Accounts</div>
-            <div id="scb-accounts-list"><div> class="scb-u-55"No other accounts saved.</div></div>
+            <div class="scb-u-54">Saved Accounts</div>
+            <div id="scb-accounts-list"><div class="scb-u-55">No other accounts saved.</div></div>
             <button class="btn btn-ghost btn-sm scb-u-56" onclick="addAnotherAccount()">+ Add Account</button>
           </div>
         </div>
@@ -2527,7 +2527,7 @@ body.device-tablet .msg-body{max-width:74%}
             <div class="settings-row-main"><div class="settings-row-label">Dark mode hours</div><div class="settings-row-sub">Switches automatically at these times each day</div></div>
             <div class="settings-row-actions">
               <input class="scb-u-57" type="time" id="theme-schedule-start" value="20:00" onchange="saveThemeSchedule()">
-              <span> class="scb-u-58"to</span>
+              <span class="scb-u-58">to</span>
               <input class="scb-u-57" type="time" id="theme-schedule-end" value="07:00" onchange="saveThemeSchedule()">
             </div>
           </div>
@@ -2622,7 +2622,7 @@ body.device-tablet .msg-body{max-width:74%}
           <h3>Security</h3>
           <div class="scb-u-59" id="security-score-card" onclick="openSecurityLog()">
             <div class="scb-u-60" id="sec-score-num">—</div>
-            <div> class="scb-u-61"
+            <div class="scb-u-61">
               <div class="scb-u-62" id="sec-score-label">Security score</div>
               <div class="scb-u-63" id="sec-score-sub">Loading…</div>
             </div>
@@ -2667,7 +2667,7 @@ body.device-tablet .msg-body{max-width:74%}
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Cross-Device Encryption</div><div class="settings-row-sub">Your decryption key syncs automatically — just log in on any device to read your messages</div></div>
-            <div class="settings-row-actions"><span> class="scb-u-68"Auto ✓</span></div>
+            <div class="settings-row-actions"><span class="scb-u-68">Auto ✓</span></div>
           </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Self-Destruct Account</div><div class="settings-row-sub">Automatically delete this account after a period of inactivity. Logging in at all resets the clock.</div></div>
@@ -2682,11 +2682,11 @@ body.device-tablet .msg-body{max-width:74%}
           </div>
           <div class="settings-row scb-u-65" onclick="openLoginHistory()">
             <div class="settings-row-main"><div class="settings-row-label">Login History</div><div class="settings-row-sub">See your last 5 logins and the device used</div></div>
-            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
+            <div class="settings-row-actions"><span class="scb-u-69">›</span></div>
           </div>
           <div class="settings-row scb-u-65" onclick="openSecurityLog()">
             <div class="settings-row-main"><div class="settings-row-label">Security Log</div><div class="settings-row-sub" id="sec-log-sub">Recent logins, password changes, and 2FA events</div></div>
-            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
+            <div class="settings-row-actions"><span class="scb-u-69">›</span></div>
           </div>
         </div>
         <div class="settings-section" data-settings-tab="security">
@@ -2770,23 +2770,23 @@ body.device-tablet .msg-body{max-width:74%}
           <h3>Feedback &amp; Support</h3>
           <div class="settings-row scb-u-65" onclick="openFeedbackModal('rate')">
             <div class="settings-row-main"><div class="settings-row-label">⭐ Rate the App</div><div class="settings-row-sub">Tell us how you'd rate SoCloudyBro</div></div>
-            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
+            <div class="settings-row-actions"><span class="scb-u-69">›</span></div>
           </div>
           <div class="settings-row scb-u-65" onclick="openFeedbackModal('feedback')">
             <div class="settings-row-main"><div class="settings-row-label">💬 Send Feedback</div><div class="settings-row-sub">Share ideas, suggestions, or general thoughts</div></div>
-            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
+            <div class="settings-row-actions"><span class="scb-u-69">›</span></div>
           </div>
           <div class="settings-row scb-u-65" onclick="openFeedbackModal('bug')">
             <div class="settings-row-main"><div class="settings-row-label">🐛 Report a Bug</div><div class="settings-row-sub">Found something broken? Let us know</div></div>
-            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
+            <div class="settings-row-actions"><span class="scb-u-69">›</span></div>
           </div>
           <div class="settings-row scb-u-65" onclick="openContactUs()">
             <div class="settings-row-main"><div class="settings-row-label">📞 Contact Us</div><div class="settings-row-sub">Get help directly from an SCB admin</div></div>
-            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
+            <div class="settings-row-actions"><span class="scb-u-69">›</span></div>
           </div>
           <div class="settings-row scb-u-65" onclick="openSecurityDisclosure()">
             <div class="settings-row-main"><div class="settings-row-label">🛡 Report a Security Vulnerability</div><div class="settings-row-sub">Found a security issue? Report it responsibly — not as a public bug report</div></div>
-            <div class="settings-row-actions"><span> class="scb-u-69"›</span></div>
+            <div class="settings-row-actions"><span class="scb-u-69">›</span></div>
           </div>
         </div>
         <!-- BUSINESS ACCOUNT SETTINGS -->
@@ -2830,7 +2830,7 @@ body.device-tablet .msg-body{max-width:74%}
 
     <div id="updates-panel">
       <div id="updates-header">
-        <div> class="scb-u-70"
+        <div class="scb-u-70">
           <button class="icon-btn" onclick="hideUpdates()">←</button>
           <h2>Game Updates</h2>
         </div>
@@ -2990,12 +2990,12 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="lp-section-label">Private Messaging</div>
         <h2>Real conversations, real privacy.</h2>
         <p class="lead">Every message is end-to-end encrypted on your device before it leaves. React, reply, pin, and search — everything you love in a modern chat.</p>
-        <div> class="scb-u-77"
-          <div> class="scb-u-78"<span> class="scb-u-79"↩️</span> Reply to any message in a thread</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"❤️</span> React with emoji — see who reacted</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"📌</span> Pin important messages for everyone</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"🔍</span> Full-text message search</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"💣</span> View-once self-destructing messages</div>
+        <div class="scb-u-77">
+          <div class="scb-u-78"><span class="scb-u-79">↩️</span> Reply to any message in a thread</div>
+          <div class="scb-u-78"><span class="scb-u-79">❤️</span> React with emoji — see who reacted</div>
+          <div class="scb-u-78"><span class="scb-u-79">📌</span> Pin important messages for everyone</div>
+          <div class="scb-u-78"><span class="scb-u-79">🔍</span> Full-text message search</div>
+          <div class="scb-u-78"><span class="scb-u-79">💣</span> View-once self-destructing messages</div>
         </div>
       </div>
       <div class="lp-mock">
@@ -3007,7 +3007,7 @@ body.device-tablet .msg-body{max-width:74%}
           <div class="lp-mock-bubble them">Hey! Did you see what happened today? 👀</div>
           <div class="lp-mock-bubble me">No way, tell me everything 😭</div>
           <div class="lp-mock-bubble them">
-            <div> class="scb-u-80"↩ Replying to: No way, tell me everything</div>
+            <div class="scb-u-80">↩ Replying to: No way, tell me everything</div>
             OK so basically…
           </div>
           <div class="lp-mock-reactions"><span class="lp-mock-chip">😂 2</span><span class="lp-mock-chip">❤️ 1</span></div>
@@ -3024,33 +3024,33 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="lp-split">
       <div class="lp-mock scb-u-82">
         <div class="lp-mock-header scb-u-83">
-          <div> class="scb-u-84"
-            <div> class="scb-u-85"Voice call · 2:34</div>
-            <div> class="scb-u-86"🎙️ Marcus &amp; You</div>
+          <div class="scb-u-84">
+            <div class="scb-u-85">Voice call · 2:34</div>
+            <div class="scb-u-86">🎙️ Marcus &amp; You</div>
           </div>
         </div>
         <div class="lp-mock-body scb-u-87">
-          <div> class="scb-u-88"M</div>
+          <div class="scb-u-88">M</div>
           <div class="lp-wave-bar">
-            <span> class="scb-u-89"</span><span> class="scb-u-90"</span><span> class="scb-u-91"</span><span> class="scb-u-92"</span><span> class="scb-u-93"</span><span> class="scb-u-94"</span><span> class="scb-u-95"</span><span> class="scb-u-96"</span><span> class="scb-u-89"</span><span> class="scb-u-93"</span>
+            <span class="scb-u-89"></span><span class="scb-u-90"></span><span class="scb-u-91"></span><span class="scb-u-92"></span><span class="scb-u-93"></span><span class="scb-u-94"></span><span class="scb-u-95"></span><span class="scb-u-96"></span><span class="scb-u-89"></span><span class="scb-u-93"></span>
           </div>
-          <div> class="scb-u-97"
-            <div> class="scb-u-98"🎙️</div>
-            <div> class="scb-u-99"📵</div>
-            <div> class="scb-u-98"🖥️</div>
+          <div class="scb-u-97">
+            <div class="scb-u-98">🎙️</div>
+            <div class="scb-u-99">📵</div>
+            <div class="scb-u-98">🖥️</div>
           </div>
         </div>
       </div>
-      <div> class="scb-u-100"
+      <div class="scb-u-100">
         <div class="lp-section-label">Voice &amp; Video Calls</div>
         <h2>Call anyone, anytime. No installs needed.</h2>
         <p class="lead">Browser-based WebRTC calls — no app download required. Voice call your friends, video chat with family, or host a group meeting. All encrypted.</p>
-        <div> class="scb-u-77"
-          <div> class="scb-u-78"<span> class="scb-u-79"📞</span> Instant 1-on-1 voice calls</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"📹</span> Video calls and group meetings</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"🖥️</span> Screen sharing during calls</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"🎙️</span> Voice messages you can record and send</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"📋</span> Full call history</div>
+        <div class="scb-u-77">
+          <div class="scb-u-78"><span class="scb-u-79">📞</span> Instant 1-on-1 voice calls</div>
+          <div class="scb-u-78"><span class="scb-u-79">📹</span> Video calls and group meetings</div>
+          <div class="scb-u-78"><span class="scb-u-79">🖥️</span> Screen sharing during calls</div>
+          <div class="scb-u-78"><span class="scb-u-79">🎙️</span> Voice messages you can record and send</div>
+          <div class="scb-u-78"><span class="scb-u-79">📋</span> Full call history</div>
         </div>
       </div>
     </div>
@@ -3065,12 +3065,12 @@ body.device-tablet .msg-body{max-width:74%}
         <div class="lp-section-label">Groups &amp; Communities</div>
         <h2>Your crew. Your channels.</h2>
         <p class="lead">Create group spaces with channels, polls, and pinned messages. Perfect for friend groups, families, clubs, and communities of any size.</p>
-        <div> class="scb-u-77"
-          <div> class="scb-u-78"<span> class="scb-u-79"#</span> Multiple channels within one group</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"📊</span> Live polls your friends can vote on</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"🗣️</span> @mention any member</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"🎮</span> Built-in games and fun stuff</div>
-          <div> class="scb-u-78"<span> class="scb-u-79"📢</span> Announcements &amp; community updates</div>
+        <div class="scb-u-77">
+          <div class="scb-u-78"><span class="scb-u-79">#</span> Multiple channels within one group</div>
+          <div class="scb-u-78"><span class="scb-u-79">📊</span> Live polls your friends can vote on</div>
+          <div class="scb-u-78"><span class="scb-u-79">🗣️</span> @mention any member</div>
+          <div class="scb-u-78"><span class="scb-u-79">🎮</span> Built-in games and fun stuff</div>
+          <div class="scb-u-78"><span class="scb-u-79">📢</span> Announcements &amp; community updates</div>
         </div>
       </div>
       <div class="lp-mock">
@@ -3079,8 +3079,8 @@ body.device-tablet .msg-body{max-width:74%}
           <div><div class="lp-mock-name">The Squad 🔥</div><div class="lp-mock-status">5 members · # general</div></div>
         </div>
         <div class="lp-mock-body">
-          <div> class="scb-u-102"— Today —</div>
-          <div class="lp-mock-bubble them"><b>📊 Poll:</b> Where are we going Friday?<br><span> class="scb-u-103"🍕 Pizza — 3 votes<br>🎬 Cinema — 1 vote</span></div>
+          <div class="scb-u-102">— Today —</div>
+          <div class="lp-mock-bubble them"><b>📊 Poll:</b> Where are we going Friday?<br><span class="scb-u-103">🍕 Pizza — 3 votes<br>🎬 Cinema — 1 vote</span></div>
           <div class="lp-mock-bubble me">Pizza obviously 🍕🍕</div>
           <div class="lp-mock-bubble them scb-u-104">📌 <b>@everyone</b> Meet at 7pm!</div>
         </div>
@@ -3092,10 +3092,10 @@ body.device-tablet .msg-body{max-width:74%}
 
   <!-- ALL FEATURES GRID -->
   <div class="lp-section lp-reveal">
-    <div> class="scb-u-105"
+    <div class="scb-u-105">
       <div class="lp-section-label scb-u-106">Everything included</div>
-      <h2> class="scb-u-10"Packed with features. Zero cost.</h2>
-      <p> class="scb-u-107"Everything you need to stay connected — no subscriptions, no ads, no data selling.</p>
+      <h2 class="scb-u-10">Packed with features. Zero cost.</h2>
+      <p class="scb-u-107">Everything you need to stay connected — no subscriptions, no ads, no data selling.</p>
     </div>
     <div class="lp-feat-grid">
       <div class="lp-feat-card"><div class="lp-feat-icon">🔒</div><div class="lp-feat-title">End-to-End Encryption</div><p class="lp-feat-desc">Messages are encrypted on your device. Nobody but you and the recipient can read them.</p></div>
@@ -3114,7 +3114,7 @@ body.device-tablet .msg-body{max-width:74%}
 
   <!-- HOW IT WORKS -->
   <div class="lp-section lp-reveal">
-    <div> class="scb-u-105"
+    <div class="scb-u-105">
       <div class="lp-section-label scb-u-106">Getting started</div>
       <h2>Ready in under a minute.</h2>
     </div>
@@ -3136,17 +3136,17 @@ body.device-tablet .msg-body{max-width:74%}
         <div><div class="lp-step-title">Start chatting</div><p class="lp-step-desc">Message, call, react, and share — everything works right in your browser, no app needed.</p></div>
       </div>
     </div>
-    <div> class="scb-u-108"
+    <div class="scb-u-108">
       <button class="lp-btn-lg primary" onclick="document.getElementById('landing-page').style.display='none';document.getElementById('shell').style.display='';openModal('setup-modal')">Join SoCloudyBro →</button>
     </div>
   </div>
 
   <!-- FOOTER -->
   <div class="lp-footer">
-    <div> class="scb-u-109"☁️</div>
-    <div> class="scb-u-110"SoCloudyBro</div>
-    <p> class="scb-u-111"Private messaging for everyone.</p>
-    <div> class="scb-u-112"
+    <div class="scb-u-109">☁️</div>
+    <div class="scb-u-110">SoCloudyBro</div>
+    <p class="scb-u-111">Private messaging for everyone.</p>
+    <div class="scb-u-112">
       <a href="#" onclick="showPrivacyPolicy();return false">Privacy Policy</a>
       <a href="#" onclick="openContactUs();return false">Contact</a>
     </div>
@@ -3182,29 +3182,29 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="modal-close" onclick="closeModal('privacy-modal')">✕</button>
     </div>
     <div class="modal-body scb-u-115">
-      <p> class="scb-u-116"Last updated: September 2026</p>
+      <p class="scb-u-116">Last updated: September 2026</p>
 
-      <h3> class="scb-u-117"What SoCloudyBro is</h3>
+      <h3 class="scb-u-117">What SoCloudyBro is</h3>
       <p>SoCloudyBro is a private, invite-based messaging platform. It lets registered users send end-to-end encrypted messages, make voice and video calls, and share updates within a trusted community.</p>
 
-      <h3> class="scb-u-117"What data we collect</h3>
-      <ul> class="scb-u-118"
+      <h3 class="scb-u-117">What data we collect</h3>
+      <ul class="scb-u-118">
         <li><strong>Account data:</strong> Your name, a user number, and optionally an email address and profile photo.</li>
         <li><strong>Messages:</strong> Stored encrypted in Firebase. Content is only readable on your device with your encryption key.</li>
         <li><strong>Usage data:</strong> Basic connection metadata (timestamps, online status) to deliver messages.</li>
         <li><strong>Google sign-in:</strong> If you sign in with Google, we receive your Google account name and email. We do not store your Google password.</li>
       </ul>
 
-      <h3> class="scb-u-117"How we use your data</h3>
+      <h3 class="scb-u-117">How we use your data</h3>
       <p>Your data is used solely to operate SoCloudyBro. We do not sell, share, or use your data for advertising. Messages are end-to-end encrypted and we cannot read them.</p>
 
-      <h3> class="scb-u-117"Data storage</h3>
+      <h3 class="scb-u-117">Data storage</h3>
       <p>Data is stored in Google Firebase (Europe West region). We do not operate our own servers. Firebase's data processing terms apply.</p>
 
-      <h3> class="scb-u-117"Your rights</h3>
+      <h3 class="scb-u-117">Your rights</h3>
       <p>You can delete your account at any time from Settings. This removes your profile and messages from our database.</p>
 
-      <h3> class="scb-u-117"Contact</h3>
+      <h3 class="scb-u-117">Contact</h3>
       <p>Questions? Email <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a></p>
     </div>
   </div>
@@ -3218,7 +3218,7 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="modal-close" onclick="closeModal('contact-us-modal')">✕</button>
     </div>
     <div class="modal-body scb-u-121">
-      <p> class="scb-u-122"Reach out to an SCB admin directly. Tap an SCB Number to open a chat, or copy an email address.</p>
+      <p class="scb-u-122">Reach out to an SCB admin directly. Tap an SCB Number to open a chat, or copy an email address.</p>
       <div id="contact-us-list"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('contact-us-modal')">Close</button></div>
@@ -3233,22 +3233,22 @@ body.device-tablet .msg-body{max-width:74%}
       <button class="modal-close" onclick="closeModal('security-disclosure-modal')">✕</button>
     </div>
     <div class="modal-body scb-u-121">
-      <p> class="scb-u-124"Found a genuine security issue — a way to bypass auth, read someone else's messages, escalate admin access, or similar? Please report it privately here rather than as a public bug report or on social media, so it can be fixed before anyone else finds it.</p>
-      <ul> class="scb-u-125"
+      <p class="scb-u-124">Found a genuine security issue — a way to bypass auth, read someone else's messages, escalate admin access, or similar? Please report it privately here rather than as a public bug report or on social media, so it can be fixed before anyone else finds it.</p>
+      <ul class="scb-u-125">
         <li>Give us a reasonable chance to fix it before any public disclosure.</li>
         <li>Don't access, modify, or delete data beyond what's needed to demonstrate the issue.</li>
         <li>Never test against other users' real accounts — use test accounts only.</li>
         <li>Include steps to reproduce, impact, and affected version/URL if known.</li>
       </ul>
-      <div> class="scb-u-126"
-        <div> class="scb-u-127"Security Contact</div>
-        <div> class="scb-u-128"
+      <div class="scb-u-126">
+        <div class="scb-u-127">Security Contact</div>
+        <div class="scb-u-128">
           <span class="scb-u-129" id="security-disclosure-email">security@socloudybro.vercel.app</span>
           <button class="btn btn-ghost btn-sm scb-u-130" onclick="navigator.clipboard.writeText('security@socloudybro.vercel.app').then(()=>showToast('Copied','Security contact email copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: security@socloudybro.vercel.app'))">Copy</button>
         </div>
         <button class="btn btn-sm scb-u-131" onclick="closeModal('security-disclosure-modal');_openDmWithAdmin(2015)">💬 Message #2015 (Head Admin)</button>
       </div>
-      <p> class="scb-u-132"We don't currently run a paid bug bounty program, but we credit researchers (with permission) once a reported issue is fixed, and take every genuine report seriously.</p>
+      <p class="scb-u-132">We don't currently run a paid bug bounty program, but we credit researchers (with permission) once a reported issue is fixed, and take every genuine report seriously.</p>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('security-disclosure-modal')">Close</button></div>
   </div>
@@ -3258,12 +3258,12 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay scb-u-25" id="camera-modal">
   <div id="camera-modal-inner">
     <div class="modal-header scb-u-133">
-      <span> class="scb-u-134"Take a Photo</span>
+      <span class="scb-u-134">Take a Photo</span>
       <button class="modal-close" onclick="closeCameraModal()">✕</button>
     </div>
     <video id="camera-preview" autoplay playsinline muted></video>
     <canvas id="camera-canvas"></canvas>
-    <div> class="scb-u-135"
+    <div class="scb-u-135">
       <button class="btn btn-ghost btn-sm" onclick="closeCameraModal()">Cancel</button>
       <button class="btn btn-sm scb-u-37" onclick="snapAndSendPhoto()">📷 Capture &amp; Send</button>
     </div>
@@ -3293,13 +3293,13 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="modal-header"><h2>Products &amp; Links</h2><p>Showcase products, services or websites on your profile</p></div>
     <div class="modal-body scb-u-138">
       <div class="scb-u-139" id="biz-products-list"></div>
-      <div> class="scb-u-140"
-        <div> class="scb-u-141"Add Item</div>
+      <div class="scb-u-140">
+        <div class="scb-u-141">Add Item</div>
         <div class="field"><label>Name</label><input type="text" id="biz-new-prod-name" maxlength="60" placeholder="Product or website name"/></div>
         <div class="field"><label>Description</label><input type="text" id="biz-new-prod-desc" maxlength="120" placeholder="Short description"/></div>
         <div class="field"><label>Link (optional)</label><input type="text" id="biz-new-prod-url" maxlength="300" placeholder="https://…"/></div>
         <div class="field"><label>Image (optional)</label>
-          <div> class="scb-u-142"
+          <div class="scb-u-142">
             <input class="scb-u-25" type="file" id="biz-new-prod-img-input" accept="image/*" onchange="bizProductImgSelected(this)"/>
             <button class="btn btn-ghost btn-sm" onclick="document.getElementById('biz-new-prod-img-input').click()">📷 Choose Image</button>
             <span class="scb-u-103" id="biz-new-prod-img-name">None</span>
@@ -3318,8 +3318,8 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="modal-header"><h2>Auto-reply Bot</h2><p>When someone DMs you with a matching keyword, the bot replies automatically</p></div>
     <div class="modal-body scb-u-138">
       <div class="scb-u-139" id="biz-bot-rules-list"></div>
-      <div> class="scb-u-140"
-        <div> class="scb-u-141"Add Rule</div>
+      <div class="scb-u-140">
+        <div class="scb-u-141">Add Rule</div>
         <div class="field"><label>Keyword (or phrase)</label><input type="text" id="biz-bot-kw-input" maxlength="80" placeholder="e.g. price, hours, order…"/></div>
         <div class="field"><label>Auto-reply</label><textarea id="biz-bot-reply-input" maxlength="500" rows="2" placeholder="The message the bot sends back…"></textarea></div>
         <button class="btn btn-sm btn-full" onclick="addBizBotRule()">+ Add Rule</button>
@@ -3337,7 +3337,7 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay scb-u-25" id="biz-view-modal">
   <div class="modal scb-u-144">
     <div class="modal-header scb-u-145">
-      <div> class="scb-u-146"
+      <div class="scb-u-146">
         <div id="biz-view-avatar" class="avatar scb-u-147"></div>
         <div>
           <div class="scb-u-148" id="biz-view-name">Business</div>
@@ -3351,7 +3351,7 @@ body.device-tablet .msg-body{max-width:74%}
       <p class="scb-u-150" id="biz-view-desc"></p>
       <a class="scb-u-151" id="biz-view-website" href="#" target="_blank" rel="noopener"></a>
       <div class="scb-u-25" id="biz-view-products-section">
-        <div> class="scb-u-152"Products &amp; Services</div>
+        <div class="scb-u-152">Products &amp; Services</div>
         <div class="biz-product-grid" id="biz-view-product-grid"></div>
       </div>
     </div>
@@ -3370,7 +3370,7 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
     
     <div class="modal-body scb-u-153" id="signup-view">
-      <p> class="scb-u-154"Create your account. Pick any unused 4–5 digit number (1000–99999) — it's your permanent handle. Email is required for login and recovery.</p>
+      <p class="scb-u-154">Create your account. Pick any unused 4–5 digit number (1000–99999) — it's your permanent handle. Email is required for login and recovery.</p>
       <!-- Shown only while a Google sign-up is in progress (see
            handleGoogleCredentialResponse): the Google account had no SoCloudyBro
            account linked to it yet, so the normal sign-up form is reused with the
@@ -3378,13 +3378,13 @@ body.device-tablet .msg-body{max-width:74%}
            copy of the number-availability check, the age tiering and the
            parental-consent rules instead of a second, drifting Google-only one. -->
       <div class="scb-u-155" id="google-signup-banner">
-        <div> class="scb-u-156"Continuing with Google</div>
+        <div class="scb-u-156">Continuing with Google</div>
         <div class="scb-u-157" id="google-signup-banner-sub"></div>
         <button type="button" class="btn btn-ghost btn-sm scb-u-7" onclick="cancelGoogleSignup()">Use a different method</button>
       </div>
-      <div> class="scb-u-158"
+      <div class="scb-u-158">
         <div class="avatar scb-u-159" id="setup-av-preview" onclick="openAvatarEditor(true)" title="Click to choose avatar">?</div>
-        <div> class="scb-u-160"Click to choose avatar</div>
+        <div class="scb-u-160">Click to choose avatar</div>
       </div>
       <div class="field"><label>Display name</label><input type="text" id="setup-name" placeholder="e.g. Alex" maxlength="24"/></div>
       <div class="field"><label>Email</label><input type="email" id="setup-email" placeholder="you@example.com"/></div>
@@ -3397,7 +3397,7 @@ body.device-tablet .msg-body{max-width:74%}
         <input type="email" id="setup-parent-email" placeholder="parent@example.com"/>
         <div class="field-hint">Since you're under 18, a parent or guardian needs to approve your account. Have them create their own SoCloudyBro account (or log into one they already have) using this same email — they'll see your request waiting for them there.</div>
       </div>
-      <div class="field"><label>Bio <span> class="scb-u-58"(optional)</span></label><textarea id="setup-bio" placeholder="I love Roblox! 🎮" maxlength="120" rows="2"></textarea></div>
+      <div class="field"><label>Bio <span class="scb-u-58">(optional)</span></label><textarea id="setup-bio" placeholder="I love Roblox! 🎮" maxlength="120" rows="2"></textarea></div>
       <div class="field" id="setup-captcha-field">
         <div id="scb-turnstile" class="cf-turnstile scb-u-81" data-sitekey="0x4AAAAAAFFStZC8pQFYnMWn" data-theme="auto" data-callback="onTurnstileSuccess" data-expired-callback="onTurnstileExpired"></div>
       </div>
@@ -3406,7 +3406,7 @@ body.device-tablet .msg-body{max-width:74%}
       <div class="error-text" id="setup-error"></div>
       <button class="btn btn-full" onclick="submitSetup()">Get Started ↗</button>
       <div class="google-auth-block scb-u-163" id="google-auth-block-signup">
-        <div> class="scb-u-164"<div> class="scb-u-165"</div><span> class="scb-u-103"or</span><div> class="scb-u-165"</div></div>
+        <div class="scb-u-164"><div class="scb-u-165"></div><span class="scb-u-103">or</span><div class="scb-u-165"></div></div>
         <!-- Google renders its own official button into this container (that is
              the only button style Google's terms allow, and the only one whose
              click reliably opens the account chooser). -->
@@ -3419,41 +3419,41 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
 
     <div class="modal-body scb-u-153" id="login-view">
-      <p> class="scb-u-154"Log in with your email and password. If you signed up before email was added, use the number option below.</p>
+      <p class="scb-u-154">Log in with your email and password. If you signed up before email was added, use the number option below.</p>
       <div class="field"><label id="login-identity-label">Email</label><input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()"/></div>
       <div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="login-password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')submitLogin()"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('login-password',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="error-text" id="login-error"></div>
       <button class="btn btn-full" id="login-btn" onclick="submitLogin()">Log In ↗</button>
-      <div> class="scb-u-168"<a class="scb-u-169" href="#" id="login-forgot-password-link" onclick="openRecoverAccount();return false;">Forgot password?</a></div>
-      <div> class="scb-u-170"<a class="scb-u-169" href="#" id="login-mode-toggle" onclick="toggleLoginMode();return false;">Signed up before email was added? Log in with your number</a></div>
-      <div> class="scb-u-170"<a class="scb-u-169" href="#" id="login-passkey-link" onclick="loginWithPasskey();return false;">🔑 Sign in with a passkey</a></div>
+      <div class="scb-u-168"><a class="scb-u-169" href="#" id="login-forgot-password-link" onclick="openRecoverAccount();return false;">Forgot password?</a></div>
+      <div class="scb-u-170"><a class="scb-u-169" href="#" id="login-mode-toggle" onclick="toggleLoginMode();return false;">Signed up before email was added? Log in with your number</a></div>
+      <div class="scb-u-170"><a class="scb-u-169" href="#" id="login-passkey-link" onclick="loginWithPasskey();return false;">🔑 Sign in with a passkey</a></div>
       <div class="google-auth-block scb-u-163" id="google-auth-block-login">
-        <div> class="scb-u-164"<div> class="scb-u-165"</div><span> class="scb-u-103"or</span><div> class="scb-u-165"</div></div>
+        <div class="scb-u-164"><div class="scb-u-165"></div><span class="scb-u-103">or</span><div class="scb-u-165"></div></div>
         <div class="google-btn-holder scb-u-166" id="google-btn-login"></div>
         <button type="button" class="btn btn-ghost btn-full google-fallback-btn scb-u-25" id="google-fallback-login" disabled>Sign in with Google</button>
         <div class="google-auth-note scb-u-167" id="google-note-login"></div>
       </div>
-      <div> class="scb-u-171"
+      <div class="scb-u-171">
         By signing up you agree to our <a class="scb-u-119" href="#" onclick="showPrivacyPolicy();return false">Privacy Policy</a>
       </div>
     </div>
 
     <div class="modal-body scb-u-172" id="login-set-email-view">
-      <p> class="scb-u-154"Your account doesn't have an email on file yet — add one now so you can log in with it going forward.</p>
+      <p class="scb-u-154">Your account doesn't have an email on file yet — add one now so you can log in with it going forward.</p>
       <div class="field"><label>Email</label><input type="email" id="login-set-email-input" placeholder="you@example.com" onkeydown="if(event.key==='Enter')submitLoginSetEmail()"/></div>
       <div class="error-text" id="login-set-email-error"></div>
       <button class="btn btn-full" onclick="submitLoginSetEmail()">Save & Continue ↗</button>
     </div>
 
     <div class="modal-body scb-u-172" id="login-2fa-view">
-      <p> class="scb-u-154"Enter the 6-digit code from your authenticator app.</p>
+      <p class="scb-u-154">Enter the 6-digit code from your authenticator app.</p>
       <div class="field"><label>Verification code</label><input type="text" id="login-2fa-code" maxlength="6" inputmode="numeric" placeholder="123456" onkeydown="if(event.key==='Enter')submit2faCode()"/></div>
-      <label> class="scb-u-173"<input class="scb-u-174" type="checkbox" id="login-2fa-trust-device"/> Trust this device for 30 days — skip this step next time</label>
+      <label class="scb-u-173"><input class="scb-u-174" type="checkbox" id="login-2fa-trust-device"/> Trust this device for 30 days — skip this step next time</label>
       <div class="error-text" id="login-2fa-error"></div>
       <button class="btn btn-full" id="login-2fa-btn" onclick="submit2faCode()">Verify ↗</button>
     </div>
     <div class="modal-body scb-u-172" id="login-face-view">
-      <p> class="scb-u-175"Look at your camera — you'll be verified automatically.</p>
+      <p class="scb-u-175">Look at your camera — you'll be verified automatically.</p>
       <div class="face-scan-wrap">
         <video id="login-face-video" autoplay muted playsinline></video>
         <canvas id="login-face-canvas"></canvas>
@@ -3464,13 +3464,13 @@ body.device-tablet .msg-body{max-width:74%}
       <div class="face-scan-status" id="login-face-status">Center your face in frame…</div>
       <div class="error-text scb-u-6" id="login-face-error"></div>
       <button class="btn btn-full" id="login-face-btn" onclick="submitFaceLogin()">Verify with Face ↗</button>
-      <div> class="scb-u-168"<a class="scb-u-169" href="#" onclick="useFaceViewPasskeyFallback();return false;">🔑 No camera? Use a passkey instead</a></div>
-      <div> class="scb-u-170"<a class="scb-u-169" href="#" onclick="showLoginBackupPinView();return false;">🔢 Use your backup PIN instead</a></div>
-      <div> class="scb-u-170"<a class="scb-u-169" href="#" onclick="recoverFromFaceView();return false;">Can't verify any other way? Recover your account</a></div>
+      <div class="scb-u-168"><a class="scb-u-169" href="#" onclick="useFaceViewPasskeyFallback();return false;">🔑 No camera? Use a passkey instead</a></div>
+      <div class="scb-u-170"><a class="scb-u-169" href="#" onclick="showLoginBackupPinView();return false;">🔢 Use your backup PIN instead</a></div>
+      <div class="scb-u-170"><a class="scb-u-169" href="#" onclick="recoverFromFaceView();return false;">Can't verify any other way? Recover your account</a></div>
       <button class="btn btn-ghost btn-full scb-u-7" onclick="cancelFaceLoginView()">Cancel</button>
     </div>
     <div class="modal-body scb-u-172" id="login-backup-pin-view">
-      <p> class="scb-u-154"Enter your 4-digit backup PIN.</p>
+      <p class="scb-u-154">Enter your 4-digit backup PIN.</p>
       <div class="pin-row" id="login-backup-pin-row">
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'backuplogin')"/>
         <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'backuplogin')"/>
@@ -3599,7 +3599,7 @@ body.device-tablet .msg-body{max-width:74%}
 
 <div class="overlay" id="delete-account-modal">
   <div class="modal">
-    <div class="modal-header"><h2> class="scb-u-47"⚠️ Delete Account</h2><p>This immediately and permanently deletes your account. Your profile and login are removed at once — messages you've sent will show as "Deleted User". <strong>This cannot be undone.</strong></p></div>
+    <div class="modal-header"><h2 class="scb-u-47">⚠️ Delete Account</h2><p>This immediately and permanently deletes your account. Your profile and login are removed at once — messages you've sent will show as "Deleted User". <strong>This cannot be undone.</strong></p></div>
     <div class="modal-body scb-u-29">
       <div class="field"><label>Type your account number (<span id="delete-account-num-hint"></span>) to confirm</label><input type="text" id="delete-account-confirm-input" placeholder="e.g. 4821"/></div>
       <div class="field">
@@ -3659,12 +3659,12 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="thread-modal">
   <div class="modal scb-u-179">
     <div class="modal-header scb-u-180">
-      <h2> class="scb-u-181"🧵 Thread</h2>
+      <h2 class="scb-u-181">🧵 Thread</h2>
       <button class="modal-close" onclick="closeThreadPanel()">✕</button>
     </div>
     <div class="scb-u-182" id="thread-parent-quote"></div>
     <div class="scb-u-183" id="thread-messages-wrap"></div>
-    <div> class="scb-u-184"
+    <div class="scb-u-184">
       <input class="scb-u-37" type="text" id="thread-reply-input" placeholder="Reply in thread…" onkeydown="if(event.key==='Enter')sendThreadReply()"/>
       <button class="btn btn-sm" onclick="sendThreadReply()">Send</button>
     </div>
@@ -3688,7 +3688,7 @@ body.device-tablet .msg-body{max-width:74%}
 
 <div id="user-hover-card">
   <div class="scb-u-193" id="user-hover-card-avatar"></div>
-  <div> class="scb-u-194"
+  <div class="scb-u-194">
     <div class="scb-u-195" id="user-hover-card-name"></div>
     <div class="scb-u-196" id="user-hover-card-status"></div>
     <div class="scb-u-197" id="user-hover-card-bio"></div>
@@ -3701,7 +3701,7 @@ body.device-tablet .msg-body{max-width:74%}
     <div class="modal-header"><h2 id="avatar-modal-title">Choose Avatar</h2><p>Pick a preset or upload your own image.</p></div>
     <div class="modal-body scb-u-29">
       <div id="avatar-presets"></div>
-      <div> class="scb-u-199"<label class="btn btn-ghost btn-sm scb-u-65">📁 Upload Image<input class="scb-u-25" type="file" accept="image/*" onchange="uploadAvatar(this)"/></label></div>
+      <div class="scb-u-199"><label class="btn btn-ghost btn-sm scb-u-65">📁 Upload Image<input class="scb-u-25" type="file" accept="image/*" onchange="uploadAvatar(this)"/></label></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('avatar-modal')">Close</button></div>
   </div>
@@ -3727,7 +3727,7 @@ body.device-tablet .msg-body{max-width:74%}
       <div class="field"><label>Their number</label><input type="number" id="add-num" placeholder="e.g. 4821" onkeydown="if(event.key==='Enter')submitAdd()"/></div>
       <div class="error-text" id="add-error"></div>
       <div class="scb-u-200" id="suggested-friends-section">
-        <label> class="scb-u-201"People you may know</label>
+        <label class="scb-u-201">People you may know</label>
         <div class="scb-u-202" id="suggested-friends-list"></div>
       </div>
     </div>
@@ -3739,7 +3739,7 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="modal">
     <div class="modal-header"><h2 id="group-modal-title">New Group</h2><p id="group-modal-desc">Create a group chat and invite your contacts.</p></div>
     <div class="modal-body scb-u-29">
-      <div> class="scb-u-203"
+      <div class="scb-u-203">
         <div class="group-avatar scb-u-204" id="grp-av-preview" onclick="openAvatarEditor(false,true)" title="Click to choose group avatar">👥</div>
       </div>
       <div class="field"><label id="grp-name-label">Group name</label><input type="text" id="grp-name" maxlength="40" placeholder="e.g. Game Night"/></div>
@@ -3751,16 +3751,16 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
       <div class="field">
         <label>Add members</label>
-        <div> class="scb-u-205"
+        <div class="scb-u-205">
           <input type="number" id="grp-add-by-num" placeholder="Add by number, e.g. 4821" onkeydown="if(event.key==='Enter'){event.preventDefault();grpAddByNumber();}"/>
           <button class="btn btn-ghost btn-sm" onclick="grpAddByNumber()">Add</button>
         </div>
-        <div> class="scb-u-10"
+        <div class="scb-u-10">
           <label class="btn btn-ghost btn-sm scb-u-206">
             📄 Import from CSV
             <input class="scb-u-25" type="file" accept=".csv,text/csv" onchange="importGroupMembersCsv(this)"/>
           </label>
-          <span> class="scb-u-207"A list of numbers, one per line or comma-separated</span>
+          <span class="scb-u-207">A list of numbers, one per line or comma-separated</span>
         </div>
         <div id="selected-members"></div>
         <div id="member-pick-list"></div>
@@ -3849,7 +3849,7 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="contact-panel-overlay">
   <div class="modal scb-u-72">
     <div class="modal-header">
-      <div> class="scb-u-213"
+      <div class="scb-u-213">
         <div class="avatar scb-u-214" id="cp-avatar">?</div>
         <div>
           <div class="scb-u-215" id="cp-name"></div>
@@ -3866,11 +3866,11 @@ body.device-tablet .msg-body{max-width:74%}
     </div>
     <div class="modal-body scb-u-145">
       <div class="field">
-        <label>Nickname <span> class="scb-u-58"(only you see this)</span></label>
+        <label>Nickname <span class="scb-u-58">(only you see this)</span></label>
         <input type="text" id="cp-nickname" placeholder="Add a nickname…" maxlength="24"/>
       </div>
       <div class="field">
-        <label>Notes <span> class="scb-u-58"(only you see this)</span></label>
+        <label>Notes <span class="scb-u-58">(only you see this)</span></label>
         <textarea class="scb-u-219" id="cp-notes" placeholder="Add a private note…" rows="2" maxlength="300"></textarea>
       </div>
     </div>
@@ -3888,9 +3888,9 @@ body.device-tablet .msg-body{max-width:74%}
 <div class="overlay" id="group-panel-overlay">
   <div class="modal scb-u-221">
     <div class="modal-header">
-      <div> class="scb-u-222"
+      <div class="scb-u-222">
         <div class="group-avatar scb-u-223" id="gp-avatar" onclick="if(isGroupAdmin())openAvatarEditor(false,true)">👥</div>
-        <div> class="scb-u-37"
+        <div class="scb-u-37">
           <div class="scb-u-215" id="gp-name"></div>
           <div class="scb-u-149" id="gp-info-text"></div>
           <div class="scb-u-224" id="gp-member-count"></div>
@@ -3906,44 +3906,44 @@ body.device-tablet .msg-body{max-width:74%}
       </div>
       <!-- Invite code (servers only) -->
       <div class="scb-u-227" id="gp-invite-section">
-        <div> class="scb-u-228"Invite Code</div>
-        <div> class="scb-u-70"
+        <div class="scb-u-228">Invite Code</div>
+        <div class="scb-u-70">
           <code class="scb-u-229" id="gp-invite-code"></code>
           <button class="btn btn-ghost btn-sm" onclick="copyServerInviteCode()">📋 Copy</button>
           <button class="btn btn-ghost btn-sm scb-u-25" id="gp-invite-regen-btn" onclick="regenerateServerInviteCode()">🔄</button>
         </div>
-        <div> class="scb-u-210"Anyone with this code can request to join — an admin must approve.</div>
+        <div class="scb-u-210">Anyone with this code can request to join — an admin must approve.</div>
       </div>
       <!-- Pending join requests (server admins only) -->
       <div class="scb-u-227" id="gp-join-requests-section">
-        <div> class="scb-u-228"Pending Join Requests</div>
+        <div class="scb-u-228">Pending Join Requests</div>
         <div id="gp-join-requests-list"></div>
       </div>
       <!-- Quarantine new members (security feature 29/32), admin only -->
       <div class="scb-u-227" id="gp-quarantine-section">
-        <label> class="scb-u-230"
+        <label class="scb-u-230">
           <input class="scb-u-174" type="checkbox" id="gp-quarantine-toggle" onchange="toggleGroupQuarantine(this.checked)"/>
           🚦 Quarantine new members' messages until a mod approves them
         </label>
         <div class="scb-u-25" id="gp-quarantine-pending-wrap">
-          <div> class="scb-u-228"Awaiting Approval</div>
+          <div class="scb-u-228">Awaiting Approval</div>
           <div id="gp-quarantine-pending-list"></div>
         </div>
       </div>
       <!-- Roles section (admin only) -->
       <div class="scb-u-227" id="gp-roles-section">
-        <div> class="scb-u-228"Roles</div>
+        <div class="scb-u-228">Roles</div>
         <div id="gp-roles-list"></div>
         <button class="btn btn-ghost btn-sm scb-u-177" onclick="openCreateRole()">+ Create Role</button>
       </div>
       <!-- Badges section (servers only — every member can see it and equip
            what they've earned; only server admins can create/manage) -->
       <div class="scb-u-227" id="gp-badges-section">
-        <div> class="scb-u-228"Badges</div>
+        <div class="scb-u-228">Badges</div>
         <div id="gp-badges-list"></div>
         <button id="gp-badges-create-btn" class="btn btn-ghost btn-sm scb-u-231" onclick="openCreateBadge()">+ Create Badge</button>
       </div>
-      <div> class="scb-u-228"Members</div>
+      <div class="scb-u-228">Members</div>
       <div id="gp-members-list"></div>
     </div>
     <div class="modal-footer scb-u-220">
@@ -3960,7 +3960,7 @@ body.device-tablet .msg-body{max-width:74%}
   <div class="ctx-item" onclick="memberCtxAction('coadmin')">⭐ Make Co-Admin</div>
   <div class="ctx-item" onclick="memberCtxAction('admin')">👑 Make Admin</div>
   <div class="ctx-item" onclick="memberCtxAction('role')">🏷 Assign Role</div>
-  <div> class="scb-u-233"</div>
+  <div class="scb-u-233"></div>
   <div class="ctx-item scb-u-47" onclick="memberCtxAction('remove')">🚫 Kick</div>
   <div class="ctx-item scb-u-47" onclick="memberCtxAction('ban')">⛔ Ban + Kick</div>
 </div>
@@ -26239,7 +26239,7 @@ init();
     <div class="modal-body scb-u-29">
       <div class="field">
         <label>Secret key (manual entry)</label>
-        <div> class="scb-u-142"
+        <div class="scb-u-142">
           <input class="scb-u-238" type="text" id="totp-secret-display" readonly/>
           <button class="btn btn-ghost btn-sm" onclick="copyTotpSecret()">Copy</button>
         </div>
@@ -26256,9 +26256,9 @@ init();
 <div class="overlay" id="outgoing-call-modal">
   <div class="modal scb-u-211">
     <div class="modal-body scb-u-239">
-      <div> class="scb-u-240"📞</div>
-      <div> class="scb-u-241"Calling <span id="outgoing-call-name"></span>…</div>
-      <div> class="scb-u-242"Ringing</div>
+      <div class="scb-u-240">📞</div>
+      <div class="scb-u-241">Calling <span id="outgoing-call-name"></span>…</div>
+      <div class="scb-u-242">Ringing</div>
       <button class="btn btn-danger btn-full" onclick="cancelOutgoingCall()">Cancel</button>
     </div>
   </div>
@@ -26353,21 +26353,21 @@ init();
     <div class="modal-header"><h2>🔄 Reset account</h2><p>Give <b id="admin-reset-who"></b> a fresh profile without losing anything they've said.</p></div>
     <div class="modal-body scb-u-29">
       <p class="scb-u-250" id="admin-reset-summary"></p>
-      <div> class="scb-u-251"
-        <div> class="scb-u-252"Cleared</div>
+      <div class="scb-u-251">
+        <div class="scb-u-252">Cleared</div>
         Name (becomes “Reset User #number”), bio, custom status, avatar, theme colours, large-text setting.
-        <div> class="scb-u-253"Kept</div>
+        <div class="scb-u-253">Kept</div>
         Their account number, password, email, sign-in and two-factor setup, <b>any connected Google account and linked Syntax Account</b> (so those stay working as ways to sign in and keep their “Playing…” badge), account creation date, blocked list, signed-in devices, and every message, chat and group they're part of.
       </div>
-      <label> class="scb-u-254"
+      <label class="scb-u-254">
         <input class="scb-u-255" type="checkbox" id="admin-reset-keys"/>
         <span><b>Also regenerate encryption keys.</b> Only do this if their keys are actually corrupted. Their new keys are created on their own device the next time they open the app — until then nobody can send them new encrypted messages. And because a shared chat key is derived from their old public key, <b>past messages in their chats will stop being readable for everyone they've talked to, permanently.</b> Key derivation is not retroactive, so this cannot be undone.</span>
       </label>
-      <label> class="scb-u-256"
+      <label class="scb-u-256">
         <input class="scb-u-255" type="checkbox" id="admin-reset-pwd"/>
         <span><b>Also require a new password.</b> Their current password keeps working, and they're asked to choose a new one the next time they open the app. Their password is never removed — an account with no password could be taken over by anyone who knows its number.</span>
       </label>
-      <label> class="scb-u-254"
+      <label class="scb-u-254">
         <input class="scb-u-255" type="checkbox" id="admin-reset-mfa"/>
         <span><b>Also clear two-factor/face sign-in.</b> Only do this if they're actually locked out — no camera, no passkey, and no backup PIN or security questions set up. Turns off authenticator-app codes and face verification so they can sign in with just their password; their backup PIN and security questions (if any) are left as they are so they still work once they're back in.</span>
       </label>
@@ -26386,7 +26386,7 @@ init();
     <div class="modal-header"><h2>🎨 Customize UI</h2><p>Drag widgets to move them, drag the ↘ corner to resize, tap ✕ to remove.</p></div>
     <div class="modal-body scb-u-29">
       <div id="editor-grid"></div>
-      <h3> class="scb-u-258"Add a widget</h3>
+      <h3 class="scb-u-258">Add a widget</h3>
       <div id="widget-tray"></div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeCustomizeUI()">Done</button></div>
@@ -28014,15 +28014,15 @@ window._sendToCloudyChat = _sendToCloudyChat;
   <div class="modal scb-u-28">
     <div class="modal-header"><h2>⌨️ Keyboard Shortcuts</h2></div>
     <div class="modal-body scb-u-145">
-      <div> class="scb-u-262"
-        <div><kbd> class="scb-u-263"Enter</kbd></div><div> class="scb-u-58"Send message</div>
-        <div><kbd> class="scb-u-263"Shift+Enter</kbd></div><div> class="scb-u-58"New line</div>
-        <div><kbd> class="scb-u-263"Esc</kbd></div><div> class="scb-u-58"Close modals / cancel reply</div>
-        <div><kbd> class="scb-u-263"?</kbd></div><div> class="scb-u-58"Show this panel</div>
-        <div><kbd> class="scb-u-263"Ctrl+K</kbd></div><div> class="scb-u-58"Search messages</div>
-        <div><kbd> class="scb-u-263"Ctrl+,</kbd></div><div> class="scb-u-58"Open settings</div>
-        <div><kbd> class="scb-u-263"Ctrl+B</kbd></div><div> class="scb-u-58"Toggle sidebar</div>
-        <div><kbd> class="scb-u-263"↑</kbd></div><div> class="scb-u-58"Edit last message (when input empty)</div>
+      <div class="scb-u-262">
+        <div><kbd class="scb-u-263">Enter</kbd></div><div class="scb-u-58">Send message</div>
+        <div><kbd class="scb-u-263">Shift+Enter</kbd></div><div class="scb-u-58">New line</div>
+        <div><kbd class="scb-u-263">Esc</kbd></div><div class="scb-u-58">Close modals / cancel reply</div>
+        <div><kbd class="scb-u-263">?</kbd></div><div class="scb-u-58">Show this panel</div>
+        <div><kbd class="scb-u-263">Ctrl+K</kbd></div><div class="scb-u-58">Search messages</div>
+        <div><kbd class="scb-u-263">Ctrl+,</kbd></div><div class="scb-u-58">Open settings</div>
+        <div><kbd class="scb-u-263">Ctrl+B</kbd></div><div class="scb-u-58">Toggle sidebar</div>
+        <div><kbd class="scb-u-263">↑</kbd></div><div class="scb-u-58">Edit last message (when input empty)</div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="closeModal('shortcuts-modal')">Close</button></div>
