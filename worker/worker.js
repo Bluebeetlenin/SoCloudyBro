@@ -235,7 +235,8 @@ async function handleReport(req, env, corsHeaders) {
   try { body = await req.json(); } catch (e) {
     return jsonResp({ error: 'Expected JSON body' }, 400, corsHeaders);
   }
-  const ALLOWED_FIELDS = ['subject','message','from_name','name','email','reportedNumber','reporterNumber','reportType','botcheck'];
+  const ALLOWED_FIELDS = ['subject','message','from_name','name','email','reportedNumber','reporterNumber','reportType','botcheck',
+    'total_users','active_week','new_week','messages_week','reports_open','top_reports','time'];
   const fields = {};
   for (const k of ALLOWED_FIELDS) {
     if (body[k] !== undefined) fields[k] = String(body[k]).slice(0, 4000);

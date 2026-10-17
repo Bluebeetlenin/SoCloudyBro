@@ -20,7 +20,7 @@
      that same block (the google-verify-proxy/ Worker); while that is empty the
      UI says so out loud instead of implying verification. -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer integrity="sha384-+AnPvvg4OmJU8pMqCs9QfllT9YpbQO6rzQ8aPOKUy239TJtpJQeqz2sHv7emgNpG" crossorigin="anonymous"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <!-- Syntax Account SDK (the shared account system behind Cube Leap, Jumpa! and
      Ultimo Chess). Used by Settings → Connected Accounts to let someone link an
      existing Syntax Account to this SoCloudyBro account, which is what makes the
@@ -20027,6 +20027,7 @@ async function sendAdminWeeklyDigestSilent(){
   // the comment in sendAdminWeeklyDigest().
   await sendWeb3Form({
     subject:'SoCloudyBro Weekly Digest (auto)',
+    from_name:'SoCloudyBro System',
     total_users:users.length,
     active_week:activeWeek,
     new_week:newWeek,
@@ -20854,7 +20855,10 @@ const SCB_CANONICAL_RULES = {
       // gets an anonymous session on page load).
       // Write is admin-only (unchanged).
       ".read": "auth != null",
-      ".write": "auth != null && (auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))"
+      ".write": "auth != null && (auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))",
+      "self_destructed_log": {
+        ".indexOn": ["destroyedAt"]
+      }
     },
 
     "blacklist": {
@@ -20880,7 +20884,7 @@ const SCB_CANONICAL_RULES = {
       // EXISTING one. Previously any authenticated user could resolve their
       // own flag or wipe everyone else's.
       ".read": "auth != null",
-      ".indexOn": ["at", "reporter"],
+      ".indexOn": ["at", "reporter", "number"],
       "$flagId": {
         ".write": "auth != null && (!data.exists() || auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))"
       }
