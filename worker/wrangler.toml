@@ -1,0 +1,19 @@
+name = "socloudybro-firebase-rules"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Plain vars (non-secret). Set these here or override with wrangler secret put.
+[vars]
+FIREBASE_PROJECT_ID = "socloudybro-b8606"
+ADMIN_NUMBER = "2015"
+
+# Secrets — set each with:
+#   wrangler secret put SERVICE_ACCOUNT_JSON
+#   wrangler secret put WEB3FORMS_ACCESS_KEY
+#   wrangler secret put EMAILJS_SERVICE_ID
+#   wrangler secret put EMAILJS_TEMPLATE_ID
+#   wrangler secret put EMAILJS_PUBLIC_KEY
+#   wrangler secret put EMAILJS_PRIVATE_KEY
+#
+# To deploy:
+#   cd worker && wrangler deploy

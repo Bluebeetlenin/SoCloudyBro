@@ -6433,7 +6433,7 @@ const VERIFY_OTP_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.worke
 // assertion signature, or face-descriptor distance) server-side — the
 // client's say-so alone is never enough for any of them.
 async function _tryUpgradeToCustomAuth(number, proof){
-  if(!number || !proof || !(proof.password||proof.googleCredential||proof.passkeyAssertion||proof.faceDescriptor||proof.backupPin) || !MINT_TOKEN_ENDPOINT) return false;
+  if(!number || !proof || !(proof.password||proof.googleCredential||proof.passkeyAssertion||proof.faceDescriptor||proof.backupPin||proof.secAnswers) || !MINT_TOKEN_ENDPOINT) return false;
   try{
     const ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
     const timer = ctl ? setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 8000) : null;
