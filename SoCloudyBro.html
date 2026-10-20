@@ -2198,6 +2198,21 @@ body.device-tablet .msg-body{max-width:74%}
     }
   };
 })();
+// Last-resort splash killer: if any uncaught script error prevents init()
+// from running, this fires and dismisses the loading screen so the app
+// doesn't freeze forever.
+window.addEventListener('error',function _splashErrorGuard(e){
+  var s=document.getElementById('scb-splash');
+  if(!s) return;
+  // Give init() 12 s to dismiss it normally; only act if it's still there.
+  setTimeout(function(){
+    var s2=document.getElementById('scb-splash');
+    if(!s2) return;
+    console.error('SCB: uncaught error kept splash alive — force-dismissing.',e&&e.message);
+    s2.style.opacity='0';
+    setTimeout(function(){ if(s2.parentNode) s2.parentNode.removeChild(s2); },500);
+  },12000);
+},true);
 </script>
 
 <div id="lock-screen">
@@ -4953,8 +4968,21 @@ const firebaseConfig = {
   messagingSenderId: "1003311021367",
   appId: "1:1003311021367:web:53e06af5bcdde14fc1aeb2",
 };
-firebase.initializeApp(firebaseConfig);
-const fbdb = firebase.database();
+// Guard: if Firebase SDK scripts failed to load (SRI mismatch, ad-blocker,
+// network error), `firebase` is undefined and calling it directly crashes
+// the entire script block — init() is never reached and the splash freezes.
+// Wrap so the page at least finishes parsing and init() can dismiss the splash.
+if(typeof firebase==='undefined'){
+  console.error('SCB: Firebase SDK failed to load — running in offline mode. Check browser console for blocked script errors.');
+  window.firebase={
+    auth:()=>({ onAuthStateChanged:(cb,eb)=>{ if(eb) eb(new Error('Firebase unavailable')); return ()=>{}; }, signInAnonymously:()=>Promise.reject(new Error('Firebase unavailable')), currentUser:null }),
+    database:()=>({ ref:()=>({ get:()=>Promise.reject(new Error('Firebase unavailable')), once:()=>Promise.reject(new Error('Firebase unavailable')), on:()=>{}, off:()=>{}, set:()=>Promise.reject(new Error('Firebase unavailable')), update:()=>Promise.reject(new Error('Firebase unavailable')), remove:()=>Promise.reject(new Error('Firebase unavailable')), push:()=>({ key: 'offline-'+Date.now() }) }) }),
+    storage:()=>({}),
+    app:()=>({name:'offline-stub'}),
+  };
+}
+try{ firebase.initializeApp(firebaseConfig); }catch(e){ console.warn('SCB: firebase.initializeApp failed:',e.message); }
+let fbdb; try{ fbdb = firebase.database(); }catch(e){ console.warn('SCB: firebase.database() failed:',e.message); fbdb=firebase.database ? firebase.database() : null; }
 // -- UNIVERSAL FIREBASE TIMEOUT GUARD -----------------------------------------
 // This file has ~110 direct fbdb.ref(...) calls, and a stalled connection
 // (ad-blocker/firewall/VPN blocking the SDK's WebSocket — the same class of
