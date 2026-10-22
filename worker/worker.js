@@ -583,7 +583,7 @@ async function verifyPasskeyAssertionServer(assertion, user, env) {
   const spkiBuf = b64DecodeToBuffer(matched.publicKeySpki);
   const clientData = JSON.parse(new TextDecoder().decode(clientDataBuf));
   if (clientData.type !== 'webauthn.get') return false;
-  if (clientData.origin !== ALLOWED_ORIGIN) return false;
+  if (!isAllowedOrigin(clientData.origin)) return false;
   // Verify the challenge in clientDataJSON matches what the Worker issued.
   if (clientData.challenge !== challengePayload.challengeB64u) return false;
   const pubKey = await crypto.subtle.importKey('spki', spkiBuf, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);

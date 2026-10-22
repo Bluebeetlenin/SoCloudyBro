@@ -8572,7 +8572,7 @@ async function init(){
   // init (landing page, login modal, or launch) runs without the splash overlay.
   // If launch() is called it adds its own fade-out after full initialisation.
   const _splashEarly=document.getElementById('scb-splash');
-  if(_splashEarly){ _splashEarly.style.opacity='0'; setTimeout(()=>{ _splashEarly.remove(); },400); }
+  if(_splashEarly){ _splashEarly.style.opacity='0'; _splashEarly.id=''; setTimeout(()=>{ _splashEarly.remove(); },400); }
   // Always ensure setup modal is closed if we have a user
   if(me && me.number){ closeModal('setup-modal'); document.getElementById('landing-page').style.display='none'; document.getElementById('shell').style.display=''; }
   if(!me || !me.number){
@@ -9109,6 +9109,9 @@ async function recoverSubmitStep(){
         u.mustChangePassword=false;
       }
       await saveUsers(users);
+      // Mirror new pwd to users_private immediately so the Worker sees the
+      // updated hash on the next login attempt without waiting for registerOrUpdate.
+      try{ if(u&&u.pwd) await fbdb.ref(USERS_PRIVATE+'/'+u.number+'/pwd').set(u.pwd); }catch(e){}
       // If this was the signed-in account choosing its own new password, keep
       // the local copy in step so registerOrUpdate() doesn't push the old hash
       // back and so the prompt doesn't reappear on the next launch.
@@ -9826,11 +9829,13 @@ async function finishLogin(user, pwdToStore){
   // Checked in this order only because password is set closest to this
   // point in the common case; a login only ever has one set at a time.
   try{
-    if(_loginRawPwd) await _tryUpgradeToCustomAuth(me.number, {password:_loginRawPwd});
-    else if(_loginGoogleCredential) await _tryUpgradeToCustomAuth(me.number, {googleCredential:_loginGoogleCredential});
-    else if(_loginPasskeyProof) await _tryUpgradeToCustomAuth(me.number, {passkeyAssertion:_loginPasskeyProof});
-    else if(_loginFaceDescriptorProof) await _tryUpgradeToCustomAuth(me.number, {faceDescriptor:_loginFaceDescriptorProof});
-    else if(_loginBackupPinProof) await _tryUpgradeToCustomAuth(me.number, {backupPin:_loginBackupPinProof});
+    let _upgraded=false;
+    if(_loginRawPwd) _upgraded=await _tryUpgradeToCustomAuth(me.number, {password:_loginRawPwd});
+    else if(_loginGoogleCredential) _upgraded=await _tryUpgradeToCustomAuth(me.number, {googleCredential:_loginGoogleCredential});
+    else if(_loginPasskeyProof) _upgraded=await _tryUpgradeToCustomAuth(me.number, {passkeyAssertion:_loginPasskeyProof});
+    else if(_loginFaceDescriptorProof) _upgraded=await _tryUpgradeToCustomAuth(me.number, {faceDescriptor:_loginFaceDescriptorProof});
+    else if(_loginBackupPinProof) _upgraded=await _tryUpgradeToCustomAuth(me.number, {backupPin:_loginBackupPinProof});
+    if(!_upgraded) showToast('Session notice','Could not fully verify your session. Some features may be limited. Try logging out and back in.',7000);
   }catch(e){}
   // Unlike _loginBackupPinProof (kept alive for the rest of the session, same
   // as _loginRawPwd/_loginGoogleCredential, because ensureE2EKeypair() below
@@ -10111,6 +10116,7 @@ async function submitChangePassword(){
     if(!ok){ err.textContent='Current password is incorrect.'; return; }
     const hashed=await hashPasswordV2(nw);
     await fbdb.ref('users/'+me.number).update({pwd:hashed});
+    fbdb.ref(USERS_PRIVATE+'/'+me.number+'/pwd').set(hashed).catch(()=>{});
     me.pwd=hashed; saveStorage();
     closeModal('change-password-modal');
     showToast('Password updated','Your new password is active.');
@@ -29080,7 +29086,9 @@ window._sendToCloudyChat = _sendToCloudyChat;
         .forEach(function(k){ localStorage.removeItem(k); });
     }catch(e){}
     if(banner) banner.style.display='none';
-    // Set session-only flag so banner does not flash again this tab.
+    // Persist decline to localStorage so the banner doesn't reappear on reload.
+    try{ localStorage.setItem(CONSENT_KEY,'declined'); }catch(e){}
+    // Also set in sessionStorage for this tab's lifetime (belt-and-suspenders).
     try{ sessionStorage.setItem(CONSENT_KEY,'declined'); }catch(e){}
   };
 })();
