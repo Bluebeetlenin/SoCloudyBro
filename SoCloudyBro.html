@@ -1797,6 +1797,33 @@ body.device-tablet .msg-body{max-width:74%}
   .btn { min-height: 40px; }
 }
 
+/* ---- Desktop (≥ 1024px) ---- */
+@media (min-width: 1024px) {
+  /* Scale up base font so the app feels like a real desktop app, not a
+     stretched phone. 14px looks fine on a phone; 15px reads comfortably
+     on a 1080p / 1440p monitor without altering any hard-coded px values. */
+  html, body { font-size: 15px; }
+
+  /* Slightly larger avatar and sidebar list items for breathing room */
+  .avatar { width: 40px; height: 40px; font-size: 15px; }
+  .sb-item { padding: 10px 14px; gap: 12px; }
+  .sb-item-name { font-size: 14px; }
+  .sb-item-preview { font-size: 12px; }
+
+  /* Icon buttons: one notch up from 36px so they're easier to click */
+  .icon-btn { width: 38px; height: 38px; font-size: 17px; }
+
+  /* Chat input: slightly taller and easier to type in */
+  #msg-input { font-size: 15px; padding: 9px 16px; }
+
+  /* Message bubbles: slightly wider max so long lines don't wrap so early */
+  .msg-body { max-width: 65%; }
+
+  /* Header and sidebar title: comfortable sizes for a desktop */
+  #sb-titlebar { height: 38px; }
+  #chat-header { min-height: 52px; }
+}
+
 /* ════════════════════════════════════════════════════════════
    UI/UX POLISH — message bubbles, compose, sidebar, toasts
    ════════════════════════════════════════════════════════════ */
@@ -7188,7 +7215,10 @@ function detectDeviceType(){
   // Real phones are held in portrait; a narrow *landscape* window is just a
   // resized desktop browser (or a touchscreen laptop) -- keep it two-pane.
   if (hasTouch && isPortrait && minSide < 600) return 'phone';
-  if (hasTouch && minSide < 1024) return 'tablet';
+  // Use WIDTH (w), not minSide, so a touchscreen laptop in landscape
+  // (e.g. 1440×900, w=1440 ≥ 1024) stays 'desktop' rather than being
+  // misclassified as tablet because its HEIGHT (900) < 1024.
+  if (hasTouch && w < 1024) return 'tablet';
   if (isPortrait && minSide < 480) return 'phone';
   return 'desktop';
 }
