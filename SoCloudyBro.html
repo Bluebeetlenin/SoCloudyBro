@@ -957,7 +957,7 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 #main-empty.bg-active p{text-shadow:0 1px 4px rgba(0,0,0,0.4)}
 
 /* ── Welcome banner ────────────────────────────────────────────────────── */
-#welcome-banner{width:100%;border-radius:var(--r-card);overflow:hidden;position:relative;min-height:134px;display:flex;align-items:stretch;margin-bottom:4px;flex-shrink:0;border:1px solid rgba(255,255,255,0.12)}
+#welcome-banner{width:100%;border-radius:var(--r-card);overflow:hidden;position:relative;min-height:180px;display:flex;align-items:stretch;margin-bottom:4px;flex-shrink:0;border:1px solid rgba(255,255,255,0.12)}
 #welcome-banner-bg{position:absolute;inset:0;background:#0b1628;z-index:0}
 #welcome-banner-art{position:absolute;inset:0;z-index:1;pointer-events:none}
 #welcome-banner-art svg{width:100%;height:100%}
@@ -968,19 +968,6 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 .welcome-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);border-radius:20px;padding:4px 12px;font-size:11.5px;color:rgba(255,255,255,0.88);font-weight:500}
 .welcome-chip.green{background:rgba(46,204,113,0.15);border-color:rgba(46,204,113,0.35);color:#6ee7a8}
 .welcome-chip.amber{background:rgba(251,191,36,0.15);border-color:rgba(251,191,36,0.35);color:#fcd34d}
-/* doodle wiggle animations */
-@keyframes doodleBob{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-5px) rotate(2deg)}}
-@keyframes doodleSway{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-7px) rotate(2deg)}}
-@keyframes doodleSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-@keyframes doodlePulse{0%,100%{opacity:.55}50%{opacity:.9}}
-#wd-cloud{animation:doodleBob 4s ease-in-out infinite;transform-origin:center}
-#wd-bolt{animation:doodleSway 3.5s ease-in-out infinite;transform-origin:center}
-#wd-heart{animation:doodlePulse 2.8s ease-in-out infinite}
-#wd-star1{animation:doodlePulse 2s ease-in-out infinite}
-#wd-star2{animation:doodlePulse 2s ease-in-out infinite .7s}
-#wd-star3{animation:doodlePulse 2s ease-in-out infinite 1.4s}
-#wd-spiral{animation:doodleBob 5s ease-in-out infinite 1s;transform-origin:center}
-#wd-bubble{animation:doodleSway 4.5s ease-in-out infinite .5s;transform-origin:center}
 
 /* ── Widget empty state art ─────────────────────────────────────────────── */
 .dash-empty-art{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%;padding:4px 0}
@@ -997,7 +984,7 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 /* ── Hero widget: animated gradient ─────────────────────────────────────── */
 @keyframes heroShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .dash-widget.hero{background:linear-gradient(135deg,#5b4fcf,#7c3aed,#a855f7,#ec4899,#7c3aed);background-size:300% 300%;animation:heroShift 7s ease infinite;color:#fff;border-color:transparent;box-shadow:0 8px 32px rgba(124,58,237,0.45),0 2px 6px rgba(0,0,0,0.2)}
-.dash-widget.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120' viewBox='0 0 200 120'%3E%3Cellipse cx='160' cy='80' rx='55' ry='32' fill='white' opacity='.07'/%3E%3Cellipse cx='130' cy='55' rx='40' ry='22' fill='white' opacity='.06'/%3E%3Cellipse cx='175' cy='55' rx='28' ry='16' fill='white' opacity='.05'/%3E%3Cellipse cx='50' cy='95' rx='38' ry='20' fill='white' opacity='.04'/%3E%3Cellipse cx='30' cy='78' rx='25' ry='13' fill='white' opacity='.04'/%3E%3C/svg%3E") right bottom / auto no-repeat;pointer-events:none}
+.dash-widget.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120' viewBox='0 0 200 120'%3E%3Cg stroke='white' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M144 35 Q143 24 154 23 Q156 15 167 15 Q178 15 179 24 Q189 23 190 31 Q197 31 198 38 Q198 46 190 46 L147 46 Q139 46 139 38 Q139 35 144 35 Z' stroke-width='1.8' opacity='.22'/%3E%3Cline x1='149' y1='50' x2='147' y2='59' stroke-width='1.3' opacity='.18'/%3E%3Cline x1='160' y1='50' x2='158' y2='59' stroke-width='1.3' opacity='.18'/%3E%3Cline x1='171' y1='50' x2='169' y2='59' stroke-width='1.3' opacity='.18'/%3E%3Cpath d='M78 84 Q78 73 87 73 Q94 73 96 79 Q98 73 107 73 Q116 73 116 84 Q116 95 96 104 Q78 95 78 84 Z' stroke-width='1.8' opacity='.2'/%3E%3Cpath d='M49 60 L42 76 L50 76 L42 92 L57 70 L49 70 Z' stroke-width='1.8' opacity='.18'/%3E%3Cline x1='24' y1='22' x2='24' y2='33' stroke-width='1.8' opacity='.2'/%3E%3Cline x1='18' y1='25' x2='30' y2='30' stroke-width='1.8' opacity='.2'/%3E%3Cline x1='18' y1='30' x2='30' y2='25' stroke-width='1.8' opacity='.2'/%3E%3Cline x1='183' y1='80' x2='183' y2='94' stroke-width='1.5' opacity='.2'/%3E%3Cline x1='183' y1='80' x2='191' y2='76' stroke-width='1.5' opacity='.2'/%3E%3Cline x1='191' y1='76' x2='191' y2='90' stroke-width='1.5' opacity='.2'/%3E%3Cellipse cx='180' cy='95' rx='4' ry='3' transform='rotate(-15 180 95)' stroke-width='1.3' opacity='.2'/%3E%3Cellipse cx='188' cy='91' rx='4' ry='3' transform='rotate(-15 188 91)' stroke-width='1.3' opacity='.2'/%3E%3C/g%3E%3C/svg%3E") right bottom / auto no-repeat;pointer-events:none}
 .dash-widget.hero .dash-widget-title{color:rgba(255,255,255,0.85)}
 .dash-widget.hero .dash-widget-empty{color:rgba(255,255,255,0.75)}
 .dash-widget.hero .dash-list-item{color:#fff}
@@ -1757,8 +1744,8 @@ body.device-tablet .msg-body{max-width:74%}
   #chat-header, #settings-header { padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important; }
 
   /* Welcome banner phone sizing */
-  #welcome-banner { min-height: 90px; }
-  #welcome-banner-art { width: 140px; height: 90px; }
+  #welcome-banner { min-height: 120px; }
+  #welcome-banner-art { width: 160px; height: 120px; }
   #welcome-greeting { font-size: 18px; }
   /* Dashboard grid — two columns */
   #dashboard-grid { grid-template-columns: 1fr 1fr !important; grid-auto-rows: 150px !important; }
@@ -2456,154 +2443,162 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <div id="welcome-banner">
           <div id="welcome-banner-bg"></div>
           <div id="welcome-banner-art">
-            <!-- chalk doodle art: fades in from left (text area clear), dense on right -->
-            <svg viewBox="0 0 700 134" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+            <!-- chalk doodle art: static, fades from left (text clear) to right (dense) -->
+            <svg viewBox="0 0 700 180" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
               <defs>
                 <linearGradient id="dFade" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stop-color="white" stop-opacity="0"/>
-                  <stop offset="28%" stop-color="white" stop-opacity="0.06"/>
-                  <stop offset="50%" stop-color="white" stop-opacity="0.28"/>
-                  <stop offset="100%" stop-color="white" stop-opacity="0.52"/>
+                  <stop offset="30%" stop-color="white" stop-opacity="0.05"/>
+                  <stop offset="52%" stop-color="white" stop-opacity="0.28"/>
+                  <stop offset="100%" stop-color="white" stop-opacity="0.55"/>
                 </linearGradient>
-                <mask id="dMask"><rect width="700" height="134" fill="url(#dFade)"/></mask>
+                <mask id="dMask"><rect width="700" height="180" fill="url(#dFade)"/></mask>
               </defs>
               <g mask="url(#dMask)" stroke="white" fill="none" stroke-linecap="round" stroke-linejoin="round">
 
-                <!-- BIG CLOUD with rain (hero, top-right) -->
-                <g id="wd-cloud" stroke-width="2.4">
-                  <path d="M556 22 Q554 8 568 7 Q571 -3 585 -3 Q599 -3 602 9 Q618 8 621 20 Q630 20 631 30 Q631 40 621 40 L560 40 Q550 40 550 30 Q550 23 556 22 Z"/>
-                  <!-- face on cloud -->
-                  <circle cx="584" cy="23" r="2" fill="white" stroke="none"/>
-                  <circle cx="594" cy="23" r="2" fill="white" stroke="none"/>
-                  <path d="M581 30 Q587 35 593 30" stroke-width="2"/>
-                  <!-- rain drops -->
-                  <line x1="564" y1="45" x2="561" y2="55" stroke-width="2"/>
-                  <line x1="574" y1="45" x2="572" y2="57" stroke-width="2"/>
-                  <line x1="584" y1="45" x2="583" y2="56" stroke-width="2"/>
-                  <line x1="594" y1="45" x2="593" y2="55" stroke-width="2"/>
-                  <line x1="604" y1="45" x2="603" y2="57" stroke-width="2"/>
+                <!-- CRESCENT MOON — top-left art area -->
+                <path d="M410 38 Q402 43 402 52 Q402 61 410 66 Q400 66 394 58 Q388 50 394 42 Q400 34 410 38 Z" stroke-width="2"/>
+
+                <!-- TINY CLOUD -->
+                <path d="M451 27 Q450 20 456 19 Q458 13 463 13 Q468 13 469 19 Q474 18 475 23 Q478 23 478 27 Q478 32 474 32 L452 32 Q448 32 448 27 Q448 25 451 27 Z" stroke-width="1.8"/>
+
+                <!-- BIG SMILEY CLOUD with rain — top centre-right -->
+                <g stroke-width="2.4">
+                  <path d="M558 32 Q556 18 570 17 Q573 7 587 7 Q601 7 604 19 Q620 18 623 30 Q632 30 633 40 Q633 50 623 50 L562 50 Q552 50 552 40 Q552 33 558 32 Z"/>
+                  <circle cx="580" cy="33" r="2" fill="white" stroke="none"/>
+                  <circle cx="596" cy="33" r="2" fill="white" stroke="none"/>
+                  <path d="M577 41 Q588 47 599 41" stroke-width="2"/>
+                  <line x1="565" y1="55" x2="562" y2="65" stroke-width="1.8"/>
+                  <line x1="577" y1="55" x2="575" y2="67" stroke-width="1.8"/>
+                  <line x1="589" y1="55" x2="588" y2="66" stroke-width="1.8"/>
+                  <line x1="601" y1="55" x2="600" y2="65" stroke-width="1.8"/>
+                  <line x1="613" y1="55" x2="612" y2="67" stroke-width="1.8"/>
+                </g>
+
+                <!-- STAR 1 — big asterisk, far top-right -->
+                <g stroke-width="2.2">
+                  <line x1="658" y1="10" x2="658" y2="34"/>
+                  <line x1="645" y1="16" x2="671" y2="28"/>
+                  <line x1="645" y1="28" x2="671" y2="16"/>
+                </g>
+
+                <!-- SWOOSH bracket — right edge -->
+                <path d="M690 20 Q698 28 690 36" stroke-width="2"/>
+
+                <!-- FLOWER — far right, mid-top -->
+                <g stroke-width="2">
+                  <circle cx="686" cy="56" r="5"/>
+                  <path d="M686 46 Q689 40 686 33 Q683 40 686 46"/>
+                  <path d="M696 56 Q702 53 708 56 Q702 59 696 56"/>
+                  <path d="M686 66 Q689 72 686 79 Q683 72 686 66"/>
+                  <path d="M676 56 Q670 53 664 56 Q670 59 676 56"/>
+                  <path d="M693 49 Q698 44 702 40 Q700 45 693 49"/>
+                  <path d="M693 63 Q698 68 702 72 Q700 67 693 63"/>
+                  <path d="M679 49 Q674 44 670 40 Q672 45 679 49"/>
+                  <path d="M679 63 Q674 68 670 72 Q672 67 679 63"/>
+                </g>
+
+                <!-- SHOOTING STAR — entering left art area -->
+                <line x1="353" y1="20" x2="373" y2="34" stroke-width="1.8" opacity=".8"/>
+                <circle cx="353" cy="20" r="2.5" fill="white" stroke="none"/>
+
+                <!-- X mark — top area -->
+                <g stroke-width="2">
+                  <line x1="424" y1="24" x2="432" y2="32"/><line x1="432" y1="24" x2="424" y2="32"/>
+                </g>
+
+                <!-- WAVY SQUIGGLE — mid-left art -->
+                <path d="M358 82 Q370 74 382 82 Q394 90 406 82" stroke-width="2.2"/>
+
+                <!-- DOT GRID 2×3 -->
+                <g fill="white" stroke="none">
+                  <circle cx="448" cy="86" r="2.5"/>
+                  <circle cx="459" cy="86" r="2.5"/>
+                  <circle cx="470" cy="86" r="2.5"/>
+                  <circle cx="448" cy="97" r="2.5"/>
+                  <circle cx="459" cy="97" r="2.5"/>
+                  <circle cx="470" cy="97" r="2.5"/>
                 </g>
 
                 <!-- LIGHTNING BOLT -->
-                <g id="wd-bolt" stroke-width="2.5">
-                  <path d="M476 25 L467 46 L476 46 L466 70 L484 42 L474 42 Z"/>
+                <g stroke-width="2.5">
+                  <path d="M480 72 L471 95 L481 95 L471 112 L496 88 L485 88 Z"/>
                 </g>
 
-                <!-- HEART -->
-                <g id="wd-heart" stroke-width="2.3">
-                  <path d="M430 62 Q430 50 440 50 Q447 50 449 57 Q451 50 458 50 Q468 50 468 62 Q468 72 449 83 Q430 72 430 62 Z"/>
+                <!-- PLUS SIGNS — scattered in gaps -->
+                <g stroke-width="2.2">
+                  <line x1="363" y1="60" x2="363" y2="72"/><line x1="357" y1="66" x2="369" y2="66"/>
+                </g>
+                <g stroke-width="2.2">
+                  <line x1="534" y1="57" x2="534" y2="69"/><line x1="528" y1="63" x2="540" y2="63"/>
                 </g>
 
-                <!-- STARS / sparkles -->
-                <g id="wd-star1" stroke-width="2.2">
-                  <line x1="650" y1="18" x2="650" y2="34"/>
-                  <line x1="642" y1="22" x2="658" y2="30"/>
-                  <line x1="642" y1="30" x2="658" y2="22"/>
-                </g>
-                <g id="wd-star2" stroke-width="2">
-                  <line x1="510" y1="75" x2="510" y2="87"/>
-                  <line x1="504" y1="78" x2="516" y2="84"/>
-                  <line x1="504" y1="84" x2="516" y2="78"/>
-                </g>
-                <g id="wd-star3" stroke-width="1.8">
-                  <line x1="680" y1="90" x2="680" y2="100"/>
-                  <line x1="675" y1="92" x2="685" y2="98"/>
-                  <line x1="675" y1="98" x2="685" y2="92"/>
+                <!-- STAR 2 — medium, mid-right -->
+                <g stroke-width="2">
+                  <line x1="516" y1="73" x2="516" y2="89"/>
+                  <line x1="508" y1="77" x2="524" y2="85"/>
+                  <line x1="508" y1="85" x2="524" y2="77"/>
                 </g>
 
                 <!-- CHAT BUBBLE with dots -->
-                <g id="wd-bubble" stroke-width="2.2">
-                  <path d="M620 72 Q620 60 633 60 Q652 60 652 72 Q652 84 633 84 L626 92 L626 84 Q620 84 620 72 Z"/>
-                  <circle cx="630" cy="72" r="2" fill="white" stroke="none"/>
-                  <circle cx="636" cy="72" r="2" fill="white" stroke="none"/>
-                  <circle cx="642" cy="72" r="2" fill="white" stroke="none"/>
-                </g>
-
-                <!-- SPIRAL / swirl -->
-                <g id="wd-spiral" stroke-width="2">
-                  <path d="M395 100 Q395 88 405 88 Q415 88 415 100 Q415 112 405 112 Q398 112 398 105 Q398 100 403 100 Q408 100 408 105"/>
-                </g>
-
-                <!-- ARROW (wavy) -->
                 <g stroke-width="2.2">
-                  <path d="M340 110 Q358 104 376 110"/>
-                  <path d="M369 103 L376 110 L369 117"/>
+                  <path d="M622 68 Q622 56 638 56 Q662 56 662 68 Q662 80 638 80 L631 90 L631 80 Q622 80 622 68 Z"/>
+                  <circle cx="630" cy="68" r="2" fill="white" stroke="none"/>
+                  <circle cx="638" cy="68" r="2" fill="white" stroke="none"/>
+                  <circle cx="646" cy="68" r="2" fill="white" stroke="none"/>
                 </g>
 
-                <!-- FLOWER -->
+                <!-- EYE doodle — lower-centre -->
                 <g stroke-width="2">
-                  <circle cx="695" cy="52" r="5"/>
-                  <path d="M695 42 Q697 37 695 32 Q693 37 695 42"/>
-                  <path d="M705 52 Q710 50 715 52 Q710 54 705 52"/>
-                  <path d="M695 62 Q697 67 695 72 Q693 67 695 62"/>
-                  <path d="M685 52 Q680 50 675 52 Q680 54 685 52"/>
-                  <path d="M701 46 Q705 42 708 38 Q706 43 701 46"/>
-                  <path d="M701 58 Q705 62 708 66 Q706 61 701 58"/>
-                  <path d="M689 46 Q685 42 682 38 Q684 43 689 46"/>
-                  <path d="M689 58 Q685 62 682 66 Q684 61 689 58"/>
+                  <path d="M528 115 Q540 105 552 115 Q540 125 528 115 Z"/>
+                  <circle cx="540" cy="115" r="6"/>
+                  <circle cx="540" cy="115" r="2.5" fill="white" stroke="none"/>
                 </g>
 
-                <!-- PLUS signs scattered -->
-                <g stroke-width="2.2">
-                  <line x1="542" y1="58" x2="542" y2="70"/><line x1="536" y1="64" x2="548" y2="64"/>
-                </g>
+                <!-- X mark — mid-right gap -->
                 <g stroke-width="1.8">
-                  <line x1="360" y1="72" x2="360" y2="82"/><line x1="355" y1="77" x2="365" y2="77"/>
-                </g>
-                <g stroke-width="1.8">
-                  <line x1="665" y1="112" x2="665" y2="122"/><line x1="660" y1="117" x2="670" y2="117"/>
+                  <line x1="509" y1="94" x2="519" y2="104"/><line x1="519" y1="94" x2="509" y2="104"/>
                 </g>
 
-                <!-- X marks -->
-                <g stroke-width="2">
-                  <line x1="488" y1="88" x2="498" y2="98"/><line x1="498" y1="88" x2="488" y2="98"/>
+                <!-- HEART — lower-left art -->
+                <g stroke-width="2.3">
+                  <path d="M390 130 Q390 118 401 118 Q409 118 411 125 Q413 118 423 118 Q433 118 433 130 Q433 143 411 153 Q390 143 390 130 Z"/>
                 </g>
+
+                <!-- PLUS — lower right gap -->
                 <g stroke-width="1.6">
-                  <line x1="415" y1="22" x2="423" y2="30"/><line x1="423" y1="22" x2="415" y2="30"/>
+                  <line x1="656" y1="120" x2="656" y2="130"/><line x1="651" y1="125" x2="661" y2="125"/>
                 </g>
 
-                <!-- small dots pattern -->
-                <g fill="white" stroke="none">
-                  <circle cx="456" cy="52" r="2.5"/>
-                  <circle cx="466" cy="52" r="2.5"/>
-                  <circle cx="476" cy="52" r="2.5"/>
-                  <circle cx="456" cy="62" r="2.5"/>
-                  <circle cx="466" cy="62" r="2.5"/>
-                  <circle cx="476" cy="62" r="2.5"/>
-                </g>
-
-                <!-- wavy squiggle line -->
-                <path d="M330 40 Q342 32 354 40 Q366 48 378 40 Q390 32 402 40" stroke-width="2.2"/>
-
-                <!-- EYE doodle -->
-                <g stroke-width="2">
-                  <path d="M556 90 Q570 78 584 90 Q570 102 556 90 Z"/>
-                  <circle cx="570" cy="90" r="5"/>
-                  <circle cx="570" cy="90" r="2" fill="white" stroke="none"/>
-                </g>
-
-                <!-- small crescent moon -->
-                <path d="M660 38 Q652 43 652 52 Q652 61 660 66 Q650 66 644 58 Q638 50 644 42 Q650 34 660 38 Z" stroke-width="2"/>
-
-                <!-- tiny cloud -->
-                <path d="M390 25 Q389 19 394 18 Q395 13 399 13 Q403 13 404 18 Q409 17 409 22 Q412 22 412 26 Q412 30 408 30 L392 30 Q388 30 388 26 Q388 24 390 25 Z" stroke-width="1.8"/>
-
-                <!-- curved bracket / swoosh decorations -->
-                <path d="M322 88 Q315 100 322 112" stroke-width="2.2"/>
-                <path d="M692 20 Q700 28 692 36" stroke-width="2"/>
-
-                <!-- shooting star trail -->
-                <line x1="335" y1="18" x2="358" y2="35" stroke-width="1.8" opacity=".8"/>
-                <circle cx="335" cy="18" r="2.5" fill="white" stroke="none"/>
-
-                <!-- tiny music note -->
+                <!-- MUSIC NOTE pair -->
                 <g stroke-width="1.8">
-                  <line x1="638" y1="104" x2="638" y2="118"/>
-                  <line x1="638" y1="104" x2="648" y2="100"/>
-                  <line x1="648" y1="100" x2="648" y2="114"/>
-                  <ellipse cx="635" cy="119" rx="4" ry="3" transform="rotate(-15 635 119)"/>
-                  <ellipse cx="645" cy="115" rx="4" ry="3" transform="rotate(-15 645 115)"/>
+                  <line x1="638" y1="122" x2="638" y2="140"/>
+                  <line x1="638" y1="122" x2="650" y2="117"/>
+                  <line x1="650" y1="117" x2="650" y2="135"/>
+                  <ellipse cx="635" cy="141" rx="4" ry="3" transform="rotate(-15 635 141)"/>
+                  <ellipse cx="647" cy="136" rx="4" ry="3" transform="rotate(-15 647 136)"/>
                 </g>
+
+                <!-- STAR 3 — small, lower-far-right -->
+                <g stroke-width="1.8">
+                  <line x1="680" y1="104" x2="680" y2="116"/>
+                  <line x1="674" y1="107" x2="686" y2="113"/>
+                  <line x1="674" y1="113" x2="686" y2="107"/>
+                </g>
+
+                <!-- SPIRAL — bottom-far-right -->
+                <g stroke-width="2">
+                  <path d="M674 134 Q688 134 688 148 Q688 162 674 162 Q662 162 662 148 Q662 139 669 139 Q676 139 676 148 Q676 154 671 154"/>
+                </g>
+
+                <!-- WAVY ARROW — bottom-left art -->
+                <g stroke-width="2.2">
+                  <path d="M358 162 Q374 156 390 162"/>
+                  <path d="M383 155 L390 162 L383 169"/>
+                </g>
+
+                <!-- CURVED BRACKET — barely visible left edge -->
+                <path d="M323 92 Q316 103 323 114" stroke-width="2.2"/>
 
               </g>
             </svg>
