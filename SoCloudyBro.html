@@ -948,28 +948,66 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg2)}
 #main-empty{flex:1;display:flex;flex-direction:column;align-items:center;overflow-y:auto;color:var(--text);padding:24px 32px 40px;background-size:cover;background-position:center}
 #main-empty.bg-active{color:var(--text)}
-#dashboard-header{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0 8px;flex-shrink:0}
+#dashboard-header{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0 8px;flex-shrink:0;width:100%}
 #main-empty .hero-icon{font-size:44px;opacity:0.6;margin-bottom:2px}
 #main-empty h2{font-size:18px;font-weight:500;color:var(--text);opacity:1}
 #main-empty p{font-size:12px;text-align:center;opacity:0.85;max-width:280px;line-height:1.6;margin-bottom:6px;color:var(--text2)}
 #main-empty.bg-active .hero-icon{text-shadow:0 2px 8px rgba(0,0,0,0.5)}
 #main-empty.bg-active h2{text-shadow:0 1px 6px rgba(0,0,0,0.5)}
 #main-empty.bg-active p{text-shadow:0 1px 4px rgba(0,0,0,0.4)}
+
+/* ── Welcome banner ────────────────────────────────────────────────────── */
+#welcome-banner{width:100%;border-radius:var(--r-card);overflow:hidden;position:relative;min-height:110px;display:flex;align-items:stretch;margin-bottom:4px;flex-shrink:0}
+#welcome-banner-bg{position:absolute;inset:0;background:linear-gradient(135deg,#5b4fcf 0%,#7c3aed 40%,#a855f7 70%,#ec4899 100%);z-index:0}
+#welcome-banner-art{position:absolute;right:0;bottom:0;width:220px;height:110px;z-index:1;pointer-events:none;overflow:hidden}
+#welcome-banner-art svg{position:absolute;bottom:-10px;right:-10px;opacity:.18}
+#welcome-banner-content{position:relative;z-index:2;padding:20px 24px;display:flex;flex-direction:column;gap:6px;flex:1}
+#welcome-greeting{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.01em;line-height:1.2;text-shadow:0 1px 8px rgba(0,0,0,0.25)}
+#welcome-sub{font-size:13px;color:rgba(255,255,255,0.8);font-weight:400}
+#welcome-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.welcome-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;color:#fff;font-weight:500;backdrop-filter:blur(6px)}
+.welcome-chip.green{background:rgba(46,204,113,0.25);border-color:rgba(46,204,113,0.4)}
+.welcome-chip.amber{background:rgba(245,158,11,0.25);border-color:rgba(245,158,11,0.4)}
+@keyframes bannerDrift{0%{transform:translateX(0) translateY(0)}50%{transform:translateX(-8px) translateY(-5px)}100%{transform:translateX(0) translateY(0)}}
+#welcome-banner-art svg{animation:bannerDrift 9s ease-in-out infinite}
+
+/* ── Dashboard grid ─────────────────────────────────────────────────────── */
 #dashboard-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:16px;width:100%;max-width:none;margin-top:16px}
 body.device-phone #dashboard-grid{grid-template-columns:1fr 1fr;grid-auto-rows:150px}
 body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!important}
 .dash-widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:16px;text-align:left;color:var(--text);min-height:80px;box-shadow:0 6px 24px rgba(0,0,0,0.28),0 1px 3px rgba(0,0,0,0.18);overflow:hidden;position:relative;transition:transform .18s var(--ease-fluent-soft),box-shadow .18s}
-.dash-widget:hover{background:var(--surface2)}
-.dash-widget.hero{background:var(--accent);color:#fff;border-color:transparent}
+.dash-widget:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(0,0,0,0.36),0 2px 6px rgba(0,0,0,0.2)}
+
+/* ── Hero widget: animated gradient ─────────────────────────────────────── */
+@keyframes heroShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.dash-widget.hero{background:linear-gradient(135deg,#5b4fcf,#7c3aed,#a855f7,#ec4899,#7c3aed);background-size:300% 300%;animation:heroShift 7s ease infinite;color:#fff;border-color:transparent;box-shadow:0 8px 32px rgba(124,58,237,0.45),0 2px 6px rgba(0,0,0,0.2)}
+.dash-widget.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120' viewBox='0 0 200 120'%3E%3Cellipse cx='160' cy='80' rx='55' ry='32' fill='white' opacity='.07'/%3E%3Cellipse cx='130' cy='55' rx='40' ry='22' fill='white' opacity='.06'/%3E%3Cellipse cx='175' cy='55' rx='28' ry='16' fill='white' opacity='.05'/%3E%3Cellipse cx='50' cy='95' rx='38' ry='20' fill='white' opacity='.04'/%3E%3Cellipse cx='30' cy='78' rx='25' ry='13' fill='white' opacity='.04'/%3E%3C/svg%3E") right bottom / auto no-repeat;pointer-events:none}
 .dash-widget.hero .dash-widget-title{color:rgba(255,255,255,0.85)}
 .dash-widget.hero .dash-widget-empty{color:rgba(255,255,255,0.75)}
+.dash-widget.hero .dash-list-item{color:#fff}
 .dash-widget.hero .dash-list-item:hover{background:rgba(255,255,255,0.12)}
+.dash-widget.hero .dash-unread-badge{background:rgba(255,255,255,0.25);color:#fff}
+
 .dash-widget-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .dash-widget-empty{font-size:12px;color:var(--text2);opacity:.8;padding:6px 0}
 .dash-list-item{display:flex;align-items:center;gap:8px;padding:7px 8px;margin:0 -8px;font-size:13px;cursor:pointer;border-radius:10px;transition:background .12s;color:var(--text)}
 .dash-list-item:hover{background:var(--surface2)}
+
+/* ── Presence dot ────────────────────────────────────────────────────────── */
 .dash-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.dash-dot.on{background:#2ecc71}.dash-dot.off{background:var(--muted);opacity:.4}
+.dash-dot.on{background:#2ecc71;box-shadow:0 0 0 0 rgba(46,204,113,0.6);animation:presencePulse 2s ease-out infinite}
+.dash-dot.off{background:var(--muted);opacity:.4}
+@keyframes presencePulse{0%{box-shadow:0 0 0 0 rgba(46,204,113,0.6)}70%{box-shadow:0 0 0 5px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
+
+/* ── Online pill ─────────────────────────────────────────────────────────── */
+.dash-online-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.25);margin-left:auto;white-space:nowrap}
+
+/* ── Mini avatar ─────────────────────────────────────────────────────────── */
+.dash-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:var(--accent);color:#fff;overflow:hidden}
+.dash-avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ── Unread badge inside hero ────────────────────────────────────────────── */
+.dash-unread-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:10px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:0 5px;margin-left:auto;flex-shrink:0}
 .widget-order-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:var(--r-sm);margin-bottom:6px;cursor:grab}
 .widget-order-item.dragging{opacity:.35}
 .widget-order-item .drag-handle{cursor:grab;color:var(--muted);font-size:14px;flex-shrink:0}
@@ -1702,6 +1740,10 @@ body.device-tablet .msg-body{max-width:74%}
   /* Chat header safe-area (notch/Dynamic Island) */
   #chat-header, #settings-header { padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important; }
 
+  /* Welcome banner phone sizing */
+  #welcome-banner { min-height: 90px; }
+  #welcome-banner-art { width: 140px; height: 90px; }
+  #welcome-greeting { font-size: 18px; }
   /* Dashboard grid — two columns */
   #dashboard-grid { grid-template-columns: 1fr 1fr !important; grid-auto-rows: 150px !important; }
   .dash-widget { grid-column: auto !important; grid-row: auto !important; }
@@ -2395,9 +2437,27 @@ window.addEventListener('error',function _splashErrorGuard(e){
     <div id="main-empty">
       <div id="dashboard-header">
         <button class="icon-btn scb-u-44" id="home-back-btn" onclick="closeHomeToSidebar()" title="Back to chats">←</button>
-        <div class="hero-icon">☁</div>
-        <h2>SoCloudyBro</h2>
-        <p>Select a conversation, or check what's happening below.</p>
+        <div id="welcome-banner">
+          <div id="welcome-banner-bg"></div>
+          <div id="welcome-banner-art">
+            <svg width="260" height="160" viewBox="0 0 260 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="195" cy="105" rx="72" ry="42" fill="white"/>
+              <ellipse cx="158" cy="88" rx="52" ry="30" fill="white"/>
+              <ellipse cx="210" cy="85" rx="38" ry="22" fill="white"/>
+              <ellipse cx="80" cy="130" rx="55" ry="30" fill="white"/>
+              <ellipse cx="50" cy="115" rx="36" ry="20" fill="white"/>
+              <ellipse cx="95" cy="112" rx="28" ry="16" fill="white"/>
+            </svg>
+          </div>
+          <div id="welcome-banner-content">
+            <div id="welcome-greeting">Good morning ☁️</div>
+            <div id="welcome-sub">Here's what's happening</div>
+            <div id="welcome-chips">
+              <span class="welcome-chip amber" id="wchip-unread">✉️ — unread</span>
+              <span class="welcome-chip green" id="wchip-online">● — online</span>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="dashboard-grid"></div>
     </div>
@@ -14889,7 +14949,31 @@ window.addEventListener('focus',()=>{
     if(el&&el.style.display!=='none') renderDashboard();
   }
 });
+function renderWelcomeBanner(){
+  // Greeting
+  const hour=new Date().getHours();
+  const greet=hour<5?'Up late':hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+  const firstName=me?(dec(me.name)||(''+me.number)).split(/[\s_]/)[0]:'';
+  const greetEl=document.getElementById('welcome-greeting');
+  if(greetEl) greetEl.textContent=greet+(firstName?' '+firstName:'')+' ☁️';
+
+  // Unread chip
+  let unread=0;
+  if(convosCache) contacts.forEach(c=>{
+    const conv=convosCache.find(x=>x&&x.key===c.key);
+    if(!conv||!conv.messages) return;
+    unread+=conv.messages.filter(m=>m.type!=='system'&&m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length;
+  });
+  const uchip=document.getElementById('wchip-unread');
+  if(uchip) uchip.textContent=unread>0?'✉️ '+unread+' unread':'✉️ All caught up';
+
+  // Online chip
+  const online=contacts.filter(c=>c.type!=='group'&&isOnline((lookupUser(c.number)||{}).lastSeen)).length;
+  const ochip=document.getElementById('wchip-online');
+  if(ochip) ochip.textContent='● '+(online||'No')+' online';
+}
 function renderDashboard(){
+  renderWelcomeBanner();
   const grid=document.getElementById('dashboard-grid');
   if(!grid||!me) return;
   const layout=getDashboardLayout().filter(w=>w.enabled&&DASHBOARD_WIDGETS[w.id]).sort((a,b)=>(a.y-b.y)||(a.x-b.x));
@@ -14943,7 +15027,12 @@ function renderOnlineWidget(body){
   const withStatus=dms.map(c=>({c,online:isOnline((lookupUser(c.number)||{}).lastSeen)}));
   withStatus.sort((a,b)=>(b.online-a.online));
   if(!withStatus.length){ body.innerHTML='<div class="dash-widget-empty">No contacts yet.</div>'; return; }
-  body.innerHTML=withStatus.slice(0,8).map(x=>'<div class="dash-list-item" data-key="'+esc(x.c.key)+'" onclick="dashOpenChat(this.dataset.key)"><span class="dash-dot '+(x.online?'on':'off')+'"></span>'+esc(x.c.name)+verifiedBadge(x.c.number)+equippedBadgeHtml(x.c.number)+'</div>').join('');
+  body.innerHTML=withStatus.slice(0,8).map(x=>{
+    const _name=dec(x.c.name)||('#'+x.c.number);const _init=_name.charAt(0).toUpperCase();
+    const av=x.c.avatar&&x.c.avatar!=='__cloudy__'?'<div class="dash-avatar"><img src="'+esc(x.c.avatar)+'" loading="lazy" onerror="this.parentNode.textContent=\''+_init+'\'"/></div>':'<div class="dash-avatar" style="background:var(--accent)">'+_init+'</div>';
+    const pill=x.online?'<span class="dash-online-pill">● online</span>':'';
+    return '<div class="dash-list-item" data-key="'+esc(x.c.key)+'" onclick="dashOpenChat(this.dataset.key)">'+av+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+esc(x.c.name)+verifiedBadge(x.c.number)+equippedBadgeHtml(x.c.number)+'</span>'+pill+'</div>';
+  }).join('');
 }
 async function renderVoiceWidget(body){
   const groups=contacts.filter(c=>c.type==='group');
@@ -14979,7 +15068,11 @@ function renderRecentWidget(body){
   });
   items.sort((a,b)=>b.time-a.time);
   if(!items.length){ body.innerHTML='<div class="dash-widget-empty">No activity yet.</div>'; return; }
-  body.innerHTML=items.slice(0,6).map(it=>'<div class="dash-list-item" data-key="'+esc(it.c.key)+'" onclick="dashOpenChat(this.dataset.key)">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>'+esc(it.c.name)+'</b>: '+esc(it.text.substring(0,36))+'</span></div>').join('');
+  body.innerHTML=items.slice(0,6).map(it=>{
+    const _name=dec(it.c.name)||('#'+it.c.number);const _init=_name.charAt(0).toUpperCase();
+    const av=it.c.avatar&&it.c.avatar!=='__cloudy__'?'<div class="dash-avatar"><img src="'+esc(it.c.avatar)+'" loading="lazy" onerror="this.parentNode.textContent=\''+_init+'\'"/></div>':'<div class="dash-avatar">'+_init+'</div>';
+    return '<div class="dash-list-item" data-key="'+esc(it.c.key)+'" onclick="dashOpenChat(this.dataset.key)">'+av+'<div style="flex:1;overflow:hidden"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.c.name)+'</div><div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.text.substring(0,40))+'</div></div></div>';
+  }).join('');
 }
 function renderGroupsWidget(body){
   const groups=contacts.filter(c=>c.type==='group'&&!c.isServer);
@@ -15001,7 +15094,12 @@ function renderUnreadWidget(body){
   });
   items.sort((a,b)=>b.unread-a.unread);
   if(!items.length){ body.innerHTML='<div class="dash-widget-empty">You\'re all caught up! ✅</div>'; return; }
-  body.innerHTML=items.slice(0,8).map(it=>'<div class="dash-list-item" data-key="'+esc(it.c.key)+'" onclick="dashOpenChat(this.dataset.key)">'+(it.c.type==='group'?'👥':'💬')+' <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.c.name)+'</span>'+renderUnreadBadgeHtml(it.unread,'margin-left:auto')+'</div>').join('');
+  body.innerHTML=items.slice(0,8).map(it=>{
+    const conv=convosCache&&convosCache.find(x=>x&&x.key===it.c.key);
+    const last=conv&&conv.messages&&conv.messages.length?conv.messages[conv.messages.length-1]:null;
+    const preview=last?(msgHasGif(last)?'GIF':msgHasPoll(last)?'Poll':msgFileData(last)?'Attachment':msgText(last).substring(0,28)):'';
+    return '<div class="dash-list-item" data-key="'+esc(it.c.key)+'" onclick="dashOpenChat(this.dataset.key)" style="flex-direction:column;align-items:flex-start;gap:2px"><div style="display:flex;width:100%;align-items:center;gap:6px"><span style="font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.c.name)+'</span><span class="dash-unread-badge">'+it.unread+'</span></div>'+(preview?'<span style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;padding-left:0">'+esc(preview)+'</span>':'')+'</div>';
+  }).join('');
 }
 function logCallHistory(entry){
   try{
