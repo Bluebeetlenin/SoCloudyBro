@@ -2458,151 +2458,138 @@ window.addEventListener('error',function _splashErrorGuard(e){
 
                 <!-- ── TOP ROW ─────────────────────────────────────────────── -->
 
-                <!-- CRESCENT MOON  x:382-414, y:22-68 -->
-                <path d="M413 34 Q404 40 404 51 Q404 62 413 68 Q402 68 395 59 Q387 50 395 40 Q402 31 413 34 Z" stroke-width="2.2"/>
+                <!-- CRESCENT MOON  -->
+                <path d="M414 30 C407 30 400 36 400 45 C400 54 407 60 414 61
+                         C406 63 397 59 393 51 C389 43 392 33 400 29 C405 26 411 27 414 30 Z" stroke-width="2.2"/>
 
-                <!-- TINY CLOUD  x:446-480, y:16-40 -->
-                <path d="M451 36 Q449 27 456 26 Q458 18 464 18 Q470 18 471 26 Q477 25 478 31 Q482 31 482 36 Q482 41 477 41 L452 41 Q447 41 447 36 Q447 33 451 36 Z" stroke-width="2"/>
+                <!-- SMALL CLOUD  x:447-492, y:16-44 -->
+                <path d="M453 40 C452 33 457 28 464 28 C466 21 472 16 479 16
+                         C486 16 491 21 491 28 C496 27 500 31 500 37
+                         C500 43 495 44 490 44 L457 44 C453 44 452 43 453 40 Z" stroke-width="2"/>
 
-                <!-- BIG PUFFY CLOUD + FACE + RAIN  x:552-648, y:4-72 -->
+                <!-- SMILEY CLOUD + RAIN  x:548-645, y:3-72 -->
                 <g stroke-width="2.4">
-                  <path d="M558 50 Q552 34 564 26 Q564 10 580 9 Q584 2 594 2 Q604 2 608 10 Q618 4 626 18 Q638 16 640 30 Q648 32 646 46 Q642 52 560 52 Q554 52 558 50 Z"/>
-                  <circle cx="583" cy="28" r="2.2" fill="white" stroke="none"/>
-                  <circle cx="597" cy="28" r="2.2" fill="white" stroke="none"/>
-                  <path d="M580 38 Q590 45 600 38" stroke-width="2.2"/>
-                  <line x1="566" y1="56" x2="563" y2="68" stroke-width="2"/>
-                  <line x1="579" y1="56" x2="577" y2="70" stroke-width="2"/>
-                  <line x1="592" y1="56" x2="591" y2="69" stroke-width="2"/>
-                  <line x1="605" y1="56" x2="604" y2="68" stroke-width="2"/>
-                  <line x1="617" y1="56" x2="616" y2="70" stroke-width="2"/>
+                  <path d="M557 52 C548 52 544 44 547 37 C546 27 554 19 563 19
+                           C564 8 575 2 587 3 C593 1 601 1 607 7
+                           C616 2 626 7 626 18 C635 17 641 24 639 33
+                           C637 44 629 52 619 52 Z"/>
+                  <circle cx="582" cy="30" r="2.5" fill="white" stroke="none"/>
+                  <circle cx="598" cy="30" r="2.5" fill="white" stroke="none"/>
+                  <path d="M578 41 C583 48 594 48 600 41" stroke-width="2.2"/>
+                  <line x1="561" y1="56" x2="558" y2="69"/>
+                  <line x1="575" y1="56" x2="573" y2="71"/>
+                  <line x1="590" y1="56" x2="589" y2="70"/>
+                  <line x1="604" y1="56" x2="603" y2="69"/>
+                  <line x1="618" y1="56" x2="617" y2="69"/>
                 </g>
 
-                <!-- BIG STAR (6-ray asterisk)  x:644-674, y:10-38 -->
-                <g stroke-width="2.4">
-                  <line x1="659" y1="10" x2="659" y2="38"/>
-                  <line x1="644" y1="18" x2="674" y2="30"/>
-                  <line x1="644" y1="30" x2="674" y2="18"/>
-                </g>
+                <!-- 5-POINT STAR (big)  center (659,26) -->
+                <path d="M659 10 L663 21 L676 21 L666 29 L670 40
+                         L659 32 L648 40 L652 29 L642 21 L655 21 Z" stroke-width="2.4"/>
 
-                <!-- SWOOSH / open bracket  x:684-698, y:18-38 -->
-                <path d="M692 18 Q700 28 692 38" stroke-width="2.2"/>
-
-                <!-- 8-PETAL FLOWER  center (685,55)  x:664-706, y:34-76 -->
+                <!-- 4-PETAL FLOWER  center (680,56) -->
                 <g stroke-width="2">
-                  <circle cx="685" cy="55" r="6"/>
-                  <path d="M685 45 Q688 38 685 30 Q682 38 685 45"/>
-                  <path d="M695 55 Q702 52 709 55 Q702 58 695 55"/>
-                  <path d="M685 65 Q688 72 685 80 Q682 72 685 65"/>
-                  <path d="M675 55 Q668 52 661 55 Q668 58 675 55"/>
-                  <path d="M692 48 Q697 42 701 37 Q699 43 692 48"/>
-                  <path d="M692 62 Q697 68 701 73 Q699 67 692 62"/>
-                  <path d="M678 48 Q673 42 669 37 Q671 43 678 48"/>
-                  <path d="M678 62 Q673 68 669 73 Q671 67 678 62"/>
+                  <ellipse cx="680" cy="43" rx="5" ry="10"/>
+                  <ellipse cx="680" cy="69" rx="5" ry="10"/>
+                  <ellipse cx="667" cy="56" rx="10" ry="5"/>
+                  <ellipse cx="693" cy="56" rx="10" ry="5"/>
+                  <circle cx="680" cy="56" r="6" fill="white" stroke="none"/>
+                  <circle cx="680" cy="56" r="6"/>
                 </g>
 
-                <!-- SHOOTING STAR  x:350-374, y:17-33 -->
-                <line x1="350" y1="17" x2="374" y2="33" stroke-width="2" opacity=".85"/>
-                <circle cx="350" cy="17" r="2.5" fill="white" stroke="none" opacity=".85"/>
+                <!-- SHOOTING STAR  -->
+                <line x1="354" y1="19" x2="380" y2="36" stroke-width="2.2" opacity=".9"/>
+                <circle cx="354" cy="19" r="2.8" fill="white" stroke="none" opacity=".9"/>
 
-                <!-- X MARK  x:422-434, y:20-32 -->
-                <g stroke-width="2.2">
-                  <line x1="422" y1="20" x2="434" y2="32"/><line x1="434" y1="20" x2="422" y2="32"/>
-                </g>
-
-                <!-- ── MIDDLE ROW ───────────────────────────────────────────── -->
-
-                <!-- WAVY SQUIGGLE  y:83, x:356-414 -->
-                <path d="M356 83 Q369 73 382 83 Q395 93 408 83" stroke-width="2.4"/>
-
-                <!-- DOT GRID 2×3  x:445-471, y:82-98 -->
-                <g fill="white" stroke="none">
-                  <circle cx="447" cy="83" r="2.8"/>
-                  <circle cx="459" cy="83" r="2.8"/>
-                  <circle cx="471" cy="83" r="2.8"/>
-                  <circle cx="447" cy="96" r="2.8"/>
-                  <circle cx="459" cy="96" r="2.8"/>
-                  <circle cx="471" cy="96" r="2.8"/>
-                </g>
-
-                <!-- LIGHTNING BOLT  x:476-500, y:72-114 -->
-                <path d="M482 72 L473 96 L484 96 L474 114 L500 88 L488 88 Z" stroke-width="2.6"/>
-
-                <!-- PLUS (upper)  x:528-542, y:56-70 -->
-                <g stroke-width="2.4">
-                  <line x1="535" y1="56" x2="535" y2="70"/><line x1="528" y1="63" x2="542" y2="63"/>
-                </g>
-
-                <!-- PLUS (lower-left)  x:356-370, y:60-74 -->
+                <!-- PLUS accent (top-left zone) -->
                 <g stroke-width="2.2">
                   <line x1="363" y1="60" x2="363" y2="74"/><line x1="356" y1="67" x2="370" y2="67"/>
                 </g>
 
-                <!-- MEDIUM STAR (6-ray)  center (518,82)  x:508-528 y:74-90 -->
-                <g stroke-width="2.2">
-                  <line x1="518" y1="73" x2="518" y2="91"/>
-                  <line x1="509" y1="77" x2="527" y2="87"/>
-                  <line x1="509" y1="87" x2="527" y2="77"/>
+                <!-- ── MIDDLE ROW ───────────────────────────────────────────── -->
+
+                <!-- WAVY SQUIGGLE  -->
+                <path d="M356 85 C365 74 374 96 383 85 C392 74 401 96 410 85 C419 74 428 96 437 85" stroke-width="2.4"/>
+
+                <!-- DOT GRID 3×2  -->
+                <g fill="white" stroke="none">
+                  <circle cx="450" cy="84" r="2.8"/><circle cx="463" cy="84" r="2.8"/><circle cx="476" cy="84" r="2.8"/>
+                  <circle cx="450" cy="97" r="2.8"/><circle cx="463" cy="97" r="2.8"/><circle cx="476" cy="97" r="2.8"/>
                 </g>
 
-                <!-- CHAT BUBBLE  x:620-664, y:58-96 -->
+                <!-- LIGHTNING BOLT  -->
+                <path d="M489 72 L479 97 L491 97 L480 115 L508 89 L495 89 Z" stroke-width="2.6"/>
+
+                <!-- 5-POINT STAR (medium)  center (521,82) -->
+                <path d="M521 70 L524 79 L534 79 L526 85 L529 95
+                         L521 89 L513 95 L516 85 L508 79 L518 79 Z" stroke-width="2.2"/>
+
+                <!-- PLUS accent (upper-middle) -->
                 <g stroke-width="2.4">
-                  <path d="M622 70 Q622 57 639 57 Q663 57 663 70 Q663 83 639 83 L631 95 L631 83 Q622 83 622 70 Z"/>
-                  <circle cx="631" cy="70" r="2.2" fill="white" stroke="none"/>
-                  <circle cx="640" cy="70" r="2.2" fill="white" stroke="none"/>
-                  <circle cx="649" cy="70" r="2.2" fill="white" stroke="none"/>
+                  <line x1="535" y1="57" x2="535" y2="69"/><line x1="529" y1="63" x2="541" y2="63"/>
                 </g>
 
-                <!-- X MARK (mid)  x:506-518, y:93-105 -->
+                <!-- CHAT BUBBLE  x:619-668, y:52-103 -->
+                <g stroke-width="2.4">
+                  <path d="M620 71 C620 57 631 52 643 52
+                           C655 52 668 57 668 71 C668 85 655 90 643 90
+                           L636 103 L636 90 C631 90 620 85 620 71 Z"/>
+                  <circle cx="632" cy="71" r="2.2" fill="white" stroke="none"/>
+                  <circle cx="643" cy="71" r="2.2" fill="white" stroke="none"/>
+                  <circle cx="654" cy="71" r="2.2" fill="white" stroke="none"/>
+                </g>
+
+                <!-- X accent (mid) -->
                 <g stroke-width="2">
-                  <line x1="506" y1="93" x2="518" y2="105"/><line x1="518" y1="93" x2="506" y2="105"/>
+                  <line x1="507" y1="94" x2="519" y2="106"/><line x1="519" y1="94" x2="507" y2="106"/>
                 </g>
 
                 <!-- ── BOTTOM ROW ───────────────────────────────────────────── -->
 
-                <!-- EYE  x:526-556, y:105-129 -->
+                <!-- EYE with lashes  center (541,117) -->
                 <g stroke-width="2.2">
-                  <path d="M526 117 Q541 105 556 117 Q541 129 526 117 Z"/>
-                  <circle cx="541" cy="117" r="7"/>
-                  <circle cx="541" cy="117" r="2.8" fill="white" stroke="none"/>
+                  <path d="M524 117 C531 107 551 107 558 117 C551 127 531 127 524 117 Z"/>
+                  <circle cx="541" cy="117" r="5.5"/>
+                  <circle cx="541" cy="117" r="2.5" fill="white" stroke="none"/>
+                  <line x1="533" y1="108" x2="531" y2="103"/>
+                  <line x1="541" y1="107" x2="541" y2="102"/>
+                  <line x1="549" y1="108" x2="551" y2="103"/>
                 </g>
 
-                <!-- HEART  x:390-436, y:114-158 -->
-                <g stroke-width="2.6">
-                  <path d="M390 128 Q390 114 402 114 Q411 114 413 122 Q415 114 425 114 Q436 114 436 128 Q436 143 413 158 Q390 143 390 128 Z"/>
-                </g>
+                <!-- HEART  center (413,133) — cubic bezier for natural curves -->
+                <path d="M413 152 C395 140 383 128 383 118
+                         C383 109 390 103 399 103 C406 103 410 108 413 113
+                         C416 108 420 103 427 103 C436 103 443 109 443 118
+                         C443 128 431 140 413 152 Z" stroke-width="2.6"/>
 
-                <!-- SMALL STAR  center (681,110)  x:673-689, y:102-118 -->
+                <!-- MUSIC NOTE PAIR  -->
                 <g stroke-width="2">
-                  <line x1="681" y1="102" x2="681" y2="118"/>
-                  <line x1="673" y1="106" x2="689" y2="114"/>
-                  <line x1="673" y1="114" x2="689" y2="106"/>
+                  <line x1="641" y1="118" x2="641" y2="142"/>
+                  <line x1="641" y1="118" x2="654" y2="113"/>
+                  <line x1="654" y1="113" x2="654" y2="137"/>
+                  <ellipse cx="638" cy="143" rx="4.5" ry="3.2" transform="rotate(-15 638 143)"/>
+                  <ellipse cx="651" cy="138" rx="4.5" ry="3.2" transform="rotate(-15 651 138)"/>
                 </g>
 
-                <!-- PLUS (lower-right)  x:652-664, y:118-130 -->
+                <!-- SPIRAL (arc-based for clean look)  -->
+                <path d="M676 138 C694 138 698 155 689 162
+                         C679 170 664 163 664 151 C664 141 672 135 681 138
+                         C689 141 693 151 689 158 C685 164 677 164 674 158" stroke-width="2.2"/>
+
+                <!-- 5-POINT STAR (small)  center (681,111) -->
+                <path d="M681 101 L684 108 L693 108 L686 113
+                         L689 121 L681 116 L673 121 L676 113 L669 108 L678 108 Z" stroke-width="2"/>
+
+                <!-- PLUS accent (lower-right) -->
                 <g stroke-width="1.8">
-                  <line x1="658" y1="118" x2="658" y2="130"/><line x1="652" y1="124" x2="664" y2="124"/>
+                  <line x1="658" y1="119" x2="658" y2="131"/><line x1="652" y1="125" x2="664" y2="125"/>
                 </g>
 
-                <!-- MUSIC NOTE PAIR  x:630-654, y:115-148 -->
-                <g stroke-width="2">
-                  <line x1="639" y1="118" x2="639" y2="140"/>
-                  <line x1="639" y1="118" x2="652" y2="113"/>
-                  <line x1="652" y1="113" x2="652" y2="135"/>
-                  <ellipse cx="636" cy="141" rx="4.5" ry="3.2" transform="rotate(-15 636 141)"/>
-                  <ellipse cx="649" cy="136" rx="4.5" ry="3.2" transform="rotate(-15 649 136)"/>
-                </g>
-
-                <!-- SPIRAL  center (676,152)  x:662-692, y:136-168 -->
-                <path d="M676 136 Q692 136 692 152 Q692 168 676 168 Q662 168 662 152 Q662 141 670 141 Q678 141 678 152 Q678 160 672 160" stroke-width="2.2"/>
-
-                <!-- WAVY ARROW →  x:356-396, y:156-172 -->
+                <!-- WAVY ARROW →  -->
                 <g stroke-width="2.4">
-                  <path d="M356 164 Q370 156 384 164 Q390 162 396 164"/>
-                  <path d="M389 157 L396 164 L389 171"/>
+                  <path d="M356 165 C363 157 370 173 377 165 C383 162 390 165 396 165"/>
+                  <path d="M390 158 L396 165 L390 172"/>
                 </g>
-
-                <!-- CURVED BRACKET (barely visible, leftmost) -->
-                <path d="M320 90 Q312 103 320 116" stroke-width="2.4"/>
 
               </g>
             </svg>
