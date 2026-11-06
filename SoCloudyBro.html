@@ -11589,9 +11589,12 @@ async function submitSetup(){
     // doesn't yet exist (!data.exists()). We write only the minimum here so the
     // Worker can verify the password server-side on the very next call.
     await fbdb.ref(USERS_BIN+'/'+num).set({number:num, createdAt:me.createdAt});
-    // Mirror pwd to the private node immediately so the Worker can verify it
-    // from there even before registerOrUpdate() promotes the full profile.
-    fbdb.ref(USERS_PRIVATE+'/'+num+'/pwd').set(me.pwd).catch(()=>{});
+    // Mirror pwd to the private node BEFORE calling the Worker — the Worker reads
+    // users_private/<num>/pwd to verify the password server-side. This must be
+    // awaited; a fire-and-forget write creates a race where the Worker finds no
+    // hash yet, _tryUpgradeToCustomAuth returns false, and registerOrUpdate() then
+    // runs anonymously against an already-existing record → PERMISSION_DENIED.
+    await fbdb.ref(USERS_PRIVATE+'/'+num+'/pwd').set(me.pwd);
     // Now upgrade to a custom auth token — the record exists, so the Worker can
     // verify the password (or Google credential) server-side. Every subsequent
     // write in registerOrUpdate() and launch() runs on the real custom session,
