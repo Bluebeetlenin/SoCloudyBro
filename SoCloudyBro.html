@@ -10364,7 +10364,11 @@ async function submitChangePassword(){
     if(!ok){ err.textContent='Current password is incorrect.'; return; }
     const hashed=await hashPasswordV2(nw);
     await fbdb.ref('users/'+me.number).update({pwd:hashed});
-    fbdb.ref(USERS_PRIVATE+'/'+me.number+'/pwd').set(hashed).catch(()=>{});
+    // Await the USERS_PRIVATE write — the Worker reads this node to verify the
+    // password on login. Fire-and-forget here creates a race: a login attempt
+    // on another device immediately after a password change would hit the old
+    // hash and fail even with the correct new password.
+    await fbdb.ref(USERS_PRIVATE+'/'+me.number+'/pwd').set(hashed).catch(()=>{});
     me.pwd=hashed; saveStorage();
     closeModal('change-password-modal');
     showToast('Password updated','Your new password is active.');
@@ -11599,8 +11603,13 @@ async function submitSetup(){
     // verify the password (or Google credential) server-side. Every subsequent
     // write in registerOrUpdate() and launch() runs on the real custom session,
     // which satisfies auth.token.number checks in the Firebase rules.
-    if(_pendingGoogleSignup && _loginGoogleCredential) await _tryUpgradeToCustomAuth(num, {googleCredential:_loginGoogleCredential});
-    else await _tryUpgradeToCustomAuth(num, {password:pwd});
+    const upgraded = _pendingGoogleSignup && _loginGoogleCredential
+      ? await _tryUpgradeToCustomAuth(num, {googleCredential:_loginGoogleCredential})
+      : await _tryUpgradeToCustomAuth(num, {password:pwd});
+    // If the Worker is down or rejects the proof, registerOrUpdate() would run
+    // anonymously against an already-existing record → PERMISSION_DENIED. Make
+    // the failure explicit so the error is actionable rather than opaque.
+    if(!upgraded) throw new Error('Could not verify your identity with the server — please try again.');
     // Write the full record now that we have custom auth.
     await registerOrUpdate();
     _pendingGoogleSignup=null;
