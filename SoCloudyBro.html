@@ -15397,6 +15397,22 @@ function updateCloudyVizState(){
 // -- Clock & Weather (Open-Meteo — free, no API key) ---------------------------
 const WEATHER_CODE_ICONS={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',80:'🌦️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️'};
 let _clockTimer=null,_weatherCache=null;
+async function _autoDetectWeatherLocation(){
+  // One-shot: if ipapi.co already failed once this session, don't retry.
+  if(localStorage.getItem('cc_weather_autodetect_tried')) return null;
+  try{
+    localStorage.setItem('cc_weather_autodetect_tried','1');
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),5000);
+    let res; try{ res=await fetch('https://ipapi.co/json/',{signal:ctrl.signal}); }finally{ clearTimeout(t); }
+    if(!res||!res.ok) return null;
+    const d=await res.json();
+    if(!d||!Number.isFinite(d.latitude)||!Number.isFinite(d.longitude)) return null;
+    const loc={name:(d.city?d.city+', ':'')+(d.country_name||d.country_code||''),lat:d.latitude,lon:d.longitude};
+    localStorage.setItem('cc_weather_location',JSON.stringify(loc));
+    return loc;
+  }catch{ return null; }
+}
 // The saved location is widget *data*, not just layout, and it goes straight
 // into a URL and (via loc.name) into the DOM — so validate its shape here
 // rather than trusting whatever is in localStorage. A partially-written or
@@ -15431,7 +15447,9 @@ async function saveWeatherLocation(){
 }
 async function renderClockWeatherWidget(body){
   if(!body) return;
-  const loc=getWeatherLocation();
+  let loc=getWeatherLocation();
+  // Silently auto-detect on first render if the user hasn't set a location yet.
+  if(!loc) loc=await _autoDetectWeatherLocation();
   body.innerHTML='<div id="dash-clock-time" style="font-size:38px;font-weight:600;letter-spacing:-.5px">--:--</div><div id="dash-clock-date" style="font-size:12px;opacity:.85;margin-bottom:8px"></div><div id="dash-clock-weather" style="font-size:14px;font-weight:500;opacity:.95">'+(loc?'Loading weather…':'Set your country in Settings → Customize UI')+'</div>';
   if(_clockTimer){ clearInterval(_clockTimer); _clockTimer=null; }
   let utcOffsetSec=null;
