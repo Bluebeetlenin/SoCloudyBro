@@ -674,7 +674,7 @@
 .scb-u-245 { max-width:520px;height:min(620px,86vh);padding:0;overflow:hidden;display:flex;flex-direction:column }
 .scb-u-246 { padding:18px 20px 12px }
 .scb-u-247 { flex:1;overflow-y:auto;padding:0 20px 14px }
-.scb-u-248 { max-width:min(92vw,1120px);height:min(88vh,900px);padding:0;overflow:hidden }
+.scb-u-248 { width:min(96vw,1400px);height:min(94vh,1050px);padding:0;overflow:hidden }
 .scb-u-249 { padding:20px 20px 14px }
 .scb-u-250 { font-size:13px;color:var(--text2);line-height:1.55;margin:0 0 10px }
 .scb-u-251 { font-size:12px;color:var(--text2);line-height:1.6;background:var(--surface2,rgba(127,127,127,.08));border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px }
@@ -6372,7 +6372,9 @@ window._launchDiagnostics = async function(){
   }).join('');
   const summaryColor=fails.length?'var(--danger,#e74c3c)':warns.length?'#f39c12':'var(--success,#27ae60)';
   const summaryLabel=fails.length?fails.length+' failure'+(fails.length>1?'s':''):warns.length?warns.length+' warning'+(warns.length>1?'s':''):'All clear';
-  document.getElementById('diag-results').innerHTML=`
+  const _diagResultsEl=document.getElementById('diag-results');
+  if(!_diagResultsEl) return;
+  _diagResultsEl.innerHTML=`
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
       <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;flex:1;min-width:80px;text-align:center">
         <div style="font-size:20px;font-weight:700;color:var(--success,#27ae60)">${passes.length}</div>
@@ -20181,8 +20183,8 @@ async function sendAdminWeeklyDigest(btn){
   if(!requirePermission('digest_send')) return;
   if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
   try{
-    const [users,convData,reports]=await Promise.all([getUsers(),getBin(CONVOS_BIN),getReports().catch(()=>[])]);
-    const convos=(convData.conversations||[]).filter(Boolean);
+    const [users,convData,reports]=await Promise.all([getUsers(),getBin(CONVOS_BIN).catch(()=>({})),getReports().catch(()=>[])]);
+    const convos=(convData&&convData.conversations||[]).filter(Boolean);
     const now=Date.now(), weekMs=7*86400000;
     const activeWeek=users.filter(u=>u.lastSeen&&(now-u.lastSeen)<weekMs).length;
     const newWeek=users.filter(u=>u.createdAt&&(now-u.createdAt)<weekMs).length;
@@ -20243,8 +20245,8 @@ async function maybeAutoSendWeeklyDigest(){
 }
 async function sendAdminWeeklyDigestSilent(){
   if(!requireAdmin(true)) return;
-  const [users,convData,reports]=await Promise.all([getUsers(),getBin(CONVOS_BIN),getReports().catch(()=>[])]);
-  const convos=(convData.conversations||[]).filter(Boolean);
+  const [users,convData,reports]=await Promise.all([getUsers(),getBin(CONVOS_BIN).catch(()=>({})),getReports().catch(()=>[])]);
+  const convos=(convData&&convData.conversations||[]).filter(Boolean);
   const now=Date.now(), weekMs=7*86400000;
   const activeWeek=users.filter(u=>u.lastSeen&&(now-u.lastSeen)<weekMs).length;
   const newWeek=users.filter(u=>u.createdAt&&(now-u.createdAt)<weekMs).length;
@@ -20343,8 +20345,8 @@ async function renderAdminOverviewTab(){
   const body=document.getElementById('admin-dashboard-body');
   body.innerHTML='<div style="padding:10px;color:var(--muted)">Loading stats…</div>';
   try{
-    const [users,convData,reports]=await Promise.all([getUsers(),getBin(CONVOS_BIN),getReports().catch(()=>[])]);
-    const convos=(convData.conversations||[]).filter(Boolean);
+    const [users,convData,reports]=await Promise.all([getUsers(),getBin(CONVOS_BIN).catch(()=>({})),getReports().catch(()=>[])]);
+    const convos=(convData&&convData.conversations||[]).filter(Boolean);
     const now=Date.now();
     const dayMs=86400000;
 
