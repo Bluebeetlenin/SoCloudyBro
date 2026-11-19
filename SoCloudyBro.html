@@ -1505,6 +1505,9 @@ select{cursor:pointer}
 
 /* ── GROUP PANEL ── */
 .group-avatar{width:38px;height:38px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0}
+#gp-avatar{position:relative;cursor:pointer;width:72px;height:72px;border-radius:14px;font-size:28px}
+#gp-avatar::after{content:'📷';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);border-radius:14px;font-size:22px;opacity:0;transition:opacity 0.2s}
+#gp-avatar:hover::after{opacity:1}
 
 /* ── AUTH TABS ── */
 .auth-tabs { display: flex; gap: 4px; margin-top: 18px; background: var(--bg3); padding: 4px; border-radius: var(--r-sm); }
@@ -2517,6 +2520,40 @@ input[type=number]:focus,input[type=date]:focus,textarea:focus {
   background:linear-gradient(180deg,var(--surface) 0%,var(--bg2) 100%);
   box-shadow:0 1px 0 rgba(255,255,255,0.05);
 }
+/* ── Profile Badges (Discord-style) ─────────────────────────────────────── */
+#user-profile-badges {
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+  padding:0 0 6px;min-height:0;
+}
+#user-profile-badges:empty { display:none; }
+.profile-badge {
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px 4px 8px;border-radius:20px;
+  background:var(--pb-bg,rgba(90,82,213,0.15));
+  border:1px solid var(--pb-color,#5a52d5);
+  color:var(--pb-color,#5a52d5);
+  font-size:12px;font-weight:600;cursor:default;
+  transition:transform 0.15s,box-shadow 0.15s;
+  white-space:nowrap;
+}
+.profile-badge:hover {
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+}
+.profile-badge .pb-icon { font-size:13px;line-height:1; }
+.profile-badge .pb-label { font-size:11px;letter-spacing:0.01em; }
+/* Hover card — compact icon-only badge row */
+#user-hover-card-badges {
+  display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;
+}
+#user-hover-card-badges:empty { display:none; }
+.hc-badge {
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:7px;font-size:14px;
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);
+  cursor:default;transition:transform 0.1s;
+}
+.hc-badge:hover { transform:scale(1.15); }
 /* end ui-redesign */
 </style>
 </head>
@@ -4980,6 +5017,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <div class="scb-u-189" id="user-profile-status"></div>
       <div class="scb-u-190" id="user-profile-bio"></div>
       <div class="scb-u-191" id="user-profile-joined"></div>
+      <div id="user-profile-badges"></div>
       <button class="btn btn-full scb-u-192" id="user-profile-msg-btn" onclick="quickMessageUser(_userProfileTarget)">💬 Message</button>
     </div>
   </div>
@@ -4989,6 +5027,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
   <div class="scb-u-193" id="user-hover-card-avatar"></div>
   <div class="scb-u-194">
     <div class="scb-u-195" id="user-hover-card-name"></div>
+    <div id="user-hover-card-badges"></div>
     <div class="scb-u-196" id="user-hover-card-status"></div>
     <div class="scb-u-197" id="user-hover-card-bio"></div>
     <button class="btn btn-sm scb-u-198" id="user-hover-card-msg-btn" onclick="quickMessageUser(_userHoverCardTarget)">💬 Message</button>
@@ -5188,7 +5227,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
   <div class="modal scb-u-221">
     <div class="modal-header">
       <div class="scb-u-222">
-        <div class="group-avatar scb-u-223" id="gp-avatar" onclick="if(isGroupAdmin())openAvatarEditor(false,true)">👥</div>
+        <div class="group-avatar scb-u-223" id="gp-avatar" onclick="if(isGroupAdmin())openGroupAvatarEdit()" title="Click to change group icon">👥</div>
         <div class="scb-u-37">
           <div class="scb-u-215" id="gp-name"></div>
           <div class="scb-u-149" id="gp-info-text"></div>
@@ -11284,6 +11323,20 @@ const PRESET_AVATARS=[
   {type:'emoji',emoji:'⚔️'},{type:'emoji',emoji:'🛡️'},{type:'emoji',emoji:'🗡️'},
   {type:'emoji',emoji:'🔑'},{type:'emoji',emoji:'💣'},{type:'emoji',emoji:'🧲'},
 ];
+function openGroupAvatarEdit(){
+  avatarTarget = 'group-edit';
+  document.getElementById('avatar-modal-title').textContent = 'Change Group Icon';
+  const presets = document.getElementById('avatar-presets');
+  presets.innerHTML = '';
+  PRESET_AVATARS.forEach((p, i) => {
+    const div = document.createElement('div'); div.className = 'preset-av';
+    if (p.type === 'gradient') { div.style.background = p.bg; div.textContent = p.label; }
+    else { div.textContent = p.emoji; div.style.background = 'var(--surface2)'; div.style.fontSize = '26px'; }
+    div.onclick = () => selectPresetAvatar(p, i);
+    presets.appendChild(div);
+  });
+  openModal('avatar-modal');
+}
 function openAvatarEditor(forSetup=false,forGroup=false){
   avatarTarget = forSetup ? 'setup' : forGroup ? 'group' : 'profile';
   
@@ -11318,7 +11371,7 @@ function avatarToDataUrl(p,name='?'){
   return c.toDataURL('image/png');
 }
 function selectPresetAvatar(p,i){
-  const name=avatarTarget==='group'?(document.getElementById('grp-name').value||'G'):(me?me.name:'?');
+  const name=(avatarTarget==='group')?(document.getElementById('grp-name').value||'G'):(avatarTarget==='group-edit')?(activeConvo?activeConvo.name||'G':'G'):(me?me.name:'?');
   const url=avatarToDataUrl(p,name);
   applyAvatar(url);
   document.querySelectorAll('.preset-av').forEach((el,j)=>el.classList.toggle('selected',j===i));
@@ -11346,6 +11399,21 @@ function uploadAvatar(input){
 function applyAvatar(url){
   if(avatarTarget==='setup'){tempSetupAvatar=url;setAvatarEl('setup-av-preview',url);}
   else if(avatarTarget==='group'){tempGroupAvatar=url;setAvatarEl('grp-av-preview',url);}
+  else if(avatarTarget==='group-edit'){
+    if(!activeConvo) return;
+    // Update the in-memory conv and contact records, then persist
+    if(convosCache){const conv=convosCache.find(x=>x&&x.key===activeConvo.key);if(conv){conv.avatar=url;saveConvos();}}
+    activeConvo.avatar=url;
+    const ci=contacts.find(c=>c&&c.key===activeConvo.key);
+    if(ci){ci.avatar=url;saveStorage();}
+    // Refresh group panel avatar and chat header
+    const gpAv=document.getElementById('gp-avatar');
+    if(gpAv){gpAv.innerHTML=`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>`;gpAv.style.background='';}
+    const haEl=document.getElementById('chat-header-avatar');
+    if(haEl&&haEl.style){haEl.innerHTML=`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"/>`;haEl.style.background='';}
+    renderSidebar();
+    showToast('Group icon updated','');
+  }
   else{
     if(me){me.avatar=url;saveStorage();renderMyCard();updateSettingsPanel();registerOrUpdate();}
   }
@@ -18548,6 +18616,7 @@ function openUserProfile(number) {
   document.getElementById('user-profile-bio').textContent = bio || (u.customStatus ? dec(u.customStatus) : '');
   const joinedEl = document.getElementById('user-profile-joined');
   joinedEl.textContent = u.createdAt ? 'Joined ' + new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '';
+  renderProfileBadges(document.getElementById('user-profile-badges'), number, false);
   const msgBtn = document.getElementById('user-profile-msg-btn');
   // Messaging yourself isn't a real action — nothing else in the app
   // offers a "DM yourself" flow, so hide it rather than letting it error.
@@ -18606,6 +18675,7 @@ function showUserHoverCard(number, anchorEl) {
   avEl.innerHTML = ''; renderAvatar(avEl, { name: dec(u.name || ''), avatar: u.avatar || '' }, 52);
   const name = dec(u.name || '') || ('#' + number);
   document.getElementById('user-hover-card-name').innerHTML = esc(name) + verifiedBadge(number) + equippedBadgeHtml(number);
+  renderProfileBadges(document.getElementById('user-hover-card-badges'), number, true);
   const online = isOnline(u.lastSeen);
   document.getElementById('user-hover-card-status').innerHTML = online
     ? '<span style="color:#3ba55d">● Online</span>'
@@ -20064,6 +20134,38 @@ async function submitAdminResetAccount(){
 function verifiedBadge(num){
   const u=lookupUser(num);
   return (u&&u.verified) ? ' <span class="verified-badge" title="Verified by admin">✓</span>' : '';
+}
+
+// ── PROFILE BADGES ────────────────────────────────────────────────────────────
+const _BADGE_DEFS = [
+  { id:'verified',  icon:'✦', label:'Verified',      desc:'Verified by an admin',         color:'#4f8ef7', bg:'rgba(79,142,247,0.15)' },
+  { id:'early',     icon:'🌱', label:'Early Adopter', desc:'One of the first to join',     color:'#10b981', bg:'rgba(16,185,129,0.15)' },
+  { id:'owner',     icon:'👑', label:'Server Owner',  desc:'Owns a community server',      color:'#f59e0b', bg:'rgba(245,158,11,0.15)' },
+  { id:'active',    icon:'⚡', label:'Active Member', desc:'Highly active in the community',color:'#a78bfa',bg:'rgba(167,139,250,0.15)' },
+  { id:'supporter', icon:'💜', label:'Supporter',     desc:'Supports SoCloudyBro',         color:'#ec4899', bg:'rgba(236,72,153,0.15)' },
+];
+// Accounts created before this timestamp (~Nov 12 2025) get the Early Adopter badge.
+const _EARLY_CUTOFF = 1762905600000;
+function _getProfileBadges(number){
+  const u=lookupUser(number);
+  if(!u) return [];
+  const ids=[];
+  if(u.verified) ids.push('verified');
+  if(u.createdAt&&u.createdAt<_EARLY_CUTOFF) ids.push('early');
+  if(contacts&&contacts.some(c=>c.type==='group'&&c.isServer&&c.admins&&c.admins[0]===number)) ids.push('owner');
+  if(u.msgCount&&u.msgCount>=500) ids.push('active');
+  if(u.supporter) ids.push('supporter');
+  return ids.map(id=>_BADGE_DEFS.find(d=>d.id===id)).filter(Boolean);
+}
+function renderProfileBadges(el, number, compact){
+  if(!el) return;
+  const badges=_getProfileBadges(number);
+  if(!badges.length){ el.innerHTML=''; return; }
+  if(compact){
+    el.innerHTML=badges.map(b=>`<span class="hc-badge" title="${esc(b.label+' — '+b.desc)}">${b.icon}</span>`).join('');
+  } else {
+    el.innerHTML=badges.map(b=>`<span class="profile-badge" style="--pb-color:${b.color};--pb-bg:${b.bg}" title="${esc(b.desc)}"><span class="pb-icon">${b.icon}</span><span class="pb-label">${esc(b.label)}</span></span>`).join('');
+  }
 }
 function adminMessage(num){
   if(!hasPermission('users_view')&&!hasPermission('users_ban')){ showToast('Access denied',scbErr('SCB-ADMIN-01','This action is for administrators only.')); return; }
