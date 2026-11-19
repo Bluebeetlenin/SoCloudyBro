@@ -2520,29 +2520,31 @@ input[type=number]:focus,input[type=date]:focus,textarea:focus {
   background:linear-gradient(180deg,var(--surface) 0%,var(--bg2) 100%);
   box-shadow:0 1px 0 rgba(255,255,255,0.05);
 }
-/* ── Profile Badges (Discord-style) ─────────────────────────────────────── */
+/* ── Lifetime Badges (tiered, Discord-style) ─────────────────────────────── */
 #user-profile-badges {
   display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
-  padding:0 0 6px;min-height:0;
+  padding:2px 0 8px;
 }
 #user-profile-badges:empty { display:none; }
-.profile-badge {
+.lt-badge {
   display:inline-flex;align-items:center;gap:5px;
-  padding:4px 10px 4px 8px;border-radius:20px;
-  background:var(--pb-bg,rgba(90,82,213,0.15));
-  border:1px solid var(--pb-color,#5a52d5);
-  color:var(--pb-color,#5a52d5);
-  font-size:12px;font-weight:600;cursor:default;
-  transition:transform 0.15s,box-shadow 0.15s;
-  white-space:nowrap;
+  padding:5px 11px 5px 8px;border-radius:22px;
+  background:var(--ltb-bg,rgba(90,82,213,0.14));
+  border:1px solid var(--ltb-color,rgba(90,82,213,0.4));
+  color:var(--ltb-color,#a5b4fc);
+  font-size:12px;font-weight:600;cursor:pointer;
+  transition:transform 0.14s,box-shadow 0.14s,border-color 0.14s;
+  white-space:nowrap;user-select:none;
 }
-.profile-badge:hover {
-  transform:translateY(-1px);
-  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+.lt-badge:hover {
+  transform:translateY(-2px);
+  box-shadow:0 5px 16px rgba(0,0,0,0.3);
+  border-color:var(--ltb-color,#a5b4fc);
 }
-.profile-badge .pb-icon { font-size:13px;line-height:1; }
-.profile-badge .pb-label { font-size:11px;letter-spacing:0.01em; }
-/* Hover card — compact icon-only badge row */
+.lt-badge .ltb-icon { font-size:15px;line-height:1; }
+.lt-badge .ltb-tier { font-size:10px;opacity:0.7;text-transform:uppercase;letter-spacing:0.06em; }
+.lt-badge .ltb-name { font-size:12px; }
+/* Hover card compact badges */
 #user-hover-card-badges {
   display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;
 }
@@ -2550,10 +2552,43 @@ input[type=number]:focus,input[type=date]:focus,textarea:focus {
 .hc-badge {
   display:inline-flex;align-items:center;justify-content:center;
   width:26px;height:26px;border-radius:7px;font-size:14px;
-  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);
-  cursor:default;transition:transform 0.1s;
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);
+  cursor:pointer;transition:transform 0.1s,background 0.1s;
 }
-.hc-badge:hover { transform:scale(1.15); }
+.hc-badge:hover { transform:scale(1.18);background:rgba(255,255,255,0.12); }
+/* Badge detail modal */
+#badge-detail-header {
+  background:var(--bdm-grad,linear-gradient(145deg,#0c1830,#1a0d35));
+  padding:28px 24px 20px;text-align:center;position:relative;
+}
+#badge-detail-header button.modal-close { position:absolute;top:12px;right:14px; }
+.bdm-big-icon {
+  font-size:60px;line-height:1;margin-bottom:10px;
+  display:block;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+}
+.bdm-cat-label { font-size:11px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px; }
+.bdm-tier-name { font-size:26px;font-weight:900;color:#fff;letter-spacing:-0.02em;margin-bottom:4px; }
+.bdm-meta { font-size:12px;color:rgba(255,255,255,0.45); }
+.bdm-progress-wrap { background:var(--surface2);border-radius:12px;padding:16px 18px;margin-bottom:0; }
+.bdm-progress-label { font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:500; }
+.bdm-track-row { display:flex;align-items:center;gap:10px; }
+.bdm-track-icon { font-size:22px;line-height:1; }
+.bdm-track { flex:1;height:7px;background:rgba(255,255,255,0.08);border-radius:10px;overflow:hidden; }
+.bdm-fill { height:100%;border-radius:10px;background:linear-gradient(90deg,var(--accent),#9333ea);transition:width 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+.bdm-next-hint { font-size:11px;color:var(--muted);margin-top:7px;text-align:center; }
+.bdm-tiers-label { font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);padding:14px 0 6px;font-weight:600; }
+.bdm-tier-row {
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+  font-size:13px;transition:background 0.15s;
+}
+.bdm-tier-row.unlocked { color:var(--text); }
+.bdm-tier-row.locked { color:var(--muted); }
+.bdm-tier-row.current { background:rgba(90,82,213,0.15);border:1px solid rgba(90,82,213,0.3); }
+.bdm-tier-row-icon { font-size:22px;line-height:1;width:28px;text-align:center; }
+.bdm-tier-row-info { flex:1; }
+.bdm-tier-row-name { font-weight:600; }
+.bdm-tier-row-req { font-size:11px;opacity:0.65; }
+.bdm-lock { font-size:12px;opacity:0.5; }
 /* end ui-redesign */
 </style>
 </head>
@@ -5020,6 +5055,15 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <div id="user-profile-badges"></div>
       <button class="btn btn-full scb-u-192" id="user-profile-msg-btn" onclick="quickMessageUser(_userProfileTarget)">💬 Message</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="badge-detail-modal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header" id="badge-detail-header">
+      <button class="modal-close" onclick="closeModal('badge-detail-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="badge-detail-body"></div>
   </div>
 </div>
 
@@ -20136,36 +20180,196 @@ function verifiedBadge(num){
   return (u&&u.verified) ? ' <span class="verified-badge" title="Verified by admin">✓</span>' : '';
 }
 
-// ── PROFILE BADGES ────────────────────────────────────────────────────────────
-const _BADGE_DEFS = [
-  { id:'verified',  icon:'✦', label:'Verified',      desc:'Verified by an admin',         color:'#4f8ef7', bg:'rgba(79,142,247,0.15)' },
-  { id:'early',     icon:'🌱', label:'Early Adopter', desc:'One of the first to join',     color:'#10b981', bg:'rgba(16,185,129,0.15)' },
-  { id:'owner',     icon:'👑', label:'Server Owner',  desc:'Owns a community server',      color:'#f59e0b', bg:'rgba(245,158,11,0.15)' },
-  { id:'active',    icon:'⚡', label:'Active Member', desc:'Highly active in the community',color:'#a78bfa',bg:'rgba(167,139,250,0.15)' },
-  { id:'supporter', icon:'💜', label:'Supporter',     desc:'Supports SoCloudyBro',         color:'#ec4899', bg:'rgba(236,72,153,0.15)' },
+// ── LIFETIME BADGES (tiered, Discord-style) ───────────────────────────────────
+// Each category has: id, label, color, bg, stat(number)→value, unit, tiers[]
+// tiers: [{icon, name, threshold}] sorted ascending
+const LIFETIME_BADGE_CATS = [
+  {
+    id:'age', label:'Account Age', color:'#10b981', bg:'rgba(16,185,129,0.14)',
+    unit:'months',
+    stat(n){ const u=lookupUser(n); if(!u||!u.createdAt) return 0; return (Date.now()-u.createdAt)/2592000000; },
+    tiers:[
+      {icon:'🌱',name:'Newcomer',   threshold:0.25,  req:'1 week'},
+      {icon:'🌿',name:'Member',     threshold:1,     req:'1 month'},
+      {icon:'🍃',name:'Regular',    threshold:6,     req:'6 months'},
+      {icon:'🌳',name:'Veteran',    threshold:12,    req:'1 year'},
+      {icon:'🏔️',name:'Elder',      threshold:24,    req:'2 years'},
+      {icon:'👑',name:'Legend',     threshold:36,    req:'3 years'},
+    ]
+  },
+  {
+    id:'msgs', label:'Chatter', color:'#60a5fa', bg:'rgba(96,165,250,0.14)',
+    unit:'messages',
+    stat(n){
+      if(!convosCache) return 0;
+      return convosCache.reduce((s,c)=>s+((c&&c.memberMsgCount&&c.memberMsgCount[n])||0),0);
+    },
+    tiers:[
+      {icon:'💬',name:'Talker',     threshold:10,    req:'10 messages'},
+      {icon:'🗣️',name:'Chatty',     threshold:50,    req:'50 messages'},
+      {icon:'📢',name:'Blabber',    threshold:250,   req:'250 messages'},
+      {icon:'📝',name:'Wordsmith',  threshold:1000,  req:'1,000 messages'},
+      {icon:'📚',name:'Oracle',     threshold:5000,  req:'5,000 messages'},
+    ]
+  },
+  {
+    id:'social', label:'Social', color:'#a78bfa', bg:'rgba(167,139,250,0.14)',
+    unit:'contacts',
+    stat(n){
+      // Count unique DM contacts visible in local data for this number
+      if(n===me?.number) return (contacts||[]).filter(c=>c.type!=='group').length;
+      // For others: count convos where both they and the viewer are participants (approximation)
+      if(!convosCache) return 0;
+      return convosCache.filter(c=>c&&c.type!=='group'&&(c.participants||[]).includes(n)).length;
+    },
+    tiers:[
+      {icon:'👋',name:'Friendly',   threshold:2,     req:'2 contacts'},
+      {icon:'🤝',name:'Social',     threshold:8,     req:'8 contacts'},
+      {icon:'🎉',name:'Popular',    threshold:20,    req:'20 contacts'},
+      {icon:'🌐',name:'Influencer', threshold:50,    req:'50 contacts'},
+    ]
+  },
+  {
+    id:'builder', label:'Builder', color:'#f59e0b', bg:'rgba(245,158,11,0.14)',
+    unit:'groups',
+    stat(n){
+      if(!convosCache) return 0;
+      return convosCache.filter(c=>c&&c.type==='group'&&c.admins&&c.admins[0]===n).length;
+    },
+    tiers:[
+      {icon:'🔨',name:'Creator',    threshold:1,     req:'1 group'},
+      {icon:'🏗️',name:'Organizer',  threshold:3,     req:'3 groups'},
+      {icon:'🏛️',name:'Leader',     threshold:5,     req:'5 groups'},
+      {icon:'🌍',name:'Pioneer',    threshold:10,    req:'10 groups'},
+    ]
+  },
+  {
+    id:'explorer', label:'Explorer', color:'#2dd4bf', bg:'rgba(45,212,191,0.14)',
+    unit:'groups joined',
+    stat(n){
+      if(!convosCache) return 0;
+      return convosCache.filter(c=>c&&c.type==='group'&&(c.participants||c.members||[]).includes(n)).length;
+    },
+    tiers:[
+      {icon:'🗺️',name:'Curious',    threshold:2,     req:'2 groups'},
+      {icon:'🧭',name:'Explorer',   threshold:5,     req:'5 groups'},
+      {icon:'⛺',name:'Adventurer', threshold:10,    req:'10 groups'},
+      {icon:'🚀',name:'Wanderer',   threshold:20,    req:'20 groups'},
+    ]
+  },
+  {
+    id:'verified', label:'Verified', color:'#4f8ef7', bg:'rgba(79,142,247,0.14)',
+    unit:'',
+    stat(n){ const u=lookupUser(n); return (u&&u.verified)?1:0; },
+    tiers:[
+      {icon:'✦', name:'Verified',   threshold:1,     req:'Admin-granted'},
+    ]
+  },
+  {
+    id:'supporter', label:'Supporter', color:'#ec4899', bg:'rgba(236,72,153,0.14)',
+    unit:'',
+    stat(n){ const u=lookupUser(n); return (u&&u.supporter)?1:0; },
+    tiers:[
+      {icon:'💜', name:'Supporter', threshold:1,     req:'Supports SoCloudyBro'},
+    ]
+  },
 ];
-// Accounts created before this timestamp (~Nov 12 2025) get the Early Adopter badge.
-const _EARLY_CUTOFF = 1762905600000;
-function _getProfileBadges(number){
-  const u=lookupUser(number);
-  if(!u) return [];
-  const ids=[];
-  if(u.verified) ids.push('verified');
-  if(u.createdAt&&u.createdAt<_EARLY_CUTOFF) ids.push('early');
-  if(contacts&&contacts.some(c=>c.type==='group'&&c.isServer&&c.admins&&c.admins[0]===number)) ids.push('owner');
-  if(u.msgCount&&u.msgCount>=500) ids.push('active');
-  if(u.supporter) ids.push('supporter');
-  return ids.map(id=>_BADGE_DEFS.find(d=>d.id===id)).filter(Boolean);
+
+function _ltBadgeEarned(cat, number){
+  const val = cat.stat(number);
+  let tierIdx = -1;
+  for(let i=0;i<cat.tiers.length;i++){ if(val>=cat.tiers[i].threshold) tierIdx=i; }
+  if(tierIdx<0) return null;
+  return {cat, tierIdx, tier:cat.tiers[tierIdx], value:val};
 }
+
+function getEarnedBadges(number){
+  return LIFETIME_BADGE_CATS.map(cat=>_ltBadgeEarned(cat,number)).filter(Boolean);
+}
+
 function renderProfileBadges(el, number, compact){
   if(!el) return;
-  const badges=_getProfileBadges(number);
-  if(!badges.length){ el.innerHTML=''; return; }
+  const earned = getEarnedBadges(number);
+  if(!earned.length){ el.innerHTML=''; return; }
   if(compact){
-    el.innerHTML=badges.map(b=>`<span class="hc-badge" title="${esc(b.label+' — '+b.desc)}">${b.icon}</span>`).join('');
+    el.innerHTML = earned.map(b=>
+      `<span class="hc-badge" title="${esc(b.cat.label+': '+b.tier.name)}" onclick="openBadgeDetail('${esc(b.cat.id)}',${Number(number)})">${b.tier.icon}</span>`
+    ).join('');
   } else {
-    el.innerHTML=badges.map(b=>`<span class="profile-badge" style="--pb-color:${b.color};--pb-bg:${b.bg}" title="${esc(b.desc)}"><span class="pb-icon">${b.icon}</span><span class="pb-label">${esc(b.label)}</span></span>`).join('');
+    el.innerHTML = earned.map(b=>
+      `<span class="lt-badge" style="--ltb-color:${b.cat.color};--ltb-bg:${b.cat.bg}" onclick="openBadgeDetail('${esc(b.cat.id)}',${Number(number)})">` +
+      `<span class="ltb-icon">${b.tier.icon}</span>` +
+      `<span class="ltb-name">${esc(b.tier.name)}</span>` +
+      `</span>`
+    ).join('');
   }
+}
+
+function openBadgeDetail(catId, number){
+  const cat = LIFETIME_BADGE_CATS.find(c=>c.id===catId);
+  if(!cat) return;
+  const val = cat.stat(number);
+  let tierIdx = -1;
+  for(let i=0;i<cat.tiers.length;i++){ if(val>=cat.tiers[i].threshold) tierIdx=i; }
+  if(tierIdx<0) return;
+  const tier = cat.tiers[tierIdx];
+  const nextTier = cat.tiers[tierIdx+1]||null;
+
+  // Header gradient based on badge color
+  const hdr = document.getElementById('badge-detail-header');
+  hdr.style.background = `linear-gradient(145deg, color-mix(in srgb, ${cat.color} 20%, #0c1012), color-mix(in srgb, ${cat.color} 10%, #0c1012))`;
+
+  // Build body
+  const body = document.getElementById('badge-detail-body');
+  const u = lookupUser(number);
+  const metaParts = [];
+  if(cat.unit && val>=1) metaParts.push(Math.round(val)+' '+cat.unit);
+  const statHtml = metaParts.length ? `<div class="bdm-meta">${esc(metaParts.join(' • '))}</div>` : '';
+
+  let progressHtml = '';
+  if(nextTier){
+    const pct = Math.min(100, Math.round((val/nextTier.threshold)*100));
+    const needed = nextTier.threshold - val;
+    const neededFmt = needed<1 ? 'less than 1' : (Number.isInteger(needed)?needed:needed.toFixed(1));
+    progressHtml = `
+      <div class="bdm-progress-wrap">
+        <div class="bdm-progress-label">Your progress</div>
+        <div class="bdm-track-row">
+          <span class="bdm-track-icon">${tier.icon}</span>
+          <div class="bdm-track"><div class="bdm-fill" style="width:${pct}%"></div></div>
+          <span class="bdm-track-icon">${nextTier.icon}</span>
+        </div>
+        <div class="bdm-next-hint">${neededFmt} more ${cat.unit||'needed'} to unlock <strong>${esc(nextTier.name)}</strong></div>
+      </div>`;
+  } else {
+    progressHtml = `<div class="bdm-progress-wrap" style="text-align:center;color:var(--muted);font-size:12px">🏆 Max tier reached!</div>`;
+  }
+
+  const tiersHtml = cat.tiers.map((t,i)=>{
+    const cls = i===tierIdx ? 'bdm-tier-row current unlocked' : i<tierIdx ? 'bdm-tier-row unlocked' : 'bdm-tier-row locked';
+    const lock = i>tierIdx ? '<span class="bdm-lock">🔒</span>' : '';
+    return `<div class="${cls}">
+      <span class="bdm-tier-row-icon">${t.icon}</span>
+      <div class="bdm-tier-row-info">
+        <div class="bdm-tier-row-name">${esc(t.name)}</div>
+        <div class="bdm-tier-row-req">${esc(t.req)}</div>
+      </div>${lock}
+    </div>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div style="text-align:center;padding:0 0 16px">
+      <span class="bdm-big-icon">${tier.icon}</span>
+      <div class="bdm-cat-label">${esc(cat.label)}</div>
+      <div class="bdm-tier-name">${esc(tier.name.toUpperCase())}</div>
+      ${statHtml}
+    </div>
+    ${progressHtml}
+    <div class="bdm-tiers-label">All tiers</div>
+    ${tiersHtml}`;
+
+  closeModal('user-profile-modal');
+  openModal('badge-detail-modal');
 }
 function adminMessage(num){
   if(!hasPermission('users_view')&&!hasPermission('users_ban')){ showToast('Access denied',scbErr('SCB-ADMIN-01','This action is for administrators only.')); return; }
