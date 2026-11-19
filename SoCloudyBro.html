@@ -21029,9 +21029,12 @@ const SCB_CANONICAL_RULES = {
     },
 
     "updates": {
-      // Any Firebase Auth session (anonymous or custom) — blocks unauthenticated REST dumps.
+      // Readable by any Firebase Auth session (anonymous or custom) so the
+      // in-browser update banner loads for every visitor. Writable only by
+      // admin (#2015) — prevents any authenticated user from posting fake
+      // app announcements.
       ".read": "auth != null",
-      ".write": "auth != null",
+      ".write": "auth != null && (auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))",
       ".indexOn": ["at", "author"]
     },
 
@@ -21044,29 +21047,32 @@ const SCB_CANONICAL_RULES = {
     },
 
     "calls": {
+      // Requires a real login (custom auth token) — anonymous page visitors
+      // cannot initiate or modify call records.
       ".read": "auth != null",
-      ".write": "auth != null",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
       ".indexOn": ["at", "caller", "callee", "status"]
     },
 
     "voice": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'"
     },
 
     "races": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'"
     },
 
     "syntax_meetings": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'"
     },
 
     "feedback": {
+      // Any logged-in user can submit feedback, but not anonymous visitors.
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'"
     },
 
     "admin_site": {
@@ -21114,10 +21120,11 @@ const SCB_CANONICAL_RULES = {
     },
 
     "errors": {
-      // Error log entries — writable by any authenticated session, readable by admin only.
-      // Admin reads all cross-session errors in the Error Log tab.
-      ".read": "auth != null",
-      ".write": "auth != null",
+      // Error log entries — writable by any real-auth session so logged-in
+      // users can report client errors; anonymous visitors cannot flood the
+      // log. Readable by admin only.
+      ".read": "auth != null && (auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
       ".indexOn": ["ts"]
     },
 
