@@ -2196,6 +2196,328 @@ body.device-tablet .msg-body{max-width:74%}
 .focus-mode #sb-restore-btn { display:flex; align-items:center; }
 /* speed button active state */
 .speed-btn.speed-active { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UI REDESIGN — Auth Screen, Dashboard & Sidebar Polish
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ── Setup Modal (Auth / Homepage) ──────────────────────────────────────── */
+#setup-modal .modal {
+  max-width:500px;
+  border-radius:20px;
+  box-shadow:0 32px 96px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.07);
+  border:none;
+}
+#setup-modal .modal-header {
+  background:linear-gradient(145deg,#0c1830 0%,#140c38 45%,#1a0d35 100%);
+  padding:30px 28px 22px;
+  position:relative;
+  overflow:hidden;
+}
+#setup-modal .modal-header::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 15% 65%,rgba(90,82,213,0.55) 0%,transparent 55%),
+    radial-gradient(circle at 88% 15%,rgba(168,85,247,0.35) 0%,transparent 50%),
+    radial-gradient(circle at 50% 110%,rgba(79,70,229,0.2) 0%,transparent 55%);
+  pointer-events:none;
+}
+#setup-modal .modal-header::after {
+  content:'';
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(90,82,213,0.7),rgba(168,85,247,0.5),transparent);
+}
+#setup-modal .modal-header h2 {
+  color:#fff;
+  font-size:22px;
+  font-weight:800;
+  letter-spacing:-0.025em;
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  margin-bottom:5px;
+  padding-right:0;
+}
+#setup-modal .modal-header h2::before {
+  content:'☁️';
+  font-size:28px;
+  display:inline-block;
+  filter:drop-shadow(0 2px 10px rgba(90,82,213,0.7));
+  animation:scb-float 4s ease-in-out infinite;
+}
+#setup-modal .modal-header .auth-modal-tagline {
+  font-size:12px;
+  color:rgba(255,255,255,0.4);
+  font-weight:400;
+  position:relative;
+  margin-bottom:20px;
+  line-height:1.5;
+}
+#setup-modal .auth-tabs {
+  position:relative;
+  background:rgba(0,0,0,0.3);
+  border:1px solid rgba(255,255,255,0.1);
+}
+#setup-modal .auth-tab {
+  color:rgba(255,255,255,0.45);
+}
+#setup-modal .auth-tab.active {
+  background:linear-gradient(135deg,rgba(90,82,213,0.75),rgba(109,40,217,0.6));
+  color:#fff;
+  box-shadow:0 2px 14px rgba(90,82,213,0.45);
+  border:none;
+}
+#setup-modal .modal-body {
+  padding:18px 28px 6px;
+}
+#setup-modal .modal-footer {
+  padding:14px 28px 18px;
+}
+#setup-modal .field label {
+  font-weight:600;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.07em;
+  color:var(--muted);
+  margin-bottom:5px;
+  display:block;
+}
+#setup-modal input[type=text],
+#setup-modal input[type=email],
+#setup-modal input[type=password],
+#setup-modal input[type=number],
+#setup-modal input[type=date] {
+  background:var(--bg3);
+  border:1.5px solid rgba(255,255,255,0.09);
+  border-radius:10px;
+  padding:10px 14px;
+  transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;
+}
+#setup-modal input[type=text]:focus,
+#setup-modal input[type=email]:focus,
+#setup-modal input[type=password]:focus,
+#setup-modal input[type=number]:focus,
+#setup-modal input[type=date]:focus {
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(90,82,213,0.18);
+  background:var(--bg2);
+  outline:none;
+}
+#setup-modal .btn {
+  border-radius:10px;
+  padding:11px 20px;
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:0.01em;
+  background:linear-gradient(135deg,#5a52d5,#7c3aed);
+  box-shadow:0 4px 18px rgba(90,82,213,0.42);
+}
+#setup-modal .btn:hover {
+  opacity:1;
+  box-shadow:0 7px 28px rgba(90,82,213,0.55);
+  transform:translateY(-1px);
+}
+#setup-modal .btn:active {
+  transform:scale(0.98);
+  box-shadow:0 2px 10px rgba(90,82,213,0.35);
+}
+
+/* ── Titlebar ────────────────────────────────────────────────────────────── */
+#sb-titlebar {
+  background:linear-gradient(180deg,var(--bg3) 0%,var(--bg2) 100%);
+  border-bottom:1px solid rgba(255,255,255,0.07);
+}
+#sb-titlebar span {
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:-0.015em;
+  color:var(--text);
+}
+
+/* ── Sidebar Polish ──────────────────────────────────────────────────────── */
+#sidebar {
+  background:var(--bg2);
+  border-right:1px solid rgba(255,255,255,0.06);
+}
+#sb-head {
+  padding:12px 14px 10px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+#my-card {
+  border-radius:10px;
+  gap:11px;
+}
+#my-card:hover {
+  background:rgba(255,255,255,0.05);
+}
+#my-avatar-wrap::before {
+  content:'';
+  position:absolute;
+  inset:-2px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#9333ea);
+  opacity:0;
+  transition:opacity 0.2s;
+  z-index:-1;
+}
+#my-card:hover #my-avatar-wrap::before {
+  opacity:1;
+}
+#my-name {
+  font-size:13.5px;
+  font-weight:700;
+  letter-spacing:-0.01em;
+}
+#sb-search {
+  padding:7px 12px 5px;
+}
+#sb-search input {
+  border-radius:10px;
+  font-size:12.5px;
+  background:var(--bg3);
+  border:1.5px solid transparent;
+  transition:border-color 0.2s,background 0.2s,box-shadow 0.2s;
+}
+#sb-search input:focus {
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(90,82,213,0.14);
+  background:var(--bg2);
+}
+.sb-tab {
+  font-size:12.5px;
+  font-weight:600;
+  padding:5px 10px;
+  border-radius:8px;
+  letter-spacing:0.01em;
+}
+.sb-tab.active {
+  background:linear-gradient(135deg,var(--accent),#7c3aed);
+  color:#fff;
+  box-shadow:0 3px 12px rgba(90,82,213,0.4);
+}
+.sb-tab:hover:not(.active) {
+  background:rgba(255,255,255,0.06);
+  color:var(--text2);
+}
+#sb-list {
+  padding:4px 10px;
+}
+.sb-item {
+  border-radius:10px;
+}
+#sb-bottom {
+  border-top:1px solid rgba(255,255,255,0.06);
+  padding:8px 10px;
+  gap:2px;
+}
+#sb-bottom .icon-btn {
+  border-radius:8px;
+  color:var(--muted);
+}
+#sb-bottom .icon-btn:hover {
+  background:rgba(255,255,255,0.08);
+  color:var(--text);
+}
+
+/* ── Dashboard Welcome Banner ────────────────────────────────────────────── */
+#welcome-banner {
+  border-radius:16px;
+  min-height:168px;
+  border:1px solid rgba(255,255,255,0.1);
+  box-shadow:0 8px 36px rgba(0,0,0,0.3),0 1px 0 rgba(255,255,255,0.05) inset;
+}
+#welcome-banner-bg {
+  background:linear-gradient(140deg,#091628 0%,#120838 40%,#0d1a40 70%,#07101e 100%);
+}
+#welcome-greeting {
+  font-size:26px;
+  font-weight:900;
+  color:#fff;
+  letter-spacing:-0.03em;
+  line-height:1.1;
+  text-shadow:0 2px 24px rgba(90,82,213,0.5);
+}
+#welcome-sub {
+  font-size:12px;
+  color:rgba(255,255,255,0.45);
+  line-height:1.5;
+  margin-top:3px;
+}
+#welcome-chips {
+  margin-top:10px;
+  gap:6px;
+}
+.welcome-chip {
+  backdrop-filter:blur(10px);
+  font-weight:600;
+  font-size:11px;
+  padding:4px 11px;
+  transition:background 0.2s,border-color 0.2s;
+}
+
+/* ── Dashboard Grid ──────────────────────────────────────────────────────── */
+#dashboard-grid {
+  gap:14px;
+  margin-top:14px;
+}
+.dash-widget {
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:linear-gradient(145deg,var(--surface) 0%,var(--surface2) 100%);
+  box-shadow:0 4px 22px rgba(0,0,0,0.25),0 1px 0 rgba(255,255,255,0.04) inset;
+  padding:14px 16px;
+  transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s,border-color 0.22s;
+}
+.dash-widget:hover {
+  transform:translateY(-3px) scale(1.005);
+  box-shadow:0 14px 44px rgba(0,0,0,0.35),0 1px 0 rgba(255,255,255,0.07) inset;
+  border-color:rgba(90,82,213,0.28);
+}
+.dash-widget-title {
+  font-size:10.5px;
+  font-weight:700;
+  color:var(--muted);
+  letter-spacing:0.08em;
+  margin-bottom:8px;
+}
+.dash-widget.hero {
+  background:linear-gradient(135deg,#4330b8,#6d28d9,#9333ea,#c026d3,#7c3aed);
+  background-size:300% 300%;
+  border:none;
+  box-shadow:0 8px 36px rgba(109,40,217,0.5),0 1px 0 rgba(255,255,255,0.1) inset;
+  border-radius:14px;
+}
+.dash-widget.hero:hover {
+  box-shadow:0 18px 52px rgba(109,40,217,0.62),0 1px 0 rgba(255,255,255,0.1) inset;
+}
+
+/* ── Global input polish ─────────────────────────────────────────────────── */
+input[type=text],input[type=email],input[type=password],
+input[type=number],input[type=date],input[type=search],textarea {
+  transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;
+}
+input[type=text]:focus,input[type=email]:focus,input[type=password]:focus,
+input[type=number]:focus,input[type=date]:focus,textarea:focus {
+  box-shadow:0 0 0 3px rgba(90,82,213,0.14);
+}
+
+/* ── Scrollbar polish ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1);border-radius:10px; }
+::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.18); }
+
+/* ── Chat header polish ──────────────────────────────────────────────────── */
+#chat-header,#settings-header {
+  background:linear-gradient(180deg,var(--surface) 0%,var(--bg2) 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,0.05);
+}
+/* end ui-redesign */
 </style>
 </head>
 <body>
@@ -4327,6 +4649,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
   <div class="modal">
     <div class="modal-header">
       <h2>Welcome to SoCloudyBro</h2>
+      <p class="auth-modal-tagline">Chat · Groups · Servers · Voice — all in one place</p>
       <div class="auth-tabs">
         <div class="auth-tab active" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</div>
         <div class="auth-tab" id="tab-login" onclick="switchAuthTab('login')">Log In</div>
