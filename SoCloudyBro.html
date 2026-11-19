@@ -20887,8 +20887,7 @@ const SCB_CANONICAL_RULES = {
       // already carry an anonymous or custom token, so this is backwards-
       // compatible. Removes the ability to curl the DB without a token.
       ".read": "auth != null",
-      // Index at the users level so orderByChild('number') on fbdb.ref('users') works
-      ".indexOn": ["number", "linkedSoCloudyBro"],
+      ".indexOn": ["number", "linkedSoCloudyBro", "lastSeen", "createdAt", "online"],
       "$uid": {
         // A user may only write their own record (auth.token.number comes from
         // a real Firebase custom auth token minted by the firebase-rules
@@ -21023,11 +21022,9 @@ const SCB_CANONICAL_RULES = {
           ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'"
         },
         "messages": {
-          // Messages store their timestamp as "time" (see sendMsg() and every
-          // other message-creation site), not "at" — this was indexing a
-          // field that doesn't exist on any message until now.
-          ".indexOn": ["time"]
-        }
+          ".indexOn": ["time", "sender", "type"]
+        },
+        ".indexOn": ["updatedAt", "createdAt"]
       }
     },
 
@@ -21039,25 +21036,17 @@ const SCB_CANONICAL_RULES = {
     },
 
     "reports": {
-      // Stored per-report-id (see saveReports()) instead of one big array
-      // blob, specifically so this rule can tell "a new report" from "an
-      // edit to an existing one": anyone can file a NEW report (data doesn't
-      // exist yet at that id), resending an UNCHANGED existing report is
-      // always harmless (every caller re-saves the whole list after
-      // mutating one entry), and only an admin can actually modify or
-      // delete an existing report. Previously any authenticated user could
-      // wipe or rewrite the entire reports collection in one write.
       ".read": "auth != null",
+      ".indexOn": ["at", "reporter", "number", "resolved"],
       "$reportId": {
         ".write": "auth != null && (data.val() == newData.val() || !data.exists() || auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))"
       }
     },
 
     "calls": {
-      // WebRTC signalling — requires any auth session (anonymous or custom).
-      // Every in-browser visitor already has an anonymous session, so nothing breaks.
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null",
+      ".indexOn": ["at", "caller", "callee", "status"]
     },
 
     "voice": {
@@ -21089,6 +21078,9 @@ const SCB_CANONICAL_RULES = {
       ".write": "auth != null && (auth.token.number == '2015' || (root.child('users').child(auth.token.number).child('adminAccess').exists() && (!root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').exists() || root.child('users').child(auth.token.number).child('adminAccess').child('expiresAt').val() > now)))",
       "self_destructed_log": {
         ".indexOn": ["destroyedAt"]
+      },
+      "audit_log": {
+        ".indexOn": ["at", "author", "action"]
       }
     },
 
@@ -21127,6 +21119,117 @@ const SCB_CANONICAL_RULES = {
       ".read": "auth != null",
       ".write": "auth != null",
       ".indexOn": ["ts"]
+    },
+
+    // ── Presence ──────────────────────────────────────────────────────────────
+    // Per-user online/typing/lastSeen — separated from users/ so presence
+    // writes don't trigger full-user-record listeners or bump write quotas on
+    // the main profile.
+    "presence": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.token.number == $uid || auth.token.number == '2015')",
+        ".indexOn": ["lastSeen", "online"]
+      }
+    },
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    // Per-user push notification queue. Each entry is a pushed child with a
+    // type, payload, and ts. Writable by any real-auth user (to send a
+    // notification to another user), readable only by the recipient.
+    "notifications": {
+      "$uid": {
+        ".read": "auth.token.number == $uid",
+        ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
+        ".indexOn": ["ts", "type"]
+      }
+    },
+
+    // ── Reactions ─────────────────────────────────────────────────────────────
+    // Per-conversation emoji reactions keyed by messageId then userId.
+    // Any conversation member can read/write (enforced at app layer via memberSet).
+    "reactions": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
+      "$convoId": {
+        "$messageId": {
+          ".indexOn": ["at"]
+        }
+      }
+    },
+
+    // ── Read receipts ─────────────────────────────────────────────────────────
+    // Per-conversation read position per user: {lastReadTime, lastReadMsgId}.
+    // Readable by conversation members (enforced at app layer), writable only
+    // by the owner.
+    "read_receipts": {
+      ".read": "auth != null",
+      "$convoId": {
+        "$uid": {
+          ".write": "auth != null && auth.token.number == $uid"
+        }
+      }
+    },
+
+    // ── Pinned messages ───────────────────────────────────────────────────────
+    "pin_messages": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
+      "$convoId": {
+        ".indexOn": ["pinnedAt", "pinnedBy"]
+      }
+    },
+
+    // ── Polls ─────────────────────────────────────────────────────────────────
+    "polls": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
+      "$convoId": {
+        ".indexOn": ["createdAt", "createdBy"]
+      }
+    },
+
+    // ── User stats ────────────────────────────────────────────────────────────
+    // Lightweight counters kept out of users/ to avoid bloating profile reads.
+    // Writable only by the owner or admin; readable by any auth session.
+    "user_stats": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.token.number == $uid || auth.token.number == '2015')",
+        ".indexOn": ["messageCount", "joinedAt", "streak"]
+      }
+    },
+
+    // ── Blocked users ─────────────────────────────────────────────────────────
+    // Per-user block list keyed by blocked number. Readable only by owner.
+    "blocked": {
+      "$uid": {
+        ".read": "auth.token.number == $uid",
+        ".write": "auth != null && auth.token.number == $uid",
+        ".indexOn": ["blockedAt"]
+      }
+    },
+
+    // ── Invites ───────────────────────────────────────────────────────────────
+    // Invite codes for groups/servers. Writable by real-auth users (creator),
+    // readable by any auth session so the invite link works before login.
+    "invites": {
+      ".read": "auth != null",
+      "$code": {
+        ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
+        ".indexOn": ["convoId", "createdBy", "expiresAt"]
+      }
+    },
+
+    // ── Leaderboards ──────────────────────────────────────────────────────────
+    // Global and per-game leaderboard entries. Writable by real-auth users
+    // (the game engine writes the score), readable by any auth session.
+    "leaderboards": {
+      ".read": "auth != null",
+      "$game": {
+        ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
+        ".indexOn": ["score", "time", "number"]
+      }
     },
 
     // Block any other top-level path not listed above
