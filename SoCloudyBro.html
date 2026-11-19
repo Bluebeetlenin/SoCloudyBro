@@ -1333,7 +1333,7 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 .biz-bot-kw{font-size:12px;font-weight:600;color:var(--accent);flex-shrink:0;min-width:80px;overflow:hidden;text-overflow:ellipsis}
 .biz-bot-reply{font-size:12px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bot-auto-msg{font-size:11px;color:var(--muted);font-style:italic;text-align:center;margin:4px 0}
-#gif-picker{display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 10px 4px;box-shadow:0 -6px 24px rgba(0,0,0,.28);z-index:160;max-height:380px;box-sizing:border-box;display:none;flex-direction:column}
+#gif-picker{display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 10px 4px;box-shadow:0 -6px 24px rgba(0,0,0,.28);z-index:160;max-height:380px;box-sizing:border-box;flex-direction:column}
 #gif-picker.visible{display:flex}
 #gif-search{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:7px 14px;outline:none;margin-bottom:8px;box-sizing:border-box;flex-shrink:0}
 #gif-picker-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border2);margin-bottom:8px;flex-shrink:0}
@@ -4889,7 +4889,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <button class="btn btn-ghost btn-sm scb-u-25" id="gp-invite-regen-btn" onclick="regenerateServerInviteCode()">🔄</button>
         </div>
         <div class="scb-u-210">Anyone with this code can request to join — an admin must approve.</div>
-        <div id="gp-invite-settings" style="display:none;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div id="gp-invite-settings" style="display:none;margin-top:8px;gap:8px;flex-wrap:wrap;align-items:center">
           <label style="font-size:12px;color:var(--muted)">Expires:
             <select id="gp-invite-expiry" style="margin-left:4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 4px;font-size:12px">
               <option value="0">Never</option>
@@ -16104,7 +16104,7 @@ function fmtTime(ts){
   return d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
 var _modalZBase=600,_modalZStack=[];
-function openModal(id){const el=document.getElementById(id);if(!el)return;el.style.display='';el.classList.add('visible');var z=_modalZBase+(_modalZStack.length+1)*10;el.style.zIndex=z;_modalZStack.push({id:id,z:z});}
+function openModal(id){const el=document.getElementById(id);if(!el)return;hideHeaderMenu();hideCtxMenu();el.style.display='';el.classList.add('visible');var z=_modalZBase+(_modalZStack.length+1)*10;el.style.zIndex=z;_modalZStack.push({id:id,z:z});}
 function showPrivacyPolicy(){openModal('privacy-modal');}
 function showTermsOfService(){openModal('tos-modal');}
 
@@ -29548,13 +29548,15 @@ window._sendToCloudyChat = _sendToCloudyChat;
 </div>
 <!-- ── Server welcome screen ──────────────────────────────────────────── -->
 <div class="overlay" id="server-welcome-modal">
-  <div class="modal" style="max-width:420px;text-align:center;padding:32px 24px">
-    <div id="swm-icon" style="font-size:48px;margin-bottom:12px">🖥️</div>
-    <h2 id="swm-name" style="margin-bottom:8px"></h2>
-    <p id="swm-info" style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5"></p>
-    <div id="swm-rules" style="display:none;text-align:left;background:var(--surface2);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--text2);margin-bottom:16px;max-height:160px;overflow-y:auto;white-space:pre-wrap"></div>
-    <div id="swm-members" style="font-size:12px;color:var(--muted);margin-bottom:20px"></div>
-    <button class="btn" style="width:100%" onclick="closeModal('server-welcome-modal')">Start chatting →</button>
+  <div class="modal" style="max-width:420px">
+    <div class="modal-body" style="text-align:center;padding:32px 24px;overflow-y:auto">
+      <div id="swm-icon" style="font-size:48px;margin-bottom:12px">🖥️</div>
+      <h2 id="swm-name" style="margin-bottom:8px"></h2>
+      <p id="swm-info" style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5"></p>
+      <div id="swm-rules" style="display:none;text-align:left;background:var(--surface2);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--text2);margin-bottom:16px;max-height:160px;overflow-y:auto;white-space:pre-wrap"></div>
+      <div id="swm-members" style="font-size:12px;color:var(--muted);margin-bottom:20px"></div>
+      <button class="btn" style="width:100%" onclick="closeModal('server-welcome-modal')">Start chatting →</button>
+    </div>
   </div>
 </div>
 <!-- ── Cookie / storage consent banner ─────────────────────────────────── -->
