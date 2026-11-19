@@ -2820,6 +2820,10 @@ window.addEventListener('error',function _splashErrorGuard(e){
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="typing-indicator-toggle" onchange="savePrivacyPref('typingIndicators',this.checked)"><span class="switch-slider"></span></label></div>
           </div>
           <div class="settings-row">
+            <div class="settings-row-main"><div class="settings-row-label">Suppress @everyone pings</div><div class="settings-row-sub">Don't notify you when someone sends @everyone or @all in a group</div></div>
+            <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="suppress-everyone-toggle" onchange="savePrivacyPref('suppressEveryone',this.checked)"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Online Status</div><div class="settings-row-sub">Let others see when you're active</div></div>
             <div class="settings-row-actions"><label class="switch"><input type="checkbox" id="online-status-toggle" onchange="savePrivacyPref('showOnline',this.checked)"><span class="switch-slider"></span></label></div>
           </div>
@@ -4885,6 +4889,27 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <button class="btn btn-ghost btn-sm scb-u-25" id="gp-invite-regen-btn" onclick="regenerateServerInviteCode()">🔄</button>
         </div>
         <div class="scb-u-210">Anyone with this code can request to join — an admin must approve.</div>
+        <div id="gp-invite-settings" style="display:none;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <label style="font-size:12px;color:var(--muted)">Expires:
+            <select id="gp-invite-expiry" style="margin-left:4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 4px;font-size:12px">
+              <option value="0">Never</option>
+              <option value="3600000">1 hour</option>
+              <option value="86400000">24 hours</option>
+              <option value="604800000">7 days</option>
+              <option value="2592000000">30 days</option>
+            </select>
+          </label>
+          <label style="font-size:12px;color:var(--muted)">Max uses:
+            <select id="gp-invite-maxuses" style="margin-left:4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 4px;font-size:12px">
+              <option value="0">Unlimited</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+        <div id="gp-invite-usage" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
       </div>
       <!-- Pending join requests (server admins only) -->
       <div class="scb-u-227" id="gp-join-requests-section">
@@ -4901,6 +4926,31 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <div class="scb-u-228">Awaiting Approval</div>
           <div id="gp-quarantine-pending-list"></div>
         </div>
+      </div>
+      <!-- Welcome message / server rules (admin only) -->
+      <div class="scb-u-227" id="gp-welcome-section" style="display:none">
+        <div class="scb-u-228">Welcome Message &amp; Rules</div>
+        <div class="scb-u-210" style="margin-bottom:8px">Shown to new members the first time they open this server. Leave blank to skip.</div>
+        <textarea id="gp-welcome-rules" rows="4" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:inherit;font-size:12px;padding:6px 8px;resize:vertical" placeholder="e.g. Welcome to our server! Please read the rules and be kind."></textarea>
+        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="saveWelcomeRules()">Save</button>
+      </div>
+      <!-- Server verification level (admin only) -->
+      <div class="scb-u-227" id="gp-verifylevel-section" style="display:none">
+        <div class="scb-u-228">Verification Level</div>
+        <div class="scb-u-210" style="margin-bottom:8px">Restrict who can send messages in this server.</div>
+        <select id="gp-verify-level" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--r-sm);padding:5px 8px;font-size:13px" onchange="saveVerifyLevel(this.value)">
+          <option value="none">None — anyone can chat</option>
+          <option value="member">Member — must have an account (custom auth)</option>
+          <option value="verified">Verified — account must be phone/email verified</option>
+          <option value="new_wait">Low — must have been a member for 10+ minutes</option>
+        </select>
+      </div>
+      <!-- AutoMod custom keywords (admin only) -->
+      <div class="scb-u-227" id="gp-automod-section" style="display:none">
+        <div class="scb-u-228">AutoMod — Blocked Keywords</div>
+        <div class="scb-u-210" style="margin-bottom:8px">Words or phrases that get auto-removed from messages in this server. One per line, case-insensitive.</div>
+        <textarea id="gp-automod-words" rows="4" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:inherit;font-size:12px;padding:6px 8px;resize:vertical" placeholder="e.g.&#10;spam&#10;offensive-word"></textarea>
+        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="saveAutoModWords()">Save Keywords</button>
       </div>
       <!-- Roles section (admin only) -->
       <div class="scb-u-227" id="gp-roles-section">
@@ -10684,14 +10734,19 @@ function muteToggle(){
   if(!activeConvo) return;
   const key=activeConvo.key;
   const btn=document.getElementById('mute-menu-item');
-  if(mutedChats[key]){
-    delete mutedChats[key];
-    if(btn){btn.innerHTML='🔕 Mute notifications';btn.classList.remove('active');}
-    showToast('Unmuted','You\'ll get notifications for this chat again.');
-  }else{
-    mutedChats[key]=true;
+  const cur=mutedChats[key]; // undefined=all, 'mentions'=mentions only, 'muted'/true=silent
+  if(!cur){
+    mutedChats[key]='mentions';
+    if(btn){btn.innerHTML='💬 Mentions only';btn.classList.add('active');}
+    showToast('Mentions only','You\'ll only be notified when you\'re mentioned.');
+  } else if(cur==='mentions'){
+    mutedChats[key]='muted';
     if(btn){btn.innerHTML='🔔 Unmute notifications';btn.classList.add('active');}
     showToast('Muted','You won\'t be notified about new messages here.');
+  } else {
+    delete mutedChats[key];
+    if(btn){btn.innerHTML='🔕 Mute notifications';btn.classList.remove('active');}
+    showToast('Unmuted','You\'ll get all notifications for this chat again.');
   }
   saveStorage();
 }
@@ -11751,8 +11806,9 @@ async function _origOpenChat(c){
   if(archiveBtn) archiveBtn.innerHTML=archivedContacts[key]?'📁 Unarchive':'📁 Archive';
   const muteBtn=document.getElementById('mute-menu-item');
   if(muteBtn){
-    muteBtn.innerHTML=mutedChats[key]?'🔔 Unmute notifications':'🔕 Mute notifications';
-    muteBtn.classList.toggle('active',!!mutedChats[key]);
+    const _ml=mutedChats[key];
+    muteBtn.innerHTML=!_ml?'🔕 Mute notifications':_ml==='mentions'?'💬 Mentions only':'🔔 Unmute notifications';
+    muteBtn.classList.toggle('active',!!_ml);
   }
   // Avatar
   const haEl=document.getElementById('chat-header-av');
@@ -11780,6 +11836,7 @@ async function _origOpenChat(c){
       chBar.style.display='flex';
       renderChannelBar(conv);
       refreshVoiceParticipantCounts(conv);
+      if(c.isServer&&typeof openServerWelcome==='function') setTimeout(()=>openServerWelcome(c,conv),400);
     } else {
       chBar.style.display='none';
       document.getElementById('voice-bar').style.display='none';
@@ -12943,7 +13000,13 @@ function refreshVoiceParticipantCounts(conv){
       const val=snap.val()||{};
       const n=Object.keys(val).length;
       const el=document.querySelector('.ch-voice-count[data-ch="'+ch.id+'"]');
-      if(el) el.textContent=n?(' · '+n):'';
+      if(el){
+        el.textContent=n?(' · '+n):'';
+        if(n){
+          const names=Object.values(val).map(p=>{const nm=typeof p==='object'&&p.name?dec(p.name):'';return nm||'?';}).slice(0,6).join(', ');
+          el.title=names+(n>6?' and '+(n-6)+' more':'');
+        } else { el.title=''; }
+      }
     });
     _voiceCountListeners[path]={ref,handler};
   });
@@ -15959,17 +16022,28 @@ function startPoll(){
           const newHash=JSON.stringify(c.messages);
           if(newHash!==prev){
             const last=c.messages[c.messages.length-1];
-            if(last&&last.from!==me.number&&!mutedChats[activeConvo.key]){
-              if(last.type==='ping'){
-                handleIncomingPing(last.from);
-              } else {
-                const u=lookupUser(last.from)||{};
-                const mentioned=last.mentions&&last.mentions.includes(me.number);
-                const txt=msgText(last);
-                const isEveryone=mentioned&&/@(everyone|all)\b/i.test(txt);
-                const title=isEveryone?('📢 '+(dec(u.name)||'Someone')+' mentioned @everyone'):mentioned?('📢 '+(dec(u.name)||'Someone')+' mentioned you'):(dec(u.name)||'New message');
-                sendNotif(title,msgHasGif(last)?'Sent a GIF':txt);
-                playMessageSound();
+            if(last&&last.from!==me.number){
+              const _notifLevel=mutedChats[activeConvo.key]; // undefined=all,'mentions'=mentions,'muted'/true=silent
+              const _isFullMuted=_notifLevel==='muted'||_notifLevel===true;
+              if(!_isFullMuted){
+                if(last.type==='ping'){
+                  handleIncomingPing(last.from);
+                } else {
+                  const u=lookupUser(last.from)||{};
+                  const mentioned=last.mentions&&last.mentions.includes(me.number);
+                  const txt=msgText(last);
+                  const isEveryone=last.mentions&&/@(everyone|all)\b/i.test(txt);
+                  // Suppress @everyone if user opted in
+                  const suppressEvery=isEveryone&&getPrivacyPref('suppressEveryone',false);
+                  // Mentions-only: only notify if directly mentioned or @everyone (unless suppressed)
+                  const _mentionsOnly=_notifLevel==='mentions';
+                  if(_mentionsOnly&&!mentioned&&(!isEveryone||suppressEvery)) { /* skip */ }
+                  else if(!suppressEvery||!isEveryone||mentioned){
+                    const title=isEveryone?('📢 '+(dec(u.name)||'Someone')+' mentioned @everyone'):mentioned?('📢 '+(dec(u.name)||'Someone')+' mentioned you'):(dec(u.name)||'New message');
+                    sendNotif(title,msgHasGif(last)?'Sent a GIF':txt);
+                    playMessageSound();
+                  }
+                }
               }
             }
             lastMsgHash=newHash; // BUG FIX: this was computed every tick but never
@@ -16141,7 +16215,11 @@ const BAD_WORDS = _bw.map(w => atob(w));
 function filterBadWords(text) {
   if (!text) return text;
   let out = text;
-  BAD_WORDS.forEach(w => {
+  // Merge global BAD_WORDS with any server-specific custom keywords
+  const conv = activeConvo && convosCache ? convosCache.find(x=>x&&x.key===activeConvo.key) : null;
+  const customWords = (conv && conv.autoModWords) || [];
+  const allWords = BAD_WORDS.concat(customWords.filter(w=>w&&w.trim()));
+  allWords.forEach(w => {
     // Word-boundary match, not a bare substring search — without this, any
     // bad word that's also a substring of an innocent one gets falsely
     // censored (the classic "Scunthorpe problem": "ass" inside "wassap",
@@ -16157,6 +16235,52 @@ function filterBadWords(text) {
     out = out.replace(re, m => '#'.repeat(m.length));
   });
   return out;
+}
+async function saveWelcomeRules(){
+  const conv=getActiveConvoObj();
+  if(!conv||!conv.isServer) return;
+  if(!(conv.admins&&conv.admins.includes(me.number))){ showToast('Admins only',''); return; }
+  const rulesEl=document.getElementById('gp-welcome-rules');
+  conv.welcomeRules=rulesEl?rulesEl.value.trim():'';
+  try{ await saveConvos(); showToast('Welcome message saved','New members will see this when they first open the server.'); }
+  catch(e){ showToast('Save failed',''); }
+}
+function openServerWelcome(c, conv){
+  if(!c||!c.isServer) return;
+  const seenKey='cc_seen_welcome_'+c.key;
+  try{ if(localStorage.getItem(seenKey)) return; localStorage.setItem(seenKey,'1'); }catch(e){ return; }
+  document.getElementById('swm-name').textContent=c.name||'Welcome';
+  document.getElementById('swm-info').textContent=c.info||'You just joined this server.';
+  const rulesEl=document.getElementById('swm-rules');
+  const rules=conv&&conv.welcomeRules;
+  if(rules&&rules.trim()){ rulesEl.textContent=rules; rulesEl.style.display='block'; }
+  else rulesEl.style.display='none';
+  const members=(conv&&(conv.participants||conv.members)||[]).length;
+  document.getElementById('swm-members').textContent=members?members+' member'+(members===1?'':'s'):'';
+  const iconEl=document.getElementById('swm-icon');
+  if(c.avatar&&typeof c.avatar==='string'&&c.avatar.startsWith('data:image/')){
+    iconEl.innerHTML='<img src="'+c.avatar+'" style="width:56px;height:56px;border-radius:12px;object-fit:cover">';
+  } else { iconEl.textContent='🖥️'; }
+  openModal('server-welcome-modal');
+}
+async function saveVerifyLevel(level){
+  const conv=getActiveConvoObj();
+  if(!conv||!conv.isServer) return;
+  if(!(conv.admins&&conv.admins.includes(me.number))){ showToast('Admins only',''); return; }
+  conv.verifyLevel=level||'none';
+  try{ await saveConvos(); showToast('Verification level saved',''); }
+  catch(e){ showToast('Save failed',''); }
+}
+async function saveAutoModWords(){
+  const conv=getActiveConvoObj();
+  if(!conv||!conv.isServer) return;
+  if(!(conv.admins&&conv.admins.includes(me.number))){ showToast('Admins only',''); return; }
+  const wordsEl=document.getElementById('gp-automod-words');
+  if(!wordsEl) return;
+  const words=wordsEl.value.split('\n').map(w=>w.trim().toLowerCase()).filter(w=>w.length>0&&w.length<80);
+  conv.autoModWords=words;
+  try{ await saveConvos(); showToast('AutoMod saved',words.length+' keyword'+(words.length===1?'':'s')+' active.'); }
+  catch(e){ showToast('Save failed',''); }
 }
 
 // ── NICKNAMES ────────────────────────────────────────────────────────────────
@@ -16442,6 +16566,26 @@ function openGroupPanel() {
   if(isServer){
     document.getElementById('gp-invite-code').textContent = conv.inviteCode || '\u2014';
     document.getElementById('gp-invite-regen-btn').style.display = isAdmin ? 'inline-flex' : 'none';
+    // Invite expiry + max uses controls (admin only)
+    const invSettingsEl=document.getElementById('gp-invite-settings');
+    if(invSettingsEl) invSettingsEl.style.display=isAdmin?'flex':'none';
+    if(isAdmin){
+      const expiryEl=document.getElementById('gp-invite-expiry');
+      const maxUsesEl=document.getElementById('gp-invite-maxuses');
+      if(expiryEl) expiryEl.value=String(conv.inviteExpiry||0);
+      if(maxUsesEl) maxUsesEl.value=String(conv.inviteMaxUses||0);
+      const usageEl=document.getElementById('gp-invite-usage');
+      if(usageEl){
+        const used=conv.inviteUsed||0;
+        const max=conv.inviteMaxUses||0;
+        const expiry=conv.inviteExpiry;
+        const issuedAt=conv.inviteIssuedAt||0;
+        let parts=[];
+        if(max) parts.push(used+' / '+max+' uses');
+        if(expiry&&issuedAt){const exp=issuedAt+expiry;const rem=exp-Date.now();parts.push(rem>0?('Expires in '+_fmtDuration(rem)):'Expired');}
+        usageEl.textContent=parts.join(' \u00b7 ');
+      }
+    }
   }
   const joinReqSection=document.getElementById('gp-join-requests-section');
   const joinRequests=(conv.joinRequests||[]);
@@ -16456,6 +16600,27 @@ function openGroupPanel() {
         +'<button class="btn btn-ghost btn-sm" data-number="'+r.number+'" onclick="denyJoinRequest(Number(this.dataset.number))">\u2715</button>'
         +'</div>';
     }).join('');
+  }
+  // Welcome message / rules (admin only)
+  const welcomeSection=document.getElementById('gp-welcome-section');
+  if(welcomeSection) welcomeSection.style.display=isAdmin&&isServer?'block':'none';
+  if(isAdmin&&isServer){
+    const rulesEl=document.getElementById('gp-welcome-rules');
+    if(rulesEl) rulesEl.value=conv.welcomeRules||'';
+  }
+  // Server verification level (admin only)
+  const verifySection=document.getElementById('gp-verifylevel-section');
+  if(verifySection) verifySection.style.display=isAdmin&&isServer?'block':'none';
+  if(isAdmin&&isServer){
+    const verifyEl=document.getElementById('gp-verify-level');
+    if(verifyEl) verifyEl.value=conv.verifyLevel||'none';
+  }
+  // AutoMod custom keywords (admin only)
+  const automodSection=document.getElementById('gp-automod-section');
+  if(automodSection) automodSection.style.display=isAdmin&&isServer?'block':'none';
+  if(isAdmin&&isServer){
+    const wordsEl=document.getElementById('gp-automod-words');
+    if(wordsEl) wordsEl.value=(conv.autoModWords||[]).join('\n');
   }
   // Quarantine new members (security feature 29/32) — admin-only toggle + pending-approval list
   const quarantineSection=document.getElementById('gp-quarantine-section');
@@ -16703,6 +16868,12 @@ async function regenerateServerInviteCode(){
   if(!(conv.admins&&conv.admins.includes(me.number))){ showToast('Admins only',scbErr('SCB-GRP-32','Only server admins can regenerate the invite code.')); return; }
   if(!confirm('Generate a new invite code? The old code will stop working.')) return;
   conv.inviteCode=generateInviteCode();
+  conv.inviteIssuedAt=Date.now();
+  conv.inviteUsed=0;
+  const expiryEl=document.getElementById('gp-invite-expiry');
+  const maxUsesEl=document.getElementById('gp-invite-maxuses');
+  conv.inviteExpiry=expiryEl?parseInt(expiryEl.value)||0:0;
+  conv.inviteMaxUses=maxUsesEl?parseInt(maxUsesEl.value)||0:0;
   try{ await saveConvos(); openGroupPanel(); showToast('New invite code','The old code no longer works.'); }
   catch(e){ showToast('Failed',scbErr('SCB-GRP-33','That code couldn\'t be regenerated — the server rejected the write.',(e.message||''))); }
 }
@@ -16719,11 +16890,21 @@ async function submitJoinServer(){
   if(!convosCache) await getConvos();
   const conv=convosCache.find(c=>c&&c.isServer&&c.inviteCode===codeRaw);
   if(!conv){ err.textContent=scbErr('SCB-GRP-36','No server found with that code.'); return; }
+  // Check expiry
+  if(conv.inviteExpiry&&conv.inviteIssuedAt&&(Date.now()>conv.inviteIssuedAt+conv.inviteExpiry)){
+    err.textContent='This invite link has expired. Ask an admin to generate a new one.'; return;
+  }
+  // Check max uses
+  if(conv.inviteMaxUses&&conv.inviteUsed>=(conv.inviteMaxUses)){
+    err.textContent='This invite link has reached its maximum number of uses. Ask an admin to generate a new one.'; return;
+  }
   const members=conv.participants||conv.members||[];
   if(members.includes(me.number)){ err.textContent=scbErr('SCB-GRP-37','You\'re already a member of that server.'); return; }
   if(!Array.isArray(conv.joinRequests)) conv.joinRequests=[];
   if(conv.joinRequests.some(r=>r.number===me.number)){ err.textContent=scbErr('SCB-GRP-38','You\'ve already requested to join — waiting on an admin to approve.'); return; }
   conv.joinRequests.push({number:me.number,name:me.name||('#'+me.number),time:Date.now()});
+  if(typeof conv.inviteUsed==='number') conv.inviteUsed++;
+  else if(conv.inviteMaxUses) conv.inviteUsed=1;
   try{
     // Written narrowly to conversations/<key>/joinRequests only, NOT via the
     // general saveConvos() (which replaces the whole conversation object) —
@@ -17782,6 +17963,18 @@ async function sendMsg(gifUrl) {
   if (activeConvo.type!=='group' && blockIfRestricted('noDm','Direct messages are turned off for your account.')) return;
   if (activeConvo.type==='group' && blockIfRestricted('noGroups','Group chats are turned off for your account.')) return;
   if (activeConvo.type!=='group' && isBlockedEitherWay(activeConvo.number)) { showToast('Cannot send', scbErr('SCB-MSG-16','This conversation is blocked.')); return; }
+  // Server verification level
+  if(activeConvo.type==='group'&&convosCache){
+    const _vConv=convosCache.find(x=>x&&x.key===activeConvo.key);
+    if(_vConv&&_vConv.verifyLevel&&_vConv.verifyLevel!=='none'&&!isGroupAdmin()){
+      const _vl=_vConv.verifyLevel;
+      const _auth=typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser;
+      const _isCustom=_auth&&_auth.providerData&&_auth.providerData.some(p=>p.providerId==='custom');
+      if(_vl==='member'&&!_isCustom){ showToast('Verification required','You must be signed in to send messages here.'); return; }
+      if(_vl==='verified'){const _em=me&&(me.email||me.phone);if(!_em){ showToast('Verification required','This server requires a verified account to chat.'); return; }}
+      if(_vl==='new_wait'){const _jAt=(_vConv.memberJoinedAt||{})[me.number];if(_jAt&&Date.now()-_jAt<600000){ showToast('Too new','You must be a member for 10 minutes before chatting here.'); return; }}
+    }
+  }
   // Security feature 22/32: scan for risky links BEFORE sending, not just
   // when the recipient later clicks one (linkifySegment's existing
   // warning badge covers that side already).
@@ -27919,7 +28112,7 @@ function getPrivacyPref(key, defaultVal=true){
   return key in prefs ? prefs[key] : defaultVal;
 }
 function _initPrivacyToggles(){
-  const ids={readReceipts:'read-receipts-toggle',typingIndicators:'typing-indicator-toggle',showOnline:'online-status-toggle',secureLinkWarning:'secure-links-toggle',messageSound:'message-sound-toggle',callRingtone:'call-ringtone-toggle',pingSound:'ping-sound-toggle'};
+  const ids={readReceipts:'read-receipts-toggle',typingIndicators:'typing-indicator-toggle',showOnline:'online-status-toggle',secureLinkWarning:'secure-links-toggle',messageSound:'message-sound-toggle',callRingtone:'call-ringtone-toggle',pingSound:'ping-sound-toggle',suppressEveryone:'suppress-everyone-toggle'};
   for(const [key,id] of Object.entries(ids)){
     const el=document.getElementById(id);
     if(el) el.checked=getPrivacyPref(key,true);
@@ -29351,6 +29544,17 @@ window._sendToCloudyChat = _sendToCloudyChat;
       <button class="btn" onclick="confirmScheduleMsg()">Schedule ↗</button>
       <button class="btn btn-ghost" onclick="closeModal('schedule-msg-modal')">Cancel</button>
     </div>
+  </div>
+</div>
+<!-- ── Server welcome screen ──────────────────────────────────────────── -->
+<div class="overlay" id="server-welcome-modal">
+  <div class="modal" style="max-width:420px;text-align:center;padding:32px 24px">
+    <div id="swm-icon" style="font-size:48px;margin-bottom:12px">🖥️</div>
+    <h2 id="swm-name" style="margin-bottom:8px"></h2>
+    <p id="swm-info" style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5"></p>
+    <div id="swm-rules" style="display:none;text-align:left;background:var(--surface2);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--text2);margin-bottom:16px;max-height:160px;overflow-y:auto;white-space:pre-wrap"></div>
+    <div id="swm-members" style="font-size:12px;color:var(--muted);margin-bottom:20px"></div>
+    <button class="btn" style="width:100%" onclick="closeModal('server-welcome-modal')">Start chatting →</button>
   </div>
 </div>
 <!-- ── Cookie / storage consent banner ─────────────────────────────────── -->
