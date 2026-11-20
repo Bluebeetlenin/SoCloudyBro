@@ -817,10 +817,21 @@ img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
    #lock-screen reserve exactly --banner-stack-h of space for the stack's
    current real height instead of letting it float over their content. */
 #top-banner-stack{position:fixed;top:0;left:0;right:0;z-index:9000;display:flex;flex-direction:column;pointer-events:none}
-.top-banner-row{pointer-events:auto;display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow-x:auto;scrollbar-width:none;box-shadow:0 1px 4px rgba(0,0,0,0.15)}
+.top-banner-row{pointer-events:auto;display:flex;align-items:center;gap:8px;padding:6px 14px;min-height:34px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow-x:auto;scrollbar-width:none;box-shadow:0 2px 10px rgba(0,0,0,0.3);animation:bannerIn .22s cubic-bezier(0.16,1,0.3,1);position:relative}
+@keyframes bannerIn{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
 .top-banner-row::-webkit-scrollbar{display:none}
-.top-banner-row .tbr-text{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.top-banner-row .tbr-text{overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 .top-banner-row button{flex-shrink:0}
+/* Banner action buttons — replaces ad-hoc inline styles in JS banner functions */
+.tbr-btn{flex-shrink:0;padding:3px 11px;border-radius:5px;border:none;font-size:11px;font-weight:700;cursor:pointer;transition:filter .15s;line-height:1.6}
+.tbr-btn:hover{filter:brightness(1.12)}
+.tbr-btn-action{background:rgba(255,255,255,0.95)}
+.tbr-btn-ghost{background:rgba(255,255,255,0.18);color:#fff}
+.tbr-dismiss{flex-shrink:0;background:transparent;border:none;color:rgba(255,255,255,0.6);font-size:17px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:4px;transition:color .15s,background .15s}
+.tbr-dismiss:hover{color:#fff;background:rgba(255,255,255,0.18)}
+/* Progress bar for countdown banners (e.g. site update) */
+.tbr-progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.15);pointer-events:none}
+.tbr-progress-fill{display:block;height:100%;background:rgba(255,255,255,0.7);border-radius:0 2px 2px 0;transition:width 1s linear}
 #landing-page{padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
 
 /* ── SIDEBAR ── */
@@ -906,8 +917,9 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 .sb-item-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-item-time{font-size:10px;color:var(--muted);flex-shrink:0}
 .sb-item-preview{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.unread-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;flex-shrink:0}
-.unread-badge-dot{display:inline-block;width:8px;height:8px;padding:0;border-radius:50%}
+.unread-badge{background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;flex-shrink:0;min-width:18px;text-align:center;line-height:1.5}
+.unread-badge-dot{display:inline-block;width:8px;height:8px;padding:0;border-radius:50%;background:var(--accent)}
+.sb-item.unread .sb-item-name{font-weight:700;color:var(--text)}
 .archived-label{font-size:10px;color:var(--muted2);background:var(--surface3);border-radius:4px;padding:1px 5px}
 /* #sb-bottom holds 11 icon buttons (a "Meetings" button is injected at
    runtime, not present in the static HTML) — #sidebar is widened above
@@ -959,17 +971,19 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 #main-empty.bg-active p{text-shadow:0 1px 4px rgba(0,0,0,0.4)}
 
 /* ── Welcome banner ────────────────────────────────────────────────────── */
-#welcome-banner{width:100%;border-radius:var(--r-card);overflow:hidden;position:relative;min-height:180px;display:flex;align-items:stretch;margin-bottom:4px;flex-shrink:0;border:1px solid rgba(255,255,255,0.12)}
-#welcome-banner-bg{position:absolute;inset:0;background:#0b1628;z-index:0}
+#welcome-banner{width:100%;border-radius:var(--r-card);overflow:hidden;position:relative;min-height:180px;display:flex;align-items:stretch;margin-bottom:4px;flex-shrink:0;border:1px solid rgba(255,255,255,0.14);box-shadow:0 4px 24px rgba(0,0,0,0.3);animation:welcomeIn .35s cubic-bezier(0.16,1,0.3,1)}
+@keyframes welcomeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#welcome-banner-bg{position:absolute;inset:0;background:linear-gradient(135deg,#0b1628 60%,#1a1040);z-index:0}
 #welcome-banner-art{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
 #welcome-banner-art svg{position:absolute;right:0;top:0;height:100%;width:auto}
 #welcome-banner-content{position:relative;z-index:2;padding:22px 26px;display:flex;flex-direction:column;gap:7px;flex:1;max-width:52%}
 #welcome-greeting{font-size:23px;font-weight:800;color:#fff;letter-spacing:-0.02em;line-height:1.15}
 #welcome-sub{font-size:12.5px;color:rgba(255,255,255,0.55);font-weight:400;letter-spacing:.01em}
-#welcome-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:3px}
-.welcome-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);border-radius:20px;padding:4px 12px;font-size:11.5px;color:rgba(255,255,255,0.88);font-weight:500}
-.welcome-chip.green{background:rgba(46,204,113,0.15);border-color:rgba(46,204,113,0.35);color:#6ee7a8}
-.welcome-chip.amber{background:rgba(251,191,36,0.15);border-color:rgba(251,191,36,0.35);color:#fcd34d}
+#welcome-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
+.welcome-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:4px 12px;font-size:11.5px;color:rgba(255,255,255,0.9);font-weight:500;transition:background .15s,border-color .15s}
+.welcome-chip:hover{background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.28)}
+.welcome-chip.green{background:rgba(46,204,113,0.18);border-color:rgba(46,204,113,0.4);color:#6ee7a8}
+.welcome-chip.amber{background:rgba(251,191,36,0.18);border-color:rgba(251,191,36,0.4);color:#fcd34d}
 
 /* ── Widget empty state art ─────────────────────────────────────────────── */
 .dash-empty-art{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%;padding:4px 0}
@@ -1057,11 +1071,11 @@ body.device-phone .dash-widget{grid-column:auto!important;grid-row:auto!importan
 #pinned-banner .pin-unpin{font-size:14px;color:var(--muted);padding:2px 6px;border-radius:6px}
 #pinned-banner .pin-unpin:hover{background:var(--surface);color:var(--text)}
 /* (.bubble's position:relative is declared with the rest of its rule below) */
-.quick-react-row{position:absolute;top:-32px;right:-6px;display:flex;gap:2px;align-items:center;background:var(--surface);border:1px solid var(--border2);border-radius:18px;padding:3px 6px;opacity:0;transform:scale(0.8);transition:opacity .15s,transform .15s;box-shadow:var(--shadow-lg);z-index:5}
-.bubble:hover .quick-react-row{opacity:1;transform:scale(1)}
+.quick-react-row{position:absolute;top:-36px;right:-6px;display:flex;gap:1px;align-items:center;background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:3px 8px;opacity:0;transform:scale(0.85) translateY(4px);transition:opacity .15s,transform .15s;box-shadow:var(--shadow-lg);z-index:5;white-space:nowrap}
+.bubble:hover .quick-react-row,.quick-react-row:hover{opacity:1;transform:scale(1) translateY(0)}
 .msg-row.me .quick-react-row{right:auto;left:-6px}
-.quick-react-btn{position:static;width:22px;height:22px;border-radius:50%;background:transparent;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;box-shadow:none;transition:transform .1s}
-.quick-react-btn:hover{background:var(--surface3)}
+.quick-react-btn{position:static;width:24px;height:24px;border-radius:50%;background:transparent;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;box-shadow:none;transition:background .1s,transform .1s;color:var(--text2)}
+.quick-react-btn:hover{background:var(--surface3);transform:scale(1.15)}
 .msg-highlight .bubble{animation:msgHighlightPulse 1.2s ease}
 @keyframes msgHighlightPulse{0%{box-shadow:0 0 0 0 rgba(107,93,232,0.5)}50%{box-shadow:0 0 0 6px rgba(107,93,232,0.15)}100%{box-shadow:0 0 0 0 rgba(107,93,232,0)}}
 .mentioned-msg .bubble{border:1px solid rgba(202,80,16,0.4);box-shadow:0 0 0 2px rgba(202,80,16,0.12)}
@@ -1237,16 +1251,18 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 .bubble.audio-bubble{padding:8px 10px;min-width:220px}
 .bubble.audio-bubble audio{width:210px;height:32px;display:block}
 @keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(231,76,60,0.45)}50%{box-shadow:0 0 0 8px rgba(231,76,60,0)}}
-#send-btn{background:var(--accent);border:none;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all 0.15s;flex-shrink:0}
-#send-btn:hover{background:var(--accent-hover)}
-#send-btn:disabled{opacity:0.4;cursor:not-allowed}
+#send-btn{background:var(--accent);border:none;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all 0.15s;flex-shrink:0;box-shadow:0 2px 8px rgba(90,82,213,0.4)}
+#send-btn:hover{background:var(--accent-hover);box-shadow:0 4px 14px rgba(90,82,213,0.5);transform:scale(1.05)}
+#send-btn:active{transform:scale(0.95)}
+#send-btn:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none}
 
 /* ── CHAT BACKGROUNDS ── */
 #chat-bg-wrapper{position:relative;flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;background-size:cover;background-position:center;}
 #messages-wrap{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:12px 16px;scroll-behavior:smooth;position:relative;z-index:1;background:transparent;}
 
-#jump-to-bottom-btn{position:absolute;right:18px;bottom:16px;z-index:5;width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);transition:opacity .15s,transform .15s}
-#jump-to-bottom-btn:hover{background:var(--surface3)}
+#jump-to-bottom-btn{position:absolute;right:18px;bottom:16px;z-index:5;width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.3),0 1px 3px rgba(0,0,0,0.2);transition:background .15s,transform .15s,box-shadow .15s;animation:jumpBtnIn .2s cubic-bezier(0.16,1,0.3,1)}
+@keyframes jumpBtnIn{from{opacity:0;transform:scale(0.7) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+#jump-to-bottom-btn:hover{background:var(--surface2);box-shadow:0 6px 20px rgba(0,0,0,0.35);transform:translateY(-1px)}
 
 #chat-drop-overlay{position:absolute;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(90,82,213,0.12);backdrop-filter:blur(2px);border:3px dashed var(--accent);pointer-events:none}
 #chat-drop-overlay.active{display:flex}
@@ -1361,16 +1377,16 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 
 
 /* ── MODALS ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);z-index:600;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);z-index:600;display:none;align-items:center;justify-content:center;padding:16px}
 .overlay.visible{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-card);padding:0;width:100%;max-width:420px;box-shadow:var(--shadow-lg);animation:modalIn 0.28s cubic-bezier(0.16,1,0.3,1);overflow:hidden;max-height:90vh;display:flex;flex-direction:column}
-@keyframes modalIn{from{opacity:0;transform:scale(0.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.modal-header{padding:20px 22px 0;flex-shrink:0;position:relative}
-.modal-header h2{font-size:17px;font-weight:700;margin-bottom:4px;padding-right:36px;letter-spacing:-0.01em}
-.modal-header p{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6}
-.modal-close{position:absolute;top:0;right:0;width:30px;height:30px;border-radius:50%;border:none;background:var(--surface2,rgba(127,127,127,.12));color:var(--text2);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:0;width:100%;max-width:420px;box-shadow:var(--shadow-lg);animation:modalIn 0.28s cubic-bezier(0.16,1,0.3,1);overflow:hidden;max-height:90vh;display:flex;flex-direction:column}
+@keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-header{padding:20px 22px 16px;flex-shrink:0;position:relative;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:17px;font-weight:700;margin-bottom:4px;padding-right:36px;letter-spacing:-0.015em}
+.modal-header p{font-size:12px;color:var(--muted);margin-bottom:0;line-height:1.6}
+.modal-close{position:absolute;top:14px;right:16px;width:28px;height:28px;border-radius:50%;border:none;background:var(--surface2,rgba(127,127,127,.12));color:var(--text2);font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
 .modal-close:hover{background:var(--danger,#ef4444);color:#fff}
-.modal-body{padding:0 22px;overflow-y:auto;flex:1}
+.modal-body{padding:16px 22px;overflow-y:auto;flex:1}
 .modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;background:var(--surface)}
 .field{margin-bottom:16px}
 .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:6px;font-weight:600}
@@ -1493,10 +1509,10 @@ select{cursor:pointer}
 #msg-info-overlay .modal{max-width:340px}
 
 /* ── NOTIFICATION TOAST ── */
-#toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);padding:12px 16px;box-shadow:var(--shadow-lg);z-index:9000;display:none;animation:toastIn 0.35s cubic-bezier(0.16,1,0.3,1);max-width:300px}
-@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-#toast-title{font-size:13px;font-weight:600;margin-bottom:2px}
-#toast-body{font-size:12px;color:var(--muted)}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.3),0 1px 4px rgba(0,0,0,0.2);z-index:9000;display:none;animation:toastIn 0.3s cubic-bezier(0.16,1,0.3,1);max-width:320px;min-width:180px}
+@keyframes toastIn{from{opacity:0;transform:translateY(16px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+#toast-title{font-size:13px;font-weight:700;margin-bottom:3px}
+#toast-body{font-size:12px;color:var(--muted);line-height:1.45}
 
 /* ── LOCK SCREEN ── */
 #lock-screen{position:fixed;inset:0;z-index:1000;background:var(--bg);display:none;flex-direction:row;padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
@@ -1901,7 +1917,7 @@ body.device-tablet .msg-body{max-width:74%}
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  background: var(--accent);
+  background: var(--danger);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -1910,7 +1926,7 @@ body.device-tablet .msg-body{max-width:74%}
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 1px 4px rgba(107,93,232,0.4);
+  box-shadow: 0 1px 4px rgba(209,52,56,0.4);
 }
 
 /* ── CHAT HEADER ── */
@@ -1926,30 +1942,34 @@ body.device-tablet .msg-body{max-width:74%}
      obscured by message bubbles. */
   z-index: 20;
   position: relative;
+  box-shadow: 0 1px 0 var(--border);
 }
 /* Ensure all dropdowns and context menus are always above messages */
 #chat-header-menu, #ctx-menu, #contact-ctx-menu {
   z-index: 9999 !important;
 }
-#chat-header-name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
-#chat-header-sub { font-size: 11.5px; }
+#chat-header-name { font-size: 15px; font-weight: 700; letter-spacing: -0.015em; }
+#chat-header-sub { font-size: 11.5px; color: var(--muted); }
 
 /* ── MESSAGE BUBBLES ── */
 .bubble {
   padding: 9px 14px;
   border-radius: 18px;
   font-size: 13.5px;
-  line-height: 1.48;
-  transition: none;
+  line-height: 1.5;
+  transition: background .12s;
+  position: relative;
 }
 .msg-row.them .bubble {
   border-bottom-left-radius: 4px;
   background: var(--surface2);
   border: 1px solid var(--border);
 }
+.msg-row.them .bubble:hover { background: var(--surface3); }
 .msg-row.me .bubble {
   border-bottom-right-radius: 4px;
   background: var(--accent);
+  box-shadow: 0 1px 4px rgba(90,82,213,0.25);
 }
 /* Pending message — faint while waiting for Firebase ack */
 .bubble.pending-bubble {
@@ -8862,9 +8882,9 @@ function updateOfflineBanner(){
   const pending=outboxCount();
   if(!netOnline||pending){
     const bar=_bannerRow('offline-banner');
-    bar.style.background='linear-gradient(90deg,#ca5010,#6264a0)';
+    bar.style.background=!netOnline?'linear-gradient(90deg,#ca5010 0%,#6264a0 100%)':'linear-gradient(90deg,#4C46C4,#6264a0)';
     bar.innerHTML='<span class="tbr-text">'+(!netOnline
-      ? '📡 Offline — will send once you\'re back online'+(pending?' ('+pending+' queued)':'')
+      ? '📡 You\'re offline'+(pending?' — '+pending+' message'+(pending!==1?'s':'')+' queued':' — messages will send when you reconnect')
       : '⏳ Sending '+pending+' queued message'+(pending!==1?'s':'')+'…')+'</span>';
     _updateBannerStackHeight();
   } else {
@@ -8882,13 +8902,12 @@ function showBirthdayBanner(u){
   span.className='tbr-text';
   span.innerHTML=`🎂 <b>${esc(name)}</b>'s birthday today!`;
   const sayBtn=document.createElement('button');
-  sayBtn.className='btn btn-sm';
-  sayBtn.style.cssText='background:#fff;color:#d83b86;border:none;padding:3px 10px;font-size:11px';
+  sayBtn.className='tbr-btn tbr-btn-action';
+  sayBtn.style.color='#d83b86';
   sayBtn.textContent='Say Happy Birthday 🎉';
   sayBtn.onclick=()=>postBirthdayToChannel(u);
   const closeBtn=document.createElement('button');
-  closeBtn.className='btn btn-ghost btn-sm';
-  closeBtn.style.cssText='color:#fff;border-color:rgba(255,255,255,0.5);padding:3px 8px;font-size:11px';
+  closeBtn.className='tbr-dismiss';
   closeBtn.textContent='✕';
   closeBtn.onclick=dismissBirthdayBanner;
   bar.appendChild(span);
@@ -11128,8 +11147,8 @@ function checkSecuritySetupNudge(){
   const bar=_bannerRow('security-setup-banner');
   bar.style.background='linear-gradient(90deg,#6264a0,#4C46C4)';
   bar.innerHTML='<span class="tbr-text">🔐 Add a backup PIN or security questions so you can never get locked out</span>'+
-    '<button class="btn btn-sm" style="background:#fff;color:#4C46C4;border:none;padding:3px 10px;font-size:11px" onclick="showSettings();switchSettingsTab(\'security\');">Set up</button>'+
-    '<button style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.7);font-size:16px;line-height:1" onclick="dismissSecuritySetupNudge()">✕</button>';
+    '<button class="tbr-btn tbr-btn-action" style="color:#4C46C4" onclick="showSettings();switchSettingsTab(\'security\');">Set up</button>'+
+    '<button class="tbr-dismiss" onclick="dismissSecuritySetupNudge()">✕</button>';
   _updateBannerStackHeight();
 }
 function dismissSecuritySetupNudge(){
@@ -18266,6 +18285,17 @@ function renderMessages(msgs) {
     bubble.addEventListener('dblclick', e => showReactionPicker(e, m));
     const quickReactRow = document.createElement('div');
     quickReactRow.className = 'quick-react-row';
+    // Reply action (Discord-style hover toolbar)
+    const replyBtn = document.createElement('span');
+    replyBtn.className = 'quick-react-btn';
+    replyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" style="opacity:.7"><path d="M6.5 2L1 7l5.5 5V9.5c3.5 0 6 1 7.5 4.5C14 9 11.5 5 6.5 5V2z"/></svg>';
+    replyBtn.title = 'Reply';
+    replyBtn.onclick = e => { e.stopPropagation(); startReply(m); };
+    quickReactRow.appendChild(replyBtn);
+    // Divider
+    const div = document.createElement('span');
+    div.style.cssText = 'width:1px;height:14px;background:var(--border2);flex-shrink:0;margin:0 2px';
+    quickReactRow.appendChild(div);
     ['👍','❤️','😂','😮','🙂'].forEach(emoji => {
       const qr = document.createElement('span');
       qr.className = 'quick-react-btn';
@@ -20974,16 +21004,18 @@ function showSiteUpdateBanner(ver,note){
   if(document.getElementById('site-update-banner')) return;
   const bar=_bannerRow('site-update-banner');
   bar.style.background='var(--accent)';
-  let secs=8;
+  const totalSecs=8; let secs=totalSecs;
   bar.innerHTML='<span class="tbr-text">🚀 Update available'+(note?' — '+esc(note):'')+' — applying in <b id="sub-countdown">'+secs+'s</b></span>'+
-    '<button onclick="applySiteUpdate()" style="background:rgba(255,255,255,0.25);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#fff;font-weight:700;font-size:11px">Apply now</button>'+
-    '<button id="sub-dismiss" style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.7);font-size:16px;line-height:1;margin-left:4px">✕</button>';
+    '<button class="tbr-btn tbr-btn-ghost" onclick="applySiteUpdate()">Apply now</button>'+
+    '<button id="sub-dismiss" class="tbr-dismiss">✕</button>'+
+    '<div class="tbr-progress"><span class="tbr-progress-fill" id="sub-progress-fill" style="width:100%"></span></div>';
   _updateBannerStackHeight();
-  // auto-apply countdown; dismiss button cancels it
   const cd=document.getElementById('sub-countdown');
+  const fill=document.getElementById('sub-progress-fill');
   const timer=setInterval(()=>{
     secs--;
     if(cd) cd.textContent=secs+'s';
+    if(fill) fill.style.width=Math.max(0,(secs/totalSecs)*100)+'%';
     if(secs<=0){ clearInterval(timer); applySiteUpdate(); }
   },1000);
   const dismiss=document.getElementById('sub-dismiss');
