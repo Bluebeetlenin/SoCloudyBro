@@ -17,7 +17,7 @@ jobs:
 
       - name: Push HTML to Firebase via Worker
         env:
-          CLAUDE_DEPLOY_KEY: ${{ secrets.CLAUDE_DEPLOY_KEY }}
+          CLAUDE_DEPLOY_KEY: ${{ secrets.Claude_RemoteAccessKey }}
           WORKER_URL: https://socloudybro-firebase-rules.steveemil7.workers.dev
         run: |
           if [ -z "$CLAUDE_DEPLOY_KEY" ]; then
