@@ -14,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: SoCloudyBro.html
+          sparse-checkout-cone-mode: false
 
       - name: Push HTML to Firebase via Worker
         env:
@@ -28,9 +32,8 @@ jobs:
           export VERSION=$(date +%s)
           export NOTE="Auto-deploy from commit ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}"
 
-          # Build JSON payload with the HTML safely encoded
           python3 - <<'PYEOF'
-          import json, os, subprocess, sys
+          import gzip, json, os, subprocess, sys
 
           html_path = "SoCloudyBro.html"
           with open(html_path, "r", encoding="utf-8") as f:
@@ -42,16 +45,19 @@ jobs:
           url     = os.environ["WORKER_URL"] + "/claude-deploy"
 
           payload = json.dumps({"html": html, "version": version, "note": note})
+          compressed = gzip.compress(payload.encode("utf-8"), compresslevel=1)
 
-          # Write payload to temp file to avoid arg-length limits
-          with open("/tmp/deploy_payload.json", "w", encoding="utf-8") as f:
-              f.write(payload)
+          with open("/tmp/deploy_payload.gz", "wb") as f:
+              f.write(compressed)
+
+          print(f"Payload: {len(payload)//1024}KB → compressed: {len(compressed)//1024}KB")
 
           result = subprocess.run(
               ["curl", "-sf", "-X", "POST", url,
                "-H", "Content-Type: application/json",
+               "-H", "Content-Encoding: gzip",
                "-H", f"X-Claude-Key: {key}",
-               "--data-binary", "@/tmp/deploy_payload.json",
+               "--data-binary", "@/tmp/deploy_payload.gz",
                "--max-time", "120"],
               capture_output=True, text=True
           )

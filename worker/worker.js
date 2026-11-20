@@ -338,7 +338,15 @@ async function handleClaudeDeploy(req, env, corsHeaders) {
     });
   }
   let body;
-  try { body = await req.json(); } catch (e) {
+  try {
+    if (req.headers.get('Content-Encoding') === 'gzip') {
+      const ds = new DecompressionStream('gzip');
+      const text = await new Response(req.body.pipeThrough(ds)).text();
+      body = JSON.parse(text);
+    } else {
+      body = await req.json();
+    }
+  } catch (e) {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
