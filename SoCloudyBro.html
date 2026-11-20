@@ -20973,10 +20973,20 @@ function showSiteUpdateBanner(ver,note){
   if(document.getElementById('site-update-banner')) return;
   const bar=_bannerRow('site-update-banner');
   bar.style.background='var(--accent)';
-  bar.innerHTML='<span class="tbr-text">🚀 Site update v'+ver+(note?' — '+esc(note):'')+'</span>'+
-    '<button onclick="applySiteUpdate()" style="background:rgba(255,255,255,0.25);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#fff;font-weight:700;font-size:11px">Reload now</button>'+
-    '<button onclick="_removeBannerRow(\'site-update-banner\')" style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.7);font-size:16px;line-height:1;margin-left:4px">✕</button>';
+  let secs=8;
+  bar.innerHTML='<span class="tbr-text">🚀 Update available'+(note?' — '+esc(note):'')+' — applying in <b id="sub-countdown">'+secs+'s</b></span>'+
+    '<button onclick="applySiteUpdate()" style="background:rgba(255,255,255,0.25);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#fff;font-weight:700;font-size:11px">Apply now</button>'+
+    '<button id="sub-dismiss" style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.7);font-size:16px;line-height:1;margin-left:4px">✕</button>';
   _updateBannerStackHeight();
+  // auto-apply countdown; dismiss button cancels it
+  const cd=document.getElementById('sub-countdown');
+  const timer=setInterval(()=>{
+    secs--;
+    if(cd) cd.textContent=secs+'s';
+    if(secs<=0){ clearInterval(timer); applySiteUpdate(); }
+  },1000);
+  const dismiss=document.getElementById('sub-dismiss');
+  if(dismiss) dismiss.onclick=()=>{ clearInterval(timer); _removeBannerRow('site-update-banner'); };
 }
 
 function applySiteUpdate(){

@@ -91,6 +91,10 @@ export default {
         return await handleCspReport(req, env, corsHeaders);
       }
 
+      if (path === '/claude-deploy' && req.method === 'POST') {
+        return await handleClaudeDeploy(req, env, corsHeaders);
+      }
+
       const adminNum = req.headers.get('X-Admin-Number');
       if (!adminNum || adminNum !== (env.ADMIN_NUMBER || '2015')) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -316,6 +320,61 @@ async function handleCspReport(req, env, corsHeaders) {
     } catch (e) { /* best-effort */ }
   }
   return new Response(null, { status: 204, headers: corsHeaders });
+}
+
+// POST /claude-deploy — secure endpoint for Claude to push a live HTML update
+// directly to Firebase RTDB without a Vercel redeploy. Protected by the
+// CLAUDE_DEPLOY_KEY secret; set it once with: wrangler secret put CLAUDE_DEPLOY_KEY
+async function handleClaudeDeploy(req, env, corsHeaders) {
+  const key = req.headers.get('X-Claude-Key');
+  if (!key || !env.CLAUDE_DEPLOY_KEY || key !== env.CLAUDE_DEPLOY_KEY) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+  if (!env.SERVICE_ACCOUNT_JSON) {
+    return new Response(JSON.stringify({ error: 'No service account configured' }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+  let body;
+  try { body = await req.json(); } catch (e) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+  const { html, version, note } = body;
+  if (typeof html !== 'string' || html.length < 1000) {
+    return new Response(JSON.stringify({ error: 'Missing or too-short html field' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+  if (!html.startsWith('<!DOCTYPE html') || !html.includes('SoCloudyBro')) {
+    return new Response(JSON.stringify({ error: 'html does not look like the SoCloudyBro app' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+  const ver = typeof version === 'number' ? version : Date.now();
+  try {
+    const accessToken = await getAccessToken(env.SERVICE_ACCOUNT_JSON);
+    const payload = { html, version: ver, note: note || '', updated_at: Date.now() };
+    const r = await fetch(`${dbBaseUrl(env)}/admin_site.json?access_token=${accessToken}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`Firebase write failed (${r.status}): ${txt}`);
+    }
+    return new Response(JSON.stringify({ ok: true, version: ver }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 async function verifyMintProof(user, { password, googleCredential, passkeyAssertion, faceDescriptor, backupPin, secAnswers }, env) {
