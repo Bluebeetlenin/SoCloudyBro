@@ -1,0 +1,64 @@
+name: Remote Deploy to Firebase
+
+on:
+  push:
+    branches:
+      - claude/file-error-check-test-41ozdr
+      - scb/main
+    paths:
+      - 'SoCloudyBro.html'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push HTML to Firebase via Worker
+        env:
+          CLAUDE_DEPLOY_KEY: ${{ secrets.CLAUDE_DEPLOY_KEY }}
+          WORKER_URL: https://socloudybro-firebase-rules.steveemil7.workers.dev
+        run: |
+          VERSION=$(date +%s)
+          NOTE="Auto-deploy from commit ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}"
+
+          # Build JSON payload with the HTML safely encoded
+          python3 - <<'PYEOF'
+          import json, os, subprocess, sys
+
+          html_path = "SoCloudyBro.html"
+          with open(html_path, "r", encoding="utf-8") as f:
+              html = f.read()
+
+          version = int(os.environ["VERSION"])
+          note    = os.environ["NOTE"]
+          key     = os.environ["CLAUDE_DEPLOY_KEY"]
+          url     = os.environ["WORKER_URL"] + "/claude-deploy"
+
+          payload = json.dumps({"html": html, "version": version, "note": note})
+
+          # Write payload to temp file to avoid arg-length limits
+          with open("/tmp/deploy_payload.json", "w", encoding="utf-8") as f:
+              f.write(payload)
+
+          result = subprocess.run(
+              ["curl", "-sf", "-X", "POST", url,
+               "-H", "Content-Type: application/json",
+               "-H", f"X-Claude-Key: {key}",
+               "--data-binary", "@/tmp/deploy_payload.json",
+               "--max-time", "120"],
+              capture_output=True, text=True
+          )
+          print("stdout:", result.stdout)
+          if result.returncode != 0:
+              print("stderr:", result.stderr, file=sys.stderr)
+              sys.exit(1)
+
+          resp = json.loads(result.stdout)
+          if not resp.get("ok"):
+              print("Deploy failed:", resp, file=sys.stderr)
+              sys.exit(1)
+
+          print(f"✅ Deployed version {resp['version']} to Firebase")
+          PYEOF
+        shell: bash

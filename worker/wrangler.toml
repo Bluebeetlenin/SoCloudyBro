@@ -14,6 +14,7 @@ ADMIN_NUMBER = "2015"
 #   wrangler secret put EMAILJS_TEMPLATE_ID
 #   wrangler secret put EMAILJS_PUBLIC_KEY
 #   wrangler secret put EMAILJS_PRIVATE_KEY
+#   wrangler secret put CLAUDE_DEPLOY_KEY   ← random key for /claude-deploy endpoint
 #
 # To deploy:
 #   cd worker && wrangler deploy
