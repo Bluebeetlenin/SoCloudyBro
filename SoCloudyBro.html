@@ -20368,7 +20368,6 @@ function openBadgeDetail(catId, number){
     <div class="bdm-tiers-label">All tiers</div>
     ${tiersHtml}`;
 
-  closeModal('user-profile-modal');
   openModal('badge-detail-modal');
 }
 function adminMessage(num){
@@ -28718,9 +28717,11 @@ document.addEventListener('keydown',function(e){
   if(ctrl&&e.key.toLowerCase()==='k'){ e.preventDefault(); if(typeof toggleMsgSearch==='function') toggleMsgSearch(); return; }
   // Esc — close topmost modal when not searching
   if(!inInput&&e.key==='Escape'){
-    const visible=document.querySelector('.overlay.visible');
-    if(visible){
-      const id=visible.id;
+    // Use the z-stack to close the topmost modal; fall back to DOM query if
+    // the stack is empty (e.g. a modal opened without going through openModal).
+    const id=_modalZStack.length ? _modalZStack[_modalZStack.length-1].id
+            : (document.querySelector('.overlay.visible')||{}).id;
+    if(id){
       // A handful of modals own a live resource (camera stream, an active
       // call's Firebase record + ringtone) that only their dedicated cancel
       // function releases — a bare closeModal() just hides the overlay and
@@ -28731,7 +28732,7 @@ document.addEventListener('keydown',function(e){
       // still just closes normally.
       const cleanup=ESCAPE_MODAL_CLEANUP[id];
       if(cleanup) cleanup();
-      else if(id) closeModal(id);
+      else closeModal(id);
     }
   }
 });
