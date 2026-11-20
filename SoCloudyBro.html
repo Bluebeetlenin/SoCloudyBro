@@ -26595,7 +26595,7 @@ function injectFeatureModals(){
       '<h4 class="scb-subhead">Add a child profile</h4>'+
       '<div class="field"><label>Child\'s display name</label><input type="text" id="scb-child-name" maxlength="24" placeholder="e.g. Sam"/></div>'+
       '<div class="field"><label>Account number</label><input type="number" id="scb-child-number" min="1000" max="99999" placeholder="e.g. 4821"/></div>'+
-      '<div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="scb-child-password" placeholder="At least 8 characters"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd(\'scb-child-password\',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>'+
+      '<div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="scb-child-password" placeholder="At least 8 characters"/><button type="button" class="pwd-toggle-btn" id="scb-child-pwd-toggle" tabindex="-1" aria-label="Show password">👁️</button></div></div>'+
       '<div class="field"><label>Date of birth</label><input type="date" id="scb-child-birthdate"/></div>'+
       '<div class="error-text" id="scb-child-error"></div>'+
       '<button class="btn btn-full" id="scb-child-create-btn">Create child profile</button>'+
@@ -26608,7 +26608,7 @@ function injectFeatureModals(){
     '<div class="modal-body" style="padding-bottom:14px">'+
       '<div id="scb-link-form">'+
         '<div class="field"><label>Parent\'s account number</label><input type="number" id="scb-link-parent-number" min="1000" max="99999"/></div>'+
-        '<div class="field"><label>Parent\'s account password</label><div class="pwd-field-wrap"><input type="password" id="scb-link-parent-password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd(\'scb-link-parent-password\',this)" tabindex="-1" aria-label="Show password">👁️</button></div><div class="field-hint">Your parent enters this themselves — it proves it\'s really them and is never stored.</div></div>'+
+        '<div class="field"><label>Parent\'s account password</label><div class="pwd-field-wrap"><input type="password" id="scb-link-parent-password"/><button type="button" class="pwd-toggle-btn" id="scb-link-parent-pwd-toggle" tabindex="-1" aria-label="Show password">👁️</button></div><div class="field-hint">Your parent enters this themselves — it proves it\'s really them and is never stored.</div></div>'+
         '<div class="field"><label>Choose a parental PIN</label><input type="text" id="scb-link-pin" inputmode="numeric" maxlength="8" placeholder="4–8 digits"/><div class="field-hint">Separate from your password. You\'ll need it to unlink later.</div></div>'+
         '<div class="error-text" id="scb-link-error"></div>'+
         '<button class="btn btn-full" id="scb-link-submit">Link parent</button>'+
@@ -26630,7 +26630,7 @@ function injectFeatureModals(){
     '<div class="modal-body" style="padding-bottom:14px">'+
       '<div class="field"><label>Syntax Account number</label><input type="number" id="scb-syntax-number" placeholder="e.g. 4821" min="1000" max="99999"/>'+
         '<div class="field-hint">1000–99999. This is a separate number from your SoCloudyBro number — it may or may not be the same digits.</div></div>'+
-      '<div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="scb-syntax-password" placeholder="Your Syntax Account password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd(\'scb-syntax-password\',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>'+
+      '<div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="scb-syntax-password" placeholder="Your Syntax Account password"/><button type="button" class="pwd-toggle-btn" id="scb-syntax-pwd-toggle" tabindex="-1" aria-label="Show password">👁️</button></div></div>'+
       '<div class="error-text" id="scb-syntax-link-error"></div>'+
       '<button class="btn btn-full" id="scb-syntax-link-submit">Connect ↗</button>'+
       '<div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">Your Syntax Account password is checked by the Syntax Account system and is never stored here. Linking lets your contacts see a “🎮 Playing…” badge while you\'re in one of those games, if they have that setting on.</div>'+
@@ -26674,6 +26674,9 @@ function injectFeatureModals(){
   document.getElementById('scb-status-recheck').onclick=runSystemStatusChecks;
   document.getElementById('scb-status-close').onclick=function(){ closeModal('scb-status-modal'); };
   document.getElementById('scb-rules-close').onclick=function(){ closeModal('scb-rules-modal'); };
+  document.getElementById('scb-child-pwd-toggle').onclick=function(){ togglePwd('scb-child-password',this); };
+  document.getElementById('scb-link-parent-pwd-toggle').onclick=function(){ togglePwd('scb-link-parent-password',this); };
+  document.getElementById('scb-syntax-pwd-toggle').onclick=function(){ togglePwd('scb-syntax-password',this); };
   document.getElementById('scb-child-create-btn').onclick=createChildProfile;
   document.getElementById('scb-child-close').onclick=function(){ closeModal('scb-child-modal'); };
   document.getElementById('scb-link-submit').onclick=submitLinkParent;
