@@ -7,6 +7,7 @@ on:
       - scb/main
     paths:
       - 'SoCloudyBro.html'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -19,6 +20,11 @@ jobs:
           CLAUDE_DEPLOY_KEY: ${{ secrets.CLAUDE_DEPLOY_KEY }}
           WORKER_URL: https://socloudybro-firebase-rules.steveemil7.workers.dev
         run: |
+          if [ -z "$CLAUDE_DEPLOY_KEY" ]; then
+            echo "❌ CLAUDE_DEPLOY_KEY secret is not set in GitHub repo secrets."
+            echo "   Go to repo Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
           export VERSION=$(date +%s)
           export NOTE="Auto-deploy from commit ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}"
 
