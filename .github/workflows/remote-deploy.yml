@@ -19,8 +19,8 @@ jobs:
           CLAUDE_DEPLOY_KEY: ${{ secrets.CLAUDE_DEPLOY_KEY }}
           WORKER_URL: https://socloudybro-firebase-rules.steveemil7.workers.dev
         run: |
-          VERSION=$(date +%s)
-          NOTE="Auto-deploy from commit ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}"
+          export VERSION=$(date +%s)
+          export NOTE="Auto-deploy from commit ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}"
 
           # Build JSON payload with the HTML safely encoded
           python3 - <<'PYEOF'
