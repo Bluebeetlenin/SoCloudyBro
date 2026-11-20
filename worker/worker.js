@@ -451,6 +451,7 @@ async function sha256Hex(str) {
 
 async function verifyPasswordHash(password, stored) {
   if (typeof stored !== 'string') return false;
+  stored = stored.trim();
   if (stored.indexOf('v2$') === 0) {
     const parts = stored.split('$');
     if (parts.length !== 4) return false;
