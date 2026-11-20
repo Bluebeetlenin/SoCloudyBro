@@ -29818,7 +29818,7 @@ function _execActiveSlash(){
 }
 
 // ── PATCH onMsgInput ─────────────────────────────────────────────────────────
-const _scbOrigOnMsgInput2 = onMsgInput;
+const _scbOrigOnMsgInput2 = typeof onMsgInput === 'function' ? onMsgInput : null;
 onMsgInput = function(el){
   try{ _scbOrigOnMsgInput2(el); }catch(e){}
   const val=el.value;
@@ -29832,7 +29832,7 @@ onMsgInput = function(el){
 };
 
 // ── PATCH msgKeydown ──────────────────────────────────────────────────────────
-const _scbOrigMsgKeydown = msgKeydown;
+const _scbOrigMsgKeydown = typeof msgKeydown === 'function' ? msgKeydown : null;
 msgKeydown = function(e){
   const pal=document.getElementById('slash-palette');
   if(pal&&pal.classList.contains('visible')){
@@ -29843,7 +29843,7 @@ msgKeydown = function(e){
     if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();if(_execActiveSlash()) return;}
     if(e.key==='Escape'){e.preventDefault();_hideSlashPalette();return;}
   }
-  _scbOrigMsgKeydown(e);
+  if(_scbOrigMsgKeydown) _scbOrigMsgKeydown(e);
 };
 
 // ── CLOUDY CHAT CONTACT ───────────────────────────────────────────────────────
