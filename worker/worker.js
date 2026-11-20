@@ -46,7 +46,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin': isAllowedOrigin(reqOrigin) ? reqOrigin : ALLOWED_ORIGIN,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Number',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Number, X-Claude-Key',
       'Vary': 'Origin',
     };
 
@@ -324,10 +324,10 @@ async function handleCspReport(req, env, corsHeaders) {
 
 // POST /claude-deploy — secure endpoint for Claude to push a live HTML update
 // directly to Firebase RTDB without a Vercel redeploy. Protected by the
-// CLAUDE_DEPLOY_KEY secret; set it once with: wrangler secret put CLAUDE_DEPLOY_KEY
+// Claude_RemoteAccessKey secret.
 async function handleClaudeDeploy(req, env, corsHeaders) {
   const key = req.headers.get('X-Claude-Key');
-  if (!key || !env.CLAUDE_DEPLOY_KEY || key !== env.CLAUDE_DEPLOY_KEY) {
+  if (!key || !env.Claude_RemoteAccessKey || key !== env.Claude_RemoteAccessKey) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
