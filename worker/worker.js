@@ -20,6 +20,18 @@
 //     embedding it in the client HTML. Add WEB3FORMS_ACCESS_KEY as a
 //     Worker secret in the Cloudflare dashboard.
 
+// Accept production and any Vercel preview/branch deployment for this project.
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (origin === 'https://socloudybro.vercel.app') return true;
+  // Vercel preview URLs: https://<anything>.vercel.app where the subdomain
+  // contains "socloudybro" (covers branch, PR, and team preview deployments).
+  try {
+    const u = new URL(origin);
+    return u.protocol === 'https:' && u.hostname.endsWith('.vercel.app') &&
+           u.hostname.includes('socloudybro');
+  } catch { return false; }
+}
 const ALLOWED_ORIGIN = 'https://socloudybro.vercel.app';
 const GOOGLE_CLIENT_ID = '838238846995-462tmfqv9p4mthurorumg30d2uq4qin1.apps.googleusercontent.com';
 const FACE_MATCH_THRESHOLD = 0.42;
@@ -30,10 +42,12 @@ const JWKS_TTL_MS = 10 * 60 * 1000;
 
 export default {
   async fetch(req, env) {
+    const reqOrigin = req.headers.get('Origin') || '';
     const corsHeaders = {
-      'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+      'Access-Control-Allow-Origin': isAllowedOrigin(reqOrigin) ? reqOrigin : ALLOWED_ORIGIN,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Number',
+      'Vary': 'Origin',
     };
 
     if (req.method === 'OPTIONS') {
@@ -235,7 +249,8 @@ async function handleReport(req, env, corsHeaders) {
   try { body = await req.json(); } catch (e) {
     return jsonResp({ error: 'Expected JSON body' }, 400, corsHeaders);
   }
-  const ALLOWED_FIELDS = ['subject','message','from_name','name','email','reportedNumber','reporterNumber','reportType','botcheck'];
+  const ALLOWED_FIELDS = ['subject','message','from_name','name','email','reportedNumber','reporterNumber','reportType','botcheck',
+    'total_users','active_week','new_week','messages_week','reports_open','top_reports','time'];
   const fields = {};
   for (const k of ALLOWED_FIELDS) {
     if (body[k] !== undefined) fields[k] = String(body[k]).slice(0, 4000);
@@ -568,7 +583,7 @@ async function verifyPasskeyAssertionServer(assertion, user, env) {
   const spkiBuf = b64DecodeToBuffer(matched.publicKeySpki);
   const clientData = JSON.parse(new TextDecoder().decode(clientDataBuf));
   if (clientData.type !== 'webauthn.get') return false;
-  if (clientData.origin !== ALLOWED_ORIGIN) return false;
+  if (!isAllowedOrigin(clientData.origin)) return false;
   // Verify the challenge in clientDataJSON matches what the Worker issued.
   if (clientData.challenge !== challengePayload.challengeB64u) return false;
   const pubKey = await crypto.subtle.importKey('spki', spkiBuf, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
