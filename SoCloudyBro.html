@@ -15266,7 +15266,7 @@ function openBizViewModal(user){
       card.className='biz-product-card';
       // Validate URL before using in click handler — only allow http/https to prevent javascript: injection
       const safeUrl=(p.url&&/^https?:\/\//i.test(p.url.trim()))?p.url.trim():'';
-      if(safeUrl) card.onclick=()=>window.open(safeUrl,'_blank');
+      if(safeUrl) card.onclick=()=>window.open(safeUrl,'_blank','noopener,noreferrer');
       const imgDiv=document.createElement('div');
       imgDiv.className='biz-product-img';
       if(p.img){
@@ -16583,7 +16583,28 @@ function fmtTime(ts){
   return d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
 var _modalZBase=600,_modalZStack=[];
-function openModal(id){const el=document.getElementById(id);if(!el)return;hideHeaderMenu();hideCtxMenu();el.style.display='';el.classList.add('visible');var z=_modalZBase+(_modalZStack.length+1)*10;el.style.zIndex=z;_modalZStack.push({id:id,z:z});}
+function openModal(id){
+  const el=document.getElementById(id);if(!el)return;
+  hideHeaderMenu();hideCtxMenu();
+  // Re-opening a modal that is already open moves it to the top of the stack
+  // instead of leaving a duplicate entry; keep the original opener so focus
+  // returns to the real trigger on close.
+  const prev=_modalZStack.find(function(e){return e.id===id;});
+  const opener=prev?prev.opener:document.activeElement;
+  _modalZStack=_modalZStack.filter(function(e){return e.id!==id;});
+  el.style.display='';el.classList.add('visible');
+  // Always one step above the current top so stacked modals can never tie.
+  var z=(_modalZStack.length?_modalZStack[_modalZStack.length-1].z:_modalZBase)+10;
+  el.style.zIndex=z;
+  _modalZStack.push({id:id,z:z,opener:opener});
+  // Move keyboard focus into the dialog (unless code already focused
+  // something inside it) so Tab/Esc act on the modal, not the page behind.
+  if(!el.contains(document.activeElement)){
+    const box=el.querySelector('.modal')||el;
+    if(!box.hasAttribute('tabindex')) box.setAttribute('tabindex','-1');
+    try{ box.focus({preventScroll:true}); }catch(e){}
+  }
+}
 function showPrivacyPolicy(){openModal('privacy-modal');}
 function showTermsOfService(){openModal('tos-modal');}
 
@@ -16624,7 +16645,18 @@ function _openDmWithAdmin(num){
   const c = { type:'dm', number:num, name:(u&&u.name?dec(u.name):'Admin #'+num), avatar:(u&&u.avatar)||'', key:'dm_'+[me.number,num].sort((a,b)=>a-b).join('_') };
   contacts.push(c); saveStorage(); openChat(c);
 }
-function closeModal(id){const el=document.getElementById(id);if(!el)return;el.classList.remove('visible');el.style.zIndex='';_modalZStack=_modalZStack.filter(function(e){return e.id!==id;});}
+function closeModal(id){
+  const el=document.getElementById(id);if(!el)return;
+  const entry=_modalZStack.find(function(e){return e.id===id;});
+  el.classList.remove('visible');el.style.zIndex='';
+  _modalZStack=_modalZStack.filter(function(e){return e.id!==id;});
+  // Give focus back to whatever opened the modal, but only if focus was
+  // inside it (or lost) — never steal it from something the user moved to.
+  const ae=document.activeElement;
+  if(entry&&entry.opener&&entry.opener!==document.body&&document.contains(entry.opener)&&entry.opener.offsetParent!==null&&(ae===document.body||el.contains(ae))){
+    try{ entry.opener.focus({preventScroll:true}); }catch(e){}
+  }
+}
 function renderContacts(){renderSidebar();}
 var toastTimer=null;
 function showToast(title,body){
@@ -21001,7 +21033,7 @@ function adminCodePreview(){
   if(!ta||!ta.value.trim()){ showToast('Nothing to preview','Load or paste HTML first.'); return; }
   const blob=new Blob([ta.value],{type:'text/html'});
   const url=URL.createObjectURL(blob);
-  window.open(url,'_blank');
+  window.open(url,'_blank','noopener,noreferrer');
   setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 
@@ -22158,7 +22190,7 @@ async function adminPushRules() {
   // Direct the admin to paste these rules manually in Firebase Console.
   const consoleUrl = 'https://console.firebase.google.com/project/socloudybro-b8606/database/socloudybro-b8606-default-rtdb/rules';
   if (confirm('Firebase rules cannot be pushed directly from the browser (requires a service account token).\n\nOpen Firebase Console to paste them manually?')) {
-    window.open(consoleUrl, '_blank');
+    window.open(consoleUrl, '_blank', 'noopener,noreferrer');
   }
   showToast('Use Firebase Console', 'Copy the JSON from the text area and paste it in Firebase Console → Rules.');
 }
@@ -28420,6 +28452,50 @@ document.addEventListener('click', function(e){
   }
 });
 
+// Accessibility pass for the static markup: dialog semantics for every modal,
+// accessible names for icon-only buttons, and a polite live region for toasts.
+(function a11yEnhance(){
+  try{
+    document.querySelectorAll('.overlay').forEach(function(ov){
+      if(!ov.hasAttribute('role')) ov.setAttribute('role','dialog');
+      if(!ov.hasAttribute('aria-modal')) ov.setAttribute('aria-modal','true');
+      if(!ov.hasAttribute('aria-labelledby')&&!ov.hasAttribute('aria-label')){
+        const h=ov.querySelector('h1,h2,h3');
+        if(h){ if(!h.id) h.id=(ov.id||'modal')+'-title'; ov.setAttribute('aria-labelledby',h.id); }
+      }
+    });
+    const names={'✕':'Close','✖':'Close','×':'Close','←':'Back','→':'Next','➤':'Send','+':'Add','⋮':'More options','☰':'Menu','🔍':'Search'};
+    document.querySelectorAll('button:not([aria-label])').forEach(function(b){
+      const txt=(b.textContent||'').trim();
+      if(txt.length>2) return;
+      const nm=b.getAttribute('title')||names[txt];
+      if(nm) b.setAttribute('aria-label',nm);
+    });
+    const toast=document.getElementById('toast');
+    if(toast){
+      toast.setAttribute('role','status');
+      toast.setAttribute('aria-live','polite');
+      toast.setAttribute('aria-atomic','true');
+    }
+  }catch(e){ console.warn('a11y enhance failed',e); }
+})();
+
+// Keep Tab inside the topmost open modal so focus can't wander to the page
+// behind it.
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Tab'||e.defaultPrevented||!_modalZStack.length) return;
+  const top=document.getElementById(_modalZStack[_modalZStack.length-1].id);
+  if(!top||!top.classList.contains('visible')) return;
+  const f=Array.prototype.filter.call(
+    top.querySelectorAll('a[href],button,input,select,textarea,[tabindex]'),
+    function(n){ return n.tabIndex>=0&&!n.disabled&&n.type!=='hidden'&&n.offsetParent!==null; });
+  if(!f.length){ e.preventDefault(); return; }
+  const first=f[0], last=f[f.length-1], ae=document.activeElement;
+  if(!top.contains(ae)){ e.preventDefault(); first.focus(); }
+  else if(e.shiftKey&&(ae===first||ae===top.querySelector('.modal'))){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey&&ae===last){ e.preventDefault(); first.focus(); }
+});
+
 init();
 </script>
 
@@ -30222,7 +30298,7 @@ window._sendToCloudyChat = _sendToCloudyChat;
 
 <!-- Avatar zoom overlay -->
 <div class="scb-u-260" id="avatar-zoom-overlay" onclick="closeAvatarZoom()">
-  <img class="scb-u-261" id="avatar-zoom-img" src="" alt="Profile photo" loading="lazy"/>
+  <img class="scb-u-261" id="avatar-zoom-img" alt="Profile photo"/>
 </div>
 
 <!-- Keyboard shortcut panel -->
