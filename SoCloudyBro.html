@@ -11146,9 +11146,21 @@ function checkSecuritySetupNudge(){
   try{ if(sessionStorage.getItem('cc_security_nudge_dismissed')==='1') return; }catch{}
   const bar=_bannerRow('security-setup-banner');
   bar.style.background='linear-gradient(90deg,#6264a0,#4C46C4)';
-  bar.innerHTML='<span class="tbr-text">🔐 Add a backup PIN or security questions so you can never get locked out</span>'+
-    '<button class="tbr-btn tbr-btn-action" style="color:#4C46C4" onclick="showSettings();switchSettingsTab(\'security\');">Set up</button>'+
-    '<button class="tbr-dismiss" onclick="dismissSecuritySetupNudge()">✕</button>';
+  const _ssnTxt=document.createElement('span');
+  _ssnTxt.className='tbr-text';
+  _ssnTxt.textContent='🔐 Add a backup PIN or security questions so you can never get locked out';
+  const _ssnSetup=document.createElement('button');
+  _ssnSetup.className='tbr-btn tbr-btn-action';
+  _ssnSetup.style.color='#4C46C4';
+  _ssnSetup.textContent='Set up';
+  _ssnSetup.onclick=()=>{ showSettings(); switchSettingsTab('security'); };
+  const _ssnDismiss=document.createElement('button');
+  _ssnDismiss.className='tbr-dismiss';
+  _ssnDismiss.textContent='✕';
+  _ssnDismiss.onclick=dismissSecuritySetupNudge;
+  bar.appendChild(_ssnTxt);
+  bar.appendChild(_ssnSetup);
+  bar.appendChild(_ssnDismiss);
   _updateBannerStackHeight();
 }
 function dismissSecuritySetupNudge(){
@@ -14380,7 +14392,12 @@ function startEditMsg(m){
     const footer=document.getElementById('chat-footer');
     footer.parentNode.insertBefore(bar,footer);
   }
-  bar.innerHTML='<span>✏️ Editing message</span><span style="cursor:pointer;font-size:16px;color:var(--muted)" onclick="cancelEdit()">✕</span>';
+  bar.innerHTML='<span>✏️ Editing message</span>';
+  const _editX=document.createElement('span');
+  _editX.style.cssText='cursor:pointer;font-size:16px;color:var(--muted)';
+  _editX.textContent='✕';
+  _editX.onclick=cancelEdit;
+  bar.appendChild(_editX);
   bar.style.display='flex';
   // Override send to save edit
   document.getElementById('send-btn').onclick=saveEditMsg;
@@ -21006,12 +21023,14 @@ function showSiteUpdateBanner(ver,note){
   bar.style.background='var(--accent)';
   const totalSecs=8; let secs=totalSecs;
   bar.innerHTML='<span class="tbr-text">🚀 Update available'+(note?' — '+esc(note):'')+' — applying in <b id="sub-countdown">'+secs+'s</b></span>'+
-    '<button class="tbr-btn tbr-btn-ghost" onclick="applySiteUpdate()">Apply now</button>'+
+    '<button id="sub-apply" class="tbr-btn tbr-btn-ghost">Apply now</button>'+
     '<button id="sub-dismiss" class="tbr-dismiss">✕</button>'+
     '<div class="tbr-progress"><span class="tbr-progress-fill" id="sub-progress-fill" style="width:100%"></span></div>';
   _updateBannerStackHeight();
   const cd=document.getElementById('sub-countdown');
   const fill=document.getElementById('sub-progress-fill');
+  const applyBtn=document.getElementById('sub-apply');
+  if(applyBtn) applyBtn.onclick=applySiteUpdate;
   const timer=setInterval(()=>{
     secs--;
     if(cd) cd.textContent=secs+'s';
@@ -29502,7 +29521,18 @@ function renderKeyChangeBanner(number){
   if(!el) return;
   if(!activeConvo||activeConvo.type==='group'||activeConvo.number!==number){ el.style.display='none'; return; }
   el.style.display='flex';
-  el.innerHTML='⚠️ This contact\'s encryption key changed. <button onclick="hideHeaderMenu();openSafetyNumbers()" style="margin-left:6px;text-decoration:underline;background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0">Verify now</button><button data-number="'+number+'" onclick="dismissKeyChangeBanner(this.dataset.number)" style="margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;font-size:14px;padding:0">✕</button>';
+  el.innerHTML='';
+  el.appendChild(document.createTextNode('⚠️ This contact\'s encryption key changed. '));
+  const _kcVerify=document.createElement('button');
+  _kcVerify.style.cssText='margin-left:6px;text-decoration:underline;background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0';
+  _kcVerify.textContent='Verify now';
+  _kcVerify.onclick=()=>{ hideHeaderMenu(); openSafetyNumbers(); };
+  const _kcDismiss=document.createElement('button');
+  _kcDismiss.style.cssText='margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;font-size:14px;padding:0';
+  _kcDismiss.textContent='✕';
+  _kcDismiss.onclick=()=>dismissKeyChangeBanner(number);
+  el.appendChild(_kcVerify);
+  el.appendChild(_kcDismiss);
 }
 function dismissKeyChangeBanner(number){
   try{ sessionStorage.removeItem('cc_key_changed_'+number); }catch(e){}
