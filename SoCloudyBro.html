@@ -25312,7 +25312,7 @@ function effectiveMaxParticipants(){
 // whichever path a given meeting took.
 function attachMeetingChatFeed(meetingId){
   const chatRef = fbdb.ref(MEETINGS_ROOT+'/'+meetingId+'/chat').limitToLast(50);
-  const onChat = chatRef.on('child_added', (s)=>appendMeetingChat(s.val()));
+  const onChat = chatRef.on('child_added', (s)=>appendMeetingChat(s.val()), (err)=>console.warn('meeting chat listener error', err));
   meetingState.refs.push({ref:chatRef, event:'child_added', cb:onChat});
 }
 
@@ -25472,7 +25472,7 @@ async function connectToMeshRoom(meetingId, localStream){
     if(!sig || !sig.from) return;
     try{ await handleMeetingSignal(sig); }
     catch(e){ console.warn('meeting signal failed', e); }
-  });
+  }, (err)=>console.warn('meeting signal listener error', err));
   meetingState.refs.push({ref:sigRef, event:'child_added', cb:onSignal});
 
   const onLeave = partsRef.on('child_removed', (s)=>{
@@ -25480,12 +25480,12 @@ async function connectToMeshRoom(meetingId, localStream){
     if(id===myId) return;
     teardownMeetingPeer(id);
     renderMeetingGrid();
-  });
+  }, (err)=>console.warn('meeting leave listener error', err));
   meetingState.refs.push({ref:partsRef, event:'child_removed', cb:onLeave});
 
   const onJoin = partsRef.on('child_added', (s)=>{
     if(s.key!==myId){ ensureMeetingPeer(s.key); renderMeetingGrid(); }
-  });
+  }, (err)=>console.warn('meeting join listener error', err));
   meetingState.refs.push({ref:partsRef, event:'child_added', cb:onJoin});
 
   attachMeetingChatFeed(meetingId);

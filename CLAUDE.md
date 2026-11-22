@@ -57,5 +57,7 @@ Do NOT run destructive operations on live production Firebase data.
 - Public speaking coach — keep language clear, confident, no filler.
 
 ## Known remaining issues
-- 8 Firebase `.on('value', cb)` listeners have no error callback (silent failure on rules denial): lines 13455, 13551, 13582, 13857, 13926, 13974, 19585, 27612
-- CSP banner onclick fixes done for: security-setup, site-update, edit-bar, key-change banners. Birthday banner was already clean.
+- Firebase `.on(...)` listeners now all have an error callback (fixed Nov 2026). Keep it that way: pass `(err)=>console.warn(...)` as the last argument to every new `.on()`.
+- All dynamic `onclick=` strings in `innerHTML` were removed (Nov 2026). JS-built UI uses `data-act` + the delegated click handler at the end of Block F (before `init();`), or `.onclick =` when `stopPropagation` is needed.
+- Modals: `openModal`/`closeModal` manage the z-stack, focus-in and focus-restore; a Tab trap and `a11yEnhance()` (dialog roles, labels) live at the end of Block F.
+- Unfixed: the `button-label` duplicate ID comes from Google's sign-in widget, not our code.
