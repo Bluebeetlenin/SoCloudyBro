@@ -28471,6 +28471,29 @@ document.addEventListener('click', function(e){
       const nm=b.getAttribute('title')||names[txt];
       if(nm) b.setAttribute('aria-label',nm);
     });
+    const regen=document.getElementById('gp-invite-regen-btn');
+    if(regen&&!regen.hasAttribute('aria-label')) regen.setAttribute('aria-label','Regenerate invite code');
+    // Honeypot field: must stay invisible to people and assistive tech.
+    const hp=document.getElementById('hp-website');
+    if(hp){ hp.setAttribute('aria-hidden','true'); hp.setAttribute('tabindex','-1'); hp.setAttribute('autocomplete','off'); }
+    // Give every unlabeled text-like control an accessible name: a preceding
+    // <label>, else PIN-digit position, else a readable form of its id.
+    const skip={hidden:1,checkbox:1,radio:1,file:1,submit:1,button:1};
+    document.querySelectorAll('input,textarea,select').forEach(function(c){
+      if(skip[c.type]||c.id==='hp-website') return;
+      if(c.getAttribute('aria-label')||c.getAttribute('aria-labelledby')||c.placeholder||c.title||c.closest('label')) return;
+      if(c.id&&document.querySelector('label[for="'+c.id+'"]')) return;
+      let nm='';
+      const prev=c.previousElementSibling;
+      if(prev&&prev.tagName==='LABEL') nm=prev.textContent.trim();
+      if(!nm&&c.type==='password'&&c.maxLength===1){
+        const grp=Array.prototype.filter.call(c.parentElement.children,function(n){ return n.tagName==='INPUT'&&n.maxLength===1; });
+        nm='PIN digit '+(grp.indexOf(c)+1)+' of '+grp.length;
+      }
+      if(!nm&&c.id) nm=c.id.replace(/-(select|input)$/,'').replace(/[-_]+/g,' ').trim();
+      if(!nm&&c.type==='password') nm='Password';
+      if(nm) c.setAttribute('aria-label',nm.charAt(0).toUpperCase()+nm.slice(1));
+    });
     const toast=document.getElementById('toast');
     if(toast){
       toast.setAttribute('role','status');
