@@ -28540,7 +28540,7 @@ init();
       <div class="field">
         <label>Secret key (manual entry)</label>
         <div class="scb-u-142">
-          <input class="scb-u-238" type="text" id="totp-secret-display" readonly/>
+          <input class="scb-u-238" type="text" id="totp-secret-display" readonly aria-label="Authenticator setup key"/>
           <button class="btn btn-ghost btn-sm" onclick="copyTotpSecret()">Copy</button>
         </div>
         <div class="field-hint">In your authenticator app: Add account → Enter setup key manually → paste this, account name SoCloudyBro.</div>
@@ -28598,7 +28598,7 @@ init();
     <div class="modal-header"><h2>Add Channel</h2></div>
     <div class="modal-body scb-u-29">
       <div class="field"><label>Channel name</label><input type="text" id="add-channel-name" placeholder="e.g. announcements" maxlength="30"/></div>
-      <div class="field"><label>Type</label><select id="add-channel-type"><option value="text">Text</option><option value="voice">Voice</option></select></div>
+      <div class="field"><label>Type</label><select id="add-channel-type" aria-label="Channel type"><option value="text">Text</option><option value="voice">Voice</option></select></div>
       <div class="error-text" id="add-channel-error"></div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="submitAddChannel()">Create</button><button class="btn btn-ghost" onclick="closeModal('add-channel-modal')">Cancel</button></div>
@@ -30369,7 +30369,7 @@ window._sendToCloudyChat = _sendToCloudyChat;
     <div class="modal-body scb-u-145">
       <div class="field">
         <label>Send at</label>
-        <input class="scb-u-265" type="datetime-local" id="schedule-dt-input"/>
+        <input class="scb-u-265" type="datetime-local" id="schedule-dt-input" aria-label="Send date and time"/>
       </div>
       <div class="error-text" id="schedule-error"></div>
     </div>
