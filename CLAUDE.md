@@ -29,7 +29,14 @@ const orig = typeof someFn === 'function' ? someFn : null;
 ```
 Root cause of the splash-screen force-dismiss bug (fixed Nov 2026 — `onMsgInput`, `msgKeydown`).
 
-## CSP
+## CSP — run before every push that edits an inline `<script>`
+`vercel.json` only allows inline scripts whose sha256 is listed. Editing ANY inline `<script>` in `SoCloudyBro.html` changes its hash, the browser blocks it, and the app freezes on the splash screen (happened Nov 22 2026). After editing, run:
+```powershell
+powershell -File scripts/update-csp-hashes.ps1
+```
+then commit `vercel.json` together with the HTML. Verify on the live site afterwards (the page must leave the splash).
+
+## CSP details
 `vercel.json` has `Content-Security-Policy` with `unsafe-hashes` + 522 sha256 hashes for static `on*=` handlers. Dynamic `onclick=` via `innerHTML` are NOT hashed → console spam. Fix: always use `.onclick =` property or `addEventListener` in JS-built UI. Static HTML `onclick=` are fine (they're hashed).
 
 ## Banner system
@@ -55,6 +62,9 @@ Do NOT run destructive operations on live production Firebase data.
 - Keep responses short and direct. No lengthy explanations unless asked.
 - Wants the app to look and feel polished — visual improvements are always welcome.
 - Public speaking coach — keep language clear, confident, no filler.
+
+## Product rules
+- **No money features, ever.** No payments, crypto, NFTs, paid gifts, tipping, subscriptions, premium tiers or ads in SCB. Don't propose or build them, and don't add integrations that need them.
 
 ## Known remaining issues
 - Firebase `.on(...)` listeners now all have an error callback (fixed Nov 2026). Keep it that way: pass `(err)=>console.warn(...)` as the last argument to every new `.on()`.
