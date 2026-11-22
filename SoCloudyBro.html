@@ -12220,7 +12220,7 @@ async function _origOpenChat(c){
   // Header
   const _bizUser = c.type!=='group'&&c.number ? lookupUser(c.number) : null;
   const _bizActive = _bizUser && _bizUser.bizProfile && _bizUser.bizProfile.enabled;
-  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number)+equippedBadgeHtml(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" data-number="'+c.number+'" onclick="openBizViewModal(lookupUser(Number(this.dataset.number)))">BIZ</span>' : '');
+  document.getElementById('chat-header-name').innerHTML=esc(dec(c.name)||c.name)+(c.number?' · #'+c.number:'')+(c.type!=='group'&&c.number?verifiedBadge(c.number)+equippedBadgeHtml(c.number):'') + (_bizActive ? ' <span class="biz-badge" title="Business account" style="cursor:pointer" data-number="'+c.number+'" data-act="bizView">BIZ</span>' : '');
   // DMs: a 1-on-1 chat has no per-message sender name/avatar to click (that's
   // only shown in groups), so the header — already styled "Click for info"
   // but with nothing actually wired to it — is the one place to reach the
@@ -12331,7 +12331,7 @@ function updateGroupDescBanner(c){
   if(!banner) return;
   const info=(c&&c.type==='group')?(c.info||'').trim():'';
   if(!info||_dismissedGroupDescBanners[c.key]){ banner.style.display='none'; return; }
-  banner.innerHTML=`<span>ℹ️</span><span>${esc(info)}</span><span class="gdb-close" data-key="${esc(c.key)}" onclick="dismissGroupDescBanner(this.dataset.key)">✕</span>`;
+  banner.innerHTML=`<span>ℹ️</span><span>${esc(info)}</span><span class="gdb-close" data-key="${esc(c.key)}" data-act="dismissGroupDesc">✕</span>`;
   banner.style.display='flex';
 }
 let _dismissedGroupDescBanners={};
@@ -12445,7 +12445,7 @@ function openNewGroup(preselectContact,asServer){
   // If quick-started from a DM whose contact wasn't in the saved list for some reason, add them directly.
   if(preselectContact&&!sel.querySelector(`[data-num="${preselectContact.number}"]`)){
     const chip=document.createElement('div');chip.className='chip';chip.dataset.num=preselectContact.number;
-    chip.innerHTML=esc(preselectContact.name)+' <span class="chip-remove" onclick="removeMember(this.closest(\'.chip\').dataset.num)">×</span>';
+    chip.innerHTML=esc(preselectContact.name)+' <span class="chip-remove" data-act="removeMember">×</span>';
     sel.appendChild(chip);
   }
   openModal('group-modal');
@@ -12470,7 +12470,7 @@ async function addMemberByNumber(num,err){
     if(!user) return {ok:false,reason:'unregistered'};
     const name=dec(user.name)||('#'+num);
     const chip=document.createElement('div');chip.className='chip';chip.dataset.num=num;
-    chip.innerHTML=esc(name)+' <span class="chip-remove" onclick="removeMember(this.closest(\'.chip\').dataset.num)">×</span>';
+    chip.innerHTML=esc(name)+' <span class="chip-remove" data-act="removeMember">×</span>';
     sel.appendChild(chip);
     const pick=document.getElementById('member-pick-list');
     const row=pick&&[...pick.children].find(r=>String(r.dataset.rowNum)===String(num));
@@ -12513,7 +12513,7 @@ function toggleMember(c,row){
   if(existing){existing.remove();row.style.background='';}
   else{
     const chip=document.createElement('div');chip.className='chip';chip.dataset.num=c.number;
-    chip.innerHTML=esc(c.name)+' <span class="chip-remove" onclick="removeMember(this.closest(\'.chip\').dataset.num)">×</span>';
+    chip.innerHTML=esc(c.name)+' <span class="chip-remove" data-act="removeMember">×</span>';
     sel.appendChild(chip);row.style.background='var(--bg3)';row.dataset.rowNum=c.number;
   }
 }
@@ -13475,7 +13475,7 @@ function refreshVoiceParticipantCounts(conv){
           el.title=names+(n>6?' and '+(n-6)+' more':'');
         } else { el.title=''; }
       }
-    });
+    },err=>{ console.warn('voice count listener error',err); });
     _voiceCountListeners[path]={ref,handler};
   });
 }
@@ -13585,7 +13585,7 @@ async function _startVoiceSession(path,label){
         leaveVoiceChannel();
       }
     }
-  });
+  },err=>{ console.warn('voice participants listener error',err); });
   _voiceRefs.push({ref:partRef,event:'value',handler:partHandler});
   // Listen for signals addressed to me. Uses the standard WebRTC "perfect
   // negotiation" pattern (polite/impolite by number comparison) so either
@@ -13633,7 +13633,7 @@ async function _startVoiceSession(path,label){
         }
       }
     }
-  });
+  },err=>{ console.warn('voice signalling listener error',err); });
   _voiceRefs.push({ref:sigRef,event:'value',handler:sigHandler});
   document.getElementById('voice-bar').style.display='flex';
   return true;
@@ -13891,6 +13891,10 @@ async function startDirectCall(contact){
       _dmCallIsOutgoing=true;
       await _beginDmCallSession(dmKeyStr,contact.number,contact.name,pairKey);
     }
+  },err=>{
+    console.warn('outgoing call listener error',err);
+    closeModal('outgoing-call-modal'); cleanupOutgoingWatcher();
+    showToast('Call failed','Could not watch the call — check your connection.');
   });
   // Firebase's onDisconnect() only clears the record once it notices the
   // other side's connection is actually gone, which can take a while (or
@@ -13994,7 +13998,7 @@ function showIncomingCallModal(pairKey,c){
       logMissedCall(c.from,c.fromName);
       renderDashboardWidget('missedcalls');
     }
-  });
+  },err=>{ console.warn('incoming call listener error',err); });
 }
 function cleanupIncomingWatcher(){
   if(_incomingCallRef&&_incomingCallHandler) _incomingCallRef.off('value',_incomingCallHandler);
@@ -14181,7 +14185,9 @@ function renderPinnedBanner(c){
   const u=msg.from===me.number?me:(lookupUser(msg.from)||{});
   const preview=msgHasGif(msg)?'📎 GIF':msgHasPoll(msg)?('📊 '+((msgPollData(msg)||{}).question||'Poll')):(msgText(msg));
   banner.style.display='flex';
-  banner.innerHTML=`<span class="pin-ico">📌</span><span class="pin-text"><strong>${esc(dec(u.name)||'Someone')}</strong>: ${esc(preview)}</span><span class="pin-unpin" onclick="event.stopPropagation();unpinFromBanner()" title="Unpin">✕</span>`;
+  banner.innerHTML=`<span class="pin-ico">📌</span><span class="pin-text"><strong>${esc(dec(u.name)||'Someone')}</strong>: ${esc(preview)}</span><span class="pin-unpin" title="Unpin">✕</span>`;
+  const _unpinBtn=banner.querySelector('.pin-unpin');
+  if(_unpinBtn) _unpinBtn.onclick=e=>{ e.stopPropagation(); unpinFromBanner(); };
 }
 async function unpinFromBanner(){
   if(!activeConvo||!convosCache) return;
@@ -15165,7 +15171,7 @@ function _renderBizBotRules(){
   const list = document.getElementById('biz-bot-rules-list');
   if(!list) return;
   if(!rules.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No rules yet — add one below</div>'; return; }
-  list.innerHTML = rules.map((r,i)=>`<div class="biz-bot-rule"><span class="biz-bot-kw">${esc(r.keyword||'')}</span><span class="biz-bot-reply">${esc(r.reply||'')}</span><button class="btn btn-ghost btn-sm" data-i="${i}" onclick="removeBizBotRule(Number(this.dataset.i))">×</button></div>`).join('');
+  list.innerHTML = rules.map((r,i)=>`<div class="biz-bot-rule"><span class="biz-bot-kw">${esc(r.keyword||'')}</span><span class="biz-bot-reply">${esc(r.reply||'')}</span><button class="btn btn-ghost btn-sm" data-i="${i}" data-act="removeBizBotRule">×</button></div>`).join('');
 }
 function addBizBotRule(){
   const kw = document.getElementById('biz-bot-kw-input').value.trim();
@@ -15594,7 +15600,7 @@ function renderPinnedWidget(body){
   });
   items.sort((a,b)=>b.time-a.time);
   if(!items.length){ body.innerHTML=_DART.pinned; return; }
-  body.innerHTML=items.slice(0,5).map(it=>'<div class="dash-list-item" data-key="'+esc(it.contact.key)+'" data-ch-id="'+esc(it.chId)+'" onclick="dashOpenChat(this.dataset.key,this.dataset.chId)">📌 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.contact.name)+' — '+esc(it.text.substring(0,40))+'</span></div>').join('');
+  body.innerHTML=items.slice(0,5).map(it=>'<div class="dash-list-item" data-key="'+esc(it.contact.key)+'" data-ch-id="'+esc(it.chId)+'" data-act="dashOpenChat">📌 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.contact.name)+' — '+esc(it.text.substring(0,40))+'</span></div>').join('');
 }
 function renderOnlineWidget(body){
   const dms=contacts.filter(c=>c.type!=='group');
@@ -15620,7 +15626,7 @@ async function renderVoiceWidget(body){
     });
   });
   if(!rows.length){ body.innerHTML=_DART.voice_empty; return; }
-  body.innerHTML=rows.slice(0,6).map(r=>'<div class="dash-list-item" data-key="'+esc(r.group.key)+'" data-ch-id="'+esc(r.ch.id)+'" onclick="dashJoinVoice(this.dataset.key,this.dataset.chId)">🔊 '+esc(r.group.name)+' — '+esc(r.ch.name)+' <span class="dash-widget-empty" id="dash-vc-count-'+r.ch.id+'" style="margin-left:auto"></span></div>').join('');
+  body.innerHTML=rows.slice(0,6).map(r=>'<div class="dash-list-item" data-key="'+esc(r.group.key)+'" data-ch-id="'+esc(r.ch.id)+'" data-act="dashJoinVoice">🔊 '+esc(r.group.name)+' — '+esc(r.ch.name)+' <span class="dash-widget-empty" id="dash-vc-count-'+r.ch.id+'" style="margin-left:auto"></span></div>').join('');
   rows.forEach(r=>{
     fbdb.ref(voicePath(r.group.key,r.ch.id)+'/participants').get().then(snap=>{
       const n=Object.keys(snap.val()||{}).length;
@@ -15717,7 +15723,7 @@ function renderMissedCallsWidget(body){
   let log=[];
   try{ log=JSON.parse(localStorage.getItem('cc_missed_calls')||'[]'); }catch(e){}
   if(!log.length){ body.innerHTML=_DART.missed_empty; return; }
-  body.innerHTML=log.slice(-6).reverse().map(l=>'<div class="dash-list-item" data-number="'+l.from+'" onclick="dashOpenChatByNumber(Number(this.dataset.number))">📞 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.fromName||('#'+l.from))+'</span><span class="dash-widget-empty" style="margin-left:auto">'+new Date(l.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');
+  body.innerHTML=log.slice(-6).reverse().map(l=>'<div class="dash-list-item" data-number="'+l.from+'" data-act="dashOpenChatByNumber">📞 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.fromName||('#'+l.from))+'</span><span class="dash-widget-empty" style="margin-left:auto">'+new Date(l.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');
 }
 function dashOpenChatByNumber(num){
   const c=contacts.find(x=>x.type!=='group'&&x.number===num);
@@ -17228,7 +17234,7 @@ function toggleAddGroupMember(num,name,row){
   if(existingChip){ existingChip.remove(); if(theRow) theRow.style.background=''; }
   else{
     const chip=document.createElement('div');chip.className='chip';chip.dataset.num=num;
-    chip.innerHTML=esc(name)+' <span class="chip-remove" onclick="toggleAddGroupMember(this.closest(\'.chip\').dataset.num)">×</span>';
+    chip.innerHTML=esc(name)+' <span class="chip-remove" data-act="toggleAddGroupMember">×</span>';
     sel.appendChild(chip); if(theRow) theRow.style.background='var(--bg3)';
   }
 }
@@ -18293,7 +18299,9 @@ function renderMessages(msgs) {
         // Long messages collapse to a preview with a "Show more" toggle rather
         // than pushing the whole chat log out of view for one message.
         const previewText = renderMsgTextWithMentions(filterBadWords(msgText(m).slice(0, 500)));
-        bubble.innerHTML = `<div class="msg-collapsed-body">${previewText}\u2026</div><div class="msg-full-body" style="display:none">${rendered}</div><span class="msg-expand-toggle" onclick="event.stopPropagation();toggleMsgExpand(this)">Show more</span>`;
+        bubble.innerHTML = `<div class="msg-collapsed-body">${previewText}\u2026</div><div class="msg-full-body" style="display:none">${rendered}</div><span class="msg-expand-toggle">Show more</span>`;
+        const _expandBtn = bubble.querySelector('.msg-expand-toggle');
+        if (_expandBtn) _expandBtn.onclick = e => { e.stopPropagation(); toggleMsgExpand(_expandBtn); };
       } else {
         bubble.innerHTML = rendered;
       }
@@ -19605,7 +19613,7 @@ function watchRaceProgress(msgId){
       const bar=document.getElementById('race-bar-'+msgId+'-'+num);
       if(bar) bar.style.width=pct+'%';
     });
-  });
+  },err=>{ console.warn('typing race listener error',err); });
   _raceListeners[msgId]={ref,handler};
 }
 // Leaving/switching a conversation used to leave every Typing Race listener
@@ -21013,7 +21021,7 @@ async function checkForSiteUpdate(){
           showSiteUpdateBanner(remoteVer,d.note||'');
         }).catch(()=>{});
       }
-    });
+    },err=>{ console.warn('site version listener error',err); });
   }catch(e){}
 }
 
@@ -28392,6 +28400,25 @@ catch(e){ console.error('feature theme/lang init failed', e); }
 // isn't on screen and this is a no-op beyond the lookups.
 try{ initGoogleSignIn(); }
 catch(e){ console.error('Google sign-in init failed', e); }
+
+// Delegated click handler for JS-built UI. Dynamic `onclick="…"` strings in
+// innerHTML are not covered by the CSP hashes (console spam), so those
+// elements carry data-act instead and are dispatched here.
+document.addEventListener('click', function(e){
+  const t = e.target.closest && e.target.closest('[data-act]');
+  if(!t) return;
+  const d = t.dataset;
+  switch(d.act){
+    case 'bizView': openBizViewModal(lookupUser(Number(d.number))); break;
+    case 'dismissGroupDesc': dismissGroupDescBanner(d.key); break;
+    case 'removeMember': removeMember(t.closest('.chip').dataset.num); break;
+    case 'toggleAddGroupMember': toggleAddGroupMember(t.closest('.chip').dataset.num); break;
+    case 'removeBizBotRule': removeBizBotRule(Number(d.i)); break;
+    case 'dashOpenChat': dashOpenChat(d.key, d.chId); break;
+    case 'dashJoinVoice': dashJoinVoice(d.key, d.chId); break;
+    case 'dashOpenChatByNumber': dashOpenChatByNumber(Number(d.number)); break;
+  }
+});
 
 init();
 </script>
