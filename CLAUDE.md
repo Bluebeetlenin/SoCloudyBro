@@ -36,6 +36,8 @@ Root cause of the splash-screen force-dismiss bug (fixed Nov 2026 — `onMsgInpu
 powershell -File scripts/update-csp-hashes.ps1
 ```
 then commit `vercel.json` together with the HTML. Verify on the live site afterwards (the page must leave the splash).
+The script also covers static `on*="..."` handlers. Handlers built inside JS strings must be constant text or the CSP blocks them: use `data-act` (click), `data-change` (select) or `.onclick =` instead of `onclick="..."` in `innerHTML`.
+The CSP header is ~27 KB because every hash adds ~60 bytes. When `scripts/csp_check.py` warns it is getting large, run `powershell -File scripts/update-csp-hashes.ps1 -Prune` to drop unused hashes (safe: it keeps anything a JS-built handler could match).
 
 ## CSP details
 `vercel.json` has `Content-Security-Policy` with `unsafe-hashes` + 522 sha256 hashes for static `on*=` handlers. Dynamic `onclick=` via `innerHTML` are NOT hashed → console spam. Fix: always use `.onclick =` property or `addEventListener` in JS-built UI. Static HTML `onclick=` are fine (they're hashed).

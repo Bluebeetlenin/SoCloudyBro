@@ -95,7 +95,13 @@ def main():
             print("\nFix: run  powershell -File scripts/update-csp-hashes.ps1  then commit vercel.json",
                   file=sys.stderr)
             return 1
-        print("✅ repo: all inline script hashes are in vercel.json")
+        print("✅ repo: all inline script and handler hashes are in vercel.json")
+        # Every hash adds ~60 bytes to a response header. The platform limit is
+        # not documented in what we checked, so warn well before ~32 KB.
+        size = len(policy)
+        if size > 28000:
+            print("⚠️  vercel.json is %d bytes; the CSP header is getting large. "
+                  "Run: powershell -File scripts/update-csp-hashes.ps1 -Prune" % size)
         return 0
 
     url = sys.argv[2] if len(sys.argv) > 2 else "https://socloudybro.vercel.app/"
