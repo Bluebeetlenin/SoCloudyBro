@@ -16,8 +16,48 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          sparse-checkout: SoCloudyBro.html
+          sparse-checkout: |
+            SoCloudyBro.html
+            vercel.json
           sparse-checkout-cone-mode: false
+
+      # Every inline <script> must have its sha256 in vercel.json's CSP, or the
+      # browser blocks it and the app freezes on the splash screen. Deploying a
+      # page that fails this check would push a broken app to every user via
+      # the site-update banner, so stop here instead.
+      - name: Check inline-script hashes against the CSP
+        run: |
+          python3 - <<'PYEOF'
+          import base64, hashlib, re, sys
+
+          html = open("SoCloudyBro.html", encoding="utf-8").read().replace("\r", "")
+          csp = open("vercel.json", encoding="utf-8").read()
+
+          missing = []
+          pattern = re.compile(r"<script(?P<attrs>[^>]*)>(?P<body>.*?)</script>", re.I | re.S)
+          for m in pattern.finditer(html):
+              if re.search(r"src\s*=", m.group("attrs")):
+                  continue
+              body = m.group("body")
+              if not body.strip():
+                  continue
+              digest = base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode()
+              token = "sha256-" + digest
+              if token not in csp:
+                  line = html[:m.start()].count("\n") + 1
+                  missing.append((token, line, len(body)))
+
+          if missing:
+              print("❌ Inline <script> hashes missing from vercel.json CSP:", file=sys.stderr)
+              for token, line, size in missing:
+                  print(f"   {token}  (script at line {line}, {size} chars)", file=sys.stderr)
+              print("", file=sys.stderr)
+              print("Fix: run  powershell -File scripts/update-csp-hashes.ps1  then commit vercel.json", file=sys.stderr)
+              sys.exit(1)
+
+          print("✅ All inline script hashes are in the CSP")
+          PYEOF
+        shell: bash
 
       - name: Push HTML to Firebase via Worker
         env:
