@@ -15,6 +15,7 @@ git push origin scb/main
 
 ## Deploy pipeline
 Push `scb/main` → GitHub Action → gzip HTML → Cloudflare Worker → Firebase RTDB `admin_site/html`. App auto-updates via site-update banner. No Vercel action needed for content changes.
+Vercel Production Branch is `scb/main` (set Nov 23 2026), so every push there deploys to production automatically. Before sending the HTML to Firebase the Action runs `scripts/csp_check.py` twice: against the repo's `vercel.json` and against the CSP header production is actually serving (waits up to 10 min), so a build the live CSP would block never reaches users.
 
 ## Script blocks (critical)
 | Block | Lines | Contents |
