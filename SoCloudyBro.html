@@ -13304,7 +13304,7 @@ function renderChannelBar(c){
         +'<span class="ch-mini-btn" data-ch-id="'+ch.id+'" onclick="event.stopPropagation();renameChannelPrompt(this.dataset.chId)" title="Rename">✏️</span>'
         +(chans.length>1?'<span class="ch-mini-btn" data-ch-id="'+ch.id+'" onclick="event.stopPropagation();deleteChannelConfirm(this.dataset.chId)" title="Delete">🗑️</span>':'');
     }
-    return '<span class="channel-group"><span class="channel-pill'+(active?' active':'')+'" data-ch-id="'+ch.id+'" data-ch-type="'+ch.type+'" onclick="(this.dataset.chType===\'voice\'?joinVoiceChannel:switchChannel)(this.dataset.chId)">'+icon+' '+esc(ch.name)+countBadge+'</span>'+adminBtns+'</span>';
+    return '<span class="channel-group"><span class="channel-pill'+(active?' active':'')+'" data-ch-id="'+ch.id+'" data-ch-type="'+ch.type+'" data-act="channelPill">'+icon+' '+esc(ch.name)+countBadge+'</span>'+adminBtns+'</span>';
   }).join('')
   + (admin?'<span class="channel-add-btn" onclick="openAddChannelModal()" title="Add channel">+</span>':'');
 }
@@ -15609,7 +15609,7 @@ function renderOnlineWidget(body){
   if(!withStatus.length){ body.innerHTML=_DART.online_empty; return; }
   body.innerHTML=withStatus.slice(0,8).map(x=>{
     const _name=dec(x.c.name)||('#'+x.c.number);const _init=_name.charAt(0).toUpperCase();
-    const av=x.c.avatar&&x.c.avatar!=='__cloudy__'?'<div class="dash-avatar"><img src="'+esc(x.c.avatar)+'" loading="lazy" onerror="this.parentNode.textContent=\''+_init+'\'"/></div>':'<div class="dash-avatar" style="background:var(--accent)">'+_init+'</div>';
+    const av=x.c.avatar&&x.c.avatar!=='__cloudy__'?'<div class="dash-avatar"><img src="'+esc(x.c.avatar)+'" loading="lazy" data-init-fallback="'+esc(_init)+'"/></div>':'<div class="dash-avatar" style="background:var(--accent)">'+_init+'</div>';
     const pill=x.online?'<span class="dash-online-pill">● online</span>':'';
     return '<div class="dash-list-item" data-key="'+esc(x.c.key)+'" onclick="dashOpenChat(this.dataset.key)">'+av+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+esc(x.c.name)+verifiedBadge(x.c.number)+equippedBadgeHtml(x.c.number)+'</span>'+pill+'</div>';
   }).join('');
@@ -15650,7 +15650,7 @@ function renderRecentWidget(body){
   if(!items.length){ body.innerHTML=_DART.recent_empty; return; }
   body.innerHTML=items.slice(0,6).map(it=>{
     const _name=dec(it.c.name)||('#'+it.c.number);const _init=_name.charAt(0).toUpperCase();
-    const av=it.c.avatar&&it.c.avatar!=='__cloudy__'?'<div class="dash-avatar"><img src="'+esc(it.c.avatar)+'" loading="lazy" onerror="this.parentNode.textContent=\''+_init+'\'"/></div>':'<div class="dash-avatar">'+_init+'</div>';
+    const av=it.c.avatar&&it.c.avatar!=='__cloudy__'?'<div class="dash-avatar"><img src="'+esc(it.c.avatar)+'" loading="lazy" data-init-fallback="'+esc(_init)+'"/></div>':'<div class="dash-avatar">'+_init+'</div>';
     return '<div class="dash-list-item" data-key="'+esc(it.c.key)+'" onclick="dashOpenChat(this.dataset.key)">'+av+'<div style="flex:1;overflow:hidden"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.c.name)+'</div><div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.text.substring(0,40))+'</div></div></div>';
   }).join('');
 }
@@ -16624,7 +16624,7 @@ function openContactUs(){
         <div style="font-weight:600;font-size:14px;margin-bottom:4px">${esc(a.name)}</div>
         ${a.email ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
           <span style="font-size:12px;color:var(--text2)">${esc(a.email)}</span>
-          <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" data-email="${esc(a.email)}" onclick="navigator.clipboard.writeText(this.dataset.email).then(()=>showToast('Copied','Email address copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: '+this.dataset.email))">Copy</button>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" data-email="${esc(a.email)}" data-act="copyEmail">Copy</button>
         </div>` : ''}
         ${a.number ? `<button class="btn btn-sm" style="font-size:12px;padding:4px 12px" data-number="${a.number}" onclick="closeModal('contact-us-modal');_openDmWithAdmin(Number(this.dataset.number))">💬 Message #${a.number}</button>` : ''}
       </div>
@@ -17932,7 +17932,7 @@ async function openGrantBadgeModal(number){
       +'<input type="text" id="badge-grant-name" placeholder="Badge name" maxlength="40" style="flex:1">'
       +'</div>'
       +'<button class="btn btn-sm" style="margin-top:8px" data-number="'+number+'" onclick="grantGlobalBadge(Number(this.dataset.number))">+ Grant Badge</button>'
-      +'<div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="closeModal(\'badge-grant-modal\')">Close</button></div>';
+      +'<div style="margin-top:12px"><button class="btn btn-ghost btn-sm" data-act="closeModalById" data-modal="badge-grant-modal">Close</button></div>';
     openModal('badge-grant-modal');
   }catch(e){ showToast('Error',scbErr('SCB-ADMIN-28','Badges couldn\'t be loaded.',e.message)); }
 }
@@ -20382,11 +20382,11 @@ function renderProfileBadges(el, number, compact){
   if(!earned.length){ el.innerHTML=''; return; }
   if(compact){
     el.innerHTML = earned.map(b=>
-      `<span class="hc-badge" title="${esc(b.cat.label+': '+b.tier.name)}" onclick="openBadgeDetail('${esc(b.cat.id)}',${Number(number)})">${b.tier.icon}</span>`
+      `<span class="hc-badge" title="${esc(b.cat.label+': '+b.tier.name)}" data-act="openBadgeDetail" data-cat="${esc(b.cat.id)}" data-badge-number="${Number(number)}">${b.tier.icon}</span>`
     ).join('');
   } else {
     el.innerHTML = earned.map(b=>
-      `<span class="lt-badge" style="--ltb-color:${b.cat.color};--ltb-bg:${b.cat.bg}" onclick="openBadgeDetail('${esc(b.cat.id)}',${Number(number)})">` +
+      `<span class="lt-badge" style="--ltb-color:${b.cat.color};--ltb-bg:${b.cat.bg}" data-act="openBadgeDetail" data-cat="${esc(b.cat.id)}" data-badge-number="${Number(number)}">` +
       `<span class="ltb-icon">${b.tier.icon}</span>` +
       `<span class="ltb-name">${esc(b.tier.name)}</span>` +
       `</span>`
@@ -21631,7 +21631,7 @@ async function renderAdminUsersTab(){
           +(me.number===ADMIN_NUMBER?(verified?'<button class="btn btn-ghost btn-sm" data-number="'+u.number+'" onclick="adminUnverify(Number(this.dataset.number))">✓ Unverify</button>':'<button class="btn btn-ghost btn-sm" data-number="'+u.number+'" onclick="adminVerify(Number(this.dataset.number))">☑️ Verify</button>'):'')
           +(hasPermission('users_ban')?(banned?'<button class="btn btn-ghost btn-sm" data-number="'+u.number+'" onclick="adminUnban(Number(this.dataset.number))">✅ Unban</button>':'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-number="'+u.number+'" onclick="adminBan(Number(this.dataset.number))">🚫 Ban</button>'):'')
           +(hasPermission('users_ban')&&!isAdmin?(shadowMuted?'<button class="btn btn-ghost btn-sm" data-number="'+u.number+'" onclick="adminUnshadowMute(Number(this.dataset.number))">🔈 Un-shadow-mute</button>':'<button class="btn btn-ghost btn-sm" data-number="'+u.number+'" onclick="adminShadowMute(Number(this.dataset.number))" title="Their messages will silently never deliver — no ban notice shown to them">🔇 Shadow-mute</button>'):'')
-          +(hasPermission('users_ban')&&!isAdmin&&!shadowMuted?'<select data-number="'+u.number+'" onchange="if(this.value){adminShadowMuteForHours(Number(this.dataset.number),Number(this.value));this.value=\'\'}" style="width:auto;padding:5px 8px;font-size:12px" title="Shadow-mute for a fixed window, lifts automatically"><option value="">⏱️ Mute for...</option><option value="1">1 hour</option><option value="6">6 hours</option><option value="24">24 hours</option><option value="168">7 days</option></select>':'')
+          +(hasPermission('users_ban')&&!isAdmin&&!shadowMuted?'<select data-number="'+u.number+'" data-change="shadowMuteHours" style="width:auto;padding:5px 8px;font-size:12px" title="Shadow-mute for a fixed window, lifts automatically"><option value="">⏱️ Mute for...</option><option value="1">1 hour</option><option value="6">6 hours</option><option value="24">24 hours</option><option value="168">7 days</option></select>':'')
           +(!isAdmin&&me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" style="color:var(--accent)" data-number="'+u.number+'" data-name="'+esc(rawName)+'" data-perms="'+esc(JSON.stringify((u.adminAccess&&u.adminAccess.permissions)||[]))+'" data-roletag="'+esc((u.adminAccess&&u.adminAccess.roleTag)||'')+'" onclick="openPermissionEditor(Number(this.dataset.number),this.dataset.name,JSON.parse(this.dataset.perms),this.dataset.roletag)" title="Manage admin access">'+(u.adminAccess&&(u.adminAccess.permissions||[]).length?'🔑 Perms':'🔑 Grant')+'</button>':'')
           +(me.number===ADMIN_NUMBER?'<button class="btn btn-ghost btn-sm" data-number="'+u.number+'" onclick="adminResetAccount(Number(this.dataset.number))" title="Clear profile for a fresh start">🔄 Reset</button>':'')
           +(Number(u.number)!==ADMIN_NUMBER&&hasPermission('users_delete')&&(!targetHasAdminAccess||me.number===ADMIN_NUMBER)?'<button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-number="'+u.number+'" data-name="'+esc(rawName)+'" onclick="adminDeleteUser(Number(this.dataset.number),this.dataset.name)">🗑️ Delete</button>':'')
@@ -24045,7 +24045,7 @@ renderSidebar = function(){
       div.innerHTML='<div class="call-log-icon" style="'+color+'">'+icon+'</div>'
         +'<div class="call-log-info"><div class="call-log-name" style="'+color+'">'+esc(name)+'</div>'
         +'<div class="call-log-meta">'+esc(metaStr)+'</div></div>'
-        +'<button class="call-log-callback" data-number="'+num+'" onclick="(function(btn){const c=contacts.find(x=>x.type!==\'group\'&&String(x.number)===btn.dataset.number);if(c)startDirectCall(c);else showToast(\'Not in contacts\',\'\');})(this)">'+esc(scbT('call_back'))+'</button>';
+        +'<button class="call-log-callback" data-number="'+num+'" data-act="callLogCallback">'+esc(scbT('call_back'))+'</button>';
       list.appendChild(div);
     });
     return;
@@ -28449,8 +28449,46 @@ document.addEventListener('click', function(e){
     case 'dashOpenChat': dashOpenChat(d.key, d.chId); break;
     case 'dashJoinVoice': dashJoinVoice(d.key, d.chId); break;
     case 'dashOpenChatByNumber': dashOpenChatByNumber(Number(d.number)); break;
+    case 'channelPill': (d.chType==='voice' ? joinVoiceChannel : switchChannel)(d.chId); break;
+    case 'closeModalById': closeModal(d.modal); break;
+    case 'openBadgeDetail': openBadgeDetail(d.cat, Number(d.badgeNumber)); break;
+    case 'copyEmail':
+      navigator.clipboard.writeText(d.email)
+        .then(function(){ showToast('Copied','Email address copied to clipboard.'); })
+        .catch(function(){ showToast('Copy failed','Please copy manually: '+d.email); });
+      break;
+    case 'callLogCallback': {
+      const c = contacts.find(function(x){ return x.type!=='group' && String(x.number)===d.number; });
+      if(c) startDirectCall(c); else showToast('Not in contacts','');
+      break;
+    }
+    case 'copyCloseDlg': {
+      const dlg = t.closest('div[style*=fixed]');
+      const ta = dlg && dlg.querySelector('textarea');
+      if(ta) navigator.clipboard.writeText(ta.value).then(function(){ showToast('Copied!',''); });
+      if(dlg) dlg.remove();
+      break;
+    }
+    case 'closeDlg': { const dlg = t.closest('div[style*=fixed]'); if(dlg) dlg.remove(); break; }
   }
 });
+// Change events (selects) and image-load failures for JS-built UI, for the
+// same reason as the click handler above.
+document.addEventListener('change', function(e){
+  const t = e.target.closest && e.target.closest('[data-change]');
+  if(!t) return;
+  if(t.dataset.change==='shadowMuteHours' && t.value){
+    adminShadowMuteForHours(Number(t.dataset.number), Number(t.value));
+    t.value='';
+  }
+});
+// 'error' does not bubble, so listen in the capture phase.
+document.addEventListener('error', function(e){
+  const t = e.target;
+  if(t && t.tagName==='IMG' && t.dataset && t.dataset.initFallback!==undefined && t.parentNode){
+    t.parentNode.textContent = t.dataset.initFallback;
+  }
+}, true);
 
 // Accessibility pass for the static markup: dialog semantics for every modal,
 // accessible names for icon-only buttons, and a polite live region for toasts.
@@ -29383,7 +29421,7 @@ async function exportE2EKey(){
     +'<div style="font-weight:700;margin-bottom:8px;font-size:15px">🔑 Your Decryption Key</div>'
     +'<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">This key lets any device read your messages. Keep it private — treat it like a password.</p>'
     +'<textarea readonly onclick="this.select()" style="width:100%;height:100px;font-size:11px;font-family:monospace;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);resize:none;box-sizing:border-box">'+bundle+'</textarea>'
-    +'<div style="display:flex;gap:8px;margin-top:12px"><button onclick="navigator.clipboard.writeText(this.closest(\'div[style*=fixed]\').querySelector(\'textarea\').value).then(()=>showToast(\'Copied!\',\'\'));this.closest(\'div[style*=fixed]\').remove()" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer">Copy & Close</button><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--text)">Close</button></div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px"><button data-act="copyCloseDlg" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer">Copy & Close</button><button data-act="closeDlg" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--text)">Close</button></div>'
     +'</div>';
   document.body.appendChild(txt);
 }
