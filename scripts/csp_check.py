@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Check that every inline <script> in SoCloudyBro.html is allowed by a CSP.
+"""Check that every inline <script> and static on*="..." handler in
+SoCloudyBro.html is allowed by a CSP.
 
-An inline script is only allowed if its sha256 is listed in the CSP. If one is
-missing the browser blocks it and the app freezes on the splash screen.
+They are only allowed if their sha256 is listed in the CSP. A missing script
+freezes the app on the splash screen; a missing handler makes its button
+silently do nothing.
 
 Usage:
   csp_check.py repo                 check against vercel.json in the repo
@@ -14,6 +16,7 @@ Exit code 0 = all hashes present, 1 = something missing (or timed out).
 """
 import base64
 import hashlib
+import html as htmllib
 import re
 import subprocess
 import sys
@@ -23,19 +26,38 @@ HTML_PATH = "SoCloudyBro.html"
 VERCEL_JSON = "vercel.json"
 
 
+def _hash(text):
+    digest = base64.b64encode(hashlib.sha256(text.encode("utf-8")).digest()).decode()
+    return "sha256-" + digest
+
+
 def inline_script_hashes():
-    html = open(HTML_PATH, encoding="utf-8").read().replace("\r", "")
-    pattern = re.compile(r"<script(?P<attrs>[^>]*)>(?P<body>.*?)</script>", re.I | re.S)
+    """Hashes the CSP must allow: inline <script> bodies and static on*="..." handlers.
+
+    Returns a list of (hash, line, size_or_text) tuples.
+    """
+    page = open(HTML_PATH, encoding="utf-8").read().replace("\r", "")
+    script_rx = re.compile(r"<script(?P<attrs>[^>]*)>(?P<body>.*?)</script>", re.I | re.S)
     found = []
-    for m in pattern.finditer(html):
+
+    # 1) inline <script> blocks
+    for m in script_rx.finditer(page):
         if re.search(r"src\s*=", m.group("attrs")):
             continue
         body = m.group("body")
         if not body.strip():
             continue
-        digest = base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode()
-        line = html[: m.start()].count("\n") + 1
-        found.append(("sha256-" + digest, line, len(body)))
+        line = page[: m.start()].count("\n") + 1
+        found.append((_hash(body), line, "script, %d chars" % len(body)))
+
+    # 2) static inline event handlers, outside <script> bodies. The browser
+    #    hashes the attribute value after HTML-entity decoding.
+    markup = script_rx.sub("", page)
+    attr_rx = re.compile(r"""\son[a-z]+\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.I | re.S)
+    for m in attr_rx.finditer(markup):
+        value = m.group(1) if m.group(1) is not None else m.group(2)
+        value = htmllib.unescape(value)
+        found.append((_hash(value), 0, "handler: " + value[:60]))
     return found
 
 
@@ -44,9 +66,10 @@ def missing_from(policy_text):
 
 
 def report(missing, where):
-    print("❌ Inline <script> hashes missing from " + where + ":", file=sys.stderr)
-    for token, line, size in missing:
-        print("   %s  (script at line %d, %d chars)" % (token, line, size), file=sys.stderr)
+    print("❌ Inline script/handler hashes missing from " + where + ":", file=sys.stderr)
+    for token, line, what in missing:
+        where_txt = ("line %d, " % line) if line else ""
+        print("   %s  (%s%s)" % (token, where_txt, what), file=sys.stderr)
 
 
 def fetch_live_csp(url):
