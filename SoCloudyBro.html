@@ -5622,7 +5622,7 @@ if(typeof firebase==='undefined'){
 // the long-polling fallback, a single failed WebSocket attempt left this flag set for
 // good, so the SDK tried the blocked fallback FIRST on every load: the realtime
 // connection never came up and every database read waited ~10s for the REST fallback.
-try{ if(!localStorage.getItem('scb_ws_reset_v1')){ localStorage.removeItem('firebase:previous_websocket_failure'); localStorage.setItem('scb_ws_reset_v1','1'); } }catch(e){}
+try{ if(!localStorage.getItem('scb_ws_reset_v2')){ localStorage.removeItem('firebase:previous_websocket_failure'); localStorage.setItem('scb_ws_reset_v2','1'); } }catch(e){}
 try{ firebase.initializeApp(firebaseConfig); }catch(e){ console.warn('SCB: firebase.initializeApp failed:',e.message); }
 let fbdb; try{ fbdb = firebase.database(); }catch(e){ console.warn('SCB: firebase.database() failed:',e.message); fbdb=firebase.database ? firebase.database() : null; }
 // -- UNIVERSAL FIREBASE TIMEOUT GUARD -----------------------------------------
