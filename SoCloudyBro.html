@@ -5618,6 +5618,11 @@ if(typeof firebase==='undefined'){
     app:()=>({name:'offline-stub'}),
   };
 }
+// One-time reset of Firebase's cached "WebSocket failed" flag. While the CSP blocked
+// the long-polling fallback, a single failed WebSocket attempt left this flag set for
+// good, so the SDK tried the blocked fallback FIRST on every load: the realtime
+// connection never came up and every database read waited ~10s for the REST fallback.
+try{ if(!localStorage.getItem('scb_ws_reset_v1')){ localStorage.removeItem('firebase:previous_websocket_failure'); localStorage.setItem('scb_ws_reset_v1','1'); } }catch(e){}
 try{ firebase.initializeApp(firebaseConfig); }catch(e){ console.warn('SCB: firebase.initializeApp failed:',e.message); }
 let fbdb; try{ fbdb = firebase.database(); }catch(e){ console.warn('SCB: firebase.database() failed:',e.message); fbdb=firebase.database ? firebase.database() : null; }
 // -- UNIVERSAL FIREBASE TIMEOUT GUARD -----------------------------------------
@@ -9216,6 +9221,10 @@ async function init(){
   if(_splashEarly){ _splashEarly.style.opacity='0'; _splashEarly.id=''; setTimeout(()=>{ _splashEarly.remove(); },400); }
   // Always ensure setup modal is closed if we have a user
   if(me && me.number){ closeModal('setup-modal'); document.getElementById('landing-page').style.display='none'; document.getElementById('shell').style.display=''; }
+  // Paint the signed-in identity and cached chat list right away. launch() below
+  // makes several network calls before its own render, and until then the sidebar
+  // would show the "Set up account" placeholder as if the user were signed out.
+  if(me && me.number){ try{ renderMyCard(); }catch(e){} try{ renderSidebar(); }catch(e){} }
   if(!me || !me.number){
     // Check if we're switching accounts — skip landing and go straight to login
     const switchTo=localStorage.getItem('cc_switch_to')||localStorage.getItem('cc_after_login_switch');
@@ -9556,6 +9565,21 @@ const TUTORIAL_STEPS=[
 ];
 let _tutorialStepIdx=0;
 function shouldShowTutorial(){ return !localStorage.getItem('cc_tutorial_done'); }
+// First-run sequencing: banners and toasts wait until the welcome tour is done so
+// they don't pile up on top of it.
+function _tutorialBusy(){
+  try{
+    const t=document.getElementById('tutorial-overlay');
+    return shouldShowTutorial() || (!!t && t.style.display==='flex');
+  }catch(e){ return false; }
+}
+// Runs fn once the tour is finished (or after ~2 minutes regardless, so a
+// device that can't store the "tour done" flag still gets its banners).
+function _afterTutorial(fn,tries){
+  tries=(tries===undefined)?80:tries;
+  if(!_tutorialBusy()||tries<=0){ fn(); return; }
+  setTimeout(function(){ _afterTutorial(fn,tries-1); },1500);
+}
 function startTutorial(){
   _tutorialStepIdx=0;
   renderTutorialStep();
@@ -11199,8 +11223,9 @@ function recoverFromFaceView(){
 // not a modal wall. Dismissing it only lasts the session — like the
 // forced-password-change prompt, it comes back next launch until it's
 // actually resolved.
-function checkSecuritySetupNudge(){
+function checkSecuritySetupNudge(_afterTour){
   if(!me) return;
+  if(!_afterTour && _tutorialBusy()){ _afterTutorial(function(){ checkSecuritySetupNudge(true); }); return; }
   const hasBackupPin=!!me.backupPinHash;
   const hasSecQuestions=Array.isArray(me.secQuestions)&&me.secQuestions.length===2;
   if(hasBackupPin||hasSecQuestions){ _removeBannerRow('security-setup-banner'); return; }
@@ -21118,6 +21143,18 @@ async function checkForSiteUpdate(){
   }catch(e){}
 }
 
+function _siteUpdateShouldWait(){
+  try{
+    const t=document.getElementById('tutorial-overlay');
+    if(t && t.style.display==='flex') return true;
+    if(typeof _modalZStack!=='undefined' && _modalZStack.length) return true;
+    const a=document.activeElement;
+    if(a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && String(a.value||'').trim()) return true;
+    const mi=document.getElementById('msg-input');
+    if(mi && String(mi.value||'').trim()) return true;
+  }catch(e){}
+  return false;
+}
 function showSiteUpdateBanner(ver,note){
   if(document.getElementById('site-update-banner')) return;
   const bar=_bannerRow('site-update-banner');
@@ -21136,7 +21173,12 @@ function showSiteUpdateBanner(ver,note){
     secs--;
     if(cd) cd.textContent=secs+'s';
     if(fill) fill.style.width=Math.max(0,(secs/totalSecs)*100)+'%';
-    if(secs<=0){ clearInterval(timer); applySiteUpdate(); }
+    if(secs<=0){
+      // Reloading mid-tour, mid-dialog or mid-message would throw the user's
+      // context away, so hold the update until they are not busy.
+      if(_siteUpdateShouldWait()){ secs=1; if(cd) cd.textContent='after you finish'; return; }
+      clearInterval(timer); applySiteUpdate();
+    }
   },1000);
   const dismiss=document.getElementById('sub-dismiss');
   if(dismiss) dismiss.onclick=()=>{ clearInterval(timer); _removeBannerRow('site-update-banner'); };
@@ -29541,8 +29583,9 @@ document.addEventListener('click', function(e){
 }, true);
 
 /* ===== LAST LOGIN NOTIFICATION ===== */
-function _showLastLoginNotif(){
+function _showLastLoginNotif(_afterTour){
   if(!window.me) return;
+  if(!_afterTour && typeof _tutorialBusy==='function' && _tutorialBusy()){ _afterTutorial(function(){ _showLastLoginNotif(true); }); return; }
   const users=window.usersCache||[];
   const u=users.find(x=>x&&x.number===window.me.number);
   const history=(u&&u.loginHistory)||[];
