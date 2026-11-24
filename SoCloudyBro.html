@@ -16714,7 +16714,7 @@ function showTermsOfService(){openModal('tos-modal');}
 /* ===== CONTACT US ===== */
 const _SCB_ADMINS = [
   { priority: 1, role: 'Head Admin', name: 'SoCloudyBro Admin', number: 2015, email: '' },
-
+  { priority: 2, role: 'Support Admin', name: 'SCB Support', number: null, email: 'syntaxgroupscb@gmail.com' },
 ];
 function openContactUs(){
   const list = document.getElementById('contact-us-list');
@@ -16728,6 +16728,7 @@ function openContactUs(){
         ${a.email ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
           <span style="font-size:12px;color:var(--text2)">${esc(a.email)}</span>
           <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" data-email="${esc(a.email)}" data-act="copyEmail">Copy</button>
+          <a class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px;text-decoration:none" href="mailto:${esc(a.email)}">Open</a>
         </div>` : ''}
         ${a.number ? `<button class="btn btn-sm" style="font-size:12px;padding:4px 12px" data-number="${a.number}" onclick="closeModal('contact-us-modal');_openDmWithAdmin(Number(this.dataset.number))">💬 Message #${a.number}</button>` : ''}
       </div>
