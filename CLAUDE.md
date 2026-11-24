@@ -39,6 +39,11 @@ then commit `vercel.json` together with the HTML. Verify on the live site afterw
 The script also covers static `on*="..."` handlers. Handlers built inside JS strings must be constant text or the CSP blocks them: use `data-act` (click), `data-change` (select) or `.onclick =` instead of `onclick="..."` in `innerHTML`.
 The CSP header is ~27 KB because every hash adds ~60 bytes. When `scripts/csp_check.py` warns it is getting large, run `powershell -File scripts/update-csp-hashes.ps1 -Prune` to drop unused hashes (safe: it keeps anything a JS-built handler could match).
 
+## CSP — realtime database hosts (learned the hard way, Nov 24 2026)
+Firebase RTDB does not stay on the database's own hostname: it hops to a shard host like `s-gke-euw1-nssi2-7.europe-west1.firebasedatabase.app`. `connect-src` (https + wss), `script-src` (long-poll fallback) and `frame-src` (long-poll iframe) therefore all need `*.europe-west1.firebasedatabase.app`, not just the exact hostnames. Listing exact hosts silently broke realtime for logged-in users (WebSocket blocked, ~10s startup, stale "Set up account" header).
+**After ANY CSP change, test while LOGGED IN**, not just on the logged-out page: in the browser console run `firebase.database().ref('.info/connected').once('value',s=>console.log(s.val()))` (expect `true`) and check the console for `Connecting to ... violates` / `Framing ... violates` errors. Logged-out checks do not exercise realtime.
+If the Firebase SDK ever records a WebSocket failure it caches `firebase:previous_websocket_failure` in localStorage and tries long-polling first on every load; the one-time reset near `firebase.initializeApp` clears it (bump `scb_ws_reset_vN` to re-run it for everyone).
+
 ## CSP details
 `vercel.json` has `Content-Security-Policy` with `unsafe-hashes` + 522 sha256 hashes for static `on*=` handlers. Dynamic `onclick=` via `innerHTML` are NOT hashed → console spam. Fix: always use `.onclick =` property or `addEventListener` in JS-built UI. Static HTML `onclick=` are fine (they're hashed).
 
