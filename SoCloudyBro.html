@@ -4611,7 +4611,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <p>To the maximum extent permitted by applicable law, SoCloudyBro and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of or inability to use the service, even if advised of the possibility of such damages. Our total liability to you for any claim shall not exceed USD $100.</p>
 
       <h3 class="scb-u-117">6. DMCA / Copyright</h3>
-      <p>If you believe content on SoCloudyBro infringes your copyright, you may submit a DMCA takedown notice to <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a>. Your notice must include: identification of the copyrighted work, identification of the infringing material and its location, your contact information, a statement of good-faith belief, and a statement of accuracy under penalty of perjury.</p>
+      <p>If you believe content on SoCloudyBro infringes your copyright, you may submit a DMCA takedown notice by messaging the Head Admin (#2015) inside SoCloudyBro. Your notice must include: identification of the copyrighted work, identification of the infringing material and its location, your contact information, a statement of good-faith belief, and a statement of accuracy under penalty of perjury.</p>
 
       <h3 class="scb-u-117">7. Voice and Video Calls — No Recording</h3>
       <p>SoCloudyBro does not record, intercept, store, or monitor the contents of voice or video calls. All calls are routed in real-time through LiveKit infrastructure and are not retained. You may not record other participants in a call without their explicit, prior consent. Covert recording of calls may violate federal and state wiretapping laws, including the Electronic Communications Privacy Act (ECPA), and is strictly prohibited.</p>
@@ -4626,7 +4626,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <p>We may update these Terms from time to time. Continued use of SoCloudyBro after changes are posted constitutes acceptance of the revised Terms.</p>
 
       <h3 class="scb-u-117">Contact</h3>
-      <p>Questions? Email <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a></p>
+      <p>Questions? Message the Head Admin (#2015) inside SoCloudyBro.</p>
     </div>
   </div>
 </div>
@@ -4663,7 +4663,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <p>We welcome feedback on accessibility barriers. If you experience difficulty using SoCloudyBro due to a disability or accessibility barrier, please contact us:</p>
       <ul class="scb-u-118">
         <li>In-app: send a message to an SCB admin</li>
-        <li>Email: <a class="scb-u-119" href="mailto:support@socloudybro.vercel.app">support@socloudybro.vercel.app</a></li>
+        <li>In-app: message the Head Admin (#2015)</li>
       </ul>
       <p>Please describe the barrier you encountered, the assistive technology you use (if any), and how we can replicate the issue. We aim to acknowledge reports within 5 business days.</p>
       <h3 class="scb-u-117">Formal Complaints</h3>
@@ -4704,10 +4704,6 @@ window.addEventListener('error',function _splashErrorGuard(e){
       </ul>
       <div class="scb-u-126">
         <div class="scb-u-127">Security Contact</div>
-        <div class="scb-u-128">
-          <span class="scb-u-129" id="security-disclosure-email">security@socloudybro.vercel.app</span>
-          <button class="btn btn-ghost btn-sm scb-u-130" onclick="navigator.clipboard.writeText('security@socloudybro.vercel.app').then(()=>showToast('Copied','Security contact email copied to clipboard.')).catch(()=>showToast('Copy failed','Please copy manually: security@socloudybro.vercel.app'))">Copy</button>
-        </div>
         <button class="btn btn-sm scb-u-131" onclick="closeModal('security-disclosure-modal');_openDmWithAdmin(2015)">💬 Message #2015 (Head Admin)</button>
       </div>
       <p class="scb-u-132">We don't currently run a paid bug bounty program, but we credit researchers (with permission) once a reported issue is fixed, and take every genuine report seriously.</p>
@@ -16717,8 +16713,8 @@ function showTermsOfService(){openModal('tos-modal');}
 
 /* ===== CONTACT US ===== */
 const _SCB_ADMINS = [
-  { priority: 1, role: 'Head Admin', name: 'SoCloudyBro Admin', number: 2015, email: 'support@socloudybro.vercel.app' },
-  { priority: 2, role: 'Support Admin', name: 'SCB Support', number: null, email: 'help@socloudybro.vercel.app' },
+  { priority: 1, role: 'Head Admin', name: 'SoCloudyBro Admin', number: 2015, email: '' },
+
 ];
 function openContactUs(){
   const list = document.getElementById('contact-us-list');
@@ -16739,7 +16735,6 @@ function openContactUs(){
   }
   openModal('contact-us-modal');
 }
-const SECURITY_DISCLOSURE_EMAIL = 'security@socloudybro.vercel.app';
 function openSecurityDisclosure(){
   openModal('security-disclosure-modal');
 }
