@@ -2825,7 +2825,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
   <details class="scb-u-22">
     <summary class="scb-u-23">Or verify with Google instead</summary>
     <div class="scb-u-24" id="google-btn-emailverify"></div>
-    <button class="btn scb-u-25" id="email-verify-fallback" disabled>Google sign-in unavailable</button>
+    <button class="btn" id="email-verify-fallback" disabled style="display:none">Google sign-in unavailable</button>
     <p class="scb-u-26" id="email-verify-note"></p>
   </details>
 
@@ -2875,8 +2875,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
     <div id="sb-search">
   <!-- Honeypot inputs: Chrome targets named inputs for autofill; these absorb
        any email/password fill-attempts before they reach the search field. -->
-  <input class="scb-u-25" type="text" name="fakeusername_sbsearch" tabindex="-1" aria-hidden="true" autocomplete="username">
-  <input class="scb-u-25" type="password" name="fakepassword_sbsearch" tabindex="-1" aria-hidden="true" autocomplete="current-password">
+  <input type="text" name="fakeusername_sbsearch" tabindex="-1" aria-hidden="true" autocomplete="username" style="display:none">
+  <input type="password" name="fakepassword_sbsearch" tabindex="-1" aria-hidden="true" autocomplete="current-password" style="display:none">
   <input type="search" id="sb-search-input" placeholder="🔍  Search…" oninput="onSearchInput(this.value)" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"/>
 </div>
 <div class="scb-u-43" id="search-results"></div>
@@ -2960,9 +2960,9 @@ window.addEventListener('error',function _splashErrorGuard(e){
         </div>
         <div class="header-actions">
           <button class="icon-btn" onclick="toggleMsgSearch()" title="Search in chat" id="msg-search-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
-          <button class="icon-btn scb-u-25" onclick="startDirectCall(activeConvo)" title="Voice call" id="call-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94m-1 7.98v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
-          <button class="icon-btn scb-u-25" onclick="quickGroupWithContact()" title="Create group with this contact" id="quick-group-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></button>
-          <button class="icon-btn scb-u-25" onclick="quickAddMember()" title="Add member" id="add-member-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <button class="icon-btn" onclick="startDirectCall(activeConvo)" title="Voice call" id="call-btn" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94m-1 7.98v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+          <button class="icon-btn" onclick="quickGroupWithContact()" title="Create group with this contact" id="quick-group-btn" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></button>
+          <button class="icon-btn" onclick="quickAddMember()" title="Add member" id="add-member-btn" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
           <button class="icon-btn" onclick="lockChatToggle()" title="Lock chat" id="lock-chat-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></button>
           <button class="icon-btn" onclick="toggleHeaderMenu(event)" title="More options">⋯</button>
         </div>
@@ -2971,18 +2971,18 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <div class="ctx-item" onclick="hideHeaderMenu();archiveToggle()" id="archive-menu-item">📁 Archive</div>
           <div class="ctx-item" onclick="hideHeaderMenu();muteToggle()" id="mute-menu-item">🔕 Mute notifications</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openDisappearingMenu()" id="disappear-menu-item">⏱ Disappearing messages</div>
-          <div class="ctx-item scb-u-25" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item">🔐 Verify security</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item" style="display:none">🔐 Verify security</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openChatWallpaperPicker()">🖼️ Wallpaper for this chat</div>
-          <div class="ctx-item scb-u-25" onclick="hideHeaderMenu();toggleBlockUser()" id="block-menu-item">⛔ Block</div>
-          <div class="ctx-item scb-u-25" onclick="hideHeaderMenu();toggleBlockCallsOnly()" id="block-calls-menu-item">📵 Block calls only</div>
-          <div class="ctx-item scb-u-25" onclick="hideHeaderMenu();toggleBlockMessagesOnly()" id="block-messages-menu-item">🔇 Block messages only</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockUser()" id="block-menu-item" style="display:none">⛔ Block</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockCallsOnly()" id="block-calls-menu-item" style="display:none">📵 Block calls only</div>
+          <div class="ctx-item" onclick="hideHeaderMenu();toggleBlockMessagesOnly()" id="block-messages-menu-item" style="display:none">🔇 Block messages only</div>
           <div class="ctx-item scb-u-47" onclick="hideHeaderMenu();openReport()">🚩 Report</div>
         </div>
       </div>
-      <div class="scb-u-25" id="channel-bar"></div>
+      <div id="channel-bar" style="display:none"></div>
       <div class="scb-u-48" id="key-change-banner"></div>
-      <div class="scb-u-25" id="cross-channel-typing"></div>
-      <div class="scb-u-25" id="voice-bar"></div>
+      <div id="cross-channel-typing" style="display:none"></div>
+      <div id="voice-bar" style="display:none"></div>
       <div class="scb-u-49" id="msg-search-bar">
         <input class="scb-u-37" type="text" id="msg-search-input" placeholder="Search in this chat…" oninput="msgSearchInput(this.value)" onkeydown="msgSearchKeydown(event)"/>
         <span class="scb-u-50" id="msg-search-count">0 / 0</span>
@@ -2992,15 +2992,15 @@ window.addEventListener('error',function _splashErrorGuard(e){
       </div>
       <div id="chat-bg-wrapper">
         <div id="chat-anim-overlay"></div>
-        <div class="scb-u-25" id="group-desc-banner"></div>
-        <div class="scb-u-25" id="pinned-banner" onclick="scrollToPinned()"></div>
+        <div id="group-desc-banner" style="display:none"></div>
+        <div id="pinned-banner" onclick="scrollToPinned()" style="display:none"></div>
         <div id="messages-wrap"></div>
-        <button class="scb-u-25" id="jump-to-bottom-btn" onclick="jumpToBottom()" title="Jump to latest message">
+        <button id="jump-to-bottom-btn" onclick="jumpToBottom()" title="Jump to latest message" style="display:none">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
         </button>
         <div id="chat-drop-overlay"><div id="chat-drop-overlay-inner">📎 Drop to send</div></div>
       </div>
-      <div class="scb-u-25" id="msg-select-bar">
+      <div id="msg-select-bar" style="display:none">
         <span id="msg-select-count">0 selected</span>
         <div id="msg-select-actions">
           <button class="btn btn-ghost btn-sm" onclick="msgSelectForward()">↪ Forward</button>
@@ -3017,9 +3017,9 @@ window.addEventListener('error',function _splashErrorGuard(e){
             <button class="gif-picker-tab" data-tab="emoji" onclick="switchGifPickerTab('emoji')">😀 Emoji</button>
           </div>
           <div id="gif-grid"></div>
-          <div class="scb-u-25" id="emoji-grid"></div>
+          <div id="emoji-grid" style="display:none"></div>
         </div>
-        <div class="scb-u-25" id="reply-preview-row">
+        <div id="reply-preview-row" style="display:none">
           <div id="reply-preview-text"></div>
           <span id="reply-preview-cancel" onclick="cancelReply()" title="Cancel reply">✕</span>
         </div>
@@ -3036,16 +3036,16 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <!-- Action buttons row -->
           <div id="compose-actions">
             <button class="compose-btn" onclick="openAttachPicker()" title="Attach file (max 50MB)">📎</button>
-            <input class="scb-u-25" type="file" id="file-attach-input" onchange="handleFileAttach(this)"/>
-            <input class="scb-u-25" type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleCameraCapture(this)"/>
+            <input type="file" id="file-attach-input" onchange="handleFileAttach(this)" style="display:none"/>
+            <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleCameraCapture(this)" style="display:none"/>
             <button class="compose-btn gif-btn" onclick="toggleGif()" title="GIF">GIF</button>
             <button class="compose-btn" onclick="openCameraCapture()" title="Take photo">📷</button>
-            <button class="compose-btn scb-u-25" id="poll-compose-btn" onclick="openPollModal()" title="Poll">📊</button>
+            <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none">📊</button>
             <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game">🎮</button>
             <button class="compose-btn" id="self-destruct-btn" onclick="sendSelfDestructMsg()" title="View-once message">💣</button>
             <button class="compose-btn" id="schedule-msg-btn" onclick="openScheduleMsg()" title="Schedule this message">🕐</button>
             <button class="compose-btn" id="voice-msg-btn" onclick="toggleVoiceMsgRecording()" title="Record voice message">🎙️</button>
-            <button class="compose-btn scb-u-25" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text">🎤</button>
+            <button class="compose-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text" style="display:none">🎤</button>
           </div>
           <!-- Input + send row -->
           <div id="compose-input-row">
@@ -3053,7 +3053,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
             <button id="send-btn" onclick="sendMsg()">➤</button>
           </div>
         </div>
-        <div class="scb-u-25" id="upload-progress-row">
+        <div id="upload-progress-row" style="display:none">
           <div id="upload-progress-name"></div>
           <div id="upload-progress-track"><div id="upload-progress-fill"></div></div>
           <div id="upload-progress-pct"></div>
@@ -3120,7 +3120,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
               <button class="btn btn-ghost btn-sm" onclick="setTheme('schedule')" id="theme-schedule-btn">🕒 Schedule</button>
             </div>
           </div>
-          <div class="settings-row scb-u-25" id="theme-schedule-row">
+          <div class="settings-row" id="theme-schedule-row" style="display:none">
             <div class="settings-row-main"><div class="settings-row-label">Dark mode hours</div><div class="settings-row-sub">Switches automatically at these times each day</div></div>
             <div class="settings-row-actions">
               <input class="scb-u-57" type="time" id="theme-schedule-start" value="20:00" onchange="saveThemeSchedule()">
@@ -3128,7 +3128,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
               <input class="scb-u-57" type="time" id="theme-schedule-end" value="07:00" onchange="saveThemeSchedule()">
             </div>
           </div>
-          <div class="settings-row scb-u-25" id="fullscreen-row">
+          <div class="settings-row" id="fullscreen-row" style="display:none">
             <div class="settings-row-main"><div class="settings-row-label">Fullscreen</div><div class="settings-row-sub">More screen space, fewer browser distractions</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="toggleFullscreen()" id="fullscreen-toggle-btn">⛶ Toggle</button></div>
           </div>
@@ -3395,12 +3395,12 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <h3>Business Account</h3>
           <div class="settings-row scb-u-65" onclick="toggleBizMode()">
             <div class="settings-row-main">
-              <div class="settings-row-label">Business Mode <span id="biz-mode-badge" class="biz-badge scb-u-25">BIZ</span></div>
+              <div class="settings-row-label">Business Mode <span id="biz-mode-badge" class="biz-badge" style="display:none">BIZ</span></div>
               <div class="settings-row-sub" id="biz-mode-sub">Turn your profile into a business page with product/website showcase</div>
             </div>
             <div class="settings-row-actions"><button class="btn btn-sm" id="biz-mode-btn">Enable</button></div>
           </div>
-          <div class="scb-u-25" id="biz-settings-expanded">
+          <div id="biz-settings-expanded" style="display:none">
             <div class="settings-row scb-u-65" onclick="openBizProfileEditor()">
               <div class="settings-row-main"><div class="settings-row-label">Business Profile</div><div class="settings-row-sub">Edit your business name, description and logo</div></div>
               <div class="settings-row-actions"><button class="btn btn-ghost btn-sm">Edit</button></div>
@@ -3811,7 +3811,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </script>
 
 <!-- PRIVACY POLICY MODAL -->
-<div class="overlay scb-u-25" id="privacy-modal">
+<div class="overlay" id="privacy-modal" style="display:none">
   <div class="modal scb-u-113">
     <div class="modal-header scb-u-114">
       <h2>Privacy Policy</h2>
@@ -4557,7 +4557,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </div>
 
 <!-- TERMS OF SERVICE MODAL -->
-<div class="overlay scb-u-25" id="tos-modal">
+<div class="overlay" id="tos-modal" style="display:none">
   <div class="modal scb-u-113">
     <div class="modal-header scb-u-114">
       <h2>Terms of Service</h2>
@@ -4611,7 +4611,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </div>
 
 <!-- ACCESSIBILITY STATEMENT MODAL -->
-<div class="overlay scb-u-25" id="accessibility-modal">
+<div class="overlay" id="accessibility-modal" style="display:none">
   <div class="modal scb-u-113">
     <div class="modal-header scb-u-114">
       <h2>Accessibility Statement</h2>
@@ -4696,7 +4696,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </div>
 
 <!-- CAMERA CAPTURE MODAL -->
-<div class="overlay scb-u-25" id="camera-modal">
+<div class="overlay" id="camera-modal" style="display:none">
   <div id="camera-modal-inner">
     <div class="modal-header scb-u-133">
       <span class="scb-u-134">Take a Photo</span>
@@ -4712,10 +4712,10 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </div>
 
 <!-- CUSTOM BG PHOTO INPUT (hidden) -->
-<input class="scb-u-25" type="file" id="custom-bg-input" accept="image/*" onchange="applyCustomBgPhoto(this)"/>
+<input type="file" id="custom-bg-input" accept="image/*" onchange="applyCustomBgPhoto(this)" style="display:none"/>
 
 <!-- BIZ PROFILE EDITOR -->
-<div class="overlay scb-u-25" id="biz-profile-modal">
+<div class="overlay" id="biz-profile-modal" style="display:none">
   <div class="modal">
     <div class="modal-header"><h2>Business Profile</h2><p>This info appears on your profile for everyone to see</p></div>
     <div class="modal-body scb-u-136">
@@ -4729,7 +4729,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </div>
 
 <!-- BIZ PRODUCTS EDITOR -->
-<div class="overlay scb-u-25" id="biz-products-modal">
+<div class="overlay" id="biz-products-modal" style="display:none">
   <div class="modal scb-u-137">
     <div class="modal-header"><h2>Products &amp; Links</h2><p>Showcase products, services or websites on your profile</p></div>
     <div class="modal-body scb-u-138">
@@ -4741,7 +4741,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <div class="field"><label>Link (optional)</label><input type="text" id="biz-new-prod-url" maxlength="300" placeholder="https://…"/></div>
         <div class="field"><label>Image (optional)</label>
           <div class="scb-u-142">
-            <input class="scb-u-25" type="file" id="biz-new-prod-img-input" accept="image/*" onchange="bizProductImgSelected(this)"/>
+            <input type="file" id="biz-new-prod-img-input" accept="image/*" onchange="bizProductImgSelected(this)" style="display:none"/>
             <button class="btn btn-ghost btn-sm" onclick="document.getElementById('biz-new-prod-img-input').click()">📷 Choose Image</button>
             <span class="scb-u-103" id="biz-new-prod-img-name">None</span>
           </div>
@@ -4754,7 +4754,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </div>
 
 <!-- BIZ BOT EDITOR -->
-<div class="overlay scb-u-25" id="biz-bot-modal">
+<div class="overlay" id="biz-bot-modal" style="display:none">
   <div class="modal">
     <div class="modal-header"><h2>Auto-reply Bot</h2><p>When someone DMs you with a matching keyword, the bot replies automatically</p></div>
     <div class="modal-body scb-u-138">
@@ -4775,7 +4775,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </div>
 
 <!-- BIZ PUBLIC PROFILE VIEW -->
-<div class="overlay scb-u-25" id="biz-view-modal">
+<div class="overlay" id="biz-view-modal" style="display:none">
   <div class="modal scb-u-144">
     <div class="modal-header scb-u-145">
       <div class="scb-u-146">
@@ -4791,7 +4791,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
     <div class="modal-body">
       <p class="scb-u-150" id="biz-view-desc"></p>
       <a class="scb-u-151" id="biz-view-website" href="#" target="_blank" rel="noopener"></a>
-      <div class="scb-u-25" id="biz-view-products-section">
+      <div id="biz-view-products-section" style="display:none">
         <div class="scb-u-152">Products &amp; Services</div>
         <div class="biz-product-grid" id="biz-view-product-grid"></div>
       </div>
@@ -4834,7 +4834,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <div class="scb-u-161" id="setup-number-suggestions"></div>
       <div class="field"><label>Password</label><div class="pwd-field-wrap"><input type="password" id="setup-password" placeholder="Create a password"/><button type="button" class="pwd-toggle-btn" onclick="togglePwd('setup-password',this)" tabindex="-1" aria-label="Show password">👁️</button></div></div>
       <div class="field"><label>Date of birth</label><input type="date" id="setup-birthdate" onchange="checkSetupAgeForParentField()"/><div class="field-hint">Used to verify you meet our minimum age requirement</div></div>
-      <div class="field scb-u-25" id="setup-parent-email-field">
+      <div class="field" id="setup-parent-email-field" style="display:none">
         <label>Parent/guardian email</label>
         <input type="email" id="setup-parent-email" placeholder="parent@example.com"/>
         <div class="field-hint">Since you're under 18, a parent or guardian needs to approve your account. Have them create their own SoCloudyBro account (or log into one they already have) using this same email — they'll see your request waiting for them there.</div>
@@ -4855,7 +4855,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <div class="google-btn-holder scb-u-166" id="google-btn-signup"></div>
         <!-- Shown instead of the above when Google sign-in isn't configured or
              its script didn't load, so the state is never a silent no-op. -->
-        <button type="button" class="btn btn-ghost btn-full google-fallback-btn scb-u-25" id="google-fallback-signup" disabled>Sign in with Google</button>
+        <button type="button" class="btn btn-ghost btn-full google-fallback-btn" id="google-fallback-signup" disabled style="display:none">Sign in with Google</button>
         <div class="google-auth-note scb-u-167" id="google-note-signup"></div>
       </div>
     </div>
@@ -4872,7 +4872,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <div class="google-auth-block scb-u-163" id="google-auth-block-login">
         <div class="scb-u-164"><div class="scb-u-165"></div><span class="scb-u-103">or</span><div class="scb-u-165"></div></div>
         <div class="google-btn-holder scb-u-166" id="google-btn-login"></div>
-        <button type="button" class="btn btn-ghost btn-full google-fallback-btn scb-u-25" id="google-fallback-login" disabled>Sign in with Google</button>
+        <button type="button" class="btn btn-ghost btn-full google-fallback-btn" id="google-fallback-login" disabled style="display:none">Sign in with Google</button>
         <div class="google-auth-note scb-u-167" id="google-note-login"></div>
       </div>
       <div class="scb-u-171">
@@ -5086,7 +5086,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
     <div class="modal-footer">
       <button class="btn" id="pin-confirm-btn" onclick="confirmPin()">Confirm PIN</button>
       <button class="btn btn-ghost" onclick="closeModal('pin-modal')">Cancel</button>
-      <button class="btn btn-danger scb-u-25" id="pin-remove-btn" onclick="removePin()">Remove PIN</button>
+      <button class="btn btn-danger" id="pin-remove-btn" onclick="removePin()" style="display:none">Remove PIN</button>
     </div>
   </div>
 </div>
@@ -5105,7 +5105,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('backup-pin-modal')">Cancel</button>
-      <button class="btn btn-danger scb-u-25" id="backup-pin-remove-btn" onclick="removeBackupPin()">Remove Backup PIN</button>
+      <button class="btn btn-danger" id="backup-pin-remove-btn" onclick="removeBackupPin()" style="display:none">Remove Backup PIN</button>
     </div>
   </div>
 </div>
@@ -5166,7 +5166,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
     <div class="modal-header"><h2 id="avatar-modal-title">Choose Avatar</h2><p>Pick a preset or upload your own image.</p></div>
     <div class="modal-body scb-u-29">
       <div id="avatar-presets"></div>
-      <div class="scb-u-199"><label class="btn btn-ghost btn-sm scb-u-65">📁 Upload Image<input class="scb-u-25" type="file" accept="image/*" onchange="uploadAvatar(this)"/></label></div>
+      <div class="scb-u-199"><label class="btn btn-ghost btn-sm scb-u-65">📁 Upload Image<input type="file" accept="image/*" onchange="uploadAvatar(this)" style="display:none"/></label></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('avatar-modal')">Close</button></div>
   </div>
@@ -5223,7 +5223,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <div class="scb-u-10">
           <label class="btn btn-ghost btn-sm scb-u-206">
             📄 Import from CSV
-            <input class="scb-u-25" type="file" accept=".csv,text/csv" onchange="importGroupMembersCsv(this)"/>
+            <input type="file" accept=".csv,text/csv" onchange="importGroupMembersCsv(this)" style="display:none"/>
           </label>
           <span class="scb-u-207">A list of numbers, one per line or comma-separated</span>
         </div>
@@ -5293,7 +5293,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'chat')"/>
         </div>
       </div>
-      <div class="scb-u-25" id="chat-lock-face-pane">
+      <div id="chat-lock-face-pane" style="display:none">
         <div class="face-scan-wrap compact">
           <video id="chat-lock-face-video" autoplay muted playsinline></video>
           <canvas id="chat-lock-face-canvas"></canvas>
@@ -5324,7 +5324,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <div class="scb-u-188" id="cp-bio"></div>
           <div class="scb-u-196" id="cp-status"></div>
           <div class="scb-u-217" id="cp-mutual"></div>
-          <div class="scb-u-25" id="cp-mutual-friends" onclick="toggleMutualFriendsList()"></div>
+          <div id="cp-mutual-friends" onclick="toggleMutualFriendsList()" style="display:none"></div>
           <div class="scb-u-218" id="cp-mutual-friends-list"></div>
         </div>
       </div>
@@ -5375,7 +5375,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <div class="scb-u-70">
           <code class="scb-u-229" id="gp-invite-code"></code>
           <button class="btn btn-ghost btn-sm" onclick="copyServerInviteCode()">📋 Copy</button>
-          <button class="btn btn-ghost btn-sm scb-u-25" id="gp-invite-regen-btn" onclick="regenerateServerInviteCode()">🔄</button>
+          <button class="btn btn-ghost btn-sm" id="gp-invite-regen-btn" onclick="regenerateServerInviteCode()" style="display:none">🔄</button>
         </div>
         <div class="scb-u-210">Anyone with this code can request to join — an admin must approve.</div>
         <div id="gp-invite-settings" style="display:none;margin-top:8px;gap:8px;flex-wrap:wrap;align-items:center">
@@ -5411,7 +5411,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <input class="scb-u-174" type="checkbox" id="gp-quarantine-toggle" onchange="toggleGroupQuarantine(this.checked)"/>
           🚦 Quarantine new members' messages until a mod approves them
         </label>
-        <div class="scb-u-25" id="gp-quarantine-pending-wrap">
+        <div id="gp-quarantine-pending-wrap" style="display:none">
           <div class="scb-u-228">Awaiting Approval</div>
           <div id="gp-quarantine-pending-list"></div>
         </div>
@@ -5458,7 +5458,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <div id="gp-members-list"></div>
     </div>
     <div class="modal-footer scb-u-220">
-      <button id="gp-edit-btn" class="btn btn-ghost btn-sm scb-u-25" onclick="toggleGpEdit()">✏️ Edit</button>
+      <button id="gp-edit-btn" class="btn btn-ghost btn-sm" onclick="toggleGpEdit()" style="display:none">✏️ Edit</button>
       <button class="btn btn-danger btn-sm" onclick="leaveGroup()">Leave Group</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('group-panel-overlay')">Close</button>
     </div>
@@ -5521,7 +5521,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <option value="message_count">Automatic — messages sent in this server</option>
         </select>
       </div>
-      <div class="field scb-u-25" id="badge-criteria-days-field">
+      <div class="field" id="badge-criteria-days-field" style="display:none">
         <label id="badge-criteria-days-label">Days</label>
         <input type="number" id="badge-criteria-days" min="1" value="30"/>
       </div>
@@ -28738,7 +28738,7 @@ init();
           <button class="admin-dash-tab" data-tab="diagnostics" data-keywords="diagnostics health check clean firebase data" onclick="switchAdminTab('diagnostics')">🔍 Diagnostics</button>
           <button class="admin-dash-tab admin-dash-tab-owner" data-tab="ownertools" data-keywords="owner tools danger zone rules nuclear reset" onclick="switchAdminTab('ownertools')" title="Owner-only">👑 Owner Tools</button>
         </div>
-        <div class="admin-dash-nav-empty scb-u-25" id="admin-dash-nav-empty">No matching sections</div>
+        <div class="admin-dash-nav-empty" id="admin-dash-nav-empty" style="display:none">No matching sections</div>
       </div>
       <div class="admin-dash-content" id="admin-dashboard-body"></div>
     </div>
