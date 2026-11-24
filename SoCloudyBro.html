@@ -2673,6 +2673,27 @@ select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{
   #scb-cookie-banner > div{ width:100%; }
   #scb-cookie-banner > div button{ flex:1; min-height:40px; }
 }
+
+/* Sizes that the utility classes ask for but a later ".modal{max-width:420px}"
+   rule had been overriding (a class loses to a later class of equal weight, where
+   the original inline style would have won). Desktop only: on phones the
+   bottom-sheet rules apply. */
+@media (min-width:641px){
+  html body #admin-dashboard-modal .modal{ width:min(96vw,1400px); max-width:none; height:min(94vh,1050px); }
+  html body #contact-us-modal .modal{ max-width:480px; }
+  html body #security-disclosure-modal .modal{ max-width:520px; }
+  html body #biz-products-modal .modal{ max-width:500px; }
+  html body #biz-view-modal .modal{ max-width:460px; }
+  html body #admin-panel-modal .modal{ max-width:460px; }
+  html body #group-panel-overlay .modal{ max-width:440px; }
+}
+
+/* Settings rows with several buttons (Theme: Light/Dark/Auto/Schedule) used to
+   squeeze the label until it ran underneath the first button. Let the buttons
+   wrap onto their own line when the row is too narrow. */
+.settings-row{ flex-wrap:wrap; }
+.settings-row-main{ flex:1 1 150px; }
+.settings-row-actions{ flex-wrap:wrap; justify-content:flex-end; }
 </style>
 </head>
 <body>
@@ -21184,18 +21205,30 @@ function showSiteUpdateBanner(ver,note){
   if(dismiss) dismiss.onclick=()=>{ clearInterval(timer); _removeBannerRow('site-update-banner'); };
 }
 
-function applySiteUpdate(){
-  const html=localStorage.getItem('scb_site_html');
-  if(!html){ location.reload(); return; }
-  // Integrity check: only write HTML that looks like the expected app page.
-  // Rejects arbitrary localStorage content that could be injected by XSS.
-  const looksLikeApp = html.startsWith('<!DOCTYPE html') && html.includes('SoCloudyBro');
-  if(!looksLikeApp){ location.reload(); return; }
-  try{
-    document.open('text/html','replace');
-    document.write(html);
-    document.close();
-  }catch(e){ location.reload(); }
+// Applies a pending site update with a real reload. The old approach rewrote the
+// open page in place (document.open/write), but that keeps the old page's globals
+// and its Firebase connection alive, so the new scripts half-start: the sidebar
+// stays on "Set up account", the database never connects, and the page also keeps
+// the old page's security policy. A reload starts clean. Vercel serves the new
+// build, but it can lag the Firebase copy by a minute, so wait (up to ~60s) until
+// the served page matches the update before reloading.
+let _applyingSiteUpdate=false;
+async function applySiteUpdate(){
+  if(_applyingSiteUpdate) return;
+  _applyingSiteUpdate=true;
+  let html='';
+  try{ html=localStorage.getItem('scb_site_html')||''; }catch(e){}
+  let ready=!html;
+  for(let i=0;i<12&&!ready;i++){
+    try{
+      const r=await fetch(location.pathname||'/',{cache:'no-store'});
+      const t=await r.text();
+      ready=(t.length===html.length);
+    }catch(e){}
+    if(!ready) await new Promise(function(res){ setTimeout(res,5000); });
+  }
+  try{ localStorage.removeItem('scb_site_html'); }catch(e){}
+  location.reload();
 }
 // Weekly digest: sends a real email via the same Web3Forms mechanism already
 // used for user reports (see sendWeb3Form above) — reusing exactly that pattern
