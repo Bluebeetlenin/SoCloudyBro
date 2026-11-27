@@ -174,11 +174,8 @@ def main():
 
     report(missing, "the live CSP at " + url)
     print(
-        "
-Production is not serving the matching vercel.json and js/css files yet, so
-"
-        "deploying this HTML could break the app for everyone.
-"
+        "\nProduction is not serving the matching vercel.json and js/css files yet, so\n"
+        "deploying this HTML could break the app for everyone.\n"
         "Fix: promote the newest Vercel deployment to Production (or set Production Branch\n"
         "to scb/main), then re-run this workflow with 'Run workflow'.",
         file=sys.stderr,
