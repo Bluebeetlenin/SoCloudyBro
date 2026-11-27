@@ -1039,7 +1039,9 @@ async function adminCodePublish(btn){
   try{
     const snap=await fbdb.ref(ADMIN_SITE_PATH+'/version').get();
     const newVer=(snap.val()||0)+1;
-    await fbdb.ref(ADMIN_SITE_PATH).set({
+    // update(), never set(): the same node holds reserved numbers, feature flags
+    // and the audit log.
+    await fbdb.ref(ADMIN_SITE_PATH).update({
       version:newVer,
       html:html,
       note:(noteEl&&noteEl.value.trim())||'',
@@ -1060,7 +1062,9 @@ async function adminCodeClearOverride(){
   if(!requirePermission('code_update')) return;
   if(!confirm('Clear the Firebase override? All users will reload into the original Vercel-deployed version.')) return;
   try{
-    await fbdb.ref(ADMIN_SITE_PATH).remove();
+    // Clear only the override fields. Removing the node would take the other
+    // admin data with it.
+    await fbdb.ref(ADMIN_SITE_PATH).update({html:null,version:null,note:null,updated_at:null,updated_by:null});
     try{ localStorage.removeItem('scb_site_version'); localStorage.removeItem('scb_site_html'); }catch(e2){}
     showToast('Override cleared','Users will reload into the built-in version.');
     renderAdminCodeTab();

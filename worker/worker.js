@@ -336,8 +336,10 @@ async function handleClaudeDeploy(req, env, corsHeaders) {
   try {
     const accessToken = await getAccessToken(env.SERVICE_ACCOUNT_JSON);
     const payload = { html, version: ver, note: note || '', updated_at: Date.now() };
+    // PATCH, never PUT: admin_site also holds reserved numbers, feature flags and
+    // the audit log, which a PUT would erase on every deploy.
     const r = await fetch(`${dbBaseUrl(env)}/admin_site.json?access_token=${accessToken}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
