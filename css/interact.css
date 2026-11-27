@@ -1,0 +1,95 @@
+/* Button feedback, icons, tooltips, chat highlight and colour presets.
+   Loaded last so it settles the older button rules in the files above. */
+
+/* ── Hover and press ── */
+.btn,.icon-btn,.compose-btn,#send-btn,.sb-tab,.stab,.welcome-chip,.reaction-chip{
+  transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s,transform .12s,filter .15s;
+}
+.btn:hover:not(:disabled),
+.icon-btn:hover:not(:disabled),
+.compose-btn:hover:not(:disabled){opacity:1}
+.btn:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.08);box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.btn-ghost:hover:not(:disabled){color:var(--text);border-color:var(--accent);filter:none}
+.icon-btn:hover:not(:disabled),
+.compose-btn:hover:not(:disabled){
+  background:color-mix(in srgb,var(--accent) 16%,transparent);
+  color:var(--text);transform:translateY(-1px);
+}
+#sb-bottom .icon-btn:hover{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.compose-btn:hover:not(:disabled){border-color:color-mix(in srgb,var(--accent) 55%,transparent)}
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled),
+.compose-btn:active:not(:disabled),
+#send-btn:active:not(:disabled),
+.sb-tab:active,.stab:active{opacity:1;transform:scale(.93);filter:brightness(.95);transition-duration:.05s}
+#send-btn{box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 40%,transparent)}
+#send-btn:hover:not(:disabled){box-shadow:0 4px 16px color-mix(in srgb,var(--accent) 55%,transparent)}
+#send-btn:disabled{opacity:.5;cursor:default}
+
+/* Touch screens have no hover, so don't leave buttons stuck lifted. */
+@media(hover:none){
+  .btn:hover:not(:disabled):not(:active),
+  .icon-btn:hover:not(:disabled):not(:active),
+  .compose-btn:hover:not(:disabled):not(:active){transform:none}
+}
+
+/* ── Loading ── */
+.is-loading{position:relative;pointer-events:none;color:transparent!important}
+.is-loading>*{visibility:hidden}
+.is-loading::after{
+  content:'';position:absolute;top:50%;left:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+  border:2px solid var(--text2);border-right-color:transparent;border-radius:50%;
+  animation:btn-spin .7s linear infinite;
+}
+.btn:not(.btn-ghost).is-loading::after{border-color:#fff;border-right-color:transparent}
+@keyframes btn-spin{to{transform:rotate(360deg)}}
+
+/* ── Line icons ── */
+.ico{width:18px;height:18px;flex-shrink:0;pointer-events:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.stab .ico{display:block;margin:0 auto 3px}
+#send-btn .ico{margin-left:-2px}
+
+/* ── Tooltips ── */
+#scb-tip{
+  position:fixed;z-index:100000;max-width:240px;padding:6px 10px;
+  background:#0b0d10;color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:var(--r-sm);
+  font-size:12px;font-weight:600;line-height:1.35;pointer-events:none;
+  box-shadow:var(--shadow-lg);opacity:0;transform:translateY(3px);
+  transition:opacity .12s,transform .12s;
+}
+#scb-tip.show{opacity:1;transform:none}
+
+/* Narrower on desktop so the whole bottom toolbar fits on one row. */
+@media(min-width:900px) and (pointer:fine){
+  #sb-bottom .icon-btn{width:33px;height:34px}
+}
+
+/* ── Chat list ── */
+.sb-item.active{
+  background:color-mix(in srgb,var(--accent) 22%,transparent);
+  background-image:none;box-shadow:inset 4px 0 0 var(--accent);
+}
+.sb-item.active .sb-item-name{color:var(--text);font-weight:700}
+.sb-item.active .sb-item-preview,.sb-item.active .sb-item-time{color:var(--text2)}
+.sb-item.unread::before{
+  content:'';position:absolute;left:0;top:50%;width:4px;height:10px;margin-top:-5px;
+  border-radius:0 4px 4px 0;background:var(--text);
+}
+.sb-item.unread .sb-item-name{font-weight:800}
+.sb-item.unread .sb-item-preview{color:var(--text);font-weight:600}
+.sb-item.unread .sb-item-time{color:var(--accent-bright);font-weight:700}
+
+/* ── Colours follow the chosen theme ── */
+.sb-tab.active{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 40%,transparent);
+}
+.scb-presets{display:flex;flex-wrap:wrap;gap:10px;padding:4px 18px 8px}
+.scb-preset{
+  width:38px;height:38px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;box-shadow:inset 0 0 0 2px var(--surface);
+  transition:transform .12s,border-color .15s;
+}
+.scb-preset:hover{transform:scale(1.1)}
+.scb-preset:active{transform:scale(.94)}
+.scb-preset[aria-pressed="true"]{border-color:var(--text)}

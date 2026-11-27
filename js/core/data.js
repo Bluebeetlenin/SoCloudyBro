@@ -1312,7 +1312,7 @@ async function applyPendingAccountReset(){
   }catch(e){}
   try{
     const root=document.documentElement;
-    ['--accent','--accent2','--accent-hover','--accent-grad'].forEach(v=>root.style.removeProperty(v));
+    ['--accent','--accent2','--accent-hover','--accent-grad','--accent-bright'].forEach(v=>root.style.removeProperty(v));
     document.body.classList.remove('scb-custom-colors');
   }catch(e){}
   if(regenKeys){

@@ -78,7 +78,8 @@ function injectFeatureDom(){
   if(bottom && !document.getElementById('scb-meetings-nav-btn')){
     const b=document.createElement('button');
     b.className='icon-btn'; b.id='scb-meetings-nav-btn';
-    b.title=scbT('meetings'); b.textContent='🎥';
+    b.title=scbT('meetings'); b.setAttribute('aria-label',b.title);
+    b.innerHTML='<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7l-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
     b.onclick=openMeetingsPanel;
     const cloudyBtn=document.getElementById('cloudy-btn');
     bottom.insertBefore(b, cloudyBtn?cloudyBtn.nextSibling:bottom.lastChild);
@@ -421,6 +422,7 @@ function injectFeatureSettings(){
   if(appearanceSection && !document.getElementById('scb-primary-color')){
     appearanceSection.insertAdjacentHTML('beforeend',
       '<h3 data-i18n="theme_colors">Theme Colours</h3>'+
+      '<div class="scb-presets" id="scb-presets" role="group" aria-label="Colour themes"></div>'+
       '<div class="settings-row">'+
         '<div class="settings-row-main"><div class="settings-row-label" data-i18n="primary_color">Primary colour</div><div class="settings-row-sub">Used for buttons, your message bubbles, badges and highlights</div></div>'+
         '<div class="settings-row-actions"><input type="color" class="scb-color-input" id="scb-primary-color" value="#5A52D5" aria-label="Primary colour"/></div>'+
@@ -569,6 +571,7 @@ function injectFeatureSettings(){
   // Wire every control explicitly (no inline onclick strings to go stale).
   document.getElementById('scb-colors-save').onclick=saveThemeColors;
   document.getElementById('scb-colors-reset').onclick=resetThemeColors;
+  renderThemePresets();
   document.getElementById('scb-status-row').onclick=openSystemStatus;
   document.getElementById('scb-changelog-row').onclick=openChangelog;
   document.getElementById('scb-meetings-row').onclick=openMeetingsPanel;

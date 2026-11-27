@@ -423,7 +423,46 @@ function applyThemeColors(primary, secondary){
   root.style.setProperty('--accent2', secondary);
   root.style.setProperty('--accent-hover', _scbShade(primary, 8));
   root.style.setProperty('--accent-grad', 'linear-gradient(135deg,'+primary+' 0%,'+secondary+' 100%)');
+  root.style.setProperty('--accent-bright', _scbShade(primary, 16));
   document.body.classList.add('scb-custom-colors');
+  markThemePreset(primary, secondary);
+}
+// One-tap colour themes. The first entry is the app's default.
+const SCB_THEME_PRESETS = [
+  ['Classic', SCB_DEFAULT_COLORS.primary, SCB_DEFAULT_COLORS.secondary],
+  ['Ocean',   '#0a6fb8', '#0e8f8a'],
+  ['Forest',  '#1f7a45', '#4d7c0f'],
+  ['Sunset',  '#c2410c', '#be185d'],
+  ['Rose',    '#be185d', '#9333ea'],
+  ['Midnight','#3949ab', '#1e293b'],
+  ['Slate',   '#475569', '#64748b']
+];
+function markThemePreset(primary, secondary){
+  document.querySelectorAll('.scb-preset').forEach(b=>{
+    const on=b.dataset.colors===(primary+','+secondary).toLowerCase();
+    b.setAttribute('aria-pressed', on?'true':'false');
+  });
+}
+function renderThemePresets(){
+  const box=document.getElementById('scb-presets');
+  if(!box) return;
+  box.innerHTML='';
+  SCB_THEME_PRESETS.forEach(([name,primary,secondary],i)=>{
+    const b=document.createElement('button');
+    b.type='button'; b.className='scb-preset'; b.title=name;
+    b.setAttribute('aria-label', name+' theme');
+    b.dataset.colors=(primary+','+secondary).toLowerCase();
+    b.style.background='linear-gradient(135deg,'+primary+','+secondary+')';
+    b.onclick=()=>{
+      if(i===0){ resetThemeColors(); return; }
+      document.getElementById('scb-primary-color').value=primary;
+      document.getElementById('scb-secondary-color').value=secondary;
+      saveThemeColors();
+    };
+    box.appendChild(b);
+  });
+  const c=getThemeColors()||SCB_DEFAULT_COLORS;
+  markThemePreset(c.primary, c.secondary);
 }
 function saveThemeColors(){
   const p=document.getElementById('scb-primary-color');
@@ -445,11 +484,12 @@ function resetThemeColors(){
   try{ localStorage.removeItem('cc_theme_colors'); }catch(e){}
   if(me){ me.themeColors=null; try{ saveStorage(); }catch(e){} }
   const root=document.documentElement;
-  ['--accent','--accent2','--accent-hover','--accent-grad'].forEach(v=>root.style.removeProperty(v));
+  ['--accent','--accent2','--accent-hover','--accent-grad','--accent-bright'].forEach(v=>root.style.removeProperty(v));
   document.body.classList.remove('scb-custom-colors');
   const p=document.getElementById('scb-primary-color'), s=document.getElementById('scb-secondary-color');
   if(p) p.value=SCB_DEFAULT_COLORS.primary;
   if(s) s.value=SCB_DEFAULT_COLORS.secondary;
+  markThemePreset(SCB_DEFAULT_COLORS.primary, SCB_DEFAULT_COLORS.secondary);
   showToast(scbT('theme_colors'), 'Reset to default.');
 }
 function initThemeColors(){
@@ -553,7 +593,7 @@ renderSidebar = function(){
       const preview=lockedChats[key]?'🔒 Locked chat':lastMsg?(lastMsg.gif?'🖼 GIF':lastMsg.type==='ping'?'🔔 Ping':(msgText(lastMsg)||'')).substring(0,32):'';
       const timeStr=lastMsg?fmtTime(lastMsg.time):'';
       const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
-      const div=document.createElement('div'); div.className='sb-item'+(isActive?' active':'');
+      const div=document.createElement('div'); div.className='sb-item unread'+(isActive?' active':'');
       div.onclick=()=>openChat(c);
       const _freshU0=c.type!=='group'?lookupUser(c.number):null;
       const _liveAv0=(_freshU0&&_freshU0.avatar)||c.avatar||'';
@@ -599,7 +639,8 @@ renderSidebar = function(){
     const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
     const inCall=c.type!=='group'&&_numbersInActiveCall.has(Number(c.number));
     const div=document.createElement('div');
-    div.className='sb-item'+(isActive?' active':'');
+    const unread=(!isActive&&conv&&conv.messages)?conv.messages.filter(m=>m&&m.from!==me.number&&m.type!=='call'&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length:0;
+    div.className='sb-item'+(isActive?' active':'')+(unread?' unread':'');
     div.onclick=()=>openChat(c);
     div.oncontextmenu=(e)=>{e.preventDefault();showContactCtxMenu(e,c);};
     const _freshU=c.type!=='group'?lookupUser(c.number):null;
@@ -614,6 +655,7 @@ renderSidebar = function(){
       (inCall?' <span title="In a call now" style="color:var(--success)">☎</span>':'')+
       '</span><span class="sb-item-time">'+esc(timeStr)+'</span></div>'+
       '<div class="sb-item-preview">'+esc(preview)+'</div></div>'+
+      renderUnreadBadgeHtml(unread)+
       '<span class="sb-fav-star'+(isFavorite(key)?' on':'')+'" title="'+(isFavorite(key)?esc(scbT('remove_favourite')):esc(scbT('add_favourite')))+'">'+(isFavorite(key)?'★':'☆')+'</span>';
     const star=div.querySelector('.sb-fav-star');
     if(star) star.onclick=(e)=>{ e.stopPropagation(); toggleFavoriteKey(key, c.name); };
