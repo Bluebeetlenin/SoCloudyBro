@@ -232,8 +232,8 @@ async function savePrefsToFirebase(){
     // (who can add you to groups, who sees your number).
     await fbdb.ref(USERS_BIN+'/'+me.number+'/prefs/privacy').set(JSON.parse(JSON.stringify(prefs.privacy)));
     // KNOWN ISSUE: this full write throws whenever a contact has an empty field
-    // (the database rejects undefined). Don't "fix" it by cleaning the object
-    // until contact lists are private: the users node is readable by any visitor.
+    // (the database rejects undefined). Leave it until the database rules have
+    // been reviewed.
     await fbdb.ref(USERS_BIN+'/'+me.number+'/prefs').set(prefs);
   }catch(e){ /* non-fatal — localStorage copy still valid */ }
 }
