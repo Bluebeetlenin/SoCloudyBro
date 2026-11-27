@@ -119,15 +119,12 @@
 function _unreadMessages(){
   if(!me||!convosCache) return [];
   const found=[];
-  contacts.forEach(c=>{
+  knownContacts().forEach(c=>{
     const key=c.key||dmKey(me.number,c.number);
     if(archivedContacts[key]) return;
-    const convo=convosCache.find(x=>x&&x.key===key);
-    ((convo&&convo.messages)||[]).forEach(m=>{
+    unreadMessagesIn(convoByKey(key)).forEach(m=>{
       // View-once messages stay unread until actually opened.
-      if(!m||m.from===me.number||m.type==='call'||m.type==='system'||m.selfDestruct) return;
-      if((m.seen&&m.seen.includes(me.number))||_isLocallySeen(m.id)) return;
-      found.push({m,key});
+      if(!m.selfDestruct) found.push({m,key});
     });
   });
   return found;
@@ -158,7 +155,7 @@ function markAllRead(){
   renderSidebar=function(){
     render.apply(this,arguments);
     const list=document.getElementById('sb-list');
-    if(!list||(currentTab!=='chats'&&currentTab!=='unread'&&currentTab!=='groups'&&currentTab!=='servers')) return;
+    if(!list||searchQ||(currentTab!=='chats'&&currentTab!=='unread'&&currentTab!=='groups'&&currentTab!=='servers')) return;
     const count=_unreadMessages().length;
     if(!count) return;
     const bar=document.createElement('div');

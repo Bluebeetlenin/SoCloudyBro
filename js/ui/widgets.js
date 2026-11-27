@@ -212,10 +212,8 @@ catch(e){ console.error('feature DOM injection failed', e); }
   function updateTabTitle(){
     if(!window.convosCache||!window.me) return;
     let total=0;
-    (window.convosCache||[]).forEach(c=>{
-      if(!c||!c.messages) return;
-      total+=c.messages.filter(m=>m&&m.from!==me.number&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length;
-    });
+    // Your own chats only: the cache also holds conversations you aren't in.
+    knownContacts().forEach(c=>{ total+=unreadMessagesIn(convoByKey(c.key)).length; });
     document.title=total>0?'('+total+') '+_origTitle:_origTitle;
   }
   const _savedConvos=window.saveConvos;
@@ -553,7 +551,7 @@ async function _cwInviteToMeeting(c){
   closeModal('cw-invite-modal');
   const code = meetingState.id;
   try{
-    await _cwPostMessage(c, '🎥 Join my meeting on SoCloudyBro — code ' + code + ' (Meetings → Join Meeting).');
+    await _cwPostMessage(c, '🎥 Join my meeting on SoCloudyBro: ' + meetingLink(code));
     showToast('Invite sent', (dec(c.name)||'Contact') + ' got the code ' + code + '.');
   }catch(e){ showToast('Invite failed', scbErr('SCB-GRP-30','That invite couldn\'t be sent — the server rejected the write.',(e.message||''))); }
 }
@@ -577,7 +575,7 @@ async function _cwUpgradeDmToMeeting(c){
   if(!voiceChannelActive || !voiceChannelActive.isDm) return;
   const otherNum = Number(voiceChannelActive.otherNum);
   const code = newMeetingId();
-  const msg = '🎥 Moving our call to a meeting room so more people can join — code ' + code + ' (Meetings → Join Meeting).';
+  const msg = '🎥 Moving our call to a meeting room so more people can join: ' + meetingLink(code);
   const targets = [c];
   const otherContact = (contacts||[]).find(x=>x && x.type!=='group' && Number(x.number)===otherNum);
   if(otherContact) targets.push(otherContact);

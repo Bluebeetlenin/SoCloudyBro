@@ -36,7 +36,19 @@ function toggleMsgExpand(toggleEl){
   collapsed.style.display=expanded?'block':'none';
   toggleEl.textContent=expanded?'Show more':'Show less';
 }
+// Records that you've looked at a message. Local tracking drives your own unread
+// badges and always happens. The shared `seen` list is what shows a read receipt
+// to the other person, so it respects the Read Receipts setting.
+function _markShown(m){
+  _markLocallySeen(m.id);
+  if(!getPrivacyPref('readReceipts',true)||(m.seen&&m.seen.includes(me.number))) return;
+  if(!m.seen) m.seen=[];
+  m.seen.push(me.number);
+  _convosDirty=true; saveConvos().catch(e=>console.warn('read receipt save failed',e));
+}
 function renderMessages(msgs) {
+  // Nothing is marked read or consumed while this is still a message request.
+  const _isReq = !!(activeConvo && isRequestKey(activeConvo.key));
   // Security feature 25/32: shadow-mute. A shadow-muted sender's messages
   // are still shown to THEM (so they get no indication anything is wrong —
   // no ban notice, nothing), but never rendered for anyone else. The
@@ -98,7 +110,7 @@ function renderMessages(msgs) {
   if (hash === lastMsgHash) return;
   lastMsgHash = hash;
   // Decrypt any pending E2E-encrypted messages, then re-render once ready
-  if (msgs && msgs.some(m => (m.ctext || m.cgif || m.cpoll) && !_decCache[m.id])) {
+  if (msgs && msgs.some(m => m && (m.ctext || m.cgif || m.cpoll || m.cfile || m.cevt) && !_decCache[m.id])) {
     const c = convosCache && activeConvo ? convosCache.find(x=>x&&x.key === activeConvo.key) : null;
     if (c) decryptConvoMessages(c).then(() => { lastMsgHash = ''; renderMessages(c.messages); });
   }
@@ -126,6 +138,9 @@ function renderMessages(msgs) {
     if(!m) return; // skip null/undefined slots (Bug 3: prevents spurious SCB-MSG-15)
     if (m.type === 'system' && !_sysRunInfo[_msgIdx]) return; // folded into an earlier collapsed run
     const isMe = m.from === me.number;
+    // Mark as read here, before the early returns below, so polls, games, pings
+    // and events don't stay unread forever.
+    if (!_isReq && !isMe && m.type !== 'system' && !m.selfDestruct) _markShown(m);
     const d = new Date(m.time);
     const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
     if (dateStr !== lastDate) {
@@ -211,6 +226,17 @@ function renderMessages(msgs) {
       wrap.appendChild(row);
       return;
     }
+    // Group event
+    if (m.evt || m.cevt) {
+      const row = document.createElement('div');
+      row.className = 'msg-row ' + (isMe ? 'me' : 'them');
+      row.setAttribute('data-msg-id', m.id);
+      row.oncontextmenu = e => { e.preventDefault(); showCtxMenu(e, m); };
+      const body = document.createElement('div'); body.className = 'msg-body';
+      if (!isMe) { const sn = document.createElement('div'); sn.className = 'msg-sender-name'; sn.textContent = dec((lookupUser(m.from)||{}).name) || ('#' + m.from); body.appendChild(sn); }
+      renderEventCard(m, body);
+      row.appendChild(body); wrap.appendChild(row); return;
+    }
     // Poll message
     if (m.poll || m.cpoll) {
       const row = document.createElement('div');
@@ -285,7 +311,8 @@ function renderMessages(msgs) {
     }
     const bubble = document.createElement('div');
     const fileData = msgFileData(m);
-    if (msgHasGif(m)) { const gifSrc = normalizeGifUrl(msgGifUrl(m)); bubble.className = 'bubble gif-bubble'; bubble.innerHTML = '<img src="' + esc(gifSrc) + '" alt="GIF" loading="lazy" data-gif-src="' + esc(gifSrc) + '" onerror="gifImgFail(this,this.dataset.gifSrc)"/>'; }
+    if (_isReq && m.selfDestruct && !isMe) { bubble.className = 'bubble'; bubble.textContent = 'View-once message. Accept the request to open it.'; }
+    else if (msgHasGif(m)) { const gifSrc = normalizeGifUrl(msgGifUrl(m)); bubble.className = 'bubble gif-bubble'; bubble.innerHTML = '<img src="' + esc(gifSrc) + '" alt="GIF" loading="lazy" data-gif-src="' + esc(gifSrc) + '" onerror="gifImgFail(this,this.dataset.gifSrc)"/>'; }
     else if (fileData) { renderFileBubble(bubble, fileData); }
     else {
       const _decFailed = _decCache[m.id]&&_decCache[m.id].textFailed;
@@ -375,9 +402,8 @@ function renderMessages(msgs) {
         setTimeout(()=>row.style.transition='',200);
       },{passive:true});
     })(row,m,isMe);
-    let _markedAnySeen = false;
     // Self-destruct: recipient sees it once, then it's deleted
-    if (!isMe && m.selfDestruct && (!m.seen || !m.seen.includes(me.number))) {
+    if (!_isReq && !isMe && m.selfDestruct && (!m.seen || !m.seen.includes(me.number))) {
       if (!m.seen) m.seen = [];
       m.seen.push(me.number);
       const sourceConvoKey = activeConvo && activeConvo.key;
@@ -387,21 +413,6 @@ function renderMessages(msgs) {
         conv.messages=conv.messages.filter(x=>x&&x.id!==m.id);
         try{ await saveConvos(); if(activeConvo&&activeConvo.key===sourceConvoKey){ lastMsgHash=''; renderMessages(conv.messages); } }catch{}
       }, 3000);
-    }
-    // Local-only "I've looked at this" tracking (for your own unread
-    // badges) happens unconditionally — unlike the `seen` array below,
-    // which is what shows a read receipt to the OTHER person and is
-    // deliberately skipped when they've turned that off. Those are two
-    // different things; disabling read receipts should never also break
-    // your own unread count.
-    if (!isMe && typeof _markLocallySeen === 'function') _markLocallySeen(m.id);
-    if (!isMe && (!m.seen || !m.seen.includes(me.number)) && getPrivacyPref('readReceipts',true) && !m.selfDestruct) {
-      if (!m.seen) m.seen = [];
-      m.seen.push(me.number);
-      _markedAnySeen = true;
-    }
-    if (_markedAnySeen && typeof saveConvos === 'function') {
-      _convosDirty=true; saveConvos();
     }
     }catch(e){ console.error('Failed to render message',m.id,e); const errDiv=document.createElement('div'); errDiv.style.cssText='font-size:11px;color:var(--danger);padding:4px 12px'; errDiv.textContent=scbErr('SCB-MSG-15','⚠️ One message in this chat couldn\'t be displayed.',(e.message||'')); wrap.appendChild(errDiv); }
   });
@@ -525,6 +536,7 @@ async function sendMsg(gifUrl) {
     }
     if (replyingTo) { msg.replyTo = replyingTo; }
     const aesKey = await getConvoAesKey(c);
+    if (!aesKey && isSelfKey(key)) { input.value = _originalText; showToast('Not saved', 'This device can\'t encrypt your note.'); return; }
     if (gifUrl) {
       const wrapped = aesKey ? await aesEnc(aesKey, gifUrl) : null;
       if (wrapped) { msg.cgif = wrapped; _decCache[msg.id] = { gif: gifUrl }; }
@@ -829,6 +841,7 @@ async function openChat(c) {
     // Hide call/group buttons (Cloudy has its own logic)
     const callBtn = document.getElementById('call-btn'); if(callBtn) callBtn.style.display='none';
     const pollBtn = document.getElementById('poll-compose-btn'); if(pollBtn) pollBtn.style.display='none';
+    const eventBtn = document.getElementById('event-compose-btn'); if(eventBtn) eventBtn.style.display='none';
     const chBar = document.getElementById('channel-bar'); if(chBar) chBar.style.display='none';
     const voiceBar = document.getElementById('voice-bar'); if(voiceBar) voiceBar.style.display='none';
     // Render local Cloudy messages (use window.* — functions live inside an IIFE)
@@ -938,6 +951,12 @@ function initFullscreenControl(){
   if(row && fullscreenSupported()) row.style.display = 'flex';
 }
 
+// Sun while dark (switch to light), moon while light.
+function _themeIcon(dark){
+  return '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(dark
+    ? '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>'
+    : '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>')+'</svg>';
+}
 function setTheme(mode){
   localStorage.setItem('cc_theme', mode);
   applyTheme(mode);
@@ -987,7 +1006,7 @@ function applyTheme(mode){
     const dark=isWithinDarkSchedule();
     document.documentElement.setAttribute('data-theme',dark?'dark':'light');
     const fbtn=document.getElementById('theme-toggle-btn');
-    if(fbtn) fbtn.textContent=dark?'☀️':'🌙';
+    if(fbtn) fbtn.innerHTML=_themeIcon(dark);
     // Re-check every minute so the switch actually happens live while the app
     // stays open, rather than only on next reload/reopen.
     if(_themeScheduleTimer) clearInterval(_themeScheduleTimer);
@@ -1000,7 +1019,7 @@ function applyTheme(mode){
   else document.documentElement.removeAttribute('data-theme');
   const isDark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme:dark)').matches);
   const fbtn = document.getElementById('theme-toggle-btn');
-  if (fbtn) fbtn.textContent = isDark ? '☀️' : '🌙';
+  if (fbtn) fbtn.innerHTML = _themeIcon(isDark);
 }
 function initTheme(){
   const saved=localStorage.getItem('cc_theme')||'auto';
@@ -1076,6 +1095,7 @@ function showReactionPicker(e,msg){
 }
 async function addReaction(msg,emoji){
   if(!convosCache||!activeConvo||!me) return;
+  if(isRequestKey(activeConvo.key)){ showToast('Message request','Accept it before reacting.'); return; }
   const c=convosCache.find(x=>x&&x.key===activeConvo.key);
   if(!c) return;
   const m=c.messages.find(x=>x.id===msg.id);

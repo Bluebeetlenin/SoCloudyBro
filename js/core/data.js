@@ -89,6 +89,7 @@ let tempSetupAvatar = null;
 let lockedChats = {};
 let archivedContacts = {};
 let mutedChats = {};
+let acceptedRequests = {}; // convo key -> true, message requests you accepted
 let dndEnabled = localStorage.getItem('cc_dnd')==='1';
 let quietHours = (()=>{ try{ return JSON.parse(localStorage.getItem('cc_quiet_hours')||'{"enabled":false,"start":"22:00","end":"07:00"}'); }catch{ return {enabled:false,start:'22:00',end:'07:00'}; } })();
 let currentTab = 'chats';
@@ -118,6 +119,7 @@ function resetLocalSessionState(){
   lockedChats = {};
   archivedContacts = {};
   mutedChats = {};
+  acceptedRequests = {};
   removedContacts = {};
   updatesCache = null;
   updatesFilter = 'all';
@@ -180,6 +182,7 @@ function loadStorage(){
   archivedContacts = safeParse('cc_archived', {});
   mutedChats    = safeParse('cc_muted', {});
   removedContacts  = safeParse('cc_removed', {});
+  acceptedRequests = safeParse('cc_requests_accepted', {});
 }
 function saveStorage(){
   localStorage.setItem('cc_me', JSON.stringify(me));
@@ -188,6 +191,7 @@ function saveStorage(){
   localStorage.setItem('cc_archived', JSON.stringify(archivedContacts));
   localStorage.setItem('cc_muted', JSON.stringify(mutedChats));
   localStorage.setItem('cc_removed', JSON.stringify(removedContacts));
+  localStorage.setItem('cc_requests_accepted', JSON.stringify(acceptedRequests));
   _debounceSavePrefs();
 }
 
@@ -211,11 +215,12 @@ async function savePrefsToFirebase(){
   if(!me||!me.number||typeof fbdb==='undefined') return;
   try{
     const prefs={
-      contacts:(contacts||[]).filter(c=>c&&String(c.number)!=='00000').map(({type,number,name,key,bio,info,members})=>({type,number,name,key,bio:bio||undefined,info:info||undefined,members:members||undefined})),
+      contacts:(contacts||[]).filter(c=>c&&String(c.number)!=='00000').map(({type,number,name,key,bio,info,members,request,isSelf})=>({type,number,name,key,bio:bio||undefined,info:info||undefined,members:members||undefined,request:request||undefined,isSelf:isSelf||undefined})),
       locked:lockedChats||{},
       archived:archivedContacts||{},
       muted:mutedChats||{},
       removed:removedContacts||{},
+      accepted:acceptedRequests||{},
       privacy:(()=>{ try{ return JSON.parse(localStorage.getItem('cc_privacy')||'{}'); }catch{ return {}; } })(),
       dnd:dndEnabled,
       quietHours:quietHours,
@@ -223,6 +228,12 @@ async function savePrefsToFirebase(){
       settingsTab:(()=>{ try{ return localStorage.getItem('cc_settings_tab')||null; }catch{ return null; } })(),
       v:2
     };
+    // Privacy settings go first and on their own: other people's apps read them
+    // (who can add you to groups, who sees your number).
+    await fbdb.ref(USERS_BIN+'/'+me.number+'/prefs/privacy').set(JSON.parse(JSON.stringify(prefs.privacy)));
+    // KNOWN ISSUE: this full write throws whenever a contact has an empty field
+    // (the database rejects undefined). Don't "fix" it by cleaning the object
+    // until contact lists are private: the users node is readable by any visitor.
     await fbdb.ref(USERS_BIN+'/'+me.number+'/prefs').set(prefs);
   }catch(e){ /* non-fatal — localStorage copy still valid */ }
 }
@@ -257,6 +268,11 @@ async function loadPrefsFromFirebase(){
     if(prefs.removed&&!Object.keys(removedContacts||{}).length){
       removedContacts=prefs.removed;
       localStorage.setItem('cc_removed',JSON.stringify(removedContacts));
+    }
+    if(prefs.accepted){
+      // Merge: a request accepted on any device stays accepted.
+      acceptedRequests=Object.assign({},prefs.accepted,acceptedRequests);
+      localStorage.setItem('cc_requests_accepted',JSON.stringify(acceptedRequests));
     }
     if(prefs.privacy&&!localStorage.getItem('cc_privacy')){
       localStorage.setItem('cc_privacy',JSON.stringify(prefs.privacy));

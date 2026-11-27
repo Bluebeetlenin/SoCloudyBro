@@ -734,6 +734,8 @@ function onToggleFaceMfaClick(){
 // ── Enrollment ────────────────────────────────────────────────────────────────
 let _faceEnrollStream=null, _faceEnrollLoopTimer=null, _faceEnrollAutoActive=false;
 async function startFaceEnrollment(){
+  // The privacy policy limits face data to adults.
+  if(isMinorAccount()){ showToast('18 or older only','Face sign-in is only available to accounts aged 18 or older.'); return; }
   // Show the consent view first; camera does not start until the user clicks I Agree
   _faceEnrollAutoActive=false;
   const consentView=document.getElementById('face-enroll-consent-view');

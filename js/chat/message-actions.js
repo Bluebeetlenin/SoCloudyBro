@@ -4,7 +4,8 @@ function showCtxMenu(e,m){
   const menu=document.getElementById('ctx-menu');
   // Only show Edit for own non-GIF messages
   const editBtn=document.getElementById('ctx-edit-btn');
-  if(editBtn) editBtn.style.display=(m.from===me.number&&!m.gif)?'flex':'none';
+  const editable=m.from===me.number&&!msgHasGif(m)&&!msgFileData(m)&&!msgHasPoll(m)&&!m.evt&&!m.cevt&&!m.game;
+  if(editBtn) editBtn.style.display=editable?'flex':'none';
   const pinBtn=document.getElementById('ctx-pin-btn');
   if(pinBtn){
     const c=convosCache&&activeConvo?convosCache.find(x=>x&&x.key===activeConvo.key):null;
@@ -195,7 +196,7 @@ function openForwardModal(m){
   if(!contacts||!contacts.length){
     list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px">No contacts or groups yet.</div>';
   }else{
-    contacts.forEach(c=>{
+    knownContacts().forEach(c=>{
       const row=document.createElement('div');
       row.className='sb-item';
       row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer';
@@ -228,6 +229,7 @@ async function forwardToTarget(c){
   try{
     const conv=await getOrMakeConvo(key,c.type==='group'?c.members:[me.number,c.number]);
     const destAesKey=await getConvoAesKey(conv);
+    if(!destAesKey&&isSelfKey(key)) throw new Error('This device can\'t encrypt your note.');
     for(const fm of forwardMsgs){
       const msg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),from:me.number,time:Date.now(),seen:[],forwarded:true};
       if(msgHasGif(fm)){

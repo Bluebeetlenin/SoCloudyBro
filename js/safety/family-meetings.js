@@ -572,7 +572,11 @@ const MEETINGS_ROOT = 'syntax_meetings';
 let meetingState = null;   // {id, myId, localStream, screenStream, peers:{}, refs:[], camOn, micOn}
 
 function newMeetingId(){
-  return Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+  // Codes are now shared in links, so they come from the secure random source.
+  // 32 symbols without look-alikes (no I, O, 0, 1).
+  const abc='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const s=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>abc[b%32]).join('');
+  return s.slice(0,4)+'-'+s.slice(4,8)+'-'+s.slice(8);
 }
 function openMeetingsPanel(){
   if(blockIfRestricted('noVoice','Meetings are turned off for your account.')) return;

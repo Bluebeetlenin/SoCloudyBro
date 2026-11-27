@@ -182,6 +182,7 @@ async function _origOpenChat(c){
     if(chatHeaderAv){ chatHeaderAv.style.cursor=''; chatHeaderAv.onclick=null; }
   }
   const pollBtn=document.getElementById('poll-compose-btn');if(pollBtn) pollBtn.style.display=c.type==='group'?'flex':'none';
+  const eventBtn=document.getElementById('event-compose-btn');if(eventBtn) eventBtn.style.display=c.type==='group'?'flex':'none';
   const gameBtn=document.getElementById('game-compose-btn');if(gameBtn) gameBtn.style.display='flex';
   const addMemberBtn=document.getElementById('add-member-btn');if(addMemberBtn) addMemberBtn.style.display=c.type==='group'?'flex':'none';
   const blockBtn=document.getElementById('block-menu-item');
@@ -335,13 +336,17 @@ async function submitAdd(){
   const err=document.getElementById('add-error');err.textContent='';
   if(!num||num<1000){err.textContent=scbErr('SCB-CONT-02','Enter a valid number.');return;}
   if(num===me.number){err.textContent=scbErr('SCB-CONT-03',"That's your own number.");return;}
-  if(contacts.find(c=>c.number===num&&c.type!=='group')){err.textContent=scbErr('SCB-CONT-04','Already in contacts.');return;}
+  const existing=contacts.find(c=>c.number===num&&c.type!=='group');
+  // Adding someone who already messaged you accepts their request.
+  if(existing&&isRequest(existing)){ acceptRequest(existing.key); closeModal('add-modal'); openChat(existing); return; }
+  if(existing){err.textContent=scbErr('SCB-CONT-04','Already in contacts.');return;}
   try{
     const users=await getUsers();
     const user=users.find(u=>u.number===num);
     if(!user){err.textContent=scbErr('SCB-CONT-05',`#${num} is not registered.`);return;}
     if(user.banned){err.textContent=scbErr('SCB-CONT-07',`#${num} is a banned account.`);return;}
     const c={type:'dm',number:num,name:dec(user.name),bio:dec(user.bio||''),avatar:user.avatar||'',key:'dm_'+[me.number,num].sort((a,b)=>a-b).join('_')};
+    delete removedContacts[c.key]; acceptedRequests[c.key]=true;
     contacts.push(c);saveStorage();renderSidebar();renderDashboardWidget('online');closeModal('add-modal');openChat(c);
   }catch(e){err.textContent=scbErr('SCB-CONT-06','That contact couldn\'t be added — the server request failed.',e.message);}
 }
@@ -362,7 +367,7 @@ function openNewGroup(preselectContact,asServer){
   // Build member pick list
   const pick=document.getElementById('member-pick-list');pick.innerHTML='';
   const sel=document.getElementById('selected-members');sel.innerHTML='';
-  const dmContacts=contacts.filter(c=>c.type!=='group');
+  const dmContacts=knownContacts().filter(c=>c.type!=='group'&&!c.isSelf);
   if(!dmContacts.length){
     pick.innerHTML='<div style="font-size:12px;color:var(--muted)">No saved contacts yet — use "Add by number" above.</div>';
   }else{
@@ -795,7 +800,7 @@ function positionGifPicker(){
   picker.style.maxHeight=pickerMaxH+'px';
   // account for the search bar + tab strip (~94px) so the content pane's
   // own scroll region is what shrinks, not the search/tabs getting squeezed
-  const paneMaxH=Math.max(80,pickerMaxH-94)+'px';
+  const paneMaxH=Math.max(80,pickerMaxH-112)+'px';
   ['gif-grid','emoji-grid'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.maxHeight=paneMaxH; });
 }
 window.addEventListener('resize',()=>{ if(document.getElementById('gif-picker')?.classList.contains('visible')) positionGifPicker(); });
@@ -812,6 +817,8 @@ function switchGifPickerTab(tab){
   const search=document.getElementById('gif-search');
   gifGrid.style.display = tab==='gifs' ? 'block' : 'none';
   emojiGrid.style.display = tab==='emoji' ? 'grid' : 'none';
+  const credit=document.getElementById('gif-attribution');
+  if(credit) credit.style.display = tab==='gifs' ? '' : 'none';
   if(search){
     search.style.display = '';
     search.placeholder = tab==='emoji' ? 'Search emoji…' : 'Search GIFs…';
@@ -1051,6 +1058,7 @@ async function sendFileMsg(fileMeta){
       if (Array.isArray(c.pendingApproval) && c.pendingApproval.includes(me.number)) msg.quarantined = true;
     }
     const aesKey=await getConvoAesKey(c);
+    if(!aesKey&&isSelfKey(key)){ showToast('Not saved','This device can\'t encrypt your note.'); return; }
     const wrapped=aesKey?await aesEnc(aesKey,JSON.stringify(fileMeta)):null;
     if(wrapped){ msg.cfile=wrapped; _decCache[msg.id]={file:fileMeta}; }
     else{ msg.file=fileMeta; }

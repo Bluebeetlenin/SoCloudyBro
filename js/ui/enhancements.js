@@ -745,7 +745,8 @@ function injectFeatureModals(){
     '<div class="modal-header"><h2 data-i18n="meetings">Meetings</h2><p>Video, voice, screen sharing and chat in one room.</p></div>'+
     '<div class="modal-body" style="padding-bottom:14px">'+
       '<button class="btn btn-full" id="scb-meeting-start-btn" data-i18n="start_meeting">Start Meeting</button>'+
-      '<div class="field" style="margin-top:14px"><label>Or join with a code</label><input type="text" id="scb-meeting-code" placeholder="ABCD-1234" maxlength="12"/></div>'+
+      '<button class="btn btn-ghost btn-full" id="scb-meeting-link-btn" style="margin-top:8px">Create a call link</button>'+
+      '<div class="field" style="margin-top:14px"><label>Or join with a code</label><input type="text" id="scb-meeting-code" placeholder="ABCD-EFGH-JKLM" maxlength="24"/></div>'+
       '<div class="error-text" id="scb-meeting-lobby-error"></div>'+
       '<button class="btn btn-ghost btn-full" id="scb-meeting-join-btn" data-i18n="join_meeting">Join Meeting</button>'+
       '<div id="scb-meeting-cap-note" style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5"></div>'+
@@ -755,7 +756,8 @@ function injectFeatureModals(){
   // ---- Meeting room --------------------------------------------------------
   '<div id="scb-meeting-room">'+
     '<div id="scb-meeting-top"><span>🎥</span><span id="scb-meeting-id-label"></span><span id="scb-meeting-count"></span>'+
-      '<button class="btn btn-ghost btn-sm" id="scb-meeting-min-btn" style="margin-left:auto" title="Keep the meeting running and go back to the app">\u2935 Minimise</button>'+
+      '<button class="btn btn-ghost btn-sm" id="scb-meeting-copy-btn" style="margin-left:auto">Copy link</button>'+
+      '<button class="btn btn-ghost btn-sm" id="scb-meeting-min-btn" title="Keep the meeting running and go back to the app">\u2935 Minimise</button>'+
       '<button class="btn btn-danger btn-sm" id="scb-meeting-leave-btn" data-i18n="leave_meeting">Leave</button></div>'+
     '<div id="scb-meeting-main">'+
       '<div id="scb-meeting-grid"></div>'+
@@ -789,6 +791,8 @@ function injectFeatureModals(){
   document.getElementById('scb-syntax-link-close').onclick=function(){ closeModal('scb-syntax-link-modal'); };
   document.getElementById('scb-meeting-start-btn').onclick=startNewMeeting;
   document.getElementById('scb-meeting-join-btn').onclick=joinMeetingFromLobby;
+  document.getElementById('scb-meeting-link-btn').onclick=()=>createCallLink();
+  document.getElementById('scb-meeting-copy-btn').onclick=()=>{ if(meetingState) shareCallLink(meetingState.id); };
   document.getElementById('scb-meeting-lobby-close').onclick=function(){ closeModal('scb-meeting-lobby'); };
   document.getElementById('scb-meeting-leave-btn').onclick=leaveMeeting;
   document.getElementById('scb-meeting-min-btn').onclick=minimizeMeetingRoom;

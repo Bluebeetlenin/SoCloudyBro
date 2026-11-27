@@ -16,7 +16,7 @@
 .error-text{font-size:12px;color:var(--danger);min-height:18px;margin-top:4px}
 
 /* ── INPUTS BUTTONS ── */
-input[type=text],input[type=number],input[type=password],input[type=email],input[type=date],input[type=time],textarea,select{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 12px;outline:none;transition:border-color 0.18s,box-shadow 0.18s;color-scheme:dark light}
+input[type=text],input[type=number],input[type=password],input[type=email],input[type=date],input[type=time],input[type=datetime-local],textarea,select{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 12px;outline:none;transition:border-color 0.18s,box-shadow 0.18s;color-scheme:dark light}
 /* Custom checkbox/radio skin — a bare native checkbox (just an OS-default
    square, at most tinted via accent-color) is the one remaining "generic
    browser control" look left in the app; everything else (buttons, text

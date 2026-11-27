@@ -774,6 +774,7 @@ async function rotateGroupKey(c, remainingNums) {
 async function getConvoAesKey(c){
   if(!c||!me) return null;
   if(c.type==='group'||c.key&&c.key.startsWith('grp_')) return getGroupAesKey(c);
+  if(isSelfKey(c.key)) return getSelfAesKey();
   // DM: figure out the "other" number (guard against object-form participants from Firebase)
   const _parts=Array.isArray(c.participants)?c.participants:Object.values(c.participants||{}).filter(n=>n!=null);
   const other=_parts.find(n=>n!==me.number);
@@ -809,12 +810,20 @@ async function decryptConvoMessages(c){
         entry.poll={question:q,options,creator:m.cpoll.creator};
       }catch{}
     }
+    if(m.cevt&&key){ try{ entry.event=JSON.parse(await aesDec(key,m.cevt)); }catch{} }
+    // Cache failures too: an uncached message makes renderMessages() ask for
+    // decryption again straight away, forever.
+    if(m.cgif||m.cfile||m.cpoll||m.cevt){ if(!Object.keys(entry).length) entry.textFailed=true; }
     if(Object.keys(entry).length) _decCache[m.id]=entry;
   }
 }
 
 function msgText(m){
   if(!m) return '';
+  if(m.evt||m.cevt){
+    const event=msgEventData(m);
+    if(event) return '📅 Event: '+event.title;
+  }
   const c=_decCache[m.id];
   if(c){
     if(c.text!=null) return c.text;

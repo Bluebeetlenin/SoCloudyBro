@@ -304,6 +304,11 @@ function syncContactsFromConvos(){
     // Never re-add a contact the user explicitly removed
     if(removedContacts[c.key]) return;
     if(isDm){
+      // Your own notes: restore the chat on a new device.
+      if(c.key==='dm_'+me.number+'_'+me.number){
+        if((c.messages||[]).length&&!contacts.some(x=>x&&x.key===c.key)){ ensureSelfContact(); changed=true; }
+        return;
+      }
       const parts=c.key.replace('dm_','').split('_');
       const otherNum=parseInt(parts.find(p=>parseInt(p)!==Number(me.number)));
       if(!otherNum||isNaN(otherNum)) return;
@@ -313,9 +318,12 @@ function syncContactsFromConvos(){
       if(!alreadyHave){
         const u=lookupUser(otherNum);
         if(!u) return; // skip contacts for users who don't exist in the user list
-        contacts.push({type:'dm',number:otherNum,name:dec(u.name)||'#'+otherNum,bio:dec(u.bio||''),avatar:u.avatar||'',key:c.key});
+        // Someone reached out first: hold it as a message request.
+        contacts.push({type:'dm',number:otherNum,name:dec(u.name)||'#'+otherNum,bio:dec(u.bio||''),avatar:u.avatar||'',key:c.key,
+          request:(!isTrustedNumber(otherNum)&&!hasSentTo(c.key))||undefined});
         changed=true;
       }else{
+        if(alreadyHave.request&&hasSentTo(alreadyHave.key)){ delete alreadyHave.request; acceptedRequests[alreadyHave.key]=true; changed=true; }
         // Refresh avatar and name from live usersCache for existing DM contacts
         const u=lookupUser(otherNum);
         if(u){
@@ -376,6 +384,7 @@ function alertForMessage(contact,last){
   const level=mutedChats[contact.key]; // undefined=all, 'mentions', 'muted'/true=silent
   if(level==='muted'||level===true) return;
   if(contact.type!=='group'&&isBlockedEitherWay(contact.number)) return;
+  if(isRequest(contact)){ announceRequest(contact); return; }
   const isOpen=!!activeConvo&&activeConvo.key===contact.key;
   if(last.type==='ping'){ handleIncomingPing(last.from,isOpen); return; }
 

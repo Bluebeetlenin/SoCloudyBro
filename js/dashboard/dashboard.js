@@ -470,16 +470,14 @@ function renderWelcomeBanner(){
 
   // Unread chip
   let unread=0;
-  if(convosCache) contacts.forEach(c=>{
-    const conv=convosCache.find(x=>x&&x.key===c.key);
-    if(!conv||!conv.messages) return;
-    unread+=conv.messages.filter(m=>m.type!=='system'&&m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length;
+  if(convosCache) knownContacts().forEach(c=>{
+    unread+=unreadMessagesIn(convosCache.find(x=>x&&x.key===c.key)).length;
   });
   const uchip=document.getElementById('wchip-unread');
   if(uchip) uchip.textContent=unread>0?'✉️ '+unread+' unread':'✉️ All caught up';
 
   // Online chip
-  const online=contacts.filter(c=>c.type!=='group'&&isOnline((lookupUser(c.number)||{}).lastSeen)).length;
+  const online=knownContacts().filter(c=>c.type!=='group'&&!c.isSelf&&isOnline((lookupUser(c.number)||{}).lastSeen)).length;
   const ochip=document.getElementById('wchip-online');
   if(ochip) ochip.textContent='● '+(online||'No')+' online';
 }
@@ -535,7 +533,7 @@ function renderPinnedWidget(body){
       if(!msgId) return;
       const msg=(c.messages||[]).find(m=>m.id===msgId);
       if(!msg) return;
-      const contact=contacts.find(x=>x&&x.key===c.key);
+      const contact=knownContacts().find(x=>x.key===c.key);
       if(!contact) return;
       const u=msg.from===me.number?me:(lookupUser(msg.from)||{});
       const preview=msgHasGif(msg)?'GIF':msgHasPoll(msg)?'Poll':msgText(msg);
@@ -547,7 +545,7 @@ function renderPinnedWidget(body){
   body.innerHTML=items.slice(0,5).map(it=>'<div class="dash-list-item" data-key="'+esc(it.contact.key)+'" data-ch-id="'+esc(it.chId)+'" data-act="dashOpenChat"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.contact.name)+' — '+esc(it.text.substring(0,40))+'</span></div>').join('');
 }
 function renderOnlineWidget(body){
-  const dms=contacts.filter(c=>c.type!=='group');
+  const dms=knownContacts().filter(c=>c.type!=='group'&&!c.isSelf);
   const withStatus=dms.map(c=>({c,online:isOnline((lookupUser(c.number)||{}).lastSeen)}));
   withStatus.sort((a,b)=>(b.online-a.online));
   if(!withStatus.length){ body.innerHTML=_DART.online_empty; return; }
@@ -582,7 +580,7 @@ async function renderVoiceWidget(body){
 function renderRecentWidget(body){
   if(!convosCache){ body.innerHTML=_DART.recent_empty; return; }
   const items=[];
-  contacts.forEach(c=>{
+  knownContacts().forEach(c=>{
     const conv=convosCache.find(x=>x&&x.key===c.key);
     if(!conv||!conv.messages||!conv.messages.length) return;
     const last=conv.messages[conv.messages.length-1];
@@ -610,10 +608,10 @@ function renderGroupsWidget(body){
 function renderUnreadWidget(body){
   if(!convosCache){ body.innerHTML=_DART.unread_ok; return; }
   const items=[];
-  contacts.forEach(c=>{
+  knownContacts().forEach(c=>{
     const conv=convosCache.find(x=>x&&x.key===c.key);
     if(!conv||!conv.messages) return;
-    const unread=conv.messages.filter(m=>m.type!=='system'&&m.from!==me.number&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length;
+    const unread=unreadMessagesIn(conv).length;
     if(unread>0) items.push({c,unread});
   });
   items.sort((a,b)=>b.unread-a.unread);

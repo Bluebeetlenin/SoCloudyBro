@@ -1,0 +1,72 @@
+/* Message requests, photo blur, search, Note to self and group events. */
+
+/* ── Message requests ── */
+.sb-request-row,.sb-request-back{
+  display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px;
+  padding:10px 12px;margin-bottom:6px;border:1px solid var(--border);border-radius:10px;
+  background:var(--surface2);color:var(--text);font:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left;
+}
+.sb-request-row:hover,.sb-request-back:hover{border-color:var(--accent)}
+.sb-request-row b{min-width:22px;padding:1px 7px;border-radius:999px;background:var(--accent);color:#fff;font-size:11px;text-align:center}
+.sb-request-back{justify-content:flex-start;background:transparent;border-color:transparent}
+.sb-request-av{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface3);color:var(--text2);font-size:14px}
+#request-bar{padding:14px 16px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
+#request-bar p{margin-bottom:10px;font-size:13px;color:var(--text2)}
+.request-actions{display:flex;flex-wrap:wrap;gap:8px}
+#chat-panel.is-request #chat-footer,
+#chat-panel.is-request #call-btn,
+#chat-panel.is-request #quick-group-btn,
+#chat-panel.is-request .quick-react-row{display:none!important}
+#chat-panel.is-request .msg-row .poll-card,
+#chat-panel.is-request .msg-row .game-card{pointer-events:none;opacity:.6}
+
+/* ── Blurred photos ── */
+.bubble.scb-blur{position:relative;overflow:hidden;cursor:pointer;min-width:140px;min-height:90px}
+.bubble.scb-blur img,.bubble.scb-blur video{filter:blur(28px);transform:scale(1.15);pointer-events:none}
+.scb-reveal{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;white-space:nowrap;
+  padding:7px 14px;border:0;border-radius:999px;background:rgba(0,0,0,.72);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;
+}
+
+/* ── Search results ── */
+#search-results{max-height:55vh;overflow-y:auto;flex-shrink:0}
+.search-result-count{padding:6px 12px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.search-result-text{overflow-wrap:anywhere}
+.search-result-text mark{color:inherit}
+
+/* ── Note to self ── */
+.sb-self-av{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--accent);font-size:17px}
+#note-to-self-btn{margin:4px 0 8px}
+#chat-panel.is-self #call-btn,
+#chat-panel.is-self #quick-group-btn,
+#chat-panel.is-self #self-destruct-btn,
+#chat-panel.is-self #game-compose-btn,
+#chat-panel.is-self #block-menu-item,
+#chat-panel.is-self #block-calls-menu-item,
+#chat-panel.is-self #block-messages-menu-item,
+#chat-panel.is-self #safety-numbers-item,
+#chat-panel.is-self #notif-choice{display:none!important}
+
+/* ── Group events ── */
+.event-card{
+  min-width:230px;max-width:320px;padding:12px 14px;
+  background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:12px;
+}
+.event-card.event-closed{opacity:.65;border-left-color:var(--muted)}
+.event-kicker{font-size:11px;font-weight:700;color:var(--accent-bright)}
+.event-title{margin:2px 0 4px;font-size:15px;font-weight:700;color:var(--text);overflow-wrap:anywhere}
+.event-line{font-size:12px;color:var(--text2);overflow-wrap:anywhere}
+.event-answers{display:flex;gap:6px;margin-top:10px}
+.event-answer{
+  flex:1;padding:7px 6px;border:1px solid var(--border2);border-radius:8px;background:transparent;
+  color:var(--text2);font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
+}
+.event-answer:hover:not(:disabled){border-color:var(--accent)}
+.event-answer[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.event-answer:disabled{cursor:default}
+.event-links{display:flex;justify-content:space-between;gap:8px;margin-top:8px}
+.event-link{padding:2px 0;border:0;background:transparent;color:var(--accent-bright);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.event-cancel{color:var(--danger)}
+
+/* ── GIF credit ── */
+#gif-attribution{padding:4px 10px 6px;font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-align:right}

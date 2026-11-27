@@ -577,12 +577,12 @@ renderSidebar = function(){
   // ── Unread tab ─────────────────────────────────────────────────────────────
   if(currentTab==='unread'){
     const unreadItems=[];
-    contacts.forEach(c=>{
+    knownContacts().forEach(c=>{
       const key=c.key||dmKey(me.number,c.number);
       if(archivedContacts[key]) return;
       const conv=convosCache?convosCache.find(x=>x&&x.key===key):null;
       if(!conv||!conv.messages) return;
-      const unread=conv.messages.filter(m=>m&&m.from!==me.number&&m.type!=='call'&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length;
+      const unread=unreadMessagesIn(conv).length;
       if(unread>0) unreadItems.push({c,unread,key,conv});
     });
     unreadItems.sort((a,b)=>b.unread-a.unread);
@@ -610,7 +610,7 @@ renderSidebar = function(){
   }
 
   // ── Standard tabs ──────────────────────────────────────────────────────────
-  let items=contacts.filter(c=>{
+  let items=knownContacts().filter(c=>{
     const key=c.key||dmKey(me.number,c.number);
     const isArchived=archivedContacts[key];
     if(currentTab==='favourites') return isFavorite(key) && !isArchived;
@@ -622,7 +622,8 @@ renderSidebar = function(){
   });
   if(searchQ){ items=items.filter(c=>c.name.toLowerCase().includes(searchQ.toLowerCase())||(c.number&&String(c.number).includes(searchQ))); }
   if(!items.length){
-    const empty = currentTab==='favourites' ? 'No favourites yet — tap the ☆ next to a chat.'
+    const empty = searchQ ? 'No chats match.'
+      : currentTab==='favourites' ? 'No favourites yet — tap the ☆ next to a chat.'
       : currentTab==='archived' ? 'No archived chats.'
       : currentTab==='groups' ? 'No groups yet.'
       : currentTab==='servers' ? 'No servers yet — create one or join with an invite code.' : 'No contacts yet.';
@@ -639,7 +640,7 @@ renderSidebar = function(){
     const online=c.type!=='group'?isOnline((lookupUser(c.number)||{}).lastSeen):false;
     const inCall=c.type!=='group'&&_numbersInActiveCall.has(Number(c.number));
     const div=document.createElement('div');
-    const unread=(!isActive&&conv&&conv.messages)?conv.messages.filter(m=>m&&m.from!==me.number&&m.type!=='call'&&m.type!=='system'&&(!m.seen||!m.seen.includes(me.number))&&!_isLocallySeen(m.id)).length:0;
+    const unread=isActive?0:unreadMessagesIn(conv).length;
     div.className='sb-item'+(isActive?' active':'')+(unread?' unread':'');
     div.onclick=()=>openChat(c);
     div.oncontextmenu=(e)=>{e.preventDefault();showContactCtxMenu(e,c);};
@@ -649,7 +650,7 @@ renderSidebar = function(){
     const avDiv = c.type==='group'
       ? '<div class="group-avatar" style="background:'+(c.isServer?'linear-gradient(135deg,#5865f2,#3ba55d)':'var(--accent)')+';color:#fff;font-size:16px;">'+(c.avatar?'<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover;">':(c.isServer?'🖥️':'👥'))+'</div>'
       : '<div style="position:relative"><div class="avatar" style="width:38px;height:38px;font-size:14px;background:var(--accent);color:#fff;'+(hasImg?'background:none;':'')+'">'+(hasImg?'<img src="'+esc(_liveAv)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':esc((c.name||'?').charAt(0).toUpperCase()))+'</div><div class="'+(online?'online-ring':'offline-ring')+'"></div></div>';
-    div.innerHTML = avDiv +
+    div.innerHTML = (c.isSelf?'<div class="avatar sb-self-av">📝</div>':avDiv) +
       '<div class="sb-item-info"><div class="sb-item-top"><span class="sb-item-name">'+esc(c.name)+
       (c.type!=='group'?verifiedBadge(c.number)+equippedBadgeHtml(c.number):'')+
       (inCall?' <span title="In a call now" style="color:var(--success)">☎</span>':'')+

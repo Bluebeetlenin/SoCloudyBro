@@ -51,7 +51,7 @@ select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{
   .btn.btn-sm{ min-height:36px; }
   #lp-footer-privacy,#lp-footer-tos,#lp-footer-a11y,#lp-footer-contact{ display:inline-block; padding:10px 6px; }
   input[type=text],input[type=number],input[type=password],input[type=email],input[type=search],
-  input[type=tel],input[type=url],input[type=date],input[type=time],textarea,select{ font-size:16px; }
+  input[type=tel],input[type=url],input[type=date],input[type=time],input[type=datetime-local],textarea,select{ font-size:16px; }
 }
 
 /* Cookie banner: brand-coloured Accept, thumb-friendly buttons, and compact on

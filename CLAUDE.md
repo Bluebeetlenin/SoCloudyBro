@@ -29,6 +29,10 @@ Scripts are plain (non-module) files sharing one global scope, loaded by `<scrip
 | `js/privacy.js`, `js/consent.js` | load after the main files |
 | `css/` | loaded in the order listed in the HTML; later files override earlier ones |
 
+Loaded last, in this order: `js/chat/{search,note-to-self,events}.js`, `js/calls/call-links.js`, `js/safety/requests.js`, `js/ui/buttons.js`. Several of them wrap earlier functions (`openChat`, `renderSidebar`, `renderMessages`, `launch`), so keep that order.
+
+Show only the user's own conversations: `convosCache` also holds everyone else's. Use `knownContacts()` for lists and `unreadMessagesIn()` for unread counts, so message requests stay hidden until accepted.
+
 `init()` runs on `DOMContentLoaded` (end of `js/ui/widgets.js`), after every script has loaded. From earlier files, still guard names defined later:
 ```js
 const orig = typeof someFn === 'function' ? someFn : null;

@@ -107,6 +107,7 @@ function displayName(contact) {
 function openContactPanel() {
   if (!activeConvo || activeConvo.type === 'group') { openGroupPanel(); return; }
   const c = activeConvo;
+  if (isSelfKey(c.key)) return;
   const u = lookupUser(c.number) || {};
   const nick = getNickname(c.number);
   document.getElementById('cp-name').textContent = (dec(c.name)||c.name) + (nick ? '  (\u201C' + nick + '\u201D)' : '');
@@ -153,9 +154,10 @@ function openContactPanel() {
    never touched this setting. ===== */
 function _isMutualWithMe(targetNum){
   if(!me) return false;
-  const iHaveThem=(contacts||[]).some(c=>c&&c.type==='dm'&&c.number===targetNum);
+  // Unanswered message requests never count as knowing each other.
+  const iHaveThem=(contacts||[]).some(c=>c&&c.type==='dm'&&c.number===targetNum&&!c.request);
   const target=(usersCache||[]).find(x=>x&&x.number===targetNum);
-  const theyHaveMe=((target&&target.prefs&&target.prefs.contacts)||[]).some(c=>c&&c.type==='dm'&&c.number===me.number);
+  const theyHaveMe=((target&&target.prefs&&target.prefs.contacts)||[]).some(c=>c&&c.type==='dm'&&c.number===me.number&&!c.request);
   return iHaveThem&&theyHaveMe;
 }
 /* ===== "WHO CAN SEE MY NUMBER" (security feature 39/32) =====
@@ -184,7 +186,7 @@ function canAddToGroup(targetNum){
 function getMutualFriends(otherNumber){
   if(!me||!contacts) return [];
   const myFriendNums=new Set(
-    contacts.filter(x=>x&&x.type==='dm'&&x.number!=null&&String(x.number)!=='00000'&&x.number!==otherNumber).map(x=>x.number)
+    contacts.filter(x=>x&&x.type==='dm'&&!x.request&&!x.isSelf&&x.number!=null&&String(x.number)!=='00000'&&x.number!==otherNumber).map(x=>x.number)
   );
   if(!myFriendNums.size) return [];
   const other=(usersCache||[]).find(x=>x&&x.number===otherNumber);
@@ -547,7 +549,7 @@ function quickAddMember(){
   const pick=document.getElementById('add-group-member-pick-list'); pick.innerHTML='';
   const sel=document.getElementById('add-group-member-selected'); sel.innerHTML='';
   document.getElementById('add-group-member-error').textContent='';
-  const eligible=contacts.filter(c=>c.type!=='group'&&!existingMembers.has(c.number)&&!bannedMembers.has(Number(c.number)));
+  const eligible=knownContacts().filter(c=>c.type!=='group'&&!c.isSelf&&!existingMembers.has(c.number)&&!bannedMembers.has(Number(c.number)));
   if(!eligible.length){
     pick.innerHTML='<div style="font-size:12px;color:var(--muted)">All your contacts are already in this group.</div>';
   }
