@@ -1,0 +1,255 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --r-card:8px;--r:6px;--r-sm:5px;--r-xs:4px;--r-pill:999px;
+  --accent:#5A52D5;--accent2:#4C46C4;--accent-hover:#6B62E0;--accent-bright:#7B74F0;
+  --accent-grad:linear-gradient(135deg,#4C46C4 0%,#7C5FD4 100%);
+  --success:#13a10e;--danger:#d13438;--warn:#ca5010;
+  /* Soft tints of the status colours, so banners/cards that need a wash of
+     colour stop hardcoding rgba() values that only read well in one theme. */
+  --warn-soft:rgba(202,80,16,0.12);--danger-soft:rgba(209,52,56,0.12);--success-soft:rgba(19,161,14,0.12);
+  --favorite:#f5b301;--warn-text:#e0a800;
+  --focus-ring:var(--accent);
+  --shadow:0 2px 8px rgba(0,0,0,0.12),0 0 1px rgba(0,0,0,0.08);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.18),0 0 1px rgba(0,0,0,0.1);
+  /* Default (dark) — overridden by media queries */
+  --bg:#12161a;--bg2:#1a2026;--bg3:#222a33;--bg4:#2c3642;
+  --surface:#1e252b;--surface2:#252d35;--surface3:#2c3642;
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
+  --text:#f3f3f3;--text2:#c8c8c8;--muted:#9d9d9d;--muted2:#6e6e6e;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#12161a;--bg2:#1a2026;--bg3:#222a33;--bg4:#2c3642;
+  --surface:#1e252b;--surface2:#252d35;--surface3:#2c3642;
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
+  --text:#f3f3f3;--text2:#c8c8c8;--muted:#9d9d9d;--muted2:#6e6e6e;
+  --shadow:0 2px 8px rgba(0,0,0,0.4),0 0 1px rgba(0,0,0,0.3);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(0,0,0,0.3);
+}}
+@media(prefers-color-scheme:light){:root{
+  --bg:#eef3f9;--bg2:#ffffff;--bg3:#f0f4f8;--bg4:#e1e8f0;
+  --surface:#ffffff;--surface2:#f2f6fc;--surface3:#e6edf5;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.16);
+  --text:#1a1a1a;--text2:#3d3d3d;--muted:#6e6e6e;--muted2:#9d9d9d;
+  /* Amber reads as washed-out on white, so the light theme uses a deeper tone
+     for the favourite star and slightly stronger status tints. */
+  --favorite:#c98a00;--warn-text:#a8480f;
+  --warn-soft:rgba(202,80,16,0.14);--danger-soft:rgba(209,52,56,0.12);--success-soft:rgba(19,161,14,0.13);
+}}
+[data-theme="dark"]{
+  --bg:#12161a;--bg2:#1a2026;--bg3:#222a33;--bg4:#2c3642;
+  --surface:#1e252b;--surface2:#252d35;--surface3:#2c3642;
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
+  --text:#f3f3f3;--text2:#c8c8c8;--muted:#9d9d9d;--muted2:#6e6e6e;
+  --shadow:0 2px 8px rgba(0,0,0,0.4),0 0 1px rgba(0,0,0,0.3);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(0,0,0,0.3);
+}
+[data-theme="light"]{
+  --bg:#eef3f9;--bg2:#ffffff;--bg3:#f0f4f8;--bg4:#e1e8f0;
+  --surface:#ffffff;--surface2:#f2f6fc;--surface3:#e6edf5;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.16);
+  --text:#1a1a1a;--text2:#3d3d3d;--muted:#6e6e6e;--muted2:#9d9d9d;
+  --favorite:#c98a00;--warn-text:#a8480f;
+  --warn-soft:rgba(202,80,16,0.14);--danger-soft:rgba(209,52,56,0.12);--success-soft:rgba(19,161,14,0.13);
+  --shadow:0 2px 8px rgba(0,0,0,0.12),0 0 1px rgba(0,0,0,0.08);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.18),0 0 1px rgba(0,0,0,0.1);
+}
+/* Colour-blind friendly palette: the default success/danger pairing
+   (green/red) is the single hardest combination for red-green colour
+   blindness (deuteranopia/protanopia, ~8% of men) to tell apart. Swaps to
+   the Okabe-Ito colour-blind-safe set — blue for success, vermillion for
+   danger, amber for warning — which stays distinguishable under red-green
+   AND blue-yellow (tritanopia) colour blindness. Applies on top of
+   whichever light/dark theme is active (higher specificity than the
+   [data-theme] blocks above), so it's an independent toggle, not a theme. */
+body.theme-colorblind{
+  --success:#0072B2;--danger:#D55E00;--warn:#E69F00;
+  --success-soft:rgba(0,114,178,0.14);--danger-soft:rgba(213,94,0,0.14);--warn-soft:rgba(230,159,0,0.16);
+  --warn-text:#8a5d00;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;overflow:hidden}
+
+
+:root{--ease-fluent:cubic-bezier(0.16,1,0.3,1);--ease-fluent-soft:cubic-bezier(0.33,1,0.68,1)}
+*{scroll-behavior:smooth}
+/* ── KEYBOARD FOCUS ──
+   Nothing in the app defined a focus style, so tabbing through it was invisible
+   in browsers that suppress the default ring on custom controls. :focus-visible
+   only fires for keyboard/AT users, so mouse users see no change at all. */
+:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+button:focus-visible,.icon-btn:focus-visible,.compose-btn:focus-visible,.btn:focus-visible,
+.ctx-item:focus-visible,.sb-tab:focus-visible,.scb-tab:focus-visible,.channel-pill:focus-visible,
+.update-ch-btn:focus-visible,.scb-suggest-chip:focus-visible,
+.reaction-chip:focus-visible,.sb-fav-star:focus-visible,.bg-option:focus-visible,.preset-av:focus-visible{
+  outline:2px solid var(--focus-ring);outline-offset:2px}
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--focus-ring);outline-offset:1px}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);background-clip:padding-box}
+button,.icon-btn,.compose-btn,#send-btn,.btn,.sb-item,.sb-tab,#my-card,.ctx-item,.update-ch-btn,.reaction-chip,.preset-av,.bg-option,.quick-react-btn,.settings-row,.search-result-item,.poll-option{
+  transition-timing-function:var(--ease-fluent-soft);
+}
+.icon-btn,.compose-btn,#send-btn,.btn,.preset-av{transition-property:background,color,border-color,opacity;transition-duration:0.12s}
+.icon-btn:hover,.compose-btn:hover{opacity:0.85}
+.icon-btn:active,.compose-btn:active,#send-btn:active,.btn:active{opacity:0.7;transition-duration:0.06s}
+.sb-item,.search-result-item,.settings-row,.ctx-item,#my-card{transition-property:background;transition-duration:0.12s}
+img,.avatar img{transition:opacity 0.25s var(--ease-fluent-soft)}
+#messages-wrap{scroll-behavior:smooth}
+.modal,#ctx-menu,#contact-ctx-menu,#toast{transition-timing-function:var(--ease-fluent)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}}
+
+:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 35%,transparent)}
+#chat-header,#settings-header,#sidebar{position:relative}
+
+/* ── SHELL ── */
+#shell{position:relative;z-index:1;display:flex;height:100vh;width:100%;background:var(--bg2);padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
+
+/* ── TOP BANNER STACK ──
+   One shared fixed container for every transient top-of-screen notice
+   (see _ensureBannerStack() / _bannerRow()). Rows stack vertically instead
+   of overlapping, stay to a single compact line via horizontal scroll
+   rather than wrapping to a second line, and #shell/#landing-page/
+   #lock-screen reserve exactly --banner-stack-h of space for the stack's
+   current real height instead of letting it float over their content. */
+#top-banner-stack{position:fixed;top:0;left:0;right:0;z-index:9000;display:flex;flex-direction:column;pointer-events:none}
+.top-banner-row{position:relative;display:flex;align-items:center;gap:10px;min-height:38px;padding:7px 14px;font-size:12.5px;font-weight:500;color:#fff;white-space:nowrap;overflow-x:auto;scrollbar-width:none;pointer-events:auto;border-bottom:1px solid rgba(0,0,0,.25);animation:bannerIn .22s cubic-bezier(0.16,1,0.3,1)}
+@keyframes bannerIn{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.top-banner-row::-webkit-scrollbar{display:none}
+.top-banner-row .tbr-text{overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.top-banner-row button{flex-shrink:0}
+/* Banner action buttons — replaces ad-hoc inline styles in JS banner functions */
+.tbr-btn{flex-shrink:0;padding:3px 11px;border-radius:5px;border:none;font-size:11px;font-weight:700;cursor:pointer;transition:filter .15s;line-height:1.6}
+.tbr-btn:hover{filter:brightness(1.12)}
+.tbr-btn-action{background:rgba(255,255,255,0.95)}
+.tbr-btn-ghost{background:rgba(255,255,255,0.18);color:#fff}
+.tbr-dismiss{flex-shrink:0;background:transparent;border:none;color:rgba(255,255,255,0.6);font-size:17px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:4px;transition:color .15s,background .15s}
+.tbr-dismiss:hover{color:#fff;background:rgba(255,255,255,0.18)}
+/* Progress bar for countdown banners (e.g. site update) */
+.tbr-progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.15);pointer-events:none}
+.tbr-progress-fill{display:block;height:100%;background:rgba(255,255,255,0.7);border-radius:0 2px 2px 0;transition:width 1s linear}
+#landing-page{padding-top:var(--banner-stack-h,0px);transition:padding-top .15s}
+
+/* ── SIDEBAR ── */
+/* 460px (not the original 300px) — #sb-bottom holds 11 icon buttons (a
+   "Meetings" button is injected at runtime, not present in the static
+   HTML) which need real room at a normal, readable size on one row.
+   Scroll/wrap-based fixes for the narrower old width were all fragile and
+   hard to discover; widening the sidebar itself is the direct fix. */
+#sidebar{width:490px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);backdrop-filter:blur(20px);color:var(--text)}
+#sb-resize-handle{width:5px;flex-shrink:0;cursor:col-resize;position:relative;margin-left:-5px;z-index:2}
+#sb-resize-handle:hover,#sb-resize-handle.dragging{background:var(--accent)}
+body.device-phone #sb-resize-handle,body.device-tablet #sb-resize-handle{display:none}
+#sb-titlebar{height:34px;display:flex;align-items:center;padding:0 14px;gap:8px;background:var(--bg3);border-bottom:1px solid var(--border);-webkit-app-region:drag;flex-shrink:0}
+#sb-titlebar span{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:0.3px}
+#sb-head{padding:12px 14px;border-bottom:1px solid var(--border)}
+#my-card{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;transition:background 0.15s}
+#my-card:hover{background:var(--surface2)}
+#my-avatar-wrap{position:relative;flex-shrink:0}
+.avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;overflow:hidden;flex-shrink:0}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.online-ring{position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:var(--success);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--success)}
+.offline-ring{position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:var(--muted2);border:2px solid var(--surface)}
+#my-info{flex:1;min-width:0}
+#my-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#my-status-text{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
+#sb-search{padding:8px 14px}
+#sb-search input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 14px;outline:none;transition:border-color 0.2s}
+#sb-search input:focus{border-color:var(--accent)}
+#sb-search input::placeholder{color:var(--muted2)}
+#sb-tabs{display:flex;padding:0 8px 8px;gap:3px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:relative}
+#sb-tabs::-webkit-scrollbar{display:none}
+/* fade-out right edge to signal overflow */
+#sidebar .sb-tabs-wrap{position:relative;overflow:hidden}
+#sidebar .sb-tabs-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:24px;background:linear-gradient(to right,transparent,var(--sidebar-bg,var(--surface)));pointer-events:none;opacity:0;transition:opacity .2s}
+#sidebar .sb-tabs-wrap.overflows::after{opacity:1}
+.sb-tab{flex:0 0 auto;padding:4px 8px;border-radius:var(--r-xs);font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);transition:all 0.15s;border:none;background:transparent;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.sb-tab.dragging{opacity:0.4}
+.sb-tab.active{background:var(--accent);color:#fff}
+.admin-dash-layout{display:flex;align-items:stretch;flex:1;min-height:0;border-top:1px solid var(--border)}
+.admin-dash-sidebar{width:190px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.admin-dash-search-wrap{position:relative;margin-bottom:8px;flex-shrink:0}
+.admin-dash-search-wrap svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.admin-dash-search-input{width:100%;padding:7px 8px 7px 28px;font-size:12px;border-radius:var(--r-xs);border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.admin-dash-nav-empty{font-size:12px;color:var(--muted);text-align:center;padding:14px 4px}
+.admin-dash-content{flex:1;min-width:0;overflow-y:auto;padding:16px}
+.admin-dash-tab{flex:0 0 auto;padding:7px 10px;border-radius:var(--r-xs);font-size:12.5px;font-weight:500;text-align:left;cursor:pointer;color:var(--muted);border:1px solid transparent;background:transparent;white-space:nowrap;width:100%;display:block}
+.admin-dash-tab:hover:not(.active){background:var(--surface2);color:var(--text)}
+.admin-dash-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.admin-dash-tab-sep{display:none}
+.admin-dash-tab-group-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);width:100%;margin:10px 0 2px;padding:0 10px}
+.admin-dash-tab-group-label:first-of-type{margin-top:0}
+.admin-dash-tab-owner{border-style:dashed}
+.admin-dash-tab-owner.active{background:var(--danger);border-color:var(--danger)}
+@media(max-width:640px){
+  /* Not enough width for a side-by-side sidebar — stack it as a horizontal
+     scrolling strip above the content instead, same information, no
+     side-by-side squeeze. */
+  .admin-dash-layout{flex-direction:column}
+  .admin-dash-sidebar{width:100%;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;border-right:none;border-bottom:1px solid var(--border);padding:8px;gap:6px;align-items:center}
+  .admin-dash-search-wrap{margin-bottom:0;flex-shrink:0;width:140px}
+  .admin-dash-nav-empty{white-space:nowrap}
+  #admin-dash-nav{display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto}
+  .admin-dash-tab-group-label{display:none}
+  .admin-dash-tab{width:auto;padding:6px 10px}
+}
+.sb-tab:hover:not(.active){background:var(--surface2)}
+#sb-list{flex:1;overflow-y:auto;padding:4px 8px}
+#sb-list::-webkit-scrollbar{width:4px}
+#sb-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;transition:background 0.12s,padding 0.15s;position:relative}
+body.sb-compact .sb-item{padding:4px 10px;gap:8px}
+body.sb-compact .sb-item .avatar{width:32px;height:32px;font-size:13px}
+body.sb-compact .sb-item .sb-item-preview{display:none}
+.switch{position:relative;display:inline-block;width:38px;height:22px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch-slider{position:absolute;cursor:pointer;inset:0;background:var(--border2);border-radius:22px;transition:background 0.15s}
+.switch-slider::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform 0.15s}
+.switch input:checked+.switch-slider{background:var(--accent)}
+.switch input:checked+.switch-slider::before{transform:translateX(16px)}
+.sb-item:hover{background:var(--surface2)}
+.sb-item-info{flex:1;min-width:0}
+.sb-item-top{display:flex;justify-content:space-between;align-items:baseline}
+.sb-item-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-item-time{font-size:10px;color:var(--muted);flex-shrink:0}
+.sb-item-preview{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.unread-badge{background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;flex-shrink:0;min-width:18px;text-align:center;line-height:1.5}
+.unread-badge-dot{display:inline-block;width:8px;height:8px;padding:0;border-radius:50%;background:var(--accent)}
+.sb-item.unread .sb-item-name{font-weight:700;color:var(--text)}
+.archived-label{font-size:10px;color:var(--muted2);background:var(--surface3);border-radius:4px;padding:1px 5px}
+/* #sb-bottom holds 11 icon buttons (a "Meetings" button is injected at
+   runtime, not present in the static HTML) — #sidebar is widened above
+   specifically so these fit on one row at a normal, readable size with no
+   scrolling or wrapping needed. flex-wrap stays on as a safety net for any
+   narrower context (tablet/phone override #sidebar's width down again). */
+#sb-bottom{padding:8px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:4px;justify-content:center}
+#sb-bottom .icon-btn{flex-shrink:0;flex-grow:0}
+#sb-bottom .sb-bottom-sep{width:1px;align-self:stretch;min-height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
+.icon-btn{width:36px;height:36px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;font-size:16px;background:transparent;border:none;color:var(--text2)}
+.icon-btn:hover{background:var(--surface2)}
+.icon-btn.active{color:var(--accent)}
+#cloudy-btn.listening{background:var(--accent);color:#fff;animation:cloudyPulse 1.6s ease-in-out infinite}
+@keyframes cloudyPulse{0%,100%{box-shadow:0 0 0 0 rgba(107,93,232,0.45)}50%{box-shadow:0 0 0 8px rgba(107,93,232,0)}}
+
+/* ── FACE RECOGNITION scanner chrome — shared by login, enrollment and the
+   per-chat face-unlock check (all three draw onto it via _drawFaceOverlay()
+   in JS); gives the plain video+canvas box a sci-fi "scanning" feel instead
+   of a bare black rectangle. ── */
+.face-scan-wrap{position:relative;width:100%;max-width:320px;margin:0 auto 14px;border-radius:20px;overflow:hidden;background:#000;aspect-ratio:4/3;box-shadow:0 0 0 1px rgba(107,93,232,0.35),0 0 30px -8px rgba(107,93,232,0.55),0 14px 30px -10px rgba(0,0,0,0.5);animation:faceScanGlow 2.6s ease-in-out infinite}
+.face-scan-wrap.compact{max-width:260px}
+@keyframes faceScanGlow{0%,100%{box-shadow:0 0 0 1px rgba(107,93,232,0.35),0 0 26px -8px rgba(107,93,232,0.5),0 14px 30px -10px rgba(0,0,0,0.5)}50%{box-shadow:0 0 0 1px rgba(107,93,232,0.6),0 0 44px -4px rgba(107,93,232,0.85),0 14px 30px -10px rgba(0,0,0,0.5)}}
+.face-scan-wrap video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
+.face-scan-wrap canvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)}
+.face-scan-label{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.6);font-family:var(--font-mono,monospace);pointer-events:none;z-index:2}
+.face-scan-label .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:5px;box-shadow:0 0 6px 1px rgba(34,197,94,0.8);animation:faceScanDotBlink 1.4s ease-in-out infinite}
+@keyframes faceScanDotBlink{0%,100%{opacity:1}50%{opacity:.35}}
+.face-scan-line{position:absolute;left:8%;right:8%;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(124,109,232,.9),#8b7cf0,rgba(124,109,232,.9),transparent);box-shadow:0 0 12px 2px rgba(124,109,232,.7);animation:faceScanSweep 2.3s cubic-bezier(.45,0,.55,1) infinite;pointer-events:none;z-index:2}
+@keyframes faceScanSweep{0%{top:12%;opacity:0}8%{opacity:1}50%{top:85%;opacity:1}58%{opacity:0}100%{top:12%;opacity:0}}
+.face-scan-wrap.face-ok .face-scan-line{animation-play-state:paused;opacity:0;transition:opacity .2s}
+.face-scan-wrap.face-ok .face-scan-label .dot{background:#22c55e;animation:none;opacity:1}
+.face-scan-success{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px;background:radial-gradient(circle,rgba(39,174,96,.4),rgba(39,174,96,0) 70%);opacity:0;pointer-events:none;z-index:3}
+.face-scan-success.show{animation:faceScanSuccess .9s ease-out}
+@keyframes faceScanSuccess{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.08)}60%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+.face-scan-status{text-align:center;font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;min-height:18px;transition:color .2s}
+.face-scan-status.active{color:var(--accent)}
+.face-scan-status.success{color:var(--success,#27ae60)}
+

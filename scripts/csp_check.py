@@ -72,6 +72,45 @@ def report(missing, where):
         print("   %s  (%s%s)" % (token, where_txt, what), file=sys.stderr)
 
 
+ASSET_RX = re.compile(r'(?:src|href)="(/(?:js|css)/[^"?]+)(?:\?v=([0-9a-f]*))?"')
+
+
+def _stamp(data):
+    return hashlib.sha256(data.replace(b"\r", b"")).hexdigest()[:10]
+
+
+def assets():
+    """Local script and stylesheet references as (path, stamp in the HTML)."""
+    with open(HTML_PATH, encoding="utf-8") as f:
+        return ASSET_RX.findall(f.read())
+
+
+def stale_assets():
+    stale = []
+    for path, version in assets():
+        try:
+            with open(path.lstrip("/"), "rb") as f:
+                actual = _stamp(f.read())
+        except OSError:
+            actual = "missing file"
+        if actual != version:
+            stale.append("%s (HTML says %s, file is %s)" % (path, version or "nothing", actual))
+    return stale
+
+
+def unserved_assets(url):
+    """Assets that the live site does not yet serve with the expected content."""
+    waiting = []
+    for path, version in assets():
+        out = subprocess.run(
+            ["curl", "-sfL", "--max-time", "20", url.rstrip("/") + path + "?v=" + version],
+            capture_output=True,
+        )
+        if out.returncode != 0 or _stamp(out.stdout) != version:
+            waiting.append(path)
+    return waiting
+
+
 def fetch_live_csp(url):
     # -sI = headers only, -L follows redirects; return every CSP header line.
     out = subprocess.run(
@@ -89,6 +128,11 @@ def main():
 
     if sys.argv[1] == "repo":
         policy = open(VERCEL_JSON, encoding="utf-8").read()
+        stale = stale_assets()
+        if stale:
+            print("❌ Asset version stamps are out of date:\n   " + "\n   ".join(stale), file=sys.stderr)
+            print("\nFix: run  powershell -File scripts/update-csp-hashes.ps1", file=sys.stderr)
+            return 1
         missing = missing_from(policy)
         if missing:
             report(missing, VERCEL_JSON + " (CSP)")
@@ -116,18 +160,25 @@ def main():
             missing = inline_script_hashes()  # treat as nothing allowed yet
         else:
             missing = missing_from(policy)
-            if not missing:
+            waiting = [] if missing else unserved_assets(url)
+            if waiting:
+                print("attempt %d: %d file(s) not live yet" % (attempt, len(waiting)))
+            elif not missing:
                 print("✅ live: %s serves a CSP that allows every inline script (attempt %d)" % (url, attempt))
                 return 0
-            print("attempt %d: %d hash(es) not yet in the live CSP" % (attempt, len(missing)))
+            if missing:
+                print("attempt %d: %d hash(es) not yet in the live CSP" % (attempt, len(missing)))
         if time.time() >= deadline:
             break
         time.sleep(15)
 
     report(missing, "the live CSP at " + url)
     print(
-        "\nProduction is not serving the matching vercel.json yet, so deploying this HTML\n"
-        "would freeze the app on the splash screen for everyone.\n"
+        "
+Production is not serving the matching vercel.json and js/css files yet, so
+"
+        "deploying this HTML could break the app for everyone.
+"
         "Fix: promote the newest Vercel deployment to Production (or set Production Branch\n"
         "to scb/main), then re-run this workflow with 'Run workflow'.",
         file=sys.stderr,

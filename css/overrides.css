@@ -1,0 +1,92 @@
+#toast{position:fixed;right:20px;bottom:20px;z-index:20000;display:flex;flex-direction:column;align-items:stretch;gap:8px;width:min(360px,calc(100vw - 32px));pointer-events:none}
+.toast-card{display:flex;align-items:center;gap:8px;padding:10px 8px 10px 14px;pointer-events:auto;color:var(--text);background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:var(--r-card);box-shadow:var(--shadow-lg);animation:toastIn .22s cubic-bezier(0.16,1,0.3,1)}
+.toast-success{border-left-color:var(--success,#2ecc71)}
+.toast-error{border-left-color:var(--danger)}
+.toast-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:0;text-align:left;font:inherit;color:inherit;background:none;border:0}
+button.toast-main{cursor:pointer}
+.toast-title{font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.toast-body{font-size:12px;line-height:1.45;color:var(--text2);overflow-wrap:anywhere}
+.toast-action{flex-shrink:0;padding:5px 10px;font-size:12px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:6px;cursor:pointer}
+.toast-close{flex-shrink:0;width:28px;height:28px;font-size:12px;color:var(--muted);background:transparent;border:0;border-radius:6px;cursor:pointer}
+.toast-close:hover{color:var(--text);background:var(--surface2)}
+body.device-phone #toast{right:16px;left:16px;width:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+/* Responsive + touch polish (Nov 2026). Additive overrides, loaded last. */
+
+/* Sidebar: never let it squeeze the chat on small laptops, and give the
+   tablet range more than 240px so the tab row is usable. */
+@media (min-width:1024px){ #sidebar{ width:min(490px,38vw); } }
+@media (min-width:640px) and (max-width:1023px){
+  body:not(.device-phone) #sidebar{ width:clamp(280px,36vw,360px) !important; }
+}
+
+/* Tab row scrolls sideways when tabs don't fit: snap to tabs and show a soft
+   shadow on whichever edge still has hidden tabs (no JS, vanishes at the end). */
+#sb-tabs{
+  scroll-snap-type:x proximity; scroll-padding-inline:8px;
+  background:
+    linear-gradient(to right,var(--bg2) 30%,transparent) left center/28px 100% no-repeat local,
+    linear-gradient(to left,var(--bg2) 30%,transparent) right center/28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.18),transparent) left center/10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.18),transparent) right center/10px 100% no-repeat scroll;
+}
+.sb-tab{ scroll-snap-align:start; }
+
+/* Real shell height on phones with a collapsing address bar. */
+#shell{ height:100dvh; }
+
+/* No 300ms tap delay / double-tap zoom on controls. */
+button,a,[role=button],[data-act],.sb-tab,.icon-btn,select,summary{ touch-action:manipulation; }
+
+/* Visible keyboard focus everywhere (inputs keep their own border highlight). */
+button:focus-visible,a:focus-visible,[role=button]:focus-visible,[data-act]:focus-visible,
+select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+
+/* Touch screens: bigger targets, and 16px text in fields so iOS doesn't zoom. */
+@media (pointer:coarse){
+  .sb-tab{ min-height:36px; padding:8px 12px; }
+  #sb-search input{ min-height:40px; font-size:16px; }
+  .modal-close,.icon-btn{ min-width:40px; min-height:40px; }
+  .btn.btn-sm{ min-height:36px; }
+  #lp-footer-privacy,#lp-footer-tos,#lp-footer-a11y,#lp-footer-contact{ display:inline-block; padding:10px 6px; }
+  input[type=text],input[type=number],input[type=password],input[type=email],input[type=search],
+  input[type=tel],input[type=url],input[type=date],input[type=time],textarea,select{ font-size:16px; }
+}
+
+/* Cookie banner: brand-coloured Accept, thumb-friendly buttons, and compact on
+   phones so it doesn't cover a fifth of the screen. */
+#scb-cookie-banner button[onclick^="scbAcceptCookies"]{ background:var(--accent) !important; }
+@media (max-width:640px){
+  #scb-cookie-banner{
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom)) !important;
+    gap:8px !important; font-size:12px !important; line-height:1.4;
+  }
+  #scb-cookie-banner > span{ min-width:0 !important; }
+  /* Privacy Policy / Terms links sit inside the sentence: grow the tap area
+     without growing the line. */
+  #scb-cookie-banner > span button{ padding:8px 2px !important; margin:-8px 0; }
+  #scb-cookie-banner > div{ width:100%; }
+  #scb-cookie-banner > div button{ flex:1; min-height:40px; }
+}
+
+/* Sizes that the utility classes ask for but a later ".modal{max-width:420px}"
+   rule had been overriding (a class loses to a later class of equal weight, where
+   the original inline style would have won). Desktop only: on phones the
+   bottom-sheet rules apply. */
+@media (min-width:641px){
+  html body #admin-dashboard-modal .modal{ width:min(96vw,1400px); max-width:none; height:min(94vh,1050px); }
+  html body #contact-us-modal .modal{ max-width:480px; }
+  html body #security-disclosure-modal .modal{ max-width:520px; }
+  html body #biz-products-modal .modal{ max-width:500px; }
+  html body #biz-view-modal .modal{ max-width:460px; }
+  html body #admin-panel-modal .modal{ max-width:460px; }
+  html body #group-panel-overlay .modal{ max-width:440px; }
+}
+
+/* Settings rows with several buttons (Theme: Light/Dark/Auto/Schedule) used to
+   squeeze the label until it ran underneath the first button. Let the buttons
+   wrap onto their own line when the row is too narrow. */
+.settings-row{ flex-wrap:wrap; }
+.settings-row-main{ flex:1 1 150px; }
+.settings-row-actions{ flex-wrap:wrap; justify-content:flex-end; }

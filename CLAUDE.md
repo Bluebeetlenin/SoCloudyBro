@@ -1,6 +1,6 @@
 # SoCloudyBro — Claude context
 
-Single-file chat app. All code lives in **`SoCloudyBro.html`** (~30K lines, ~1.8 MB).
+Chat app. Markup is in **`SoCloudyBro.html`**; scripts are in `js/`, styles in `css/`.
 
 ## First thing every session
 There are unpushed commits on `scb/main`. Push them immediately:
@@ -17,18 +17,28 @@ git push origin scb/main
 Push `scb/main` → GitHub Action → gzip HTML → Cloudflare Worker → Firebase RTDB `admin_site/html`. App auto-updates via site-update banner. No Vercel action needed for content changes.
 Vercel Production Branch is `scb/main` (set Nov 23 2026), so every push there deploys to production automatically. Before sending the HTML to Firebase the Action runs `scripts/csp_check.py` twice: against the repo's `vercel.json` and against the CSP header production is actually serving (waits up to 10 min), so a build the live CSP would block never reaches users.
 
-## Script blocks (critical)
-| Block | Lines | Contents |
-|-------|-------|----------|
-| F (main) | 5535–28378 | All core functions |
-| G | 28564–30164 | Privacy, slash palette, zero-retention |
-| H | 30247–30272 | Cookie consent IIFE |
+## Files and load order (critical)
+Scripts are plain (non-module) files sharing one global scope, loaded by `<script>` tags in `SoCloudyBro.html`. **Order matters**: top-level code may only use names from the same file or an earlier one.
 
-**Cross-block rule:** Top-level code in Block G runs after F, but bare name lookups can still throw. Always guard:
+| Folder | Contents |
+|--------|----------|
+| `js/core/` | config, errors, diagnostics, encryption, data |
+| `js/auth/` | login, account, sign-in |
+| `js/chat/`, `js/calls/`, `js/social/` | conversations, messages, voice, profiles and groups |
+| `js/admin/`, `js/safety/`, `js/ui/`, `js/dashboard/` | admin tools, moderation, widgets, home dashboard |
+| `js/privacy.js`, `js/consent.js` | load after the main files |
+| `css/` | loaded in the order listed in the HTML; later files override earlier ones |
+
+`init()` runs on `DOMContentLoaded` (end of `js/ui/widgets.js`), after every script has loaded. From earlier files, still guard names defined later:
 ```js
 const orig = typeof someFn === 'function' ? someFn : null;
 ```
-Root cause of the splash-screen force-dismiss bug (fixed Nov 2026 — `onMsgInput`, `msgKeydown`).
+
+## After editing anything in `js/`, `css/` or inline code
+```powershell
+powershell -File scripts/update-csp-hashes.ps1
+```
+It updates the `?v=` stamps in the HTML and the CSP hashes. Commit those with your change, or the deploy check fails.
 
 ## CSP — run before every push that edits an inline `<script>`
 `vercel.json` only allows inline scripts whose sha256 is listed. Editing ANY inline `<script>` in `SoCloudyBro.html` changes its hash, the browser blocks it, and the app freezes on the splash screen (happened Nov 22 2026). After editing, run:

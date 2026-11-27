@@ -7,6 +7,8 @@ on:
       - scb/main
     paths:
       - 'SoCloudyBro.html'
+      - 'js/**'
+      - 'css/**'
   workflow_dispatch:
 
 jobs:
@@ -20,6 +22,8 @@ jobs:
             SoCloudyBro.html
             vercel.json
             scripts/csp_check.py
+            js
+            css
           sparse-checkout-cone-mode: false
 
       # Every inline <script> must have its sha256 in vercel.json's CSP, or the

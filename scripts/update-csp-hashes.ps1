@@ -22,6 +22,23 @@ $root = Split-Path -Parent $PSScriptRoot
 $htmlPath = Join-Path $root 'SoCloudyBro.html'
 $vjPath = Join-Path $root 'vercel.json'
 
+# 0) version-stamp local assets: /js/x.js?v=<first 10 hex of sha256>. A change to
+#    any file then changes the HTML, which busts caches and triggers the update.
+$assetRx = [regex]'(?<attr>(?:src|href)=")(?<path>/(?:js|css)/[^"?]+)(?:\?v=[0-9a-f]+)?"'
+$page = [IO.File]::ReadAllText($htmlPath, [Text.Encoding]::UTF8)
+$stamped = $assetRx.Replace($page, {
+  param($m)
+  $rel = $m.Groups['path'].Value
+  $body = [IO.File]::ReadAllText((Join-Path $root $rel.TrimStart('/')), [Text.Encoding]::UTF8) -replace "`r", ''
+  $bytes = [Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($body))
+  $v = (-join ($bytes | ForEach-Object { $_.ToString('x2') })).Substring(0, 10)
+  $m.Groups['attr'].Value + $rel + '?v=' + $v + '"'
+})
+if ($stamped -ne $page) {
+  [IO.File]::WriteAllText($htmlPath, $stamped, (New-Object Text.UTF8Encoding($false)))
+  Write-Host 'Updated asset version stamps in SoCloudyBro.html.'
+}
+
 # Browsers normalise CRLF to LF before hashing, so do the same.
 $text = [IO.File]::ReadAllText($htmlPath, [Text.Encoding]::UTF8) -replace "`r", ''
 $vj = [IO.File]::ReadAllText($vjPath, [Text.Encoding]::UTF8)
@@ -55,9 +72,10 @@ foreach ($m in $attrRx.Matches($markup)) {
 #    to prune; several escaping variants are tried because the runtime value
 #    depends on how the string is written in the source.
 $dynRx = [regex]'\bon[a-z]+\s*=\s*(\\?)(["''])'
-foreach ($sm in $scriptRx.Matches($text)) {
-  if ($sm.Groups['attrs'].Value -match 'src\s*=') { continue }
-  foreach ($ln in ($sm.Groups['body'].Value -split "`n")) {
+$scriptBodies = @($scriptRx.Matches($text) | Where-Object { $_.Groups['attrs'].Value -notmatch 'src\s*=' } | ForEach-Object { $_.Groups['body'].Value })
+$scriptBodies += @(Get-ChildItem (Join-Path $root 'js') -Recurse -Filter *.js | ForEach-Object { [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8) -replace "`r", '' })
+foreach ($body in $scriptBodies) {
+  foreach ($ln in ($body -split "`n")) {
     foreach ($m in $dynRx.Matches($ln)) {
       $term = $m.Groups[1].Value + $m.Groups[2].Value
       $start = $m.Index + $m.Length
