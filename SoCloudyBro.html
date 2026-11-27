@@ -321,7 +321,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <div id="chat-header-menu" class="header-menu">
           <div class="ctx-item" onclick="hideHeaderMenu();exportChat()">📤 Export chat</div>
           <div class="ctx-item" onclick="hideHeaderMenu();archiveToggle()" id="archive-menu-item">📁 Archive</div>
-          <div class="ctx-item" onclick="hideHeaderMenu();muteToggle()" id="mute-menu-item">🔕 Mute notifications</div>
+          <div class="notif-choice" id="notif-choice" role="group" aria-label="Notifications for this chat"></div>
           <div class="ctx-item" onclick="hideHeaderMenu();openDisappearingMenu()" id="disappear-menu-item">⏱ Disappearing messages</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openSafetyNumbers()" id="safety-numbers-item" style="display:none">🔐 Verify security</div>
           <div class="ctx-item" onclick="hideHeaderMenu();openChatWallpaperPicker()">🖼️ Wallpaper for this chat</div>
@@ -385,19 +385,22 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <div id="compose-row">
           <div id="slash-palette"></div>
           <div id="mention-suggest" class="mention-suggest"></div>
+          <div id="compose-more" role="group" aria-label="More message options" hidden>
+            <button class="compose-btn" onclick="openAttachPicker()" title="Attach file (max 50MB)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg><span>Attach file</span></button>
+            <button class="compose-btn" onclick="openCameraCapture()" title="Take photo"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Take photo</span></button>
+            <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Poll</span></button>
+            <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12h4M8 10v4M16 10h.01M18 13h.01"/></svg><span>Play a game</span></button>
+            <button class="compose-btn" id="self-destruct-btn" onclick="sendSelfDestructMsg()" title="View-once message"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/><path d="M10.5 9.5L12.5 8v8"/></svg><span>View-once message</span></button>
+            <button class="compose-btn" id="schedule-msg-btn" onclick="openScheduleMsg()" title="Schedule this message"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Schedule message</span></button>
+            <button class="compose-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text" style="display:none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Voice to text</span></button>
+          </div>
           <!-- Action buttons row -->
           <div id="compose-actions">
-            <button class="compose-btn" onclick="openAttachPicker()" title="Attach file (max 50MB)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+            <button class="compose-btn" type="button" id="compose-more-btn" title="More" aria-haspopup="true" aria-expanded="false" aria-controls="compose-more"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
             <input type="file" id="file-attach-input" onchange="handleFileAttach(this)" style="display:none"/>
             <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleCameraCapture(this)" style="display:none"/>
             <button class="compose-btn gif-btn" onclick="toggleGif()" title="GIF">GIF</button>
-            <button class="compose-btn" onclick="openCameraCapture()" title="Take photo"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-            <button class="compose-btn" id="poll-compose-btn" onclick="openPollModal()" title="Poll" style="display:none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></button>
-            <button class="compose-btn" id="game-compose-btn" onclick="openGameMenu()" title="Play a game"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12h4M8 10v4M16 10h.01M18 13h.01"/></svg></button>
-            <button class="compose-btn" id="self-destruct-btn" onclick="sendSelfDestructMsg()" title="View-once message"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/><path d="M10.5 9.5L12.5 8v8"/></svg></button>
-            <button class="compose-btn" id="schedule-msg-btn" onclick="openScheduleMsg()" title="Schedule this message"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></button>
             <button class="compose-btn" id="voice-msg-btn" onclick="toggleVoiceMsgRecording()" title="Record voice message"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg></button>
-            <button class="compose-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Voice to text" style="display:none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></button>
           </div>
           <!-- Input + send row -->
           <div id="compose-input-row">
@@ -853,7 +856,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <!-- PUBLIC LANDING PAGE — visible before login, satisfies Google OAuth verification -->
 <div class="scb-u-76" id="landing-page">
 <link rel="stylesheet" href="/css/landing.css?v=93440ee3fa">
-<link rel="stylesheet" href="/css/interact.css?v=328c9d31dc">
+<link rel="stylesheet" href="/css/interact.css?v=34bb29a1e4">
 
   <!-- NAV -->
   <nav class="lp-nav" id="lp-nav">
@@ -2836,8 +2839,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <script src="/js/core/encryption.js?v=05c5e1acbb"></script>
 <script src="/js/core/data.js?v=ca71804cc8"></script>
 <script src="/js/auth/login.js?v=f1572d0f07"></script>
-<script src="/js/auth/account.js?v=dd6f155f3f"></script>
-<script src="/js/chat/conversations.js?v=d2a272a635"></script>
+<script src="/js/auth/account.js?v=f643a47fae"></script>
+<script src="/js/chat/conversations.js?v=9a2e01ce94"></script>
 <script src="/js/calls/voice.js?v=88ba6ba81d"></script>
 <script src="/js/chat/message-actions.js?v=f436ced093"></script>
 <script src="/js/dashboard/dashboard.js?v=7b1357f58e"></script>
@@ -2847,7 +2850,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <script src="/js/games.js?v=06b96944d2"></script>
 <script src="/js/admin/panel.js?v=ab6cf0bb40"></script>
 <script src="/js/admin/tools.js?v=d201078a6c"></script>
-<script src="/js/assistant.js?v=8efca2017d"></script>
+<script src="/js/assistant.js?v=33bdb29c22"></script>
 <script src="/js/safety/moderation.js?v=bc358ff0c7"></script>
 <script src="/js/safety/family-meetings.js?v=58f34a8dc6"></script>
 <script src="/js/ui/enhancements.js?v=8bec934877"></script>
@@ -3038,7 +3041,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <div class="scb-u-259" id="reaction-picker">
 </div>
 
-<script src="/js/privacy.js?v=3d4607ee0d"></script>
+<script src="/js/privacy.js?v=7ded922217"></script>
 
 <!-- Avatar zoom overlay -->
 <div class="scb-u-260" id="avatar-zoom-overlay" onclick="closeAvatarZoom()">
@@ -3122,6 +3125,6 @@ window.addEventListener('error',function _splashErrorGuard(e){
   </div>
 </div>
 <script src="/js/consent.js?v=d2774283c8"></script>
-<script src="/js/ui/buttons.js?v=85ac12fc94"></script>
+<script src="/js/ui/buttons.js?v=a058c08297"></script>
 </body>
 </html>

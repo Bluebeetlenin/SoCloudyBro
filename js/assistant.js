@@ -607,7 +607,7 @@ function scbSave(key, value){
 // unread badges (sidebar previews, the browser tab title) forever, since
 // they all counted off that same shared field. This set is local-only,
 // never synced, and always updated regardless of that privacy setting.
-const LOCALLY_SEEN_CAP=1000;
+const LOCALLY_SEEN_CAP=3000;
 function _isLocallySeen(msgId){
   return scbLoad('cc_locally_seen',[]).includes(msgId);
 }

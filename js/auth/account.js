@@ -1,23 +1,33 @@
 // -- MUTE NOTIFICATIONS --------------------------------------------------------
-function muteToggle(){
-  if(!activeConvo) return;
-  const key=activeConvo.key;
-  const btn=document.getElementById('mute-menu-item');
-  const cur=mutedChats[key]; // undefined=all, 'mentions'=mentions only, 'muted'/true=silent
-  if(!cur){
-    mutedChats[key]='mentions';
-    if(btn){btn.innerHTML='💬 Mentions only';btn.classList.add('active');}
-    showToast('Mentions only','You\'ll only be notified when you\'re mentioned.');
-  } else if(cur==='mentions'){
-    mutedChats[key]='muted';
-    if(btn){btn.innerHTML='🔔 Unmute notifications';btn.classList.add('active');}
-    showToast('Muted','You won\'t be notified about new messages here.');
-  } else {
-    delete mutedChats[key];
-    if(btn){btn.innerHTML='🔕 Mute notifications';btn.classList.remove('active');}
-    showToast('Unmuted','You\'ll get all notifications for this chat again.');
-  }
+// One choice per chat: 'all' (nothing stored), 'mentions', or 'muted' (off).
+// Older entries stored `true` for muted.
+function notifLevel(key){
+  const v=mutedChats[key];
+  return !v ? 'all' : v==='mentions' ? 'mentions' : 'muted';
+}
+function setNotifLevel(key,level){
+  if(level==='all') delete mutedChats[key];
+  else mutedChats[key]=level;
   saveStorage();
+  showToast('Notifications', level==='all' ? 'You\'ll be notified about every message here.'
+    : level==='mentions' ? 'You\'ll only be notified when you\'re mentioned.'
+    : 'Notifications are off for this chat.');
+}
+// Draws the All / Mentions / Off control. Mentions only makes sense in groups.
+function renderNotifChoice(box,convo){
+  if(!box||!convo) return;
+  const key=convo.key||dmKey(me.number,convo.number);
+  const current=notifLevel(key);
+  const options=[['all','All'],['mentions','Mentions'],['muted','Off']]
+    .filter(o=>o[0]!=='mentions'||convo.type==='group'||current==='mentions');
+  box.innerHTML='<span class="notif-label">Notifications</span><span class="notif-options"></span>';
+  options.forEach(([level,label])=>{
+    const b=document.createElement('button');
+    b.type='button'; b.textContent=label;
+    b.setAttribute('aria-pressed',level===current?'true':'false');
+    b.onclick=(e)=>{ e.stopPropagation(); setNotifLevel(key,level); renderNotifChoice(box,convo); };
+    box.lastChild.appendChild(b);
+  });
 }
 // -- CHAT LOCK -----------------------------------------------------------------
 // Tracks which chat a pending unlock (PIN or Face) applies to. Set explicitly

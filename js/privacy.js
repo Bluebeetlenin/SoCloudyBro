@@ -1153,7 +1153,7 @@ const SLASH_CMDS = [
   { cmd:'/pin',     icon:'📌',  args:'',                   desc:'Pin a message',
     run:()=>{ showToast('Pin','Long-press or right-click a message to pin it.'); } },
   { cmd:'/mute',    icon:'🔕',  args:'',                   desc:'Mute/unmute this chat',
-    run:()=>{ if(activeConvo&&typeof mutedChats!=='undefined'){ const k=activeConvo.key; mutedChats[k]=!mutedChats[k]; saveStorage(); showToast('Chat',mutedChats[k]?'Muted':'Unmuted'); } else showToast('Mute','Open a chat first'); } },
+    run:()=>{ if(activeConvo&&typeof mutedChats!=='undefined'){ const k=activeConvo.key; setNotifLevel(k,notifLevel(k)==='muted'?'all':'muted'); renderNotifChoice(document.getElementById('notif-choice'),activeConvo); } else showToast('Mute','Open a chat first'); } },
   { cmd:'/image',   icon:'🖼️',  args:'',                   desc:'Attach an image',
     run:()=>{ const fi=document.getElementById('file-attach-input'); if(fi){fi.accept='image/*';fi.click();} } },
   { cmd:'/file',    icon:'📎',  args:'',                   desc:'Attach a file',

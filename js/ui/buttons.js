@@ -55,7 +55,9 @@
     if(el.matches&&el.matches(SELECTOR)&&el.matches(':focus-visible')) queue(el,100);
   });
   document.addEventListener('focusout',hide);
-  document.addEventListener('pointerdown',()=>{ clearTimeout(timer); if(tip) tip.classList.remove('show'); },true);
+  const dismiss=()=>{ clearTimeout(timer); if(tip) tip.classList.remove('show'); };
+  document.addEventListener('pointerdown',dismiss,true);
+  document.addEventListener('click',dismiss,true);
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') hide(); },true);
   document.addEventListener('scroll',hide,true);
   document.documentElement.addEventListener('mouseleave',hide);
@@ -84,4 +86,86 @@
       return result;
     };
   });
+})();
+
+// -- MORE MENU ON THE MESSAGE BAR ----------------------------------------------
+(function(){
+  const btn=document.getElementById('compose-more-btn');
+  const menu=document.getElementById('compose-more');
+  if(!btn||!menu) return;
+  function setOpen(open){
+    menu.hidden=!open;
+    btn.setAttribute('aria-expanded',open?'true':'false');
+  }
+  btn.addEventListener('click',()=>{
+    const open=menu.hidden;
+    setOpen(open);
+    if(open){
+      const gif=document.getElementById('gif-picker');
+      if(gif) gif.classList.remove('visible');
+    }
+  });
+  // Close once an option has been picked, or on a click anywhere else.
+  menu.addEventListener('click',e=>{ if(e.target.closest('button')) setOpen(false); });
+  document.addEventListener('click',e=>{
+    if(!menu.hidden && !menu.contains(e.target) && !btn.contains(e.target)) setOpen(false);
+  },true);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape' && !menu.hidden){ e.stopPropagation(); setOpen(false); btn.focus(); }
+  },true);
+})();
+
+// -- MARK ALL AS READ ----------------------------------------------------------
+function _unreadMessages(){
+  if(!me||!convosCache) return [];
+  const found=[];
+  contacts.forEach(c=>{
+    const key=c.key||dmKey(me.number,c.number);
+    if(archivedContacts[key]) return;
+    const convo=convosCache.find(x=>x&&x.key===key);
+    ((convo&&convo.messages)||[]).forEach(m=>{
+      // View-once messages stay unread until actually opened.
+      if(!m||m.from===me.number||m.type==='call'||m.type==='system'||m.selfDestruct) return;
+      if((m.seen&&m.seen.includes(me.number))||_isLocallySeen(m.id)) return;
+      found.push({m,key});
+    });
+  });
+  return found;
+}
+function markAllRead(){
+  const found=_unreadMessages();
+  if(!found.length) return;
+  const receipts=getPrivacyPref('readReceipts',true);
+  let shared=false;
+  found.forEach(({m,key})=>{
+    _markLocallySeen(m.id);
+    // Locked chats are cleared on this device only: nobody has read them.
+    if(receipts && !lockedChats[key]){
+      if(!m.seen) m.seen=[];
+      m.seen.push(me.number);
+      shared=true;
+    }
+  });
+  if(shared){
+    _convosDirty=true;
+    Promise.resolve(saveConvos()).catch(e=>console.warn('mark all read: save failed',e));
+  }
+  renderSidebar();
+  showToast('All caught up',found.length+(found.length===1?' message':' messages')+' marked as read.');
+}
+(function(){
+  const render=renderSidebar;
+  renderSidebar=function(){
+    render.apply(this,arguments);
+    const list=document.getElementById('sb-list');
+    if(!list||(currentTab!=='chats'&&currentTab!=='unread'&&currentTab!=='groups'&&currentTab!=='servers')) return;
+    const count=_unreadMessages().length;
+    if(!count) return;
+    const bar=document.createElement('div');
+    bar.className='sb-readbar';
+    bar.innerHTML='<span></span><button type="button">Mark all as read</button>';
+    bar.firstChild.textContent=count+' unread';
+    bar.lastChild.onclick=markAllRead;
+    list.insertBefore(bar,list.firstChild);
+  };
 })();

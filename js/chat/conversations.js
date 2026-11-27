@@ -209,12 +209,7 @@ async function _origOpenChat(c){
   document.getElementById('lock-chat-btn').innerHTML=lockedChats[key]?"<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/></svg>":"<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 9.9-1\"/></svg>";
   const archiveBtn=document.getElementById('archive-menu-item');
   if(archiveBtn) archiveBtn.innerHTML=archivedContacts[key]?'📁 Unarchive':'📁 Archive';
-  const muteBtn=document.getElementById('mute-menu-item');
-  if(muteBtn){
-    const _ml=mutedChats[key];
-    muteBtn.innerHTML=!_ml?'🔕 Mute notifications':_ml==='mentions'?'💬 Mentions only':'🔔 Unmute notifications';
-    muteBtn.classList.toggle('active',!!_ml);
-  }
+  renderNotifChoice(document.getElementById('notif-choice'),activeConvo);
   // Avatar
   const haEl=document.getElementById('chat-header-av');
   if(c.type==='group'){haEl.style.borderRadius='10px';haEl.style.background='linear-gradient(135deg,#ca5010,#6264a0)';haEl.style.color='#fff';if(c.avatar&&typeof c.avatar==='string'&&(c.avatar.startsWith('data:image/')||c.avatar.startsWith('https://'))){const _img=document.createElement('img');_img.src=c.avatar;_img.style.cssText='width:100%;height:100%;object-fit:cover;';_img.onerror=()=>{haEl.textContent='👥';};haEl.textContent='';haEl.appendChild(_img);}else{haEl.textContent='👥';}}
