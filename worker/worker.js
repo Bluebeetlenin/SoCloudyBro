@@ -1,10 +1,9 @@
-// Cloudflare Worker: Firebase Rules Manager + Custom Auth Token Minting
+// Cloudflare Worker: Custom Auth Token Minting, email codes and API proxies
 // Deploy at: socloudybro-firebase-rules.steveemil7.workers.dev
 //
 // Required secrets/vars:
 //   FIREBASE_PROJECT_ID   = "socloudybro-b8606"   (plain var)
-//   ADMIN_NUMBER          = "2015"                 (plain var)
-//   SERVICE_ACCOUNT_JSON  = <full service account key JSON>  (SECRET)
+//   SERVICE_ACCOUNT_JSON = <full service account key JSON>  (SECRET)
 //   EMAILJS_SERVICE_ID    = <EmailJS Service ID, e.g. "service_xxxxxxx">  (SECRET)
 //   EMAILJS_TEMPLATE_ID   = <EmailJS Template ID, e.g. "template_xxxxxxx">  (SECRET)
 //   EMAILJS_PUBLIC_KEY    = <EmailJS Public Key>  (SECRET)
@@ -46,7 +45,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin': isAllowedOrigin(reqOrigin) ? reqOrigin : ALLOWED_ORIGIN,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Number, X-Claude-Key',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Claude-Key',
       'Vary': 'Origin',
     };
 
@@ -95,49 +94,8 @@ export default {
         return await handleClaudeDeploy(req, env, corsHeaders);
       }
 
-      const adminNum = req.headers.get('X-Admin-Number');
-      if (!adminNum || adminNum !== (env.ADMIN_NUMBER || '2015')) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      const token = await getAccessToken(env.SERVICE_ACCOUNT_JSON);
-      const rulesUrl = `${dbBaseUrl(env)}/.settings/rules.json`;
-
-      if (path === '/get' && req.method === 'GET') {
-        const r = await fetch(`${rulesUrl}?access_token=${token}`);
-        if (!r.ok) {
-          const body = await r.text();
-          throw new Error(`Firebase rules GET failed (${r.status}): ${body}`);
-        }
-        const data = await r.json();
-        return new Response(JSON.stringify(data), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      if (path === '/set' && req.method === 'POST') {
-        const body = await req.json();
-        if (!body.rules) {
-          return new Response(JSON.stringify({ error: 'Missing rules field' }), {
-            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-        const r = await fetch(`${rulesUrl}?access_token=${token}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body.rules)
-        });
-        if (!r.ok) {
-          const errBody = await r.text();
-          throw new Error(`Firebase rules PUT failed (${r.status}): ${errBody}`);
-        }
-        return new Response(JSON.stringify({ ok: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
+      // There is deliberately no route that reads or writes the database rules.
+      // Edit them in the Firebase console, where Google checks who you are.
       return new Response('Not Found', { status: 404, headers: corsHeaders });
 
     } catch(e) {
@@ -253,6 +211,9 @@ async function handleReport(req, env, corsHeaders) {
   try { body = await req.json(); } catch (e) {
     return jsonResp({ error: 'Expected JSON body' }, 400, corsHeaders);
   }
+  if (!await takeSlot(env, 'report_ip', clientIp(req), 10, HOUR_MS)) {
+    return jsonResp({ error: 'Too many reports. Try again later.' }, 429, corsHeaders);
+  }
   const ALLOWED_FIELDS = ['subject','message','from_name','name','email','reportedNumber','reporterNumber','reportType','botcheck',
     'total_users','active_week','new_week','messages_week','reports_open','top_reports','time'];
   const fields = {};
@@ -305,8 +266,17 @@ async function handleGiphy(req, env, corsHeaders) {
 // POST /csp-report — receives Content-Security-Policy violation reports from
 // browsers and logs them to the Firebase errors node for admin review.
 async function handleCspReport(req, env, corsHeaders) {
+  // Anyone can call this, so cap both the size and how often it writes.
+  // Rejected reports still get a 204: browsers ignore the answer anyway.
   let body;
-  try { body = await req.json(); } catch (e) { return new Response(null, { status: 204, headers: corsHeaders }); }
+  try {
+    const text = await req.text();
+    if (text.length > MAX_CSP_REPORT_CHARS) return new Response(null, { status: 204, headers: corsHeaders });
+    body = JSON.parse(text);
+  } catch (e) { return new Response(null, { status: 204, headers: corsHeaders }); }
+  if (!body || !await takeSlot(env, 'csp_ip', clientIp(req), 20, HOUR_MS)) {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
   const report = body['csp-report'] || body;
   if (env.SERVICE_ACCOUNT_JSON && env.FIREBASE_PROJECT_ID) {
     try {
@@ -437,13 +407,22 @@ async function handleSendOtp(req, env, corsHeaders) {
     return jsonResp({ error: 'Enter a valid email address' }, 400, corsHeaders);
   }
 
+  // Per address stops one inbox being flooded; per IP stops one sender working
+  // through many addresses.
+  if (!await takeSlot(env, 'otp_send_ip', clientIp(req), 10, HOUR_MS) ||
+      !await takeSlot(env, 'otp_send_email', email, 3, 15 * 60 * 1000)) {
+    return jsonResp({ error: 'Too many codes requested. Try again later.' }, 429, corsHeaders);
+  }
+
   const codeBytes = new Uint32Array(1);
   crypto.getRandomValues(codeBytes);
   const secureCode = String(100000 + (codeBytes[0] % 900000));
 
+  // The browser can read the challenge, so the code goes in it only as a keyed
+  // MAC. A plain hash of six digits can be reversed in well under a second.
   const exp = Date.now() + OTP_TTL_MS;
-  const codeHash = await sha256Hex(secureCode);
-  const challenge = await signOtpChallenge(env, { email, codeHash, exp });
+  const codeMac = await otpCodeMac(env, email, exp, secureCode);
+  const challenge = await signOtpChallenge(env, { email, codeMac, exp });
 
   const sendRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
     method: 'POST',
@@ -482,8 +461,12 @@ async function handleVerifyOtp(req, env, corsHeaders) {
   if (Date.now() > payload.exp) {
     return jsonResp({ error: 'That code has expired — request a new one' }, 401, corsHeaders);
   }
-  const codeHash = await sha256Hex(code);
-  if (codeHash !== payload.codeHash) {
+  // Counted before checking, so parallel guesses can't get extra tries.
+  if (!await takeSlot(env, 'otp_verify', challenge, 5, OTP_TTL_MS)) {
+    return jsonResp({ error: 'Too many attempts — request a new code' }, 429, corsHeaders);
+  }
+  const codeMac = await otpCodeMac(env, payload.email, payload.exp, code);
+  if (codeMac !== payload.codeMac) {
     return jsonResp({ error: 'Incorrect code' }, 401, corsHeaders);
   }
   return jsonResp({ ok: true, email: payload.email }, 200, corsHeaders);
@@ -511,9 +494,53 @@ async function verifyOtpChallenge(env, challenge) {
   if (!valid) throw new Error('Invalid signature');
   return JSON.parse(base64urlDecodeToString(payloadB64));
 }
-async function sha256Hex(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+async function hmacHex(env, label, value) {
+  const sa = parseServiceAccount(env.SERVICE_ACCOUNT_JSON);
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(label + ':' + sa.private_key),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const buf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function otpCodeMac(env, email, exp, code) {
+  return hmacHex(env, 'scb-otp-code-v1', JSON.stringify([email, exp, code]));
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+const MAX_CSP_REPORT_CHARS = 8000;
+function clientIp(req) {
+  return req.headers.get('CF-Connecting-IP') || 'unknown';
+}
+// Counts one use of `id` and answers whether it is still within `max` per
+// window. Counters live under rate_limits/, which the database rules close to
+// everyone but this Worker. The ETag makes each update atomic, so simultaneous
+// requests can't share one slot. If the counter can't be updated, the request is
+// refused. Addresses and IPs are stored only as keyed MACs.
+async function takeSlot(env, bucket, id, max, windowMs) {
+  try {
+    const token = await getAccessToken(env.SERVICE_ACCOUNT_JSON);
+    const key = await hmacHex(env, 'scb-rate-v1', id);
+    const url = `${dbBaseUrl(env)}/rate_limits/${bucket}/${key}.json?access_token=${token}`;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const read = await fetch(url, { headers: { 'X-Firebase-ETag': 'true' } });
+      if (!read.ok) break;
+      const etag = read.headers.get('ETag');
+      const slot = await read.json();
+      if (!etag) break;
+      const now = Date.now();
+      const current = slot && now - slot.start < windowMs ? slot : { start: now, count: 0 };
+      if (current.count >= max) return false;
+      const write = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'if-match': etag },
+        body: JSON.stringify({ start: current.start, count: current.count + 1 })
+      });
+      if (write.ok) return true;
+      if (write.status !== 412) break; // 412: someone else got there first, retry
+    }
+  } catch (e) {
+    console.error('Rate limit check failed:', e.message);
+  }
+  return false;
 }
 
 async function verifyPasswordHash(password, stored) {
