@@ -499,10 +499,19 @@ async function submitLinkParent(){
     if(!parent){ err.textContent=scbErr('SCB-FAM-21','No account found with that number.'); return; }
     const age=calcAge(parent.birthdate);
     if(age===null||age<18){ err.textContent=scbErr('SCB-FAM-22','That account isn\'t verified as 18 or older.'); return; }
-    // The password check proves the parent is present and consenting.
-    // Reject legacy accounts with no password — they must use recovery first.
-    if(!parent.pwd){ err.textContent=scbErr('SCB-FAM-23','That account has no password set. They must use Account Recovery first.'); return; }
-    const ok=await verifyPassword(ppwd, parent.pwd);
+    // The password check proves the parent is present and consenting. Newer
+    // accounts have no hash on their record, so the server checks those.
+    let ok;
+    if(parent.pwd){
+      ok=await verifyPassword(ppwd, parent.pwd);
+    }else{
+      const result=await checkPasswordWithServer(pnum, ppwd);
+      if(result==='unavailable'||result==='locked'){
+        err.textContent=scbErr('SCB-FAM-23',result==='locked'?'Too many failed attempts. Try again in 5 minutes.':'That password couldn\'t be checked. Try again in a moment.');
+        return;
+      }
+      ok=result==='ok';
+    }
     if(!ok){ err.textContent=scbErr('SCB-FAM-23','That password is incorrect.'); return; }
     const mine=users.find(u=>u&&u.number===me.number);
     if(!mine){ err.textContent=scbErr('SCB-FAM-24','Your account record wasn\'t found.'); return; }

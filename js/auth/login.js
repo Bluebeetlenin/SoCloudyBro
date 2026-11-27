@@ -1127,15 +1127,20 @@ async function submitLogin() {
     // rewrite the record from the new session). A deleted account is gone.
     if(user.deleted) { err.textContent = scbErr('SCB-AUTH-13','This account has been deleted.'); return; }
 
-    // Check password — legacy accounts with no password stored must go through
-    // Account Recovery to set one. Accepting any password and storing it would
-    // let anyone who knows the account number take over the account permanently.
-    if(!user.pwd){
-      _recordLoginFailure(identity);
-      err.textContent = scbErr('SCB-AUTH-16','This account has no password on file. Use "Forgot password?" to set one via your security questions.');
-      return;
+    // Check the password. Older accounts carry its hash on their record; newer
+    // ones don't, so the server checks those. An account with no password at all
+    // is refused by the server: accepting any password and storing it would let
+    // anyone who knows the number take the account over.
+    let passwordOk;
+    if(user.pwd){
+      passwordOk = await verifyPassword(pwd, user.pwd);
+    }else{
+      const result = await checkPasswordWithServer(user.number, pwd);
+      if(result==='unavailable'){ err.textContent = scbErr('SCB-AUTH-25','Your password couldn\'t be checked because the server didn\'t answer. Try again in a moment.'); return; }
+      if(result==='locked'){ err.textContent = scbErr('SCB-AUTH-26','Too many failed attempts. Try again in 5 minutes.'); return; }
+      passwordOk = result==='ok';
     }
-    if(!(await verifyPassword(pwd, user.pwd))) {
+    if(!passwordOk) {
       const rd=_recordLoginFailure(identity);
       const remaining=5-rd.count;
       err.textContent = scbErr('SCB-AUTH-14', remaining>0
@@ -1169,8 +1174,8 @@ async function submitLogin() {
     // registerOrUpdate()'s next save (part of the normal launch() flow)
     // persists me.pwd back to Firebase, so this reaches the server without
     // a dedicated write here. No forced reset, no user-visible change.
-    let pwdToStore = user.pwd;
-    if(user.pwd.indexOf('v2$')!==0){ pwdToStore = await hashPasswordV2(pwd); }
+    let pwdToStore = user.pwd || '';
+    if(pwdToStore.indexOf('v2$')!==0){ pwdToStore = await hashPasswordV2(pwd); }
 
     // Risk-based login challenge: an unfamiliar country for an account with
     // established history requires explicit confirmation before continuing,

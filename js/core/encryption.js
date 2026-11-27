@@ -156,6 +156,28 @@ async function _tryUpgradeToCustomAuth(number, proof){
   }
 }
 
+// Newer accounts keep no password hash on the record this device can read, so
+// the server checks it. This only asks: it never signs this device in as that
+// account. Returns 'ok', 'wrong', 'locked' or 'unavailable'.
+async function checkPasswordWithServer(number, password){
+  if(!number || !password || !MINT_TOKEN_ENDPOINT) return 'unavailable';
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), 8000);
+  try{
+    const res = await fetch(MINT_TOKEN_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({number, password}), signal: ctl.signal,
+    });
+    if(res.ok) return 'ok';
+    if(res.status===401) return 'wrong';
+    if(res.status===429) return 'locked';
+    return 'unavailable';
+  }catch(e){
+    console.warn('[auth] password check failed:', e.message);
+    return 'unavailable';
+  }finally{ clearTimeout(timer); }
+}
+
 // Any account that logged in before the custom-auth upgrade existed (or
 // whose browser simply kept its old anonymous Firebase session alive
 // across reloads — Firebase persists that session the same way it

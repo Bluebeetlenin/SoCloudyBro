@@ -118,6 +118,8 @@ const SCB_ERROR_CODES = {
   'SCB-AUTH-22': {area:'Sign-in / session', meaning:'2FA code incorrect at login'},
   'SCB-AUTH-23': {area:'Sign-in / session', meaning:'2FA verification threw while checking the code'},
   'SCB-AUTH-24': {area:'Sign-in / session', meaning:'Signed out because the account was suspended while in use'},
+  'SCB-AUTH-25': {area:'Sign-in / session', meaning:'Login: the server could not be reached to check the password'},
+  'SCB-AUTH-26': {area:'Sign-in / session', meaning:'Login: the server locked sign-in after too many failed attempts'},
   'SCB-CALL-01': {area:'Calls & voice channels', meaning:'Voice channel unavailable: no microphone API in this browser/context'},
   'SCB-CALL-02': {area:'Calls & voice channels', meaning:'Voice channel join could not get the microphone'},
   'SCB-CALL-03': {area:'Calls & voice channels', meaning:'Screen share blocked: not in a voice channel'},
