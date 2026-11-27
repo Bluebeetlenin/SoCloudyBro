@@ -15497,18 +15497,18 @@ const DASH_ROW_PX=150;
 // also the order the "add widget" tray lists them in.
 const DASHBOARD_WIDGETS={
   // message activity — most people check this first, every time
-  unread:{icon:'✉️',label:'Unread Messages',defaultW:1,defaultH:2,hero:true},
-  recent:{icon:'💬',label:'Recent Activity',defaultW:2,defaultH:2},
-  pinned:{icon:'📌',label:'Pinned Messages',defaultW:1,defaultH:2},
+  unread:{icon:'',label:'Unread Messages',defaultW:1,defaultH:2,hero:true},
+  recent:{icon:'',label:'Recent Activity',defaultW:2,defaultH:2},
+  pinned:{icon:'',label:'Pinned Messages',defaultW:1,defaultH:2},
   // people
-  online:{icon:'👥',label:'Contacts',defaultW:1,defaultH:2},
-  groups:{icon:'👥',label:'Groups',defaultW:1,defaultH:2},
+  online:{icon:'',label:'Contacts',defaultW:1,defaultH:2},
+  groups:{icon:'',label:'Groups',defaultW:1,defaultH:2},
   // calls & voice
   voice:{icon:'🔊',label:'Voice Channels',defaultW:2,defaultH:1},
-  missedcalls:{icon:'📞',label:'Missed Calls',defaultW:1,defaultH:2},
-  cloudyvoice:{icon:'🎙️',label:'Cloudy Assistant',defaultW:2,defaultH:1},
+  missedcalls:{icon:'',label:'Missed Calls',defaultW:1,defaultH:2},
+  cloudyvoice:{icon:'',label:'Cloudy Assistant',defaultW:2,defaultH:1},
   // decorative/utility — last, not hero-styled
-  clock:{icon:'🕐',label:'Clock & Weather',defaultW:1,defaultH:2}
+  clock:{icon:'',label:'Clock & Weather',defaultW:1,defaultH:2}
 };
 function cellsOverlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
 function findFreeSpot(layout,w,h){
@@ -15698,13 +15698,13 @@ function renderPinnedWidget(body){
       const contact=contacts.find(x=>x&&x.key===c.key);
       if(!contact) return;
       const u=msg.from===me.number?me:(lookupUser(msg.from)||{});
-      const preview=msgHasGif(msg)?'GIF':msgHasPoll(msg)?'📊 Poll':msgText(msg);
+      const preview=msgHasGif(msg)?'GIF':msgHasPoll(msg)?'Poll':msgText(msg);
       items.push({contact,chId,time:msg.time,text:(dec(u.name)||('#'+msg.from))+': '+preview});
     });
   });
   items.sort((a,b)=>b.time-a.time);
   if(!items.length){ body.innerHTML=_DART.pinned; return; }
-  body.innerHTML=items.slice(0,5).map(it=>'<div class="dash-list-item" data-key="'+esc(it.contact.key)+'" data-ch-id="'+esc(it.chId)+'" data-act="dashOpenChat">📌 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.contact.name)+' — '+esc(it.text.substring(0,40))+'</span></div>').join('');
+  body.innerHTML=items.slice(0,5).map(it=>'<div class="dash-list-item" data-key="'+esc(it.contact.key)+'" data-ch-id="'+esc(it.chId)+'" data-act="dashOpenChat"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.contact.name)+' — '+esc(it.text.substring(0,40))+'</span></div>').join('');
 }
 function renderOnlineWidget(body){
   const dms=contacts.filter(c=>c.type!=='group');
@@ -15747,7 +15747,7 @@ function renderRecentWidget(body){
     if(!conv||!conv.messages||!conv.messages.length) return;
     const last=conv.messages[conv.messages.length-1];
     const u=last.from===me.number?me:(lookupUser(last.from)||{});
-    const preview=msgHasGif(last)?'GIF':msgHasPoll(last)?'📊 Poll':msgFileData(last)?'📎 Attachment':msgText(last);
+    const preview=msgHasGif(last)?'GIF':msgHasPoll(last)?'Poll':msgFileData(last)?'Attachment':msgText(last);
     items.push({c,time:last.time,text:(dec(u.name)||('#'+last.from))+': '+preview});
   });
   items.sort((a,b)=>b.time-a.time);
@@ -15764,7 +15764,7 @@ function renderGroupsWidget(body){
   body.innerHTML=groups.slice(0,8).map(g=>{
     const conv=convosCache?convosCache.find(x=>x&&x.key===g.key):null;
     const memberCount=conv?(conv.participants||conv.members||[]).length:0;
-    return '<div class="dash-list-item" data-key="'+esc(g.key)+'" onclick="dashOpenChat(this.dataset.key)">👥 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.name)+'</span><span class="dash-widget-empty" style="margin-left:auto">'+memberCount+'</span></div>';
+    return '<div class="dash-list-item" data-key="'+esc(g.key)+'" onclick="dashOpenChat(this.dataset.key)"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.name)+'</span><span class="dash-widget-empty" style="margin-left:auto">'+memberCount+'</span></div>';
   }).join('');
 }
 function renderUnreadWidget(body){
@@ -15827,7 +15827,7 @@ function renderMissedCallsWidget(body){
   let log=[];
   try{ log=JSON.parse(localStorage.getItem('cc_missed_calls')||'[]'); }catch(e){}
   if(!log.length){ body.innerHTML=_DART.missed_empty; return; }
-  body.innerHTML=log.slice(-6).reverse().map(l=>'<div class="dash-list-item" data-number="'+l.from+'" data-act="dashOpenChatByNumber">📞 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.fromName||('#'+l.from))+'</span><span class="dash-widget-empty" style="margin-left:auto">'+new Date(l.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');
+  body.innerHTML=log.slice(-6).reverse().map(l=>'<div class="dash-list-item" data-number="'+l.from+'" data-act="dashOpenChatByNumber"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(l.fromName||('#'+l.from))+'</span><span class="dash-widget-empty" style="margin-left:auto">'+new Date(l.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');
 }
 function dashOpenChatByNumber(num){
   const c=contacts.find(x=>x.type!=='group'&&x.number===num);
@@ -15982,9 +15982,8 @@ async function renderClockWeatherWidget(body){
       const d=_weatherCache.data;
       utcOffsetSec=d.utc_offset_seconds;
       const cw=d.current_weather;
-      const icon=WEATHER_CODE_ICONS[cw.weathercode]||'🌡️';
       const wEl=document.getElementById('dash-clock-weather');
-      if(wEl) wEl.innerHTML=icon+' '+Math.round(cw.temperature)+'°C — '+esc(loc.name);
+      if(wEl) wEl.innerHTML=Math.round(cw.temperature)+'°C — '+esc(loc.name);
     }catch(e){
       const wEl=document.getElementById('dash-clock-weather');
       if(wEl) wEl.textContent='Weather unavailable';
