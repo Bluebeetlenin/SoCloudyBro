@@ -11,9 +11,8 @@
 //   WEB3FORMS_ACCESS_KEY  = <Web3Forms key>  (SECRET — moved from client source)
 //
 // CHANGES IN THIS VERSION:
-//   - handleMintToken now also reads users_private/<number> for pwd,
-//     backupPinHash, faceDescriptor (with backward-compat fallback to the
-//     public users/<number> copy that older app versions still write).
+//   - handleMintToken checks the account record first and reads
+//     users_private/<number>/pwd only when the record has no password.
 //   - POST /report: proxy endpoint for Web3Forms submissions — keeps the
 //     Web3Forms access key server-side as a Worker secret instead of
 //     embedding it in the client HTML. Add WEB3FORMS_ACCESS_KEY as a
@@ -34,6 +33,8 @@ function isAllowedOrigin(origin) {
 const ALLOWED_ORIGIN = 'https://socloudybro.vercel.app';
 const GOOGLE_CLIENT_ID = '838238846995-462tmfqv9p4mthurorumg30d2uq4qin1.apps.googleusercontent.com';
 const FACE_MATCH_THRESHOLD = 0.42;
+// Accounts older than this keep their password on the account record.
+const PRIVATE_PASSWORDS_SINCE = Date.UTC(2026, 9, 12);
 
 let _jwksCache = null;
 let _jwksCacheAt = 0;
@@ -153,23 +154,21 @@ async function handleMintToken(req, env, corsHeaders) {
     return jsonResp({ error: 'Account is not available' }, 403, corsHeaders);
   }
 
-  // Overlay sensitive auth fields from users_private (not client-readable).
-  // Falls back to the public-node copy during the migration window when older
-  // app versions haven't yet written to users_private.
-  if (user) {
+  // The account record can only be written by its owner or an admin, so what it
+  // holds always wins. users_private is a fallback for one thing: the password of
+  // accounts created since passwords stopped being copied to the account record.
+  // It never overrides, and never supplies face data or a backup PIN, because
+  // those are always saved on the account record.
+  if (user && !user.pwd && user.createdAt >= PRIVATE_PASSWORDS_SINCE) {
     try {
-      const privUrl = `${dbBaseUrl(env)}/users_private/${encodeURIComponent(number)}.json?access_token=${accessToken}`;
+      const privUrl = `${dbBaseUrl(env)}/users_private/${encodeURIComponent(number)}/pwd.json?access_token=${accessToken}`;
       const privRes = await fetch(privUrl);
       if (privRes.ok) {
-        const priv = await privRes.json();
-        if (priv) {
-          if (priv.pwd           !== undefined) user.pwd            = priv.pwd;
-          if (priv.backupPinHash !== undefined) user.backupPinHash  = priv.backupPinHash;
-          if (priv.faceDescriptor!== undefined) user.faceDescriptor = priv.faceDescriptor;
-        }
+        const pwd = await privRes.json();
+        if (typeof pwd === 'string') user.pwd = pwd;
       }
     } catch (e) {
-      // best-effort — fall through to the public-node value already in user.*
+      // No password to check against: the sign-in is refused below.
     }
   }
 
