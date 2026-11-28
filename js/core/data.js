@@ -996,6 +996,14 @@ async function getConvos(){
 }
 let _convosCacheSnapshot=[];
 let _saveConvosTimer=null, _saveConvosPending=null, _convosDirty=false;
+function _maySaveConvo(c,before){
+  if(!me) return true;
+  if(Number(me.number)===ADMIN_NUMBER||me.adminAccess) return true;
+  const roster=x=>x?Object.values(x.participants||{}).concat(Object.values(x.members||{})).map(Number):[];
+  const everyone=roster(c).concat(roster(before));
+  // Old chats with no member list stay writable.
+  return !everyone.length||everyone.includes(Number(me.number));
+}
 function saveConvos(){
   // Coalesce rapid-fire saves (typing, votes, sends) into a single PUT request to cut JSON traffic
   if(_saveConvosPending) return _saveConvosPending;
@@ -1066,6 +1074,10 @@ function saveConvos(){
         for(const c of toSave){
           if(!c||!c.key) continue;
           const before=prevByKey.get(c.key);
+          // One chat you can't write to would get the whole save rejected, so
+          // leave out chats you aren't in. Membership before the change counts,
+          // or leaving a group could never be saved.
+          if(!_maySaveConvo(c,before)) continue;
           if(!before||JSON.stringify(before)!==JSON.stringify(c)) convoUpdates[c.key]=c;
         }
         // Null out the legacy nested 'conversations' array key in the same atomic update —
