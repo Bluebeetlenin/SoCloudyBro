@@ -177,17 +177,8 @@ function _loadDraft(){
 // running silently in the background.
 const ESCAPE_MODAL_CLEANUP={
   'chat-lock-overlay': ()=>closeChatLockOverlay(),
-  'face-mfa-setup-modal': ()=>cancelFaceEnrollment(),
   'incoming-call-modal': ()=>declineIncomingCall(),
   'outgoing-call-modal': ()=>cancelOutgoingCall(),
-  'setup-modal': ()=>{
-    // setup-modal hosts login/signup/2FA panes too, which own no resource —
-    // only route through the camera-owning cleanup while the face-login
-    // view is the one actually showing (a live _faceLoginStream is exactly
-    // that signal), otherwise close it normally like any other modal.
-    if(typeof _faceLoginStream!=='undefined'&&_faceLoginStream) cancelFaceLoginView();
-    else closeModal('setup-modal');
-  },
 };
 document.addEventListener('keydown',function(e){
   const inInput=e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA';
@@ -580,7 +571,7 @@ function _computeSecurityScore(){
   const _me=window.me; const _uc=window.usersCache; const _pk=window._myPubJwk;
   let score=0; const checks=[];
   if(_me&&_me.pwd){ score+=20; checks.push({ok:true,label:'Password set'}); } else checks.push({ok:false,label:'No password'});
-  if(_me&&(_me.totpEnabled||_me.faceMfaEnabled)){ score+=25; checks.push({ok:true,label:'2FA enabled'}); } else checks.push({ok:false,label:'2FA off'});
+  if(_me&&_me.totpEnabled){ score+=25; checks.push({ok:true,label:'2FA enabled'}); } else checks.push({ok:false,label:'2FA off'});
   if(localStorage.getItem('cc_pin')){ score+=15; checks.push({ok:true,label:'PIN lock on'}); } else checks.push({ok:false,label:'No PIN lock'});
   const u=_uc&&_me?_uc.find(x=>x&&x.number===_me.number):null;
   if(u&&Array.isArray(u.secQuestions)&&u.secQuestions.length===2){ score+=15; checks.push({ok:true,label:'Recovery questions set'}); } else checks.push({ok:false,label:'No recovery questions'});

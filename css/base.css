@@ -230,26 +230,3 @@ body.sb-compact .sb-item .sb-item-preview{display:none}
 #cloudy-btn.listening{background:var(--accent);color:#fff;animation:cloudyPulse 1.6s ease-in-out infinite}
 @keyframes cloudyPulse{0%,100%{box-shadow:0 0 0 0 rgba(107,93,232,0.45)}50%{box-shadow:0 0 0 8px rgba(107,93,232,0)}}
 
-/* ── FACE RECOGNITION scanner chrome — shared by login, enrollment and the
-   per-chat face-unlock check (all three draw onto it via _drawFaceOverlay()
-   in JS); gives the plain video+canvas box a sci-fi "scanning" feel instead
-   of a bare black rectangle. ── */
-.face-scan-wrap{position:relative;width:100%;max-width:320px;margin:0 auto 14px;border-radius:20px;overflow:hidden;background:#000;aspect-ratio:4/3;box-shadow:0 0 0 1px rgba(107,93,232,0.35),0 0 30px -8px rgba(107,93,232,0.55),0 14px 30px -10px rgba(0,0,0,0.5);animation:faceScanGlow 2.6s ease-in-out infinite}
-.face-scan-wrap.compact{max-width:260px}
-@keyframes faceScanGlow{0%,100%{box-shadow:0 0 0 1px rgba(107,93,232,0.35),0 0 26px -8px rgba(107,93,232,0.5),0 14px 30px -10px rgba(0,0,0,0.5)}50%{box-shadow:0 0 0 1px rgba(107,93,232,0.6),0 0 44px -4px rgba(107,93,232,0.85),0 14px 30px -10px rgba(0,0,0,0.5)}}
-.face-scan-wrap video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
-.face-scan-wrap canvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)}
-.face-scan-label{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.6);font-family:var(--font-mono,monospace);pointer-events:none;z-index:2}
-.face-scan-label .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:5px;box-shadow:0 0 6px 1px rgba(34,197,94,0.8);animation:faceScanDotBlink 1.4s ease-in-out infinite}
-@keyframes faceScanDotBlink{0%,100%{opacity:1}50%{opacity:.35}}
-.face-scan-line{position:absolute;left:8%;right:8%;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(124,109,232,.9),#8b7cf0,rgba(124,109,232,.9),transparent);box-shadow:0 0 12px 2px rgba(124,109,232,.7);animation:faceScanSweep 2.3s cubic-bezier(.45,0,.55,1) infinite;pointer-events:none;z-index:2}
-@keyframes faceScanSweep{0%{top:12%;opacity:0}8%{opacity:1}50%{top:85%;opacity:1}58%{opacity:0}100%{top:12%;opacity:0}}
-.face-scan-wrap.face-ok .face-scan-line{animation-play-state:paused;opacity:0;transition:opacity .2s}
-.face-scan-wrap.face-ok .face-scan-label .dot{background:#22c55e;animation:none;opacity:1}
-.face-scan-success{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px;background:radial-gradient(circle,rgba(39,174,96,.4),rgba(39,174,96,0) 70%);opacity:0;pointer-events:none;z-index:3}
-.face-scan-success.show{animation:faceScanSuccess .9s ease-out}
-@keyframes faceScanSuccess{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.08)}60%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
-.face-scan-status{text-align:center;font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;min-height:18px;transition:color .2s}
-.face-scan-status.active{color:var(--accent)}
-.face-scan-status.success{color:var(--success,#27ae60)}
-

@@ -11,6 +11,11 @@
 //   WEB3FORMS_ACCESS_KEY  = <Web3Forms key>  (SECRET — moved from client source)
 //
 // CHANGES IN THIS VERSION:
+//   - New password format "v3": the device does the slow hashing and this Worker
+//     compares a SHA-256. POST /hash-params tells the device how to do it.
+//   - Face descriptors and backup PINs are no longer accepted as sign-in proof.
+//   - Passkeys must come from the production site, with the device's own user
+//     check, and each challenge works once.
 //   - handleMintToken checks the account record first and reads
 //     users_private/<number>/pwd only when the record has no password.
 //   - POST /report: proxy endpoint for Web3Forms submissions — keeps the
@@ -32,7 +37,6 @@ function isAllowedOrigin(origin) {
 }
 const ALLOWED_ORIGIN = 'https://socloudybro.vercel.app';
 const GOOGLE_CLIENT_ID = '838238846995-462tmfqv9p4mthurorumg30d2uq4qin1.apps.googleusercontent.com';
-const FACE_MATCH_THRESHOLD = 0.42;
 // Accounts older than this keep their password on the account record.
 const PRIVATE_PASSWORDS_SINCE = Date.UTC(2026, 9, 12);
 
@@ -71,6 +75,9 @@ export default {
     try {
       if (path === '/mint-token' && req.method === 'POST') {
         return await handleMintToken(req, env, corsHeaders);
+      }
+      if (path === '/hash-params' && req.method === 'POST') {
+        return await handleHashParams(req, env, corsHeaders);
       }
       if (path === '/send-otp' && req.method === 'POST') {
         return await handleSendOtp(req, env, corsHeaders);
@@ -117,13 +124,11 @@ async function handleMintToken(req, env, corsHeaders) {
   const password = body && body.password;
   const googleCredential = body && body.googleCredential;
   const passkeyAssertion = body && body.passkeyAssertion;
-  const faceDescriptor = body && body.faceDescriptor;
-  const backupPin = body && body.backupPin;
+
   const secAnswers = body && body.secAnswers;
 
   const hasProof = typeof password === 'string' || typeof googleCredential === 'string' ||
     (passkeyAssertion && typeof passkeyAssertion === 'object') ||
-    isValidFaceDescriptor(faceDescriptor) || typeof backupPin === 'string' ||
     isValidSecAnswers(secAnswers);
   if (!number || !hasProof) {
     return jsonResp({ error: 'Missing number and a recognized proof' }, 400, corsHeaders);
@@ -154,25 +159,9 @@ async function handleMintToken(req, env, corsHeaders) {
     return jsonResp({ error: 'Account is not available' }, 403, corsHeaders);
   }
 
-  // The account record can only be written by its owner or an admin, so what it
-  // holds always wins. users_private is a fallback for one thing: the password of
-  // accounts created since passwords stopped being copied to the account record.
-  // It never overrides, and never supplies face data or a backup PIN, because
-  // those are always saved on the account record.
-  if (user && !user.pwd && user.createdAt >= PRIVATE_PASSWORDS_SINCE) {
-    try {
-      const privUrl = `${dbBaseUrl(env)}/users_private/${encodeURIComponent(number)}/pwd.json?access_token=${accessToken}`;
-      const privRes = await fetch(privUrl);
-      if (privRes.ok) {
-        const pwd = await privRes.json();
-        if (typeof pwd === 'string') user.pwd = pwd;
-      }
-    } catch (e) {
-      // No password to check against: the sign-in is refused below.
-    }
-  }
+  await addPrivatePassword(user, number, env, accessToken);
 
-  const verified = user ? await verifyMintProof(user, { password, googleCredential, passkeyAssertion, faceDescriptor, backupPin, secAnswers }, env) : false;
+  const verified = user ? await verifyMintProof(user, { password, googleCredential, passkeyAssertion, secAnswers }, env) : false;
 
   if (!verified) {
     const count = (attempts && attempts.count || 0) + 1;
@@ -196,6 +185,59 @@ async function handleMintToken(req, env, corsHeaders) {
 
   const customToken = await mintFirebaseCustomToken(env.SERVICE_ACCOUNT_JSON, 'u' + number, { number: String(number), email: (user.email || '').toLowerCase() });
   return jsonResp({ token: customToken }, 200, corsHeaders);
+}
+
+// The account record can only be written by its owner or an admin, so what it
+// holds always wins. users_private is a fallback for one thing: the password of
+// accounts created since passwords stopped being copied to the account record.
+// It never overrides, and never supplies any other proof.
+async function addPrivatePassword(user, number, env, accessToken) {
+  if (!user || user.pwd || !(user.createdAt >= PRIVATE_PASSWORDS_SINCE)) return;
+  try {
+    const privUrl = `${dbBaseUrl(env)}/users_private/${encodeURIComponent(number)}/pwd.json?access_token=${accessToken}`;
+    const privRes = await fetch(privUrl);
+    if (privRes.ok) {
+      const pwd = await privRes.json();
+      if (typeof pwd === 'string') user.pwd = pwd;
+    }
+  } catch (e) {
+    // No password to check against: the sign-in is refused.
+  }
+}
+
+// POST /hash-params {number} — the salt and iteration count the device needs to
+// stretch a password or security answer saved in the v3 format. Never returns a
+// hash. null means "send it as typed" (older format, or nothing saved).
+async function handleHashParams(req, env, corsHeaders) {
+  let body;
+  try { body = await req.json(); } catch (e) {
+    return jsonResp({ error: 'Expected JSON body' }, 400, corsHeaders);
+  }
+  const number = String(body && body.number);
+  if (!/^\d{1,9}$/.test(number)) return jsonResp({ error: 'Missing number' }, 400, corsHeaders);
+  if (!await takeSlot(env, 'params_ip', clientIp(req), 120, HOUR_MS)) {
+    return jsonResp({ error: 'Too many attempts. Try again later.' }, 429, corsHeaders);
+  }
+  const accessToken = await getAccessToken(env.SERVICE_ACCOUNT_JSON);
+  const userRes = await fetch(`${dbBaseUrl(env)}/users/${number}.json?access_token=${accessToken}`);
+  if (!userRes.ok) return jsonResp({ error: 'Could not look up account' }, 502, corsHeaders);
+  const user = await userRes.json();
+  await addPrivatePassword(user, number, env, accessToken);
+  const questions = user && Array.isArray(user.secQuestions) ? user.secQuestions : [];
+  return jsonResp({
+    password: hashParams(user && user.pwd),
+    secAnswers: [0, 1].map(i => hashParams(questions[i] && questions[i].hash)),
+  }, 200, corsHeaders);
+}
+function hashParams(stored) {
+  if (typeof stored !== 'string') return null;
+  const parts = stored.trim().split('$');
+  if (parts.length !== 4 || parts[0] !== 'v3') return null;
+  return { iterations: parseInt(parts[1], 10), salt: parts[2] };
+}
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // POST /report — proxies Web3Forms submissions server-side so the
@@ -356,7 +398,7 @@ async function handleClaudeDeploy(req, env, corsHeaders) {
   }
 }
 
-async function verifyMintProof(user, { password, googleCredential, passkeyAssertion, faceDescriptor, backupPin, secAnswers }, env) {
+async function verifyMintProof(user, { password, googleCredential, passkeyAssertion, secAnswers }, env) {
   try {
     if (typeof googleCredential === 'string' && googleCredential) {
       if (!user.googleSub) return false;
@@ -364,20 +406,13 @@ async function verifyMintProof(user, { password, googleCredential, passkeyAssert
       return claims.sub === user.googleSub;
     } else if (passkeyAssertion && typeof passkeyAssertion === 'object') {
       return await verifyPasskeyAssertionServer(passkeyAssertion, user, env);
-    } else if (isValidFaceDescriptor(faceDescriptor)) {
-      if (!Array.isArray(user.faceDescriptor) || !user.faceDescriptor.length) return false;
-      const dist = euclideanDistance(faceDescriptor, user.faceDescriptor);
-      return dist < FACE_MATCH_THRESHOLD;
-    } else if (typeof backupPin === 'string' && backupPin) {
-      if (!user.backupPinHash) return false;
-      return await verifyPasswordHash(backupPin, user.backupPinHash);
     } else if (isValidSecAnswers(secAnswers)) {
       if (!Array.isArray(user.secQuestions) || user.secQuestions.length !== 2) return false;
       const ok1 = await verifyPasswordHash(normalizeSecAnswer(secAnswers[0]), user.secQuestions[0].hash);
       const ok2 = await verifyPasswordHash(normalizeSecAnswer(secAnswers[1]), user.secQuestions[1].hash);
       return ok1 && ok2;
     } else {
-      if (!user.pwd) return false;
+      if (!user.pwd || typeof password !== 'string') return false;
       return await verifyPasswordHash(password, user.pwd);
     }
   } catch (e) {
@@ -547,6 +582,13 @@ async function takeSlot(env, bucket, id, max, windowMs) {
 async function verifyPasswordHash(password, stored) {
   if (typeof stored !== 'string') return false;
   stored = stored.trim();
+  // v3: `password` is the key the device derived. Only its SHA-256 is stored, so
+  // a copied hash can't be sent back as proof.
+  if (stored.indexOf('v3$') === 0) {
+    const parts = stored.split('$');
+    if (parts.length !== 4 || !/^[0-9a-f]{64}$/.test(password)) return false;
+    return await sha256Hex(password) === parts[3];
+  }
   if (stored.indexOf('v2$') === 0) {
     const parts = stored.split('$');
     if (parts.length !== 4) return false;
@@ -679,26 +721,32 @@ async function verifyPasskeyAssertionServer(assertion, user, env) {
   const spkiBuf = b64DecodeToBuffer(matched.publicKeySpki);
   const clientData = JSON.parse(new TextDecoder().decode(clientDataBuf));
   if (clientData.type !== 'webauthn.get') return false;
-  if (!isAllowedOrigin(clientData.origin)) return false;
+  // Stricter than CORS: preview hosts are not trusted to sign anyone in.
+  if (clientData.origin !== ALLOWED_ORIGIN) return false;
   // Verify the challenge in clientDataJSON matches what the Worker issued.
   if (clientData.challenge !== challengePayload.challengeB64u) return false;
+  if (!await isUserVerifiedForThisSite(authDataBuf)) return false;
   const pubKey = await crypto.subtle.importKey('spki', spkiBuf, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
   const clientDataHash = await crypto.subtle.digest('SHA-256', clientDataBuf);
   const signedData = new Uint8Array(authDataBuf.byteLength + clientDataHash.byteLength);
   signedData.set(new Uint8Array(authDataBuf), 0);
   signedData.set(new Uint8Array(clientDataHash), authDataBuf.byteLength);
   const rawSig = derToRawEcdsaSig(sigBuf);
-  return crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pubKey, rawSig, signedData.buffer);
+  if (!await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pubKey, rawSig, signedData.buffer)) return false;
+  // One use per challenge, so a captured sign-in can't be sent a second time.
+  return takeSlot(env, 'passkey_used', challengePayload.challengeB64u, 1, PASSKEY_CHALLENGE_TTL_MS);
 }
 
-function isValidFaceDescriptor(d) {
-  return Array.isArray(d) && d.length > 0 && d.length <= 512 && d.every(x => typeof x === 'number' && Number.isFinite(x));
-}
-function euclideanDistance(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || !a.length) return Infinity;
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; sum += d * d; }
-  return Math.sqrt(sum);
+// Authenticator data starts with SHA-256 of the site the passkey belongs to,
+// then a flags byte: bit 0 means someone was present, bit 2 means the device
+// checked who they are (biometric, PIN or similar).
+async function isUserVerifiedForThisSite(authDataBuf) {
+  const data = new Uint8Array(authDataBuf);
+  if (data.length < 37) return false;
+  const siteId = new TextEncoder().encode(new URL(ALLOWED_ORIGIN).hostname);
+  const expected = new Uint8Array(await crypto.subtle.digest('SHA-256', siteId));
+  if (!expected.every((byte, i) => data[i] === byte)) return false;
+  return (data[32] & 0x05) === 0x05;
 }
 
 function base64urlDecodeToString(str) {

@@ -193,6 +193,7 @@ async function launch(){
   step('updateOfflineBanner', updateOfflineBanner);
   step('checkBirthdaysToday', checkBirthdaysToday);
   step('checkSecuritySetupNudge', checkSecuritySetupNudge);
+  step('checkFaceRemovalNotice', checkFaceRemovalNotice);
   step('flushOutbox', flushOutbox);
   step('requestNotifPerm', requestNotifPerm);
   step('initVoiceInput', initVoiceInput);
@@ -228,7 +229,7 @@ async function launch(){
 // hide a sibling view when showing a new one, which would leave two views
 // visible stacked on top of each other. showAuthView() is the one place
 // that knows the full set and guarantees exactly one is ever visible.
-const AUTH_VIEW_IDS=['signup-view','login-view','login-set-email-view','login-2fa-view','login-face-view','login-backup-pin-view'];
+const AUTH_VIEW_IDS=['signup-view','login-view','login-set-email-view','login-2fa-view'];
 function showAuthView(viewId){
   AUTH_VIEW_IDS.forEach(id=>{
     const el=document.getElementById(id);
@@ -380,7 +381,7 @@ const TUTORIAL_STEPS=[
   {icon:'👋',title:'Start a chat',body:'Tap the message icon in the sidebar to start a new conversation with anyone by their number.'},
   {icon:'👥',title:'Groups',body:'Create a group to chat with several people at once — you can even import members from a CSV file.'},
   {icon:'🎙️',title:'Voice & calls',body:'Call a contact directly, or join a group voice channel to hang out with friends live.'},
-  {icon:'🔒',title:'Your security',body:'Set up two-factor authentication, face recognition, or security questions any time in Settings.'},
+  {icon:'🔒',title:'Your security',body:'Set up a passkey, two-factor authentication, or security questions any time in Settings.'},
   {icon:'🚀',title:'You\'re all set!',body:'That\'s the basics — enjoy SoCloudyBro!'}
 ];
 let _tutorialStepIdx=0;
@@ -481,8 +482,8 @@ async function saveSecurityQuestions(){
   if(q1Key==='custom'&&q1Text==='custom'){ err.textContent='Type your first question.'; return; }
   if(q2Key==='custom'&&q2Text==='custom'){ err.textContent='Type your second question.'; return; }
   try{
-    const hash1=await hashPasswordV2(normalizeSecAnswer(a1));
-    const hash2=await hashPasswordV2(normalizeSecAnswer(a2));
+    const hash1=await hashPasswordV3(normalizeSecAnswer(a1));
+    const hash2=await hashPasswordV3(normalizeSecAnswer(a2));
     const users=await getUsers();
     const u=users.find(x=>x.number===me.number);
     const secQuestions=[{q:q1Text,hash:hash1},{q:q2Text,hash:hash2}];
@@ -587,7 +588,7 @@ async function recoverSubmitStep(){
       const users=await getUsers();
       const u=users.find(x=>x.number===_recoverState.number);
       if(u){
-        u.pwd=await hashPasswordV2(newPwd);
+        u.pwd=await hashPasswordV3(newPwd);
         // An admin reset can ask for a new password (adminResetAccount's second
         // checkbox). Setting one is what satisfies that, whichever route they
         // took to get here, so clear the flag in the same write.
@@ -628,371 +629,40 @@ function onToggleTotpClick(){
   }
 }
 
-// -- FACE RECOGNITION MFA ---------------------------------------------------
-// Client-side only, via face-api.js (TensorFlow.js underneath) — no server,
-// no API keys. What's actually stored is a 128-number face descriptor (a
-// mathematical summary of facial geometry used for comparison), never a photo.
-// Mutually exclusive with TOTP for simplicity: enabling one is meant as an
-// alternative to the other, per "as an MFA option if you don't have Google
-// Authenticator" — not a second method stacked on top of TOTP.
-// Face recognition — uses face-api.js (lazy-loaded).
-// Stores an averaged 128-D descriptor (not a photo) from 5 enrollment frames.
-// Auto-captures on enrollment when face is stable; auto-verifies on login when
-// 2 consecutive frames match below the distance threshold.
-const FACE_MATCH_THRESHOLD=0.42;
-const FACE_ENROLL_SAMPLES=5;
-const FACE_MODEL_URL='https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
-let _faceApiModelsLoaded=false;
-async function _ensureFaceApi(){
-  if(typeof faceapi!=='undefined') return;
-  await new Promise((resolve,reject)=>{
-    const s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
-    s.onload=resolve;
-    s.onerror=()=>reject(new Error('Face detection library failed to load. Check your connection.'));
-    document.head.appendChild(s);
-  });
-}
-async function loadFaceApiModels(){
-  if(_faceApiModelsLoaded) return;
-  await _ensureFaceApi();
-  await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
-    faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
-  ]);
-  _faceApiModelsLoaded=true;
-}
-function _avgDescriptors(descriptors){
-  const len=descriptors[0].length, avg=new Float32Array(len);
-  for(const d of descriptors) for(let i=0;i<len;i++) avg[i]+=d[i]/descriptors.length;
-  return avg;
-}
-// HUD-style scanner reticle: a soft glow fill, a dashed ring that slowly
-// marches around while searching (lineDashOffset driven off the clock) and
-// snaps to a solid glowing green ring plus four corner brackets once a face
-// is actually locked on — replaces the original plain oval + bounding box.
-// Also toggles .face-ok on the shared .face-scan-wrap wrapper (see its CSS)
-// so the ambient scan-line animation pauses the moment a face is found,
-// instead of still sweeping across a face that's already locked on.
-function _drawFaceOverlay(canvas, video, detection){
-  const W=canvas.offsetWidth||canvas.width, H=canvas.offsetHeight||canvas.height;
-  canvas.width=W; canvas.height=H;
-  const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,W,H);
-  const wrap=canvas.parentElement;
-  if(wrap) wrap.classList.toggle('face-ok',!!detection);
-  const cx=W/2, cy=H/2, rx=W*0.28, ry=H*0.4;
-  const locked=!!detection;
-  const accent=locked?'#22c55e':'#7B74F0';
-  // Soft radial glow behind the guide
-  const grad=ctx.createRadialGradient(cx,cy,Math.min(rx,ry)*0.3,cx,cy,Math.max(rx,ry)*1.15);
-  grad.addColorStop(0,locked?'rgba(34,197,94,0.16)':'rgba(123,116,240,0.12)');
-  grad.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=grad; ctx.beginPath(); ctx.ellipse(cx,cy,rx*1.3,ry*1.2,0,0,2*Math.PI); ctx.fill();
-  // Guide ring — dashed and slowly rotating while searching, solid once locked on
-  ctx.save();
-  ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,2*Math.PI);
-  ctx.strokeStyle=accent; ctx.lineWidth=locked?3:2;
-  if(!locked){ ctx.setLineDash([10,8]); ctx.lineDashOffset=-(Date.now()/40)%18; }
-  ctx.shadowColor=accent; ctx.shadowBlur=locked?16:8;
-  ctx.stroke();
-  ctx.restore();
-  // Viewfinder corner brackets around the guide's bounding box
-  const bx=cx-rx, by=cy-ry, bw=rx*2, bh=ry*2, cl=Math.min(bw,bh)*0.22;
-  ctx.strokeStyle=accent; ctx.lineWidth=3; ctx.lineCap='round';
-  ctx.shadowColor=accent; ctx.shadowBlur=locked?10:4;
-  [[bx,by,1,1],[bx+bw,by,-1,1],[bx,by+bh,1,-1],[bx+bw,by+bh,-1,-1]].forEach(([x,y,dx,dy])=>{
-    ctx.beginPath();
-    ctx.moveTo(x,y+cl*dy);
-    ctx.lineTo(x,y);
-    ctx.lineTo(x+cl*dx,y);
-    ctx.stroke();
-  });
-  ctx.shadowBlur=0;
-}
-// Briefly flashes the ✅ success overlay over a given video's .face-scan-wrap
-// (see its CSS) and resolves after the animation has had time to play, so a
-// caller can `await` it before tearing down the camera/closing the modal
-// instead of the flash never actually being visible.
-function _showFaceScanSuccess(videoId,holdMs){
-  return new Promise(resolve=>{
-    const video=document.getElementById(videoId);
-    const flash=video&&video.parentElement&&video.parentElement.querySelector('.face-scan-success');
-    if(!flash){ resolve(); return; }
-    flash.classList.remove('show'); void flash.offsetWidth; flash.classList.add('show');
-    setTimeout(resolve,holdMs||550);
-  });
-}
-function onToggleFaceMfaClick(){
+// -- FACE SIGN-IN RETIRED --------------------------------------------------
+// Accounts that used face recognition get a notice pointing them to passkeys,
+// until they add one or dismiss it.
+function checkFaceRemovalNotice(){
   if(!me) return;
-  if(me.faceMfaEnabled){
-    if(confirm('Turn off face recognition MFA?')) disableFaceMfa();
-  } else {
-    startFaceEnrollment();
-  }
+  const u=(usersCache||[]).find(x=>x.number===me.number);
+  if(!u||!u.faceMfaEnabled){ _removeBannerRow('face-removed-banner'); return; }
+  const bar=_bannerRow('face-removed-banner');
+  bar.textContent='';
+  bar.style.background='#4C46C4';
+  const text=document.createElement('span');
+  text.className='tbr-text';
+  text.textContent='Face sign-in has been removed. Add a passkey to keep using your face or fingerprint on this device.';
+  const add=document.createElement('button');
+  add.className='tbr-btn tbr-btn-action';
+  add.style.color='#4C46C4';
+  add.textContent='Add passkey';
+  add.onclick=registerPasskey;
+  const close=document.createElement('button');
+  close.className='tbr-dismiss';
+  close.textContent='✕';
+  close.setAttribute('aria-label','Dismiss');
+  close.onclick=dismissFaceRemovalNotice;
+  bar.append(text,add,close);
+  _updateBannerStackHeight();
 }
-// ── Enrollment ────────────────────────────────────────────────────────────────
-let _faceEnrollStream=null, _faceEnrollLoopTimer=null, _faceEnrollAutoActive=false;
-async function startFaceEnrollment(){
-  // The privacy policy limits face data to adults.
-  if(isMinorAccount()){ showToast('18 or older only','Face sign-in is only available to accounts aged 18 or older.'); return; }
-  // Show the consent view first; camera does not start until the user clicks I Agree
-  _faceEnrollAutoActive=false;
-  const consentView=document.getElementById('face-enroll-consent-view');
-  const scanView=document.getElementById('face-enroll-scan-view');
-  if(consentView) consentView.style.display='';
-  if(scanView) scanView.style.display='none';
-  openModal('face-mfa-setup-modal');
-}
-async function acceptFaceEnrollmentConsent(){
-  const consentView=document.getElementById('face-enroll-consent-view');
-  const scanView=document.getElementById('face-enroll-scan-view');
-  if(consentView) consentView.style.display='none';
-  if(scanView) scanView.style.display='';
-  const statusEl=document.getElementById('face-enroll-status');
-  const errEl=document.getElementById('face-enroll-error');
-  errEl.textContent='';
-  statusEl.textContent='⏳ Loading face detection models…';
-  try{
-    await loadFaceApiModels();
-    _faceEnrollStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
-    const video=document.getElementById('face-enroll-video');
-    video.srcObject=_faceEnrollStream;
-    await new Promise(r=>{ video.onloadedmetadata=r; });
-    statusEl.textContent='🔍 Center your face in the oval — capture starts automatically.';
-    _startEnrollLoop();
-  }catch(e){
-    errEl.textContent=scbErr('SCB-SEC-03','The camera or face-recognition model couldn\'t start.',(e.message||'could not start.'));
-    statusEl.textContent='';
-  }
-}
-let _enrollStableCount=0;
-function _startEnrollLoop(){
-  _enrollStableCount=0;
-  const video=document.getElementById('face-enroll-video');
-  const canvas=document.getElementById('face-enroll-canvas');
-  const statusEl=document.getElementById('face-enroll-status');
-  async function tick(){
-    if(!_faceEnrollStream||_faceEnrollAutoActive) return;
-    try{
-      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-      if(canvas) _drawFaceOverlay(canvas,video,det);
-      if(det){
-        _enrollStableCount++;
-        statusEl.classList.add('active');
-        if(_enrollStableCount<4){ statusEl.textContent='🎯 Face locked — hold still…'; }
-        else{
-          statusEl.textContent='✨ Capturing…';
-          _faceEnrollAutoActive=true;
-          _runEnrollCapture(video,statusEl);
-          return;
-        }
-      } else {
-        _enrollStableCount=0;
-        statusEl.classList.remove('active');
-        statusEl.textContent='🔍 Center your face in the oval — capture starts automatically.';
-      }
-    }catch(e){}
-    _faceEnrollLoopTimer=setTimeout(tick,350);
-  }
-  tick();
-}
-async function _runEnrollCapture(video,statusEl){
-  const errEl=document.getElementById('face-enroll-error');
-  const btn=document.getElementById('face-enroll-btn');
-  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Capturing…';
-  const samples=[];
-  for(let i=0;i<FACE_ENROLL_SAMPLES;i++){
-    await new Promise(r=>setTimeout(r,280));
-    try{
-      const d=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-      if(d) samples.push(d.descriptor);
-    }catch(e){}
-  }
-  if(samples.length<3){
-    btn.disabled=false; btn.textContent='Capture My Face ↗'; _faceEnrollAutoActive=false;
-    errEl.textContent=scbErr('SCB-SEC-04','Too few clear frames — ensure good lighting and try again.');
-    statusEl.classList.remove('active');
-    statusEl.textContent='🔍 Center your face in the oval.';
-    _faceEnrollLoopTimer=setTimeout(()=>_startEnrollLoop(),800);
-    return;
-  }
-  await _saveEnrollDescriptor(_avgDescriptors(samples));
-  btn.disabled=false; btn.textContent='Capture My Face ↗';
-}
-async function _saveEnrollDescriptor(avgDesc){
-  const errEl=document.getElementById('face-enroll-error');
-  try{
-    const descArr=Array.from(avgDesc);
-    const users=await getUsers();
-    const u=users.find(x=>x.number===me.number);
-    if(u){ u.faceDescriptor=descArr; u.faceMfaEnabled=true; u.totpEnabled=false; u.totpSecret=''; }
-    await saveUsers(users);
-    me.faceDescriptor=descArr; me.faceMfaEnabled=true; me.totpEnabled=false; saveStorage();
-    const statusEl2=document.getElementById('face-enroll-status');
-    if(statusEl2){ statusEl2.textContent='Face captured!'; statusEl2.classList.add('success'); }
-    await _showFaceScanSuccess('face-enroll-video');
-    if(_faceEnrollStream){ _faceEnrollStream.getTracks().forEach(t=>t.stop()); _faceEnrollStream=null; }
-    if(_faceEnrollLoopTimer){ clearTimeout(_faceEnrollLoopTimer); _faceEnrollLoopTimer=null; }
-    closeModal('face-mfa-setup-modal'); updateFaceMfaStatusUI(); updateTotpStatusUI();
-    showToast('Face recognition enabled','This is now your login verification method.');
-  }catch(e){
-    errEl.textContent=scbErr('SCB-SEC-05','Couldn\'t save face data — try again.',(e.message||''));
-    _faceEnrollAutoActive=false;
-    _faceEnrollLoopTimer=setTimeout(()=>_startEnrollLoop(),800);
-  }
-}
-// Manual capture fallback (button still works)
-async function captureFaceEnrollment(){
-  if(_faceEnrollAutoActive) return;
-  if(_faceEnrollLoopTimer){ clearTimeout(_faceEnrollLoopTimer); _faceEnrollLoopTimer=null; }
-  _faceEnrollAutoActive=true;
-  const errEl=document.getElementById('face-enroll-error');
-  const statusEl=document.getElementById('face-enroll-status');
-  const btn=document.getElementById('face-enroll-btn');
-  errEl.textContent=''; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  try{
-    const video=document.getElementById('face-enroll-video');
-    const samples=[];
-    for(let i=0;i<FACE_ENROLL_SAMPLES;i++){
-      const d=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-      if(d) samples.push(d.descriptor);
-      await new Promise(r=>setTimeout(r,280));
-    }
-    if(!samples.length){ errEl.textContent=scbErr('SCB-SEC-04','No face detected — make sure your face is clearly visible.'); _faceEnrollAutoActive=false; _startEnrollLoop(); return; }
-    statusEl.textContent='✨ Saving…';
-    await _saveEnrollDescriptor(_avgDescriptors(samples));
-  }catch(e){
-    errEl.textContent=scbErr('SCB-SEC-05','Couldn\'t capture your face.',(e.message||''));
-    _faceEnrollAutoActive=false; _startEnrollLoop();
-  }finally{ btn.disabled=false; btn.textContent='Capture My Face ↗'; }
-}
-function cancelFaceEnrollment(){
-  if(_faceEnrollStream){ _faceEnrollStream.getTracks().forEach(t=>t.stop()); _faceEnrollStream=null; }
-  if(_faceEnrollLoopTimer){ clearTimeout(_faceEnrollLoopTimer); _faceEnrollLoopTimer=null; }
-  _faceEnrollAutoActive=false;
-  closeModal('face-mfa-setup-modal');
-}
-async function disableFaceMfa(){
-  try{
-    const users=await getUsers();
-    const u=users.find(x=>x.number===me.number);
-    if(u){ u.faceMfaEnabled=false; u.faceDescriptor=null; }
-    await saveUsers(users);
-    me.faceMfaEnabled=false; me.faceDescriptor=null; saveStorage();
-    updateFaceMfaStatusUI();
-    showToast('Face recognition disabled','');
-  }catch(e){ showToast('Failed',scbErr('SCB-SEC-06','Face recognition couldn\'t be turned off — the server rejected the change.',(e.message||''))); }
-}
-function updateFaceMfaStatusUI(){
-  const sub=document.getElementById('face-mfa-status-text');
-  const btn=document.getElementById('face-mfa-btn-text');
-  if(!sub||!btn) return;
-  if(me&&me.faceMfaEnabled){ sub.textContent='On — verify with your camera at login'; btn.textContent='Disable'; }
-  else{ sub.textContent='Off — an alternative to an authenticator app, using your camera'; btn.textContent='Enable'; }
-}
-// ── Login ─────────────────────────────────────────────────────────────────────
-let _faceLoginStream=null, _faceLoginLoopTimer=null, _faceLoginAutoVerifying=false;
-async function startFaceLoginView(){
-  document.getElementById('login-face-error').textContent='';
-  const statusEl=document.getElementById('login-face-status');
-  if(statusEl){ statusEl.classList.remove('active','success'); statusEl.textContent='⏳ Starting camera…'; }
-  _faceLoginAutoVerifying=false;
-  try{
-    await loadFaceApiModels();
-    _faceLoginStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
-    const video=document.getElementById('login-face-video');
-    video.srcObject=_faceLoginStream;
-    await new Promise(r=>{ video.onloadedmetadata=r; });
-    if(statusEl) statusEl.textContent='🔍 Center your face in frame…';
-    _startLoginLoop();
-  }catch(e){
-    document.getElementById('login-face-error').textContent=scbErr('SCB-AUTH-02','The camera or face-recognition model couldn\'t start.',(e.message||'could not start.'));
-    if(statusEl) statusEl.textContent='';
-  }
-}
-let _loginMatchCount=0;
-function _startLoginLoop(){
-  _loginMatchCount=0;
-  const video=document.getElementById('login-face-video');
-  const canvas=document.getElementById('login-face-canvas');
-  const statusEl=document.getElementById('login-face-status');
-  async function tick(){
-    if(!_faceLoginStream||_faceLoginAutoVerifying) return;
-    if(!pending2fa) return;
-    try{
-      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-      if(canvas) _drawFaceOverlay(canvas,video,det);
-      if(det&&pending2fa.user.faceDescriptor){
-        const dist=faceapi.euclideanDistance(Array.from(det.descriptor),pending2fa.user.faceDescriptor);
-        if(dist<FACE_MATCH_THRESHOLD){
-          _loginMatchCount++;
-          if(statusEl){ statusEl.classList.add('active'); statusEl.textContent='🎯 Face matched — verifying…'; }
-          if(_loginMatchCount>=2){
-            _faceLoginAutoVerifying=true;
-            await _finishFaceLogin(det.descriptor);
-            return;
-          }
-        } else { _loginMatchCount=0; if(statusEl){ statusEl.classList.add('active'); statusEl.textContent='🎯 Face detected — hold still…'; } }
-      } else { _loginMatchCount=0; if(statusEl){ statusEl.classList.remove('active'); statusEl.textContent='🔍 Center your face in frame…'; } }
-    }catch(e){}
-    _faceLoginLoopTimer=setTimeout(tick,400);
-  }
-  tick();
-}
-// Releases the login-face-view camera and resets back to a clean login
-// screen — same effect the view's own Cancel button already had inline
-// (closeModal + reload; reload is what actually frees the camera here), now
-// factored out so the global Escape-key handler can reach it too instead of
-// leaving _faceLoginStream running with no visible UI to stop it from.
-function cancelFaceLoginView(){
-  if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
-  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
-  closeModal('setup-modal');
-  location.reload();
-}
-async function _finishFaceLogin(descriptor){
-  const btn=document.getElementById('login-face-btn');
-  const statusEl=document.getElementById('login-face-status');
-  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  if(statusEl){ statusEl.classList.remove('active'); statusEl.classList.add('success'); statusEl.textContent='✅ Verified!'; }
-  try{
-    await _showFaceScanSuccess('login-face-video',400);
-    if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
-    if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
-    // The Worker recomputes the same faceapi.euclideanDistance() check
-    // against the account's stored descriptor before minting anything — the
-    // raw descriptor array is sent, never just a client-side "it matched".
-    _loginRawPwd=null; _loginGoogleCredential=null; _loginPasskeyProof=null; _loginBackupPinProof=null;
-    _loginFaceDescriptorProof=Array.from(descriptor);
-    await finishLogin(pending2fa.user, pending2fa.pwdToStore);
-    pending2fa=null;
-  }catch(e){
-    document.getElementById('login-face-error').textContent=scbErr('SCB-AUTH-07','Face login couldn\'t be completed.',e.message);
-    _faceLoginAutoVerifying=false; _startLoginLoop();
-  }finally{ btn.disabled=false; btn.textContent='Verify with Face ↗'; }
-}
-// Manual verify fallback
-async function submitFaceLogin(){
-  const err=document.getElementById('login-face-error'); err.textContent='';
-  if(!pending2fa){ err.textContent=scbErr('SCB-AUTH-03','Session expired — log in again.'); return; }
-  if(_faceLoginAutoVerifying) return;
-  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
-  _faceLoginAutoVerifying=true;
-  const btn=document.getElementById('login-face-btn'); btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  try{
-    const video=document.getElementById('login-face-video');
-    const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-    if(!det){ err.textContent=scbErr('SCB-AUTH-04','No face detected — try again.'); _faceLoginAutoVerifying=false; _startLoginLoop(); return; }
-    const stored=pending2fa.user.faceDescriptor;
-    if(!stored||!stored.length){ err.textContent=scbErr('SCB-AUTH-05','No face on file for this account.'); return; }
-    const distance=faceapi.euclideanDistance(Array.from(det.descriptor),stored);
-    if(distance>FACE_MATCH_THRESHOLD){ err.textContent=scbErr('SCB-AUTH-06','Face didn\'t match — try in better lighting.'); _faceLoginAutoVerifying=false; _startLoginLoop(); return; }
-    await _finishFaceLogin(det.descriptor);
-  }catch(e){ err.textContent=scbErr('SCB-AUTH-07','Face login couldn\'t be completed.',e.message); _faceLoginAutoVerifying=false; _startLoginLoop(); }
-  finally{ btn.disabled=false; btn.textContent='Verify with Face ↗'; }
-}
-function openTotpSetup(){
+async function dismissFaceRemovalNotice(){
+  _removeBannerRow('face-removed-banner');
+  const u=me&&(usersCache||[]).find(x=>x.number===me.number);
+  if(!u||!u.faceMfaEnabled) return;
+  delete u.faceMfaEnabled;
+  try{ await fbdb.ref(USERS_BIN+'/'+me.number+'/faceMfaEnabled').remove(); }
+  catch(e){ console.warn('Could not clear the face sign-in notice',e); }
+}function openTotpSetup(){
   _pendingTotpSecret=generateTotpSecret();
   document.getElementById('totp-secret-display').value=_pendingTotpSecret;
   document.getElementById('totp-confirm-code').value='';
@@ -1014,11 +684,10 @@ async function confirmTotpSetup(){
   try{
     const users=await getUsers();
     const u=users.find(x=>x.number===me.number);
-    if(u){ u.totpSecret=_pendingTotpSecret; u.totpEnabled=true; u.faceMfaEnabled=false; u.faceDescriptor=null; }
+    if(u){ u.totpSecret=_pendingTotpSecret; u.totpEnabled=true; }
     await saveUsers(users);
-    me.totpEnabled=true; me.faceMfaEnabled=false; saveStorage();
+    me.totpEnabled=true; saveStorage();
     updateTotpStatusUI();
-    updateFaceMfaStatusUI();
     closeModal('totp-setup-modal');
     showToast('2FA enabled','You will be asked for a code on future logins.');
   }catch(e){ err.textContent=scbErr('SCB-SEC-09','Two-factor authentication couldn\'t be enabled — the server rejected the update.',e.message); }
@@ -1158,25 +827,30 @@ async function submitLogin() {
     _loginGoogleCredential = null;
     // Mint the real custom auth token right here, as soon as the password is
     // confirmed valid — NOT only at the end via finishLogin(). The branches
-    // below (no email on file, 2FA, face MFA) can all return early before
+    // below (no email on file, 2FA) can all return early before
     // finishLogin() ever runs, and the "no email on file" branch in
     // particular writes to this user's own record (submitLoginSetEmail())
     // while still on the plain anonymous session if this isn't done first —
     // the users/$uid rule's self-write branch needs auth.token.number to
     // already equal this account's number, which only a minted token
     // provides. finishLogin() still calls this again at the very end for
-    // every OTHER login path (face/passkey/backup-PIN) that reaches it
+    // every OTHER login path (such as passkeys) that reaches it
     // directly; re-running it here for password logins is a harmless no-op
     // if it already succeeded.
-    await _tryUpgradeToCustomAuth(user.number, {password:pwd});
-    // Transparently upgrade any pre-PBKDF2 hash (unsalted legacy, or the
-    // older single-round salted-SHA-256 format) to the new PBKDF2 format —
-    // registerOrUpdate()'s next save (part of the normal launch() flow)
-    // persists me.pwd back to Firebase, so this reaches the server without
-    // a dedicated write here. No forced reset, no user-visible change.
+    const serverVerified = await _tryUpgradeToCustomAuth(user.number, {password:pwd});
     let pwdToStore = user.pwd || '';
-    if(pwdToStore.indexOf('v2$')!==0){ pwdToStore = await hashPasswordV2(pwd); }
-
+    if(pwdToStore.indexOf('v3$')!==0){
+      pwdToStore = await hashPasswordV3(pwd);
+      // Move an older hash on the account record to the current format. Only
+      // after the server accepted the password: the write needs that session.
+      if(serverVerified && user.pwd){
+        try{
+          await fbdb.ref(USERS_BIN+'/'+user.number+'/pwd').set(pwdToStore);
+          user.pwd = pwdToStore;
+          await fbdb.ref(USERS_PRIVATE+'/'+user.number+'/pwd').set(pwdToStore);
+        }catch(e){ console.warn('Password hash upgrade failed (non-fatal):',e.message); }
+      }
+    }
     // Risk-based login challenge: an unfamiliar country for an account with
     // established history requires explicit confirmation before continuing,
     // and forces 2FA even on an otherwise-trusted device (see below).
@@ -1203,10 +877,6 @@ async function submitLogin() {
       document.getElementById('login-2fa-code').value = '';
       document.getElementById('login-2fa-error').textContent = '';
       showAuthView('login-2fa-view');
-    } else if(user.faceMfaEnabled && user.faceDescriptor){
-      pending2fa = { user, pwdToStore };
-      showAuthView('login-face-view');
-      await startFaceLoginView();
     } else {
       await finishLogin(user, pwdToStore);
     }
@@ -1239,10 +909,6 @@ async function submitLoginSetEmail(){
       document.getElementById('login-2fa-code').value = '';
       document.getElementById('login-2fa-error').textContent = '';
       showAuthView('login-2fa-view');
-    } else if(user.faceMfaEnabled && user.faceDescriptor){
-      pending2fa = { user, pwdToStore };
-      showAuthView('login-face-view');
-      await startFaceLoginView();
     } else {
       await finishLogin(user, pwdToStore);
     }
@@ -1285,15 +951,8 @@ async function submit2faCode(){
 async function finishLogin(user, pwdToStore){
   resetLocalSessionState();
   me = { name: dec(user.name), email: user.email||'', number: user.number, bio: dec(user.bio||''), pwd: pwdToStore, avatar: user.avatar||'', blocked: user.blocked||[], blockedCalls: user.blockedCalls||[], blockedMessages: user.blockedMessages||[], totpEnabled: !!user.totpEnabled, shadowMuted: !!user.shadowMuted, selfDestructMonths: user.selfDestructMonths||0,
-    // Account-recovery/alternate-sign-in state: secQuestions/faceMfaEnabled/
-    // faceDescriptor/backupPinHash all live on the server record and were
-    // never copied onto `me` here (only totpEnabled was) — so the Settings
-    // panel, which reads these straight off `me.*`, showed "Not set" for
-    // all of them on every fresh login, even with real data saved server-
-    // side the whole time. Same fix pattern as totpEnabled right above.
-    secQuestions: user.secQuestions||null, faceMfaEnabled: !!user.faceMfaEnabled,
-    faceDescriptor: user.faceDescriptor||null, backupPinHash: user.backupPinHash||null,
-    // createdAt + emailVerified drive the email-verification gate in launch()
+    // Recovery state lives on the server record; Settings reads it off `me`.
+    secQuestions: user.secQuestions||null,    // createdAt + emailVerified drive the email-verification gate in launch()
     // (needsEmailVerification()) — without copying them onto `me` here, that
     // check would only ever work right after signUp() (which sets them
     // directly), never after an ordinary login.
@@ -1315,28 +974,19 @@ async function finishLogin(user, pwdToStore){
     // until the first registerOrUpdate() poll completes after launch, so a
     // delegated admin's admin button/tabs would flash hidden then appear.
     adminAccess: user.adminAccess||null, selectedBadge: user.selectedBadge||null, lastLockoutAt: user.lastLockoutAt||null };
-  // Exactly one of these five is set by whichever login path just
-  // succeeded (password, Google, passkey, face, or backup-PIN) — each gets
-  // its own server-verifiable proof now, see MINT_TOKEN_ENDPOINT's comment.
-  // Checked in this order only because password is set closest to this
-  // point in the common case; a login only ever has one set at a time.
+  // Whichever login path just succeeded (password, Google or passkey) has its
+  // own server-verifiable proof, see MINT_TOKEN_ENDPOINT's comment. Password is
+  // checked first; a login only ever has one set at a time.
   try{
     let _upgraded=false;
     if(_loginRawPwd) _upgraded=await _tryUpgradeToCustomAuth(me.number, {password:_loginRawPwd});
     else if(_loginGoogleCredential) _upgraded=await _tryUpgradeToCustomAuth(me.number, {googleCredential:_loginGoogleCredential});
     else if(_loginPasskeyProof) _upgraded=await _tryUpgradeToCustomAuth(me.number, {passkeyAssertion:_loginPasskeyProof});
-    else if(_loginFaceDescriptorProof) _upgraded=await _tryUpgradeToCustomAuth(me.number, {faceDescriptor:_loginFaceDescriptorProof});
-    else if(_loginBackupPinProof) _upgraded=await _tryUpgradeToCustomAuth(me.number, {backupPin:_loginBackupPinProof});
+
     if(!_upgraded) showToast('Session notice','Could not fully verify your session. Some features may be limited. Try logging out and back in.',7000);
   }catch(e){}
-  // Unlike _loginBackupPinProof (kept alive for the rest of the session, same
-  // as _loginRawPwd/_loginGoogleCredential, because ensureE2EKeypair() below
-  // and at various later points still needs it to restore/sync the E2E key —
-  // see the e2eEncP slot), the passkey assertion and face descriptor have no
-  // further use after this one mint-token call, so clearing them immediately
-  // just avoids holding onto a used WebAuthn assertion / biometric sample
-  // longer than needed.
-  _loginPasskeyProof=null; _loginFaceDescriptorProof=null;
+  // A passkey assertion works once, so drop it straight away.
+  _loginPasskeyProof=null;
   saveStorage();
   // Save account to multi-account list
   try{ _saveAccountToAccounts(me); }catch(e){}
@@ -1400,7 +1050,7 @@ async function registerPasskey(){
       rp:{name:'SoCloudyBro'},
       user:{id:new TextEncoder().encode(String(me.number)), name: me.email||('#'+me.number), displayName: me.name||('#'+me.number)},
       pubKeyCredParams:[{type:'public-key',alg:-7}], // ES256
-      authenticatorSelection:{userVerification:'preferred'},
+      authenticatorSelection:{userVerification:'required'},
       timeout:60000,
     }});
     if(!cred) return;
@@ -1413,6 +1063,7 @@ async function registerPasskey(){
     await fbdb.ref(USERS_BIN+'/'+me.number+'/passkeys').set(list);
     await _logSecurityEvent('passkey_added','New passkey registered on this device').catch(()=>{});
     showToast('Passkey added','You can now sign in with this device\'s passkey.');
+    dismissFaceRemovalNotice();
     renderSecurityPasskeysList();
   }catch(e){ showToast('Couldn\'t add passkey', e.message||'Try again.'); }
 }
@@ -1452,11 +1103,9 @@ async function _verifyPasskeyAssertion(assertion, storedEntry, expectedChallenge
   const rawSig=_derToRawEcdsaSig(resp.signature);
   return crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},pubKey,rawSig,signedData.buffer);
 }
-// Shared core for both the main login screen's passkey link and the
-// face-verification fallback below — given an already-resolved user (and
-// the password value finishLogin() expects for them), runs the WebAuthn
-// challenge/verify and completes sign-in. errElId is whichever error
-// element is visible in the caller's current view.
+// Given an already-resolved user (and the password value finishLogin() expects
+// for them), runs the WebAuthn challenge/verify and completes sign-in. errElId
+// is the error element visible in the caller's view.
 async function _attemptPasskeyLogin(user,pwdToStore,errElId){
   const err=document.getElementById(errElId); if(err) err.textContent='';
   if(!passkeysSupported()){ showToast('Not supported','Passkeys aren\'t supported in this browser or device.'); return; }
@@ -1474,7 +1123,7 @@ async function _attemptPasskeyLogin(user,pwdToStore,errElId){
     const assertion=await navigator.credentials.get({publicKey:{
       challenge:challengeBytes,
       allowCredentials:passkeys.map(p=>({type:'public-key',id:_unb64url(p.id)})),
-      userVerification:'preferred',
+      userVerification:'required',
       timeout:60000,
     }});
     if(!assertion){ if(err) err.textContent=scbErr('SCB-AUTH-20','Passkey sign-in was cancelled.'); return; }
@@ -1488,7 +1137,7 @@ async function _attemptPasskeyLogin(user,pwdToStore,errElId){
     // Hand the Worker everything it needs to independently re-verify this
     // exact assertion, plus the challengeToken proving the challenge was
     // freshly issued by the Worker itself (prevents replay attacks).
-    _loginRawPwd=null; _loginGoogleCredential=null; _loginFaceDescriptorProof=null; _loginBackupPinProof=null;
+    _loginRawPwd=null; _loginGoogleCredential=null;
     _loginPasskeyProof={
       credentialId:_b64url(assertion.rawId),
       clientDataJSON:_b64(assertion.response.clientDataJSON),
@@ -1516,19 +1165,6 @@ async function loginWithPasskey(){
   if(!user){ if(err) err.textContent=scbErr('SCB-AUTH-18','No account found for that login.'); return; }
   await _attemptPasskeyLogin(user,user.pwd,'login-error');
 }
-// Fallback for the face-verification screen: devices without a working
-// camera (none at all, permission denied, or faceapi/model load failure)
-// previously had no way past this screen except Cancel -> reload -> land
-// right back on it, since face was the only 2FA method on the account.
-// A passkey (Face/Touch ID, a security key, or the device's own PIN) needs
-// no camera, so it's offered as a real way through instead of a dead end.
-async function useFaceViewPasskeyFallback(){
-  if(!pending2fa){ return; }
-  if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
-  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
-  await _attemptPasskeyLogin(pending2fa.user,pending2fa.pwdToStore,'login-face-error');
-}
-
 // -- LOCK SCREEN ---------------------------------------------------------------
 function showLockScreen(){
   document.getElementById('lock-screen').classList.add('visible');
@@ -1606,7 +1242,7 @@ async function submitChangePassword(){
     // than changing one, so skip the current-password check for it only.
     const ok=!me.pwd || await verifyPassword(cur,me.pwd);
     if(!ok){ err.textContent='Current password is incorrect.'; return; }
-    const hashed=await hashPasswordV2(nw);
+    const hashed=await hashPasswordV3(nw);
     await fbdb.ref('users/'+me.number).update({pwd:hashed});
     // Await the USERS_PRIVATE write — the Worker reads this node to verify the
     // password on login. Fire-and-forget here creates a race: a login attempt
@@ -1703,13 +1339,11 @@ async function performScheduledAccountDeletion(){
       googleSub:null,googleEmail:'',linkedSyntaxAccount:null,linkedSyntaxAccountName:''
     };
     await saveUsers(users);
-    // Erase biometric (face descriptor) data from the private node.
-    // users_private/<number>/faceDescriptor is not covered by the public user
-    // record wipe above, so we must remove it explicitly to honour the privacy
-    // policy commitment that face data is destroyed on account deletion.
+    // The record above doesn't cover the private node, which may still hold
+    // face data or a backup PIN saved by an older version of the app.
     try{
-      if(fbdb) await fbdb.ref(USERS_PRIVATE+'/'+me.number+'/faceDescriptor').remove();
-    }catch(faceErr){ console.error('performScheduledAccountDeletion: could not remove faceDescriptor:',faceErr); }
+      if(fbdb) await fbdb.ref(USERS_PRIVATE+'/'+me.number).update({faceDescriptor:null,backupPinHash:null});
+    }catch(e){ console.error('performScheduledAccountDeletion: could not clear private data:',e); }
   }catch(e){ console.error('performScheduledAccountDeletion failed:',e); }
   clearLocalSessionPreservingE2EKeys();
   location.reload();
@@ -1760,7 +1394,7 @@ function togglePwd(inputId,btn){
 }
 function pinNav(el,idx,ctx){
   if(!/^\d$/.test(el.value)){el.value='';return;}
-  const rows={lock:'lock-pin-row',set:'pin-input-row',chat:'chat-lock-overlay',delete:'delete-pin-row',backupset:'backup-pin-input-row',backuplogin:'login-backup-pin-row'};
+  const rows={lock:'lock-pin-row',set:'pin-input-row',chat:'chat-lock-overlay',delete:'delete-pin-row'};
   const row=document.getElementById(rows[ctx]);
   const inputs=row?row.querySelectorAll('.pin-digit'):[];
   if(idx<3&&inputs[idx+1]) inputs[idx+1].focus();
@@ -1770,8 +1404,7 @@ function pinNav(el,idx,ctx){
     else if(ctx==='set') handleSetPin(pin,inputs);
     else if(ctx==='chat') checkChatLockPin(pin,inputs);
     else if(ctx==='delete') confirmAccountDeletion(pin,inputs);
-    else if(ctx==='backupset') handleSetBackupPin(pin,inputs);
-    else if(ctx==='backuplogin') checkLoginBackupPin(pin,inputs);
+
   }
 }
 function checkLockPin(pin,inputs){
@@ -1831,34 +1464,36 @@ async function hashPassword(p,existingSalt){
   const hex=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   return salt+'$'+hex;
 }
-// PBKDF2-SHA256, 210000 iterations (OWASP's current minimum recommendation
-// for PBKDF2-HMAC-SHA256) — a single unsalted/lightly-salted SHA-256 round
-// (hashPassword() above) is fast enough that an offline attacker with a
-// leaked hash can brute-force it at billions of guesses/second on commodity
-// GPU hardware; PBKDF2's deliberate per-guess cost is the actual point of a
-// password hash, which plain SHA-256 was never designed to provide. Format
-// is "v2$<iterations>$<saltB64>$<hashHex>" — the iteration count travels
-// WITH the hash specifically so it can be raised later for new hashes
-// without invalidating ones already stored at a lower count. Every new
-// credential (signup, password change, new backup PIN, new security
-// answers) goes through this; verifyPassword() below still verifies old
-// hashPassword()-format hashes, and callers transparently re-hash through
-// this function the next time that secret is successfully verified (see
-// submitLogin()'s "Transparently upgrade legacy weak hashes" step) — no
-// forced resets, no user-visible change, just upgrades in place over time.
-const PBKDF2_ITERATIONS=210000;
-async function hashPasswordV2(p,existingSaltB64,iterations){
-  iterations=iterations||PBKDF2_ITERATIONS;
-  const saltBytes=existingSaltB64?new Uint8Array(_unb64(existingSaltB64)):crypto.getRandomValues(new Uint8Array(16));
-  const saltB64=existingSaltB64||_b64(saltBytes.buffer);
+// PBKDF2-SHA256. New credentials (sign-up, password change, security answers,
+// parental PIN) use "v3$<iterations>$<saltB64>$<sha256 of the derived key>".
+// The slow part runs on this device and the Worker only compares the SHA-256:
+// Cloudflare refuses more than 100000 iterations and limits processing time.
+// The iteration count travels with the hash so it can be raised later.
+const PBKDF2_ITERATIONS=600000;
+const PBKDF2_MAX_ITERATIONS=2000000;
+async function _pbkdf2Hex(p,saltBytes,iterations){
   const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(p),{name:'PBKDF2'},false,['deriveBits']);
   const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:saltBytes,iterations,hash:'SHA-256'},key,256);
-  const hex=Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
-  return 'v2$'+iterations+'$'+saltB64+'$'+hex;
+  return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-async function verifyPassword(p,stored){
+// The derived key for a v3 hash: what the Worker is sent in place of the secret.
+// Refuses a weaker setting than this app saves.
+async function stretchSecret(p,{salt,iterations}){
+  if(!(iterations>=PBKDF2_ITERATIONS&&iterations<=PBKDF2_MAX_ITERATIONS)) throw new Error('Unexpected password hashing settings');
+  return _pbkdf2Hex(p,new Uint8Array(_unb64(salt)),iterations);
+}
+async function hashPasswordV3(p,existingSaltB64,iterations){
+  iterations=iterations||PBKDF2_ITERATIONS;
+  const salt=existingSaltB64||_b64(crypto.getRandomValues(new Uint8Array(16)).buffer);
+  const derived=await stretchSecret(p,{salt,iterations});
+  return 'v3$'+iterations+'$'+salt+'$'+await _sha256Hex(derived);
+}
+// Older format, kept only so hashes already saved can still be checked.
+async function hashPasswordV2(p,saltB64,iterations){
+  return 'v2$'+iterations+'$'+saltB64+'$'+await _pbkdf2Hex(p,new Uint8Array(_unb64(saltB64)),iterations);
+}async function verifyPassword(p,stored){
   // Fail CLOSED, not open: every caller (login, change-password's "current
-  // password" check, recovery security answers, backup PIN, parental PIN/
+  // password" check, recovery security answers, parental PIN/
   // password) is verifying a secret that's supposed to already be set. A
   // missing/empty `stored` means that secret was never configured, which
   // must never be treated as "any input matches" — that previously let
@@ -1866,12 +1501,11 @@ async function verifyPassword(p,stored){
   // password" on any account whose `me.pwd` was empty (e.g. reachable via
   // Google sign-in's pwdToStore=user.pwd||'').
   if(!stored) return false;
-  if(stored.indexOf('v2$')===0){
-    const parts=stored.split('$');
-    const iterations=parseInt(parts[1],10);
-    const salt=parts[2];
-    const recomputed=await hashPasswordV2(p,salt,iterations);
-    return recomputed===stored;
+  if(stored.indexOf('v3$')===0||stored.indexOf('v2$')===0){
+    const [version,iterations,salt]=stored.split('$');
+    const rehash=version==='v3'?hashPasswordV3:hashPasswordV2;
+    try{ return (await rehash(p,salt,parseInt(iterations,10)))===stored; }
+    catch(e){ console.warn('Stored password hash could not be checked:',e.message); return false; }
   }
   if(stored.indexOf('$')>-1){
     const salt=stored.split('$')[0];
@@ -1915,153 +1549,21 @@ function handleSetPin(pin,inputs){
 function confirmPin(){const r=document.getElementById('pin-input-row');const inputs=r.querySelectorAll('.pin-digit');const pin=Array.from(inputs).map(i=>i.value).join('');if(pin.length<4){document.getElementById('pin-error').textContent=scbErr('SCB-SEC-18','Enter all 4 digits.');return;}handleSetPin(pin,inputs);}
 function removePin(){if(confirm('Remove PIN protection?')){localStorage.removeItem('cc_pin');closeModal('pin-modal');document.getElementById('pin-status-text').textContent='Not set';document.getElementById('pin-btn-text').textContent='Set PIN';showToast('PIN removed','Your account is no longer PIN-protected.');}}
 
-// -- BACKUP PIN ------------------------------------------------------------
-// A server-stored (hashed) account-level PIN, distinct from the local-only
-// "PIN Lock" above: that one lives in localStorage and only re-gates an
-// already-signed-in session on THIS device, so it can't help someone stuck
-// at face verification on a different device, or this one with storage
-// cleared. This PIN is a real alternative sign-in method alongside
-// TOTP/face/passkey — specifically so face-only MFA can never be a true
-// dead end for someone without a camera or a passkey on hand.
-let _backupPinPhase=null,_backupPinTemp=null;
-function openBackupPinSetup(){
-  if(!me) return;
-  const has=!!me.backupPinHash;
-  document.getElementById('backup-pin-modal-title').textContent=has?'Change Backup PIN':'Set Backup PIN';
-  document.getElementById('backup-pin-modal-desc').textContent=has?'Enter your new 4-digit backup PIN.':'Choose a 4-digit PIN you can use to sign in if your camera or passkey aren\'t available.';
-  document.getElementById('backup-pin-remove-btn').style.display=has?'inline-flex':'none';
-  document.getElementById('backup-pin-error').textContent='';
-  _backupPinPhase='set1';_backupPinTemp=null;
-  clearPinInputs(document.getElementById('backup-pin-input-row').querySelectorAll('.pin-digit'));
-  openModal('backup-pin-modal');
-}
-async function handleSetBackupPin(pin,inputs){
-  if(_backupPinPhase==='set1'){
-    _backupPinTemp=pin;_backupPinPhase='set2';
-    document.getElementById('backup-pin-modal-desc').textContent='Confirm your backup PIN.';
-    clearPinInputs(inputs);inputs[0].focus();
-    return;
-  }
-  if(pin!==_backupPinTemp){
-    document.getElementById('backup-pin-error').textContent=scbErr('SCB-SEC-19','PINs do not match. Try again.');
-    _backupPinPhase='set1';_backupPinTemp=null;
-    clearPinInputs(inputs);inputs[0].focus();
-    return;
-  }
-  try{
-    const hash=await hashPasswordV2(pin);
-    const users=await getUsers();
-    const u=users.find(x=>x.number===me.number);
-    if(u){ u.backupPinHash=hash; await saveUsers(users); }
-    me.backupPinHash=hash; saveStorage();
-    closeModal('backup-pin-modal');
-    renderBackupPinStatus();
-    if(typeof checkSecuritySetupNudge==='function') checkSecuritySetupNudge();
-    showToast('Backup PIN set','You can use this to sign in if your camera or passkey aren\'t available.');
-    await _logSecurityEvent('backup_pin_set','A backup sign-in PIN was set').catch(()=>{});
-  }catch(e){
-    document.getElementById('backup-pin-error').textContent=scbErr('SCB-SEC-20','Backup PIN couldn\'t be saved.',e.message);
-  }
-}
-async function removeBackupPin(){
-  if(!me||!confirm('Remove your backup PIN? You won\'t be able to use it to sign in anymore.')) return;
-  try{
-    const users=await getUsers();
-    const u=users.find(x=>x.number===me.number);
-    if(u){ u.backupPinHash=null; await saveUsers(users); }
-    me.backupPinHash=null; saveStorage();
-    closeModal('backup-pin-modal');
-    renderBackupPinStatus();
-    if(typeof checkSecuritySetupNudge==='function') checkSecuritySetupNudge();
-    showToast('Backup PIN removed','');
-    await _logSecurityEvent('backup_pin_removed','The backup sign-in PIN was removed').catch(()=>{});
-  }catch(e){ showToast('Failed','Could not remove the backup PIN.'); }
-}
-function renderBackupPinStatus(){
-  const statusEl=document.getElementById('backup-pin-status-text');
-  const btnEl=document.getElementById('backup-pin-btn-text');
-  if(!statusEl||!btnEl||!me) return;
-  const has=!!me.backupPinHash;
-  statusEl.textContent=has?'Backup PIN is set':'Not set';
-  btnEl.textContent=has?'Change':'Set PIN';
-}
-// Login-time entry, reached from the face-login screen's fallback link.
-function showLoginBackupPinView(){
-  if(!pending2fa) return;
-  if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
-  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
-  showAuthView('login-backup-pin-view');
-  document.getElementById('login-backup-pin-error').textContent='';
-  clearPinInputs(document.getElementById('login-backup-pin-row').querySelectorAll('.pin-digit'));
-}
-async function checkLoginBackupPin(pin,inputs){
-  const err=document.getElementById('login-backup-pin-error'); err.textContent='';
-  if(!pending2fa){ err.textContent=scbErr('SCB-AUTH-23','Session expired — log in again.'); return; }
-  const user=pending2fa.user;
-  if(!user.backupPinHash){
-    err.textContent=scbErr('SCB-AUTH-24','This account has no backup PIN set up. Log in normally, then add one in Settings → Security.');
-    clearPinInputs(inputs);
-    return;
-  }
-  const rlKey='backuppin_'+user.number;
-  const rl=_checkLoginRateLimit(rlKey);
-  if(rl&&rl.until>Date.now()){
-    err.textContent=scbErr('SCB-AUTH-25','Too many incorrect attempts. Try again in '+Math.ceil((rl.until-Date.now())/60000)+' minute(s).');
-    clearPinInputs(inputs);
-    return;
-  }
-  try{
-    const ok=await verifyPassword(pin,user.backupPinHash);
-    if(!ok){
-      _recordLoginFailure(rlKey);
-      err.textContent=scbErr('SCB-AUTH-26','Incorrect PIN.');
-      clearPinInputs(inputs);
-      return;
-    }
-    _clearLoginRateLimit(rlKey);
-    const u=pending2fa.user,p=pending2fa.pwdToStore;
-    pending2fa=null;
-    // Same salted-SHA-256 scheme/hash as the account password (see
-    // handleSetBackupPin) — the Worker verifies the PIN against
-    // backupPinHash the same way it verifies a password against pwd.
-    _loginRawPwd=null; _loginGoogleCredential=null; _loginPasskeyProof=null; _loginFaceDescriptorProof=null;
-    _loginBackupPinProof=pin;
-    await finishLogin(u,p);
-  }catch(e){
-    err.textContent=scbErr('SCB-AUTH-27','Backup PIN sign-in couldn\'t be completed.',e.message);
-    clearPinInputs(inputs);
-  }
-}
-// "Recover your account" from the face-login screen — same security-
-// questions reset flow as the main login screen's "Forgot password?",
-// just reachable without first backing all the way out to a blank form.
-function recoverFromFaceView(){
-  if(_faceLoginStream){ _faceLoginStream.getTracks().forEach(t=>t.stop()); _faceLoginStream=null; }
-  if(_faceLoginLoopTimer){ clearTimeout(_faceLoginLoopTimer); _faceLoginLoopTimer=null; }
-  pending2fa=null;
-  closeModal('setup-modal');
-  openRecoverAccount();
-}
-// A backup PIN or security questions are the only two ways back into an
-// account if face MFA is ever the only thing standing in the way on a
-// camera-less device with no passkey enrolled — so nudge accounts that
-// have NEITHER set up, without hard-blocking anything: a dismissible
-// banner (reusing the same compact top-banner-stack as everything else),
-// not a modal wall. Dismissing it only lasts the session — like the
-// forced-password-change prompt, it comes back next launch until it's
-// actually resolved.
+// Security questions are the way back in after a forgotten password, so nudge
+// accounts without them: a dismissible banner, not a modal wall. Dismissing it
+// only lasts the session.
 function checkSecuritySetupNudge(_afterTour){
   if(!me) return;
   if(!_afterTour && _tutorialBusy()){ _afterTutorial(function(){ checkSecuritySetupNudge(true); }); return; }
-  const hasBackupPin=!!me.backupPinHash;
   const hasSecQuestions=Array.isArray(me.secQuestions)&&me.secQuestions.length===2;
-  if(hasBackupPin||hasSecQuestions){ _removeBannerRow('security-setup-banner'); return; }
+  if(hasSecQuestions){ _removeBannerRow('security-setup-banner'); return; }
   try{ if(sessionStorage.getItem('cc_security_nudge_dismissed')==='1') return; }catch{}
   const bar=_bannerRow('security-setup-banner');
+  bar.textContent='';
   bar.style.background='#4C46C4';
   const _ssnTxt=document.createElement('span');
   _ssnTxt.className='tbr-text';
-  _ssnTxt.textContent='🔐 Add a backup PIN or security questions so you can never get locked out';
+  _ssnTxt.textContent='🔐 Add security questions so you can recover your account if you forget your password';
   const _ssnSetup=document.createElement('button');
   _ssnSetup.className='tbr-btn tbr-btn-action';
   _ssnSetup.style.color='#4C46C4';

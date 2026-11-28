@@ -149,7 +149,7 @@ async function openUserRecordModal(number){
     html+='<div style="color:var(--muted)">Email</div><div>'+esc(u.email||'—')+(u.emailVerified?' ✓':'')+'</div>';
     html+='<div style="color:var(--muted)">Joined</div><div>'+fmt(u.createdAt)+'</div>';
     html+='<div style="color:var(--muted)">Status</div><div>'+(u.banned?'<span style="color:var(--danger)">Banned</span> ':'')+(u.shadowMuted?'<span style="color:var(--warn)">Shadow-muted</span> ':'')+(u.verified?'Verified ':'')+(!u.banned&&!u.shadowMuted?'Active':'')+'</div>';
-    html+='<div style="color:var(--muted)">2FA</div><div>'+(u.totpEnabled?'Authenticator app':u.faceMfaEnabled?'Face MFA':'Off')+'</div>';
+    html+='<div style="color:var(--muted)">2FA</div><div>'+(u.totpEnabled?'Authenticator app':'Off')+'</div>';
     html+='<div style="color:var(--muted)">Parent email</div><div>'+esc(u.parentEmail||'—')+(u.parentalConsentStatus?' ('+esc(u.parentalConsentStatus)+')':'')+'</div>';
     html+='</div>';
 
@@ -486,8 +486,7 @@ const SCB_CANONICAL_RULES = {
     },
 
     "users_private": {
-      // Sensitive auth credentials — password hash, backup PIN hash, face
-      // descriptor. Readable only by the account owner (custom auth token with
+      // Sensitive auth credentials (password hash). Readable only by the account owner (custom auth token with
       // matching number claim) or the Worker's service-account token (which
       // bypasses client rules entirely). Writable by the owner and by new
       // account creation (anonymous !data.exists() — same pattern as users/$uid,
@@ -506,8 +505,8 @@ const SCB_CANONICAL_RULES = {
       // REST dumps. Message content is also E2E encrypted at the app layer.
       ".read": "auth != null",
       // Writes require a REAL authenticated session (a custom auth token from
-      // /mint-token — password, Google, passkey, face, or backup-PIN login all
-      // mint one now), not just the anonymous session every visitor gets for
+      // /mint-token — password, Google and passkey logins all
+      // mint one), not just the anonymous session every visitor gets for
       // free on page load.
       ".write": "auth != null && auth.token.firebase.sign_in_provider == 'custom'",
       "$convoId": {

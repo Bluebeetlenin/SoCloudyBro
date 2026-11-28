@@ -452,7 +452,7 @@ async function createChildProfile(){
     }catch(e){}
     const rec={
       number:num, name:name, bio:'', customStatus:'', avatar:'',
-      pwd:await hashPasswordV2(pwd), email:'', birthdate:bd, blocked:[], lastSeen:0,
+      pwd:await hashPasswordV3(pwd), email:'', birthdate:bd, blocked:[], lastSeen:0,
       createdAt:Date.now(), accountTier:deriveAccountTier(bd), childOf:me.number,
       // Child profiles start locked down; the parent opens things up deliberately.
       restrictions:{noDm:true, noCalls:true, noGroups:true, noVoice:true}
@@ -516,7 +516,7 @@ async function submitLinkParent(){
     const mine=users.find(u=>u&&u.number===me.number);
     if(!mine){ err.textContent=scbErr('SCB-FAM-24','Your account record wasn\'t found.'); return; }
     mine.linkedParent=pnum;
-    mine.parentalPin=await hashPasswordV2(pin);   // same PBKDF2 helper as passwords, separate field
+    mine.parentalPin=await hashPasswordV3(pin);   // same PBKDF2 helper as passwords, separate field
     await saveUsers(users);
     me.linkedParent=pnum;
     try{ saveStorage(); }catch(e){}

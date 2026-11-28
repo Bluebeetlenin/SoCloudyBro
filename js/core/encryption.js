@@ -114,9 +114,7 @@ const GOOGLE_VERIFY_ENDPOINT = 'https://socloudybro-google-verify.steveemil7.wor
 // safe to ship on its own. Covers password AND Google logins (the Worker
 // independently re-verifies whichever proof is sent — a password hash
 // comparison, or the Google ID token's signature — server-side; the
-// client's say-so alone is never enough). Passkey/face/backup-PIN logins
-// still run on the plain anonymous session until each gets its own proof
-// wired up the same way.
+// client's say-so alone is never enough).
 const MINT_TOKEN_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.workers.dev/mint-token';
 // Same Worker, two new routes for email verification via a one-time code
 // (see the Worker's own comment block for how the stateless challenge works).
@@ -126,22 +124,42 @@ const VERIFY_OTP_ENDPOINT = 'https://socloudybro-firebase-rules.steveemil7.worke
 // unreachable, bad credentials server-side somehow, timeout) this just
 // leaves the existing anonymous session in place exactly as before this
 // existed, so the worst case is "no upgrade happened," never "login broke."
-// `proof` is exactly one of {password}, {googleCredential}, {passkeyAssertion},
-// {faceDescriptor}, or {backupPin} — whichever the login path that just
-// succeeded actually has. The Worker independently re-verifies whichever one
-// is sent (password/PIN hash comparison, Google ID token signature, WebAuthn
-// assertion signature, or face-descriptor distance) server-side — the
-// client's say-so alone is never enough for any of them.
+// `proof` is exactly one of {password}, {googleCredential}, {passkeyAssertion}
+// or {secAnswers}, whichever the login path that just succeeded actually has.
+// The Worker independently re-verifies it server-side; the client's say-so
+// alone is never enough.
+const HASH_PARAMS_ENDPOINT = MINT_TOKEN_ENDPOINT.replace(/mint-token$/,'hash-params');
+// A password or security answer saved in the current format is stretched on
+// this device, so the server is sent the result and not what was typed. Returns
+// {proof}, or {status} when the server wouldn't say how it is saved.
+async function _prepareProof(number, proof, signal){
+  if(!proof.password && !proof.secAnswers) return {proof};
+  const res = await fetch(HASH_PARAMS_ENDPOINT, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({number}), signal,
+  });
+  if(!res.ok) return {status:res.status};
+  const params = await res.json();
+  const ready = {...proof};
+  if(ready.password && params.password) ready.password = await stretchSecret(ready.password, params.password);
+  if(ready.secAnswers && params.secAnswers){
+    ready.secAnswers = await Promise.all(ready.secAnswers.map((answer,i)=>
+      params.secAnswers[i] ? stretchSecret(normalizeSecAnswer(answer), params.secAnswers[i]) : answer));
+  }
+  return {proof:ready};
+}
 async function _tryUpgradeToCustomAuth(number, proof){
-  if(!number || !proof || !(proof.password||proof.googleCredential||proof.passkeyAssertion||proof.faceDescriptor||proof.backupPin||proof.secAnswers) || !MINT_TOKEN_ENDPOINT) return false;
+  if(!number || !proof || !(proof.password||proof.googleCredential||proof.passkeyAssertion||proof.secAnswers) || !MINT_TOKEN_ENDPOINT) return false;
   try{
     const ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
-    const timer = ctl ? setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 8000) : null;
+    const timer = ctl ? setTimeout(()=>{ try{ ctl.abort(); }catch(e){} }, 20000) : null;
     let res;
     try{
+      const prepared = await _prepareProof(number, proof, ctl?ctl.signal:undefined);
+      if(!prepared.proof) return false;
       res = await fetch(MINT_TOKEN_ENDPOINT, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({number, ...proof}),
+        body: JSON.stringify({number, ...prepared.proof}),
         ...(ctl?{signal:ctl.signal}:{}),
       });
     } finally { if(timer) clearTimeout(timer); }
@@ -162,11 +180,13 @@ async function _tryUpgradeToCustomAuth(number, proof){
 async function checkPasswordWithServer(number, password){
   if(!number || !password || !MINT_TOKEN_ENDPOINT) return 'unavailable';
   const ctl = new AbortController();
-  const timer = setTimeout(()=>ctl.abort(), 8000);
+  const timer = setTimeout(()=>ctl.abort(), 20000);
   try{
+    const prepared = await _prepareProof(number, {password}, ctl.signal);
+    if(!prepared.proof) return prepared.status===429 ? 'locked' : 'unavailable';
     const res = await fetch(MINT_TOKEN_ENDPOINT, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({number, password}), signal: ctl.signal,
+      body: JSON.stringify({number, ...prepared.proof}), signal: ctl.signal,
     });
     if(res.ok) return 'ok';
     if(res.status===401) return 'wrong';
@@ -256,7 +276,7 @@ async function _submitStaleSessionUpgrade(){
 
 // Realtime Database paths (each holds the same JSON blob that used to live in a JSONBin bin)
 const USERS_BIN     = 'users';
-const USERS_PRIVATE = 'users_private'; // pwd / backupPinHash / faceDescriptor — not publicly readable
+const USERS_PRIVATE = 'users_private'; // pwd — not publicly readable
 const CONVOS_BIN    = 'conversations';
 const UPDATES_BIN = 'updates';
 // Web3Forms submissions are proxied through the Cloudflare Worker's /report
@@ -463,18 +483,6 @@ async function _syncE2EKeyToCloudSlot(rawSecret, number, privJwk, slot, field){
 }
 function _syncE2EKeyToCloud(rawPassword, number, privJwk){ return _syncE2EKeyToCloudSlot(rawPassword,number,privJwk,'pwd','e2eEnc'); }
 function _syncE2EKeyToCloudGoogle(googleSub, number, privJwk){ return _syncE2EKeyToCloudSlot(googleSub,number,privJwk,'google','e2eEncG'); }
-// Third slot (field e2eEncP), same scheme as the two above — wrapped with a
-// key derived from the backup PIN, so a device that only ever signs in with
-// the backup PIN (no password, no Google link) can still restore the
-// account's real E2E key instead of silently minting its own. Passkey and
-// face logins have no equivalent: there's no portable secret to derive a
-// wrap key from (a passkey's private key never leaves its device/OS
-// keychain, and a face descriptor isn't stable between scans), so a brand
-// new device signing in only that way still can't self-restore — it still
-// gets the canonical-pubkey mismatch repair below if THIS device previously
-// had a working key, just not a from-nothing cloud restore.
-function _syncE2EKeyToCloudBackupPin(backupPin, number, privJwk){ return _syncE2EKeyToCloudSlot(backupPin,number,privJwk,'pin','e2eEncP'); }
-
 // Fetch the encrypted ECDH private key from Firebase and restore it to localStorage.
 // Returns true if successfully restored, false otherwise.
 async function _restoreE2EKeyFromCloudSlot(rawSecret, number, slot, field){
@@ -501,7 +509,6 @@ async function _restoreE2EKeyFromCloudSlot(rawSecret, number, slot, field){
 }
 function _restoreE2EKeyFromCloud(rawPassword, number){ return _restoreE2EKeyFromCloudSlot(rawPassword,number,'pwd','e2eEnc'); }
 function _restoreE2EKeyFromCloudGoogle(googleSub, number){ return _restoreE2EKeyFromCloudSlot(googleSub,number,'google','e2eEncG'); }
-function _restoreE2EKeyFromCloudBackupPin(backupPin, number){ return _restoreE2EKeyFromCloudSlot(backupPin,number,'pin','e2eEncP'); }
 
 // Raw password available at login time — stored temporarily so ensureE2EKeypair
 // can sync/restore the cloud-backed key.
@@ -517,16 +524,11 @@ var _loginGoogleSub=null;
 // token for this login the same way _loginRawPwd does for password logins.
 // See MINT_TOKEN_ENDPOINT's comment.
 var _loginGoogleCredential=null;
-// Same purpose as _loginRawPwd/_loginGoogleCredential, for the three login
-// methods that previously had no server-verifiable proof at all (see
-// MINT_TOKEN_ENDPOINT's comment) — set right before finishLogin() by
-// whichever of passkey/face/backup-PIN login just succeeded, consumed once,
-// and nulled alongside the others so a stale proof from an earlier attempt
-// can never leak into a later login.
+// Same purpose as _loginRawPwd/_loginGoogleCredential, for passkey login: set
+// right before finishLogin(), used once and nulled. A passkey has no portable
+// secret to wrap the E2E key with, so a new device signing in only that way
+// can't restore the key from the cloud.
 var _loginPasskeyProof=null;
-var _loginFaceDescriptorProof=null;
-var _loginBackupPinProof=null;
-
 async function ensureE2EKeypair(){
   if(_myKeyPair) return _myKeyPair;
   if(!window.crypto||!crypto.subtle||!me) return null;
@@ -555,14 +557,6 @@ async function ensureE2EKeypair(){
         _retryFailedDecryptions();
       }
     }
-    if((!stored||!storedPub)&&_loginBackupPinProof){
-      const restored=await _restoreE2EKeyFromCloudBackupPin(_loginBackupPinProof,me.number);
-      if(restored){
-        stored=localStorage.getItem('cc_e2e_priv_'+me.number);
-        storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
-        _retryFailedDecryptions();
-      }
-    }
     // Even when this device already has SOME local key, it may be a stale or
     // orphaned one — e.g. generated before cloud-restore worked at all (see
     // the Sept 25 fix to _restoreE2EKeyFromCloud), or from a device that was
@@ -575,14 +569,13 @@ async function ensureE2EKeypair(){
     // cloud-wrapped copy (kept in sync with the canonical key by
     // _syncE2EKeyToCloudSlot) if it doesn't, instead of silently using a
     // key nothing else on the account agrees with.
-    if(stored&&storedPub&&(_loginRawPwd||googleSub||_loginBackupPinProof)){
+    if(stored&&storedPub&&(_loginRawPwd||googleSub)){
       try{
         const pubSnap=await fbdb.ref(USERS_BIN+'/'+me.number+'/pubkey').once('value');
         const canonicalPub=pubSnap.val();
         if(canonicalPub&&canonicalPub!==storedPub){
           let fixed=_loginRawPwd&&await _restoreE2EKeyFromCloud(_loginRawPwd,me.number);
           if(!fixed&&googleSub) fixed=await _restoreE2EKeyFromCloudGoogle(googleSub,me.number);
-          if(!fixed&&_loginBackupPinProof) fixed=await _restoreE2EKeyFromCloudBackupPin(_loginBackupPinProof,me.number);
           if(fixed){
             stored=localStorage.getItem('cc_e2e_priv_'+me.number);
             storedPub=localStorage.getItem('cc_e2e_pub_'+me.number);
@@ -600,11 +593,10 @@ async function ensureE2EKeypair(){
       // Opportunistically sync to cloud (both slots, whichever secrets are
       // available) if not yet done this session — covers both a fresh key
       // and backfilling the other slot for an account linked after the fact.
-      if((_loginRawPwd||googleSub||_loginBackupPinProof)&&!sessionStorage.getItem('e2e_synced_'+me.number)){
+      if((_loginRawPwd||googleSub)&&!sessionStorage.getItem('e2e_synced_'+me.number)){
         sessionStorage.setItem('e2e_synced_'+me.number,'1');
         if(_loginRawPwd) _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
         if(googleSub) _syncE2EKeyToCloudGoogle(googleSub,me.number,privJwk);
-        if(_loginBackupPinProof) _syncE2EKeyToCloudBackupPin(_loginBackupPinProof,me.number,privJwk);
       }
       return _myKeyPair;
     }
@@ -616,11 +608,10 @@ async function ensureE2EKeypair(){
     _myKeyPair=kp;
     _myPubJwk=JSON.stringify(pubJwk);
     // Sync new key to cloud for future devices (all slots, whichever secrets are available)
-    if(_loginRawPwd||googleSub||_loginBackupPinProof){
+    if(_loginRawPwd||googleSub){
       sessionStorage.setItem('e2e_synced_'+me.number,'1');
       if(_loginRawPwd) _syncE2EKeyToCloud(_loginRawPwd,me.number,privJwk);
       if(googleSub) _syncE2EKeyToCloudGoogle(googleSub,me.number,privJwk);
-      if(_loginBackupPinProof) _syncE2EKeyToCloudBackupPin(_loginBackupPinProof,me.number,privJwk);
     }
     return _myKeyPair;
   }catch(e){ _myKeyPair=null; return null; }

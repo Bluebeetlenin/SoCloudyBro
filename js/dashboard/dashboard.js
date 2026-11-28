@@ -261,7 +261,7 @@ async function confirmDeleteAccount(){
 }
 
 // -- SETTINGS / UPDATES --------------------------------------------------------
-function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();renderSecurityPasskeysList();renderTrustedDevicesList();renderBackupPinStatus();try{const t=localStorage.getItem('cc_settings_tab')||'profile';switchSettingsTab(t);}catch(e){}}
+function showSettings(){hideAll();document.getElementById('settings-panel').classList.add('visible');updateSettingsPanel();updateSettingsBgSelection();_initPrivacyToggles();renderSecurityScore();renderSecurityPasskeysList();renderTrustedDevicesList();try{const t=localStorage.getItem('cc_settings_tab')||'profile';switchSettingsTab(t);}catch(e){}}
 function switchSettingsTab(tab){
   const all=document.querySelectorAll('[data-settings-tab]');
   all.forEach(s=>{s.style.display=s.getAttribute('data-settings-tab')===tab?'':'none';});

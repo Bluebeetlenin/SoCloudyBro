@@ -400,6 +400,5 @@ body>a[href*="netlify.com"],body>[class*="netlify-badge"]{
 @keyframes cloudyTypingBlink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
 .cloudy-chip{background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:var(--r-pill);padding:5px 11px;font-size:12px;cursor:pointer;transition:background .15s}
 .cloudy-chip:hover{background:var(--surface2)}
-.chat-lock-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 

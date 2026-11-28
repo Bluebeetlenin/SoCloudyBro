@@ -721,9 +721,8 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
     // meaning this session never had it), never overwrites one a user
     // deliberately just changed this session (even to false/null).
     if(typeof me.secQuestions==='undefined') me.secQuestions=u.secQuestions||null;
-    if(typeof me.faceMfaEnabled==='undefined') me.faceMfaEnabled=!!u.faceMfaEnabled;
-    if(typeof me.faceDescriptor==='undefined') me.faceDescriptor=u.faceDescriptor||null;
-    if(typeof me.backupPinHash==='undefined') me.backupPinHash=u.backupPinHash||null;
+    // Retired sign-in data that an older session may still keep on this device.
+    delete me.faceMfaEnabled; delete me.faceDescriptor; delete me.backupPinHash;
     // Security-sensitive, admin-controlled — always take the server's current
     // value (never fall back to a locally-cached one, and never write it back
     // in `payload` below). Without this, hasPermission()/requirePermission()
@@ -862,9 +861,7 @@ async function registerOrUpdate(blockedOverride,blockedCallsOverride,blockedMess
   // public-node copy for backward compat during the migration window.
   {
     const priv={};
-    if(u.pwd)           priv.pwd           = u.pwd;
-    if(u.backupPinHash) priv.backupPinHash = u.backupPinHash;
-    if(u.faceDescriptor)priv.faceDescriptor= u.faceDescriptor;
+    if(u.pwd) priv.pwd = u.pwd;
     if(Object.keys(priv).length) fbdb.ref(USERS_PRIVATE+'/'+me.number).update(priv).catch(()=>{});
   }
   if(isNewDevice&&!sessionStorage.getItem('cc_new_device_notice_shown')){

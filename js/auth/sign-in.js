@@ -319,7 +319,7 @@ async function googleAuthenticate(identity){
         try{ await saveUsers(users); }catch(e){ console.warn('emailVerified backfill save failed',e); }
       }
       // Respect 2FA — Google sign-in is an alternative way in, not a bypass.
-      // Route through the same TOTP / face-MFA gates as the password login path.
+      // Route through the same two-factor gate as the password login path.
       const pwdToStore=user.pwd||'';
       // No password is ever entered on this path — this is the only secret
       // ensureE2EKeypair() has available to restore/sync this account's E2E
@@ -331,11 +331,6 @@ async function googleAuthenticate(identity){
         document.getElementById('login-2fa-code').value='';
         document.getElementById('login-2fa-error').textContent='';
         showAuthView('login-2fa-view');
-        return;
-      } else if(user.faceMfaEnabled && user.faceDescriptor){
-        pending2fa={user, pwdToStore};
-        showAuthView('login-face-view');
-        await startFaceLoginView();
         return;
       }
       await finishLogin(user, pwdToStore);

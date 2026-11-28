@@ -30,7 +30,7 @@ function renderNotifChoice(box,convo){
   });
 }
 // -- CHAT LOCK -----------------------------------------------------------------
-// Tracks which chat a pending unlock (PIN or Face) applies to. Set explicitly
+// Tracks which chat a pending PIN unlock applies to. Set explicitly
 // by every entry point into openChatLockOverlay() rather than assumed to be
 // activeConvo — opening a locked chat from the sidebar must NOT point
 // activeConvo at it until it's actually unlocked (see _origOpenChat), or a
@@ -41,9 +41,7 @@ let _chatLockTarget=null;
 function lockChatToggle(){
   if(!activeConvo) return;
   const key=activeConvo.key;
-  const hasPin=!!localStorage.getItem('cc_pin');
-  const hasFace=!!(me&&me.faceMfaEnabled&&me.faceDescriptor&&me.faceDescriptor.length);
-  if(!hasPin&&!hasFace){showToast('Set up a PIN or Face Recognition first',scbErr('SCB-SEC-19','Go to Settings → Security to set a PIN or enable Face Recognition.'));return;}
+  if(!localStorage.getItem('cc_pin')){showToast('Set up a PIN first',scbErr('SCB-SEC-19','Go to Settings → Security to set a PIN.'));return;}
   if(lockedChats[key]){
     // unlock flow — this chat is already the active/rendered one
     _chatLockTarget=activeConvo;
@@ -51,7 +49,7 @@ function lockChatToggle(){
   }else{
     lockedChats[key]=true;saveStorage();
     document.getElementById('lock-chat-btn').innerHTML="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/></svg>";
-    showToast('Chat locked','This chat is now protected — unlock with '+(hasPin&&hasFace?'your PIN or Face Recognition.':hasPin?'your PIN.':'Face Recognition.'));
+    showToast('Chat locked','This chat is now protected — unlock with your PIN.');
   }
 }
 function checkChatLockPin(pin,inputs){
@@ -77,124 +75,19 @@ function checkChatLockPin(pin,inputs){
   }
 }
 
-// -- CHAT LOCK: PIN + Face Recognition unlock methods ---------------------------
-// Whichever method(s) the account has set up are offered on the unlock screen —
-// PIN if cc_pin is set, Face if the account's login Face Recognition MFA is
-// enabled (reusing its already-enrolled faceDescriptor, not a separate enrollment).
+// The PIN is checked live: if it has been removed since the chat was locked,
+// say so instead of showing a keypad nothing can satisfy.
 function openChatLockOverlay(){
-  document.getElementById('chat-lock-error').textContent='';
   const hasPin=!!localStorage.getItem('cc_pin');
-  const hasFace=!!(me&&me.faceMfaEnabled&&me.faceDescriptor&&me.faceDescriptor.length);
-  // Both are re-checked live here, not remembered from whenever the chat was
-  // originally locked — if the only method that chat was locked with has
-  // since been removed (PIN cleared, Face MFA disabled), neither is
-  // available. Defaulting to the face pane in that case (the old
-  // `hasPin?'pin':'face'` always falls to 'face' when both are false) ran a
-  // detection loop against a descriptor that no longer exists — no match is
-  // possible, ever, with no indication anything was wrong. Show a real error
-  // instead of a hopeless camera view.
-  if(!hasPin&&!hasFace){
-    stopChatLockFaceCheck();
-    document.getElementById('chat-lock-method-tabs').style.display='none';
-    document.getElementById('chat-lock-pin-pane').style.display='none';
-    document.getElementById('chat-lock-face-pane').style.display='none';
-    document.getElementById('chat-lock-error').textContent=scbErr('SCB-SEC-24','This chat was locked with a PIN or Face Recognition that\'s no longer set up. Set one up again in Settings → Security to unlock it.');
-    openModal('chat-lock-overlay');
-    return;
-  }
-  const tabs=document.getElementById('chat-lock-method-tabs');
-  tabs.style.display=(hasPin&&hasFace)?'flex':'none';
-  switchChatLockMethod(hasPin?'pin':'face');
+  document.getElementById('chat-lock-pin-pane').style.display=hasPin?'block':'none';
+  document.getElementById('chat-lock-error').textContent=hasPin?'':scbErr('SCB-SEC-24','This chat was locked with a PIN that\'s no longer set up. Set one up again in Settings → Security to unlock it.');
+  clearPinInputs(document.querySelectorAll('#chat-lock-pin-pane .pin-digit'));
   openModal('chat-lock-overlay');
 }
-function switchChatLockMethod(method){
-  document.getElementById('chat-lock-error').textContent='';
-  const pinPane=document.getElementById('chat-lock-pin-pane'), facePane=document.getElementById('chat-lock-face-pane');
-  const pinTab=document.getElementById('chat-lock-tab-pin'), faceTab=document.getElementById('chat-lock-tab-face');
-  const desc=document.getElementById('chat-lock-desc');
-  if(method==='face'){
-    stopChatLockFaceCheck(); // in case a stale loop is still running
-    pinPane.style.display='none'; facePane.style.display='block';
-    pinTab.classList.remove('active'); faceTab.classList.add('active');
-    desc.textContent='Look at the camera to unlock this chat.';
-    startChatLockFaceCheck();
-  } else {
-    stopChatLockFaceCheck();
-    facePane.style.display='none'; pinPane.style.display='block';
-    faceTab.classList.remove('active'); pinTab.classList.add('active');
-    desc.textContent='Enter your PIN to unlock this chat.';
-    clearPinInputs(document.querySelectorAll('#chat-lock-pin-pane .pin-digit'));
-  }
-}
 function closeChatLockOverlay(){
-  stopChatLockFaceCheck();
   _chatLockTarget=null;
   closeModal('chat-lock-overlay');
 }
-let _chatLockFaceStream=null,_chatLockFaceLoopTimer=null,_chatLockFaceAutoVerifying=false,_chatLockMatchCount=0;
-async function startChatLockFaceCheck(){
-  const statusEl=document.getElementById('chat-lock-face-status');
-  const errEl=document.getElementById('chat-lock-error');
-  _chatLockFaceAutoVerifying=false; _chatLockMatchCount=0;
-  statusEl.classList.remove('active','success');
-  statusEl.textContent='⏳ Loading face detection…';
-  try{
-    await loadFaceApiModels();
-    _chatLockFaceStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
-    const video=document.getElementById('chat-lock-face-video');
-    video.srcObject=_chatLockFaceStream;
-    await new Promise(r=>{ video.onloadedmetadata=r; });
-    statusEl.textContent='🔍 Center your face in the frame…';
-    _chatLockFaceTick();
-  }catch(e){
-    errEl.textContent=scbErr('SCB-SEC-22','The camera or face-recognition model couldn\'t start.',(e.message||''));
-    statusEl.textContent='';
-  }
-}
-function _chatLockFaceTick(){
-  const video=document.getElementById('chat-lock-face-video');
-  const canvas=document.getElementById('chat-lock-face-canvas');
-  const statusEl=document.getElementById('chat-lock-face-status');
-  async function tick(){
-    if(!_chatLockFaceStream||_chatLockFaceAutoVerifying) return;
-    try{
-      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-      if(canvas) _drawFaceOverlay(canvas,video,det);
-      if(det&&me&&me.faceDescriptor){
-        const dist=faceapi.euclideanDistance(Array.from(det.descriptor),me.faceDescriptor);
-        if(dist<FACE_MATCH_THRESHOLD){
-          _chatLockMatchCount++;
-          if(statusEl){ statusEl.classList.add('active'); statusEl.textContent='🎯 Face matched — unlocking…'; }
-          if(_chatLockMatchCount>=2){ _chatLockFaceAutoVerifying=true; _finishChatLockFace(); return; }
-        } else { _chatLockMatchCount=0; if(statusEl){ statusEl.classList.add('active'); statusEl.textContent='🎯 Face detected — hold still…'; } }
-      } else { _chatLockMatchCount=0; if(statusEl){ statusEl.classList.remove('active'); statusEl.textContent='🔍 Center your face in the frame…'; } }
-    }catch(e){}
-    _chatLockFaceLoopTimer=setTimeout(tick,400);
-  }
-  tick();
-}
-function stopChatLockFaceCheck(){
-  if(_chatLockFaceStream){ _chatLockFaceStream.getTracks().forEach(t=>t.stop()); _chatLockFaceStream=null; }
-  if(_chatLockFaceLoopTimer){ clearTimeout(_chatLockFaceLoopTimer); _chatLockFaceLoopTimer=null; }
-  _chatLockFaceAutoVerifying=false;
-}
-async function _finishChatLockFace(){
-  const statusEl=document.getElementById('chat-lock-face-status');
-  if(statusEl){ statusEl.classList.remove('active'); statusEl.classList.add('success'); statusEl.textContent='✅ Verified!'; }
-  await _showFaceScanSuccess('chat-lock-face-video',400);
-  stopChatLockFaceCheck();
-  const target=_chatLockTarget;
-  if(target){
-    delete lockedChats[target.key]; saveStorage();
-    const btn=document.getElementById('lock-chat-btn');
-    if(btn) btn.innerHTML="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 9.9-1\"/></svg>";
-  }
-  _chatLockTarget=null;
-  closeModal('chat-lock-overlay');
-  showToast('Chat unlocked','');
-  if(target) openChat(target);
-}
-
 // -- AVATAR --------------------------------------------------------------------
 const PRESET_AVATARS=[
   // Gradient letter avatars
@@ -790,7 +683,7 @@ async function submitSetup(){
     // Hash the password locally (salted SHA-256) before storing -- never sent or stored in plaintext
     _loginRawPwd = pwd; // available for E2E cloud key sync during this session
     resetLocalSessionState();
-    me={name,email,number:num,bio,birthdate,pwd:await hashPasswordV2(pwd),avatar:tempSetupAvatar||'',createdAt:Date.now()};
+    me={name,email,number:num,bio,birthdate,pwd:await hashPasswordV3(pwd),avatar:tempSetupAvatar||'',createdAt:Date.now()};
     // Stamp the Google identity onto the brand-new account. `sub` is Google's
     // stable per-account subject id and is what every later sign-in matches on;
     // the email is stored only for display in Settings, never for matching,
@@ -872,7 +765,6 @@ function updateSettingsPanel(){
   document.getElementById('pin-status-text').textContent=hasPin?'PIN is set':'Not set';
   document.getElementById('pin-btn-text').textContent=hasPin?'Change PIN':'Set PIN';
   updateTotpStatusUI();
-  updateFaceMfaStatusUI();
   updateSecQStatusUI();
   updateDeleteAccountBanner();
   initNoiseSuppressPref();

@@ -260,10 +260,9 @@ async function submitAdminResetAccount(){
     // already handles: getDmAesKey() returns null and decryptConvoMessages()
     // marks bubbles textFailed instead of crashing.
     if(regenKeys) u.pubkey=null;
-    // --- two-factor/face sign-in: an admin-side rescue for a genuinely
-    // locked-out account (no camera, no passkey on hand, no backup PIN or
-    // security questions set up — the normal self-service fallbacks).
-    // secQuestions/backupPinHash are deliberately left untouched: they're
+    // --- two-factor sign-in: an admin-side rescue for a genuinely locked-out
+    // account (no passkey on hand and no security questions set up).
+    // secQuestions are deliberately left untouched: they're
     // the solution, not the lock, and clearing them would only strip a
     // working recovery option the account might still have. ------------------
     if(clearMfa){ u.totpEnabled=false; u.totpSecret=''; u.faceMfaEnabled=false; u.faceDescriptor=null; }
@@ -1364,7 +1363,6 @@ async function renderAdminOverviewTab(){
     const reportsStale=(reports||[]).filter(r=>r.status!=='resolved'&&r.time&&(now-r.time)>dayMs).length;
 
     const totpCount=users.filter(u=>u.totpEnabled).length;
-    const faceMfaCount=users.filter(u=>u.faceMfaEnabled).length;
     const secQCount=users.filter(u=>Array.isArray(u.secQuestions)&&u.secQuestions.length).length;
 
     const card=(label,value,sub,color)=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px">
@@ -1391,7 +1389,6 @@ async function renderAdminOverviewTab(){
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px">Security adoption</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px">
         ${card('2FA enabled',totpCount,totalUsers?Math.round(totpCount/totalUsers*100)+'% of users':'')}
-        ${card('Face MFA enabled',faceMfaCount,totalUsers?Math.round(faceMfaCount/totalUsers*100)+'% of users':'')}
         ${card('Security questions set',secQCount,totalUsers?Math.round(secQCount/totalUsers*100)+'% of users':'')}
         ${pendingDeletions?card('Pending deletions',pendingDeletions,'','var(--warn)'):''}
         ${pendingParental?card('Pending parental approval',pendingParental,'','var(--warn)'):''}

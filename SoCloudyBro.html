@@ -31,13 +31,9 @@
      than throwing. Note the "Now Playing" lookup further down does NOT depend on
      this file — it reads the Syntax database over plain REST. -->
 <script src="/js/syntax-account.js?v=d8e071e4ea"></script>
-<script>
-// face-api.js is loaded lazily from CDN only when face MFA is actually used.
-// Call _ensureFaceApi() before any faceapi.* access.
-</script>
 <link rel="stylesheet" href="/css/utilities.css?v=a9980ab703">
-<link rel="stylesheet" href="/css/base.css?v=e8de462aec">
-<link rel="stylesheet" href="/css/chat.css?v=5f82194a19">
+<link rel="stylesheet" href="/css/base.css?v=13698675ff">
+<link rel="stylesheet" href="/css/chat.css?v=b887b50210">
 <link rel="stylesheet" href="/css/modals.css?v=f2e1fb94cb">
 <link rel="stylesheet" href="/css/devices.css?v=abda2c31c6">
 <link rel="stylesheet" href="/css/theme.css?v=2c6754bc0c">
@@ -592,10 +588,6 @@ window.addEventListener('error',function _splashErrorGuard(e){
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" onclick="registerPasskey()">+ Add</button></div>
           </div>
           <div class="scb-u-66" id="scb-passkeys-list"></div>
-          <div class="settings-row scb-u-65" onclick="openBackupPinSetup()">
-            <div class="settings-row-main"><div class="settings-row-label">Backup PIN</div><div class="settings-row-sub" id="backup-pin-status-text">Not set</div></div>
-            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="backup-pin-btn-text">Set PIN</button></div>
-          </div>
           <div class="settings-row">
             <div class="settings-row-main"><div class="settings-row-label">Trusted Devices</div><div class="settings-row-sub">Devices that skip the 2FA code for 30 days after you check "Trust this device"</div></div>
           </div>
@@ -607,10 +599,6 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <div class="settings-row scb-u-65" onclick="onToggleTotpClick()">
             <div class="settings-row-main"><div class="settings-row-label">Two-Factor Authentication <span class="scb-u-67" id="totp-nudge-badge">Recommended</span></div><div class="settings-row-sub" id="totp-status-text">Off — use an authenticator app for an extra login step</div></div>
             <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="totp-btn-text">Enable</button></div>
-          </div>
-          <div class="settings-row scb-u-65" onclick="onToggleFaceMfaClick()">
-            <div class="settings-row-main"><div class="settings-row-label">Face Recognition (MFA)</div><div class="settings-row-sub" id="face-mfa-status-text">Off — an alternative to an authenticator app, using your camera</div></div>
-            <div class="settings-row-actions"><button class="btn btn-ghost btn-sm" id="face-mfa-btn-text">Enable</button></div>
           </div>
           <div class="settings-row scb-u-65" onclick="openSecurityQuestionsSetup()">
             <div class="settings-row-main"><div class="settings-row-label">Security Questions</div><div class="settings-row-sub" id="secq-status-text">Not set — the only way to recover your account if you forget your password</div></div>
@@ -1094,7 +1082,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 </div>
 <div id="pp-lang-en" class="pp-lang-section">
 
-      <p class="scb-u-116">Last updated: October 2026</p>
+      <p class="scb-u-116">Last updated: November 2026</p>
 
       <p>We wrote this policy to be readable, not to bury you in legal language. Here is exactly what SoCloudyBro collects, why, and what control you have over it. Short version: we collect only what we need to run the app, we never sell your data, and we never use it for advertising.</p>
 
@@ -1122,17 +1110,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <p><strong>GIF searches</strong> — When you search for GIFs, your search query is sent to the Giphy API. Giphy's own privacy policy governs how they handle that query.
       <br><em>Lawful basis: Legitimate interest — providing in-app GIF functionality.</em></p>
 
-      <h3 class="scb-u-117">4. Biometric Data (Face Recognition MFA)</h3>
-      <p>You may optionally enable Face MFA as a second login factor. When you do, your device's camera captures an image, and a 128-dimensional facial geometry descriptor is derived from it locally. This is a set of numbers representing facial measurements — not a photograph. The image itself is discarded immediately; only the descriptor is transmitted and stored.</p>
-      <ul class="scb-u-118">
-        <li><strong>Purpose:</strong> The descriptor is used exclusively to verify your identity at login. It is never used for surveillance, advertising, analytics, or any other purpose.</li>
-        <li><strong>Storage:</strong> Descriptors are stored encrypted in your private account data in Firebase. They are never stored in a photo or image format.</li>
-        <li><strong>No sharing:</strong> Face descriptors are never sold, licensed, disclosed, or shared with any third party for any purpose, including law enforcement, without a valid legal order.</li>
-        <li><strong>Retention and deletion:</strong> Your face descriptor is deleted within 30 days of you disabling Face MFA or deleting your account, whichever comes first. You can request immediate deletion at any time by disabling Face MFA in Settings or contacting an SCB admin in-app.</li>
-        <li><strong>Encryption at rest:</strong> Face descriptors are stored in Firebase Realtime Database, which encrypts all data at rest using AES-256 and in transit using TLS 1.2+.</li>
-        <li><strong>Consent:</strong> You must affirmatively opt in to Face MFA. Enrollment does not begin until you explicitly agree. You may withdraw consent and have your descriptor deleted at any time.</li>
-      </ul>
-      <p><em>Lawful basis: Explicit consent for processing biometric data (GDPR Article 9(2)(a)). This section also satisfies the Illinois Biometric Information Privacy Act (BIPA) disclosure requirements.</em></p>
+      <h3 class="scb-u-117">4. Face and Fingerprint Data</h3>
+      <p>SoCloudyBro no longer offers face recognition sign-in, and the app no longer collects or matches face data. Face descriptors saved while the feature was offered are no longer used and are due to be deleted. To ask for yours to be removed, contact an SCB admin. If you use a passkey, your face or fingerprint stays on your own device: we receive only a public key and signed confirmations.</p>
 
       <h3 class="scb-u-117">5. Cookies and Local Storage</h3>
       <p>SoCloudyBro does not use advertising cookies or third-party tracking cookies. We use <strong>localStorage</strong> (browser storage on your device) to remember your session state, preferences such as theme and notification settings, and other conveniences. This data lives only on your device — it is not transmitted to us or any third party. You can clear it at any time through your browser settings. Cloudflare Turnstile (our CAPTCHA provider) and Cloudflare's CDN may set cookies or read browser signals for bot protection and performance purposes.</p>
@@ -1153,7 +1132,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <ul class="scb-u-118">
         <li><strong>Account data</strong> (display name, SCB Number, bio, profile photo, birthday): kept for as long as your account is active, then deleted within 30 days of account deletion.</li>
         <li><strong>Messages:</strong> kept until you or the other party deletes them, or until your account is deleted.</li>
-        <li><strong>Face descriptor (biometric data):</strong> deleted within 30 days of Face MFA being disabled or account deletion.</li>
+        <li><strong>Face descriptor (biometric data):</strong> no longer collected; any saved earlier is due to be deleted (see Section 4).</li>
         <li><strong>Technical/usage metadata:</strong> kept for up to 90 days for operational purposes, then deleted.</li>
         <li><strong>Contact form data:</strong> retained only as long as needed to respond to your enquiry.</li>
       </ul>
@@ -1169,7 +1148,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <li>Request deletion of their child's account and all associated data at any time.</li>
         <li>Revoke consent, which will result in the account being deactivated.</li>
       </ul>
-      <p>We do not use children's data for advertising, profiling, or any purpose other than providing the messaging service. Biometric data (Face MFA) may only be enrolled by users 18 or older, or by a parent/guardian on behalf of a minor with explicit written consent.</p>
+      <p>We do not use children's data for advertising, profiling, or any purpose other than providing the messaging service.</p>
 
       <h3 class="scb-u-117">10. Your Rights</h3>
       <p>Depending on where you live, you have rights over your personal data. Here is what you can do:</p>
@@ -1177,10 +1156,10 @@ window.addEventListener('error',function _splashErrorGuard(e){
         <li><strong>Access:</strong> Ask us for a copy of the personal data we hold about you.</li>
         <li><strong>Portability:</strong> Receive your data in a structured, commonly used, machine-readable format (e.g., JSON).</li>
         <li><strong>Rectification:</strong> Correct any personal data that is inaccurate or incomplete. You can update your display name, bio, and profile photo directly in Settings.</li>
-        <li><strong>Erasure ("right to be forgotten"):</strong> Request deletion of your personal data. You can delete your account at any time from Settings &rarr; Delete Account, which removes your profile, messages, and all associated data including any biometric descriptor.</li>
+        <li><strong>Erasure ("right to be forgotten"):</strong> Request deletion of your personal data. You can delete your account at any time from Settings &rarr; Delete Account, which removes your profile, messages, and all associated data.</li>
         <li><strong>Restriction:</strong> Ask us to pause processing of your data while a dispute is resolved.</li>
         <li><strong>Objection:</strong> Object to processing based on our legitimate interest. We will stop unless we can show a compelling reason to continue.</li>
-        <li><strong>Withdraw consent:</strong> Where processing is based on consent (e.g., Face MFA, Google Sign-In), you may withdraw at any time without affecting the lawfulness of prior processing.</li>
+        <li><strong>Withdraw consent:</strong> Where processing is based on consent (e.g., Google Sign-In), you may withdraw at any time without affecting the lawfulness of prior processing.</li>
         <li><strong>Lodge a complaint:</strong> If you are in the EEA or UK, you have the right to lodge a complaint with your local data protection authority.</li>
       </ul>
       <p>To exercise any of these rights, reach out to an SCB admin directly in-app via the contact form or private message.</p>
@@ -1211,7 +1190,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <p>Have questions about this policy or want to exercise your rights? The best way to reach us is directly in-app — send a message to an SCB admin or use the Help &amp; Contact form in Settings. We aim to respond to all privacy requests within 30 days.</p>
     </div>
 <div id="pp-lang-es" class="pp-lang-section" hidden>
-<p class="scb-u-116">Última actualización: octubre de 2026</p>
+<p class="scb-u-116">Última actualización: noviembre de 2026</p>
 <p>Escribimos esta política para que sea legible, no para sepultarte en lenguaje legal. Aquí encontrarás exactamente qué recopila SoCloudyBro, por qué y qué control tienes sobre ello. Resumen: solo recopilamos lo necesario para operar la app, nunca vendemos tus datos ni los usamos para publicidad.</p>
 <h3 class="scb-u-117">1. Qué es SoCloudyBro</h3>
 <p>SoCloudyBro ("SCB", "nosotros") es una aplicación web de mensajería social. Te permite enviar mensajes privados, participar en servidores de grupo y realizar llamadas de voz y video con personas de confianza.</p>
@@ -1223,15 +1202,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>Datos técnicos</strong> — marcas de tiempo, estado en línea/desconectado y eventos de conexión.<br><em>Base legal: interés legítimo (Art. 6(1)(f)).</em></p>
 <p><strong>Formulario de contacto</strong> — nombre, correo y mensaje transmitidos a Web3Forms.<br><em>Base legal: consentimiento (Art. 6(1)(a)).</em></p>
 <p><strong>Búsquedas de GIFs</strong> — tu consulta se envía a la API de Giphy, sujeta a su propia política de privacidad.</p>
-<h3 class="scb-u-117">4. Datos biométricos (Face MFA)</h3>
-<p>Puedes activar opcionalmente el Face MFA. Se genera un descriptor facial de 128 dimensiones (no una fotografía) que se descarta inmediatamente; solo se transmite y almacena el descriptor.</p>
-<ul class="scb-u-118">
-<li><strong>Propósito:</strong> verificación de identidad en el inicio de sesión, exclusivamente.</li>
-<li><strong>Sin compartir:</strong> los descriptores nunca se venden ni comparten con terceros.</li>
-<li><strong>Retención:</strong> el descriptor se elimina en un plazo de 30 días tras desactivar el Face MFA o eliminar la cuenta.</li>
-<li><strong>Consentimiento:</strong> debes aceptar expresamente. Puedes retirar el consentimiento en cualquier momento desde Configuración.</li>
-</ul>
-<p><em>Base legal: consentimiento explícito para datos biométricos (Art. 9(2)(a) RGPD). Esta sección cumple los requisitos de la Ley de Privacidad de Información Biométrica de Illinois (BIPA).</em></p>
+<h3 class="scb-u-117">4. Datos faciales y de huella</h3>
+<p>SoCloudyBro ya no ofrece el inicio de sesión por reconocimiento facial y la aplicación ya no recopila ni compara datos faciales. Los descriptores guardados mientras existía la función ya no se usan y están pendientes de eliminación. Para pedir que se borre el tuyo, contacta con un administrador de SCB. Si usas una llave de acceso (passkey), tu rostro o huella permanece en tu dispositivo: solo recibimos una clave pública y confirmaciones firmadas.</p>
 <h3 class="scb-u-117">5. Cookies y almacenamiento local</h3>
 <p>No usamos cookies publicitarias ni de seguimiento de terceros. Usamos localStorage para recordar tu sesión y preferencias. Cloudflare Turnstile puede establecer cookies para protección contra bots.</p>
 <h3 class="scb-u-117">6. Procesadores externos</h3>
@@ -1247,13 +1219,13 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <ul class="scb-u-118">
 <li><strong>Datos de cuenta:</strong> mientras la cuenta esté activa; eliminados en 30 días tras su eliminación.</li>
 <li><strong>Mensajes:</strong> hasta que tú u otro participante los elimine, o hasta la eliminación de la cuenta.</li>
-<li><strong>Descriptor facial:</strong> eliminado en 30 días tras desactivar Face MFA o eliminar la cuenta.</li>
+<li><strong>Descriptor facial:</strong> ya no se recopila; los guardados anteriormente deben eliminarse (ver sección 4).</li>
 <li><strong>Metadatos técnicos:</strong> hasta 90 días con fines operativos.</li>
 </ul>
 <h3 class="scb-u-117">8. Transferencias internacionales</h3>
 <p>SoCloudyBro opera desde Estados Unidos. Si te encuentras en el EEE, Reino Unido o Suiza, tus datos pueden transferirse a EE. UU. mediante las Cláusulas Contractuales Tipo (CCT) de Google y Cloudflare.</p>
 <h3 class="scb-u-117">9. Menores y consentimiento parental (COPPA / RGPD-K)</h3>
-<p>Los usuarios deben tener al menos 13 años. Los usuarios de 13 a 17 años necesitan consentimiento parental verificado. Los padres y tutores pueden revisar y eliminar los datos de sus hijos contactando a un administrador de SCB en la app. Los datos biométricos están restringidos a mayores de 18 años o con consentimiento parental expreso.</p>
+<p>Los usuarios deben tener al menos 13 años. Los usuarios de 13 a 17 años necesitan consentimiento parental verificado. Los padres y tutores pueden revisar y eliminar los datos de sus hijos contactando a un administrador de SCB en la app.</p>
 <h3 class="scb-u-117">10. Tus derechos</h3>
 <ul class="scb-u-118">
 <li><strong>Acceso:</strong> solicita una copia de tus datos.</li>
@@ -1261,7 +1233,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>Rectificación:</strong> corrige datos inexactos desde Configuración.</li>
 <li><strong>Supresión:</strong> elimina tu cuenta desde Configuración → Eliminar cuenta.</li>
 <li><strong>Restricción y oposición:</strong> contáctanos a través de la app.</li>
-<li><strong>Retirar consentimiento:</strong> en cualquier momento para Face MFA o Google Sign-In.</li>
+<li><strong>Retirar consentimiento:</strong> en cualquier momento para Google Sign-In.</li>
 <li><strong>Reclamación:</strong> ante tu autoridad de protección de datos local (si estás en el EEE/Reino Unido).</li>
 </ul>
 <h3 class="scb-u-117">11. Notificación de brechas</h3>
@@ -1278,7 +1250,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p>¿Tienes preguntas o deseas ejercer tus derechos? Contáctanos directamente en la app enviando un mensaje a un administrador de SCB o usando el formulario de Ayuda y Contacto en Configuración.</p>
 </div>
 <div id="pp-lang-fr" class="pp-lang-section" hidden>
-<p class="scb-u-116">Dernière mise à jour : octobre 2026</p>
+<p class="scb-u-116">Dernière mise à jour : novembre 2026</p>
 <p>Nous avons rédigé cette politique pour qu'elle soit lisible, et non pour vous noyer dans du jargon juridique. Voici exactement ce que SoCloudyBro collecte, pourquoi, et le contrôle que vous avez sur ces données. En bref : nous ne collectons que le strict nécessaire, nous ne vendons jamais vos données et ne les utilisons pas à des fins publicitaires.</p>
 <h3 class="scb-u-117">1. Qu'est-ce que SoCloudyBro</h3>
 <p>SoCloudyBro (« SCB », « nous ») est une application web de messagerie sociale permettant d'envoyer des messages privés, de participer à des serveurs de groupe et de passer des appels vocaux et vidéo.</p>
@@ -1290,15 +1262,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>Données techniques</strong> — horodatages, statut en ligne/hors ligne et événements de connexion.<br><em>Base légale : intérêt légitime (Art. 6(1)(f)).</em></p>
 <p><strong>Formulaire de contact</strong> — nom, e-mail et message transmis à Web3Forms.<br><em>Base légale : consentement (Art. 6(1)(a)).</em></p>
 <p><strong>Recherches de GIFs</strong> — vos requêtes sont envoyées à l'API Giphy, régie par leur propre politique de confidentialité.</p>
-<h3 class="scb-u-117">4. Données biométriques (Face MFA)</h3>
-<p>Vous pouvez activer optionnellement le Face MFA. Un descripteur facial à 128 dimensions (pas une photo) est généré et transmis ; l'image est immédiatement supprimée.</p>
-<ul class="scb-u-118">
-<li><strong>Finalité :</strong> vérification d'identité lors de la connexion uniquement.</li>
-<li><strong>Pas de partage :</strong> les descripteurs ne sont jamais vendus ni partagés avec des tiers.</li>
-<li><strong>Conservation :</strong> le descripteur est supprimé dans les 30 jours suivant la désactivation du Face MFA ou la suppression du compte.</li>
-<li><strong>Consentement :</strong> vous devez donner votre accord explicite. Vous pouvez le retirer à tout moment dans les Paramètres.</li>
-</ul>
-<p><em>Base légale : consentement explicite pour les données biométriques (Art. 9(2)(a) RGPD). Cette section satisfait également aux exigences du BIPA (Illinois).</em></p>
+<h3 class="scb-u-117">4. Données du visage et empreintes</h3>
+<p>SoCloudyBro ne propose plus la connexion par reconnaissance faciale et l'application ne collecte ni ne compare plus de données faciales. Les descripteurs enregistrés lorsque la fonction existait ne sont plus utilisés et doivent être supprimés. Pour demander la suppression du vôtre, contactez un administrateur SCB. Avec une clé d'accès (passkey), votre visage ou votre empreinte reste sur votre appareil : nous ne recevons qu'une clé publique et des confirmations signées.</p>
 <h3 class="scb-u-117">5. Cookies et stockage local</h3>
 <p>Nous n'utilisons pas de cookies publicitaires ni de traceurs tiers. Nous utilisons localStorage pour mémoriser votre session et vos préférences. Cloudflare Turnstile peut déposer des cookies à des fins de protection contre les bots.</p>
 <h3 class="scb-u-117">6. Sous-traitants tiers</h3>
@@ -1314,13 +1279,13 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <ul class="scb-u-118">
 <li><strong>Données de compte :</strong> conservées le temps de l'activité du compte, supprimées dans les 30 jours suivant sa suppression.</li>
 <li><strong>Messages :</strong> jusqu'à leur suppression par l'une des parties ou la suppression du compte.</li>
-<li><strong>Descripteur facial :</strong> supprimé dans les 30 jours suivant la désactivation du Face MFA ou la suppression du compte.</li>
+<li><strong>Descripteur facial :</strong> n'est plus collecté ; ceux enregistrés auparavant doivent être supprimés (voir section 4).</li>
 <li><strong>Métadonnées techniques :</strong> conservées jusqu'à 90 jours à des fins opérationnelles.</li>
 </ul>
 <h3 class="scb-u-117">8. Transferts internationaux</h3>
 <p>SoCloudyBro est exploité depuis les États-Unis. Si vous vous trouvez dans l'EEE, au Royaume-Uni ou en Suisse, vos données peuvent être transférées aux États-Unis via les Clauses Contractuelles Types (CCT) de Google et Cloudflare.</p>
 <h3 class="scb-u-117">9. Mineurs et consentement parental (COPPA / RGPD-K)</h3>
-<p>SoCloudyBro est réservé aux personnes de 13 ans et plus. Les 13-17 ans nécessitent un consentement parental vérifié. Les parents peuvent consulter et supprimer les données de leur enfant en contactant un administrateur SCB dans l'application. Les données biométriques sont réservées aux majeurs ou aux mineurs avec consentement parental explicite.</p>
+<p>SoCloudyBro est réservé aux personnes de 13 ans et plus. Les 13-17 ans nécessitent un consentement parental vérifié. Les parents peuvent consulter et supprimer les données de leur enfant en contactant un administrateur SCB dans l'application.</p>
 <h3 class="scb-u-117">10. Vos droits</h3>
 <ul class="scb-u-118">
 <li><strong>Accès :</strong> demandez une copie de vos données.</li>
@@ -1328,7 +1293,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>Rectification :</strong> corrigez vos données depuis les Paramètres.</li>
 <li><strong>Effacement :</strong> supprimez votre compte depuis Paramètres → Supprimer le compte.</li>
 <li><strong>Limitation et opposition :</strong> contactez-nous via l'application.</li>
-<li><strong>Retrait du consentement :</strong> à tout moment pour le Face MFA ou Google Sign-In.</li>
+<li><strong>Retrait du consentement :</strong> à tout moment pour Google Sign-In.</li>
 <li><strong>Réclamation :</strong> auprès de votre autorité de protection des données locale (EEE/Royaume-Uni).</li>
 </ul>
 <h3 class="scb-u-117">11. Notification de violation</h3>
@@ -1345,7 +1310,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p>Des questions ou souhaitez exercer vos droits ? Contactez-nous directement dans l'application en envoyant un message à un administrateur SCB ou via le formulaire Aide et contact dans les Paramètres.</p>
 </div>
 <div id="pp-lang-de" class="pp-lang-section" hidden>
-<p class="scb-u-116">Zuletzt aktualisiert: Oktober 2026</p>
+<p class="scb-u-116">Zuletzt aktualisiert: November 2026</p>
 <p>Wir haben diese Richtlinie so geschrieben, dass sie lesbar ist – keine rechtlichen Endlostexte. Hier steht genau, was SoCloudyBro erfasst, warum und welche Kontrolle du darüber hast. Kurzfassung: Wir erfassen nur das Nötigste, verkaufen deine Daten nie und nutzen sie nicht für Werbung.</p>
 <h3 class="scb-u-117">1. Was ist SoCloudyBro</h3>
 <p>SoCloudyBro („SCB", „wir") ist eine soziale Messaging-Web-App. Du kannst Privatnachrichten senden, an Gruppenservern teilnehmen und Sprach- und Videoanrufe tätigen.</p>
@@ -1357,15 +1322,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>Technische Daten</strong> — Zeitstempel, Online-/Offline-Status und Verbindungsereignisse.<br><em>Rechtsgrundlage: berechtigtes Interesse (Art. 6(1)(f)).</em></p>
 <p><strong>Kontaktformular</strong> — Name, E-Mail und Nachricht werden über Web3Forms übermittelt.<br><em>Rechtsgrundlage: Einwilligung (Art. 6(1)(a)).</em></p>
 <p><strong>GIF-Suche</strong> — Deine Suchanfragen werden an die Giphy-API gesendet, die ihrer eigenen Datenschutzrichtlinie unterliegt.</p>
-<h3 class="scb-u-117">4. Biometrische Daten (Face MFA)</h3>
-<p>Du kannst optional Face MFA aktivieren. Dabei wird ein 128-dimensionaler Gesichtsdeskriptor (kein Foto) erzeugt; das Bild wird sofort verworfen, nur der Deskriptor wird übertragen und gespeichert.</p>
-<ul class="scb-u-118">
-<li><strong>Zweck:</strong> ausschließlich Identitätsprüfung beim Login.</li>
-<li><strong>Kein Teilen:</strong> Deskriptoren werden nie verkauft oder an Dritte weitergegeben.</li>
-<li><strong>Aufbewahrung:</strong> Der Deskriptor wird innerhalb von 30 Tagen nach Deaktivierung des Face MFA oder Kontolöschung gelöscht.</li>
-<li><strong>Einwilligung:</strong> Du musst aktiv zustimmen. Du kannst deine Einwilligung jederzeit in den Einstellungen widerrufen.</li>
-</ul>
-<p><em>Rechtsgrundlage: ausdrückliche Einwilligung für biometrische Daten (Art. 9(2)(a) DSGVO). Dieser Abschnitt erfüllt zudem die Anforderungen des Illinois BIPA.</em></p>
+<h3 class="scb-u-117">4. Gesichts- und Fingerabdruckdaten</h3>
+<p>SoCloudyBro bietet keine Anmeldung per Gesichtserkennung mehr an, und die App erhebt oder vergleicht keine Gesichtsdaten mehr. Gesichtsdeskriptoren aus der Zeit dieser Funktion werden nicht mehr verwendet und sollen gelöscht werden. Wende dich an einen SCB-Admin, um die Löschung deines Deskriptors zu verlangen. Bei einem Passkey bleiben Gesicht oder Fingerabdruck auf deinem Gerät: Wir erhalten nur einen öffentlichen Schlüssel und signierte Bestätigungen.</p>
 <h3 class="scb-u-117">5. Cookies und lokaler Speicher</h3>
 <p>Wir verwenden keine Werbe- oder Drittanbieter-Tracking-Cookies. Wir nutzen localStorage für Sitzungsstatus und Einstellungen. Cloudflare Turnstile kann Cookies zum Schutz vor Bots setzen.</p>
 <h3 class="scb-u-117">6. Drittanbieter-Dienstleister</h3>
@@ -1387,7 +1345,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <h3 class="scb-u-117">8. Internationale Datenübertragungen</h3>
 <p>SoCloudyBro wird aus den USA betrieben. Wenn du dich im EWR, im Vereinigten Königreich oder in der Schweiz befindest, können deine Daten in die USA übertragen werden – auf Grundlage der Standardvertragsklauseln (SCC) von Google und Cloudflare.</p>
 <h3 class="scb-u-117">9. Minderjährige und elterliche Einwilligung (COPPA / DSGVO-K)</h3>
-<p>SoCloudyBro setzt ein Mindestalter von 13 Jahren voraus. 13- bis 17-Jährige benötigen eine verifizierte elterliche Einwilligung. Eltern können die Daten ihres Kindes über einen SCB-Admin in der App einsehen und löschen lassen. Biometrische Daten sind auf Personen ab 18 Jahren oder Minderjährige mit ausdrücklicher elterlicher Einwilligung beschränkt.</p>
+<p>SoCloudyBro setzt ein Mindestalter von 13 Jahren voraus. 13- bis 17-Jährige benötigen eine verifizierte elterliche Einwilligung. Eltern können die Daten ihres Kindes über einen SCB-Admin in der App einsehen und löschen lassen.</p>
 <h3 class="scb-u-117">10. Deine Rechte</h3>
 <ul class="scb-u-118">
 <li><strong>Auskunft:</strong> Fordere eine Kopie deiner Daten an.</li>
@@ -1395,7 +1353,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>Berichtigung:</strong> Korrigiere deine Daten in den Einstellungen.</li>
 <li><strong>Löschung:</strong> Lösche dein Konto unter Einstellungen → Konto löschen.</li>
 <li><strong>Einschränkung und Widerspruch:</strong> Kontaktiere uns über die App.</li>
-<li><strong>Einwilligung widerrufen:</strong> Jederzeit für Face MFA oder Google Sign-In möglich.</li>
+<li><strong>Einwilligung widerrufen:</strong> Jederzeit für Google Sign-In möglich.</li>
 <li><strong>Beschwerde:</strong> Bei deiner lokalen Datenschutzbehörde (EWR/UK).</li>
 </ul>
 <h3 class="scb-u-117">11. Meldung von Datenpannen</h3>
@@ -1412,7 +1370,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p>Fragen oder möchtest du deine Rechte ausüben? Wende dich direkt in der App an einen SCB-Admin oder nutze das Hilfe-und-Kontakt-Formular in den Einstellungen.</p>
 </div>
 <div id="pp-lang-pt" class="pp-lang-section" hidden>
-<p class="scb-u-116">Última atualização: outubro de 2026</p>
+<p class="scb-u-116">Última atualização: novembro de 2026</p>
 <p>Escrevemos esta política para ser legível, não para te afogar em linguagem jurídica. Aqui está exatamente o que o SoCloudyBro coleta, por quê e que controle você tem sobre isso. Resumo: coletamos apenas o necessário, nunca vendemos seus dados e não os usamos para publicidade.</p>
 <h3 class="scb-u-117">1. O que é o SoCloudyBro</h3>
 <p>SoCloudyBro ("SCB", "nós") é um aplicativo web de mensagens sociais. Permite enviar mensagens privadas, participar de servidores de grupo e fazer chamadas de voz e vídeo.</p>
@@ -1424,15 +1382,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>Dados técnicos</strong> — registros de tempo, status online/offline e eventos de conexão.<br><em>Base legal: interesse legítimo (Art. 6(1)(f)).</em></p>
 <p><strong>Formulário de contato</strong> — nome, e-mail e mensagem transmitidos ao Web3Forms.<br><em>Base legal: consentimento (Art. 6(1)(a)).</em></p>
 <p><strong>Pesquisas de GIFs</strong> — suas consultas são enviadas à API do Giphy, sujeita à própria política de privacidade deles.</p>
-<h3 class="scb-u-117">4. Dados biométricos (Face MFA)</h3>
-<p>Você pode ativar opcionalmente o Face MFA. Um descritor facial de 128 dimensões (não uma foto) é gerado; a imagem é descartada imediatamente e apenas o descritor é transmitido e armazenado.</p>
-<ul class="scb-u-118">
-<li><strong>Finalidade:</strong> verificação de identidade no login exclusivamente.</li>
-<li><strong>Sem compartilhamento:</strong> descritores nunca são vendidos ou compartilhados com terceiros.</li>
-<li><strong>Retenção:</strong> o descritor é excluído em até 30 dias após desativar o Face MFA ou excluir a conta.</li>
-<li><strong>Consentimento:</strong> você deve concordar explicitamente. Pode revogar a qualquer momento nas Configurações.</li>
-</ul>
-<p><em>Base legal: consentimento explícito para dados biométricos (Art. 9(2)(a) GDPR). Esta seção também atende aos requisitos do BIPA (Illinois).</em></p>
+<h3 class="scb-u-117">4. Dados faciais e de impressão digital</h3>
+<p>O SoCloudyBro não oferece mais login por reconhecimento facial, e o app não coleta nem compara mais dados faciais. Os descritores salvos enquanto o recurso existia não são mais usados e estão marcados para exclusão. Para pedir a remoção do seu, fale com um admin SCB. Se você usa uma chave de acesso (passkey), seu rosto ou digital fica no seu aparelho: recebemos apenas uma chave pública e confirmações assinadas.</p>
 <h3 class="scb-u-117">5. Cookies e armazenamento local</h3>
 <p>Não usamos cookies de publicidade ou rastreamento de terceiros. Usamos localStorage para lembrar sua sessão e preferências. O Cloudflare Turnstile pode definir cookies para proteção contra bots.</p>
 <h3 class="scb-u-117">6. Processadores terceirizados</h3>
@@ -1448,13 +1399,13 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <ul class="scb-u-118">
 <li><strong>Dados de conta:</strong> mantidos enquanto a conta estiver ativa; excluídos em 30 dias após a exclusão.</li>
 <li><strong>Mensagens:</strong> até você ou outra parte excluí-las, ou até a exclusão da conta.</li>
-<li><strong>Descritor facial:</strong> excluído em 30 dias após desativar o Face MFA ou excluir a conta.</li>
+<li><strong>Descritor facial:</strong> não é mais coletado; os salvos antes devem ser excluídos (veja a seção 4).</li>
 <li><strong>Metadados técnicos:</strong> até 90 dias para fins operacionais.</li>
 </ul>
 <h3 class="scb-u-117">8. Transferências internacionais</h3>
 <p>O SoCloudyBro opera nos Estados Unidos. Se você estiver no EEE, Reino Unido ou Suíça, seus dados podem ser transferidos para os EUA com base nas Cláusulas Contratuais Padrão (SCCs) do Google e Cloudflare.</p>
 <h3 class="scb-u-117">9. Menores e consentimento parental (COPPA / LGPD)</h3>
-<p>O SoCloudyBro requer idade mínima de 13 anos. Usuários de 13 a 17 anos precisam de consentimento parental verificado. Pais e responsáveis podem revisar e excluir os dados de seus filhos contatando um admin SCB no app. Dados biométricos são restritos a maiores de 18 anos ou menores com consentimento parental explícito.</p>
+<p>O SoCloudyBro requer idade mínima de 13 anos. Usuários de 13 a 17 anos precisam de consentimento parental verificado. Pais e responsáveis podem revisar e excluir os dados de seus filhos contatando um admin SCB no app.</p>
 <h3 class="scb-u-117">10. Seus direitos</h3>
 <ul class="scb-u-118">
 <li><strong>Acesso:</strong> solicite uma cópia dos seus dados.</li>
@@ -1462,7 +1413,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>Retificação:</strong> corrija dados nas Configurações.</li>
 <li><strong>Exclusão:</strong> exclua sua conta em Configurações → Excluir conta.</li>
 <li><strong>Restrição e oposição:</strong> entre em contato pelo app.</li>
-<li><strong>Revogar consentimento:</strong> a qualquer momento para Face MFA ou Google Sign-In.</li>
+<li><strong>Revogar consentimento:</strong> a qualquer momento para Google Sign-In.</li>
 <li><strong>Reclamação:</strong> junto à sua autoridade de proteção de dados local (EEE/UK).</li>
 </ul>
 <h3 class="scb-u-117">11. Notificação de violação</h3>
@@ -1479,7 +1430,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p>Dúvidas ou quer exercer seus direitos? Fale conosco diretamente no app enviando uma mensagem a um admin SCB ou usando o formulário de Ajuda e Contato nas Configurações.</p>
 </div>
 <div id="pp-lang-ar" class="pp-lang-section" hidden dir="rtl">
-<p class="scb-u-116">آخر تحديث: أكتوبر 2026</p>
+<p class="scb-u-116">آخر تحديث: نوفمبر 2026</p>
 <p>كتبنا هذه السياسة لتكون مقروءة وواضحة، لا لنُغرقك في لغة قانونية. إليك بالضبط ما يجمعه SoCloudyBro، ولماذا، وما هو حقك في التحكم به. ملخص: نجمع فقط ما هو ضروري لتشغيل التطبيق، ولا نبيع بياناتك أبدًا، ولا نستخدمها للإعلانات.</p>
 <h3 class="scb-u-117">١. ما هو SoCloudyBro</h3>
 <p>SoCloudyBro ("SCB"، "نحن") تطبيق ويب للتواصل الاجتماعي يتيح لك إرسال رسائل خاصة، والمشاركة في مجموعات، وإجراء مكالمات صوتية ومرئية مع الأشخاص الذين تثق بهم.</p>
@@ -1491,15 +1442,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>البيانات التقنية</strong> — الطوابع الزمنية وحالة الاتصال/عدم الاتصال وأحداث الشبكة.<br><em>الأساس القانوني: مصلحة مشروعة (المادة 6(1)(و)).</em></p>
 <p><strong>نموذج الاتصال</strong> — اسمك وبريدك الإلكتروني ورسالتك تُرسَل عبر Web3Forms.<br><em>الأساس القانوني: موافقة (المادة 6(1)(أ)).</em></p>
 <p><strong>البحث عن GIFs</strong> — تُرسَل استعلاماتك إلى واجهة برمجة تطبيقات Giphy، وتخضع لسياسة الخصوصية الخاصة بها.</p>
-<h3 class="scb-u-117">٤. البيانات البيومترية (Face MFA)</h3>
-<p>يمكنك تفعيل ميزة التعرف على الوجه بشكل اختياري. يُولَّد وصف وجهي من 128 بُعدًا (وليس صورة فوتوغرافية)؛ تُحذف الصورة فورًا ويُخزَّن الوصف فقط.</p>
-<ul class="scb-u-118">
-<li><strong>الغرض:</strong> التحقق من الهوية عند تسجيل الدخول فقط.</li>
-<li><strong>عدم المشاركة:</strong> لا تُباع أوصاف الوجه ولا تُشارَك مع أي طرف ثالث.</li>
-<li><strong>الاحتفاظ:</strong> يُحذف الوصف خلال 30 يومًا من تعطيل Face MFA أو حذف الحساب.</li>
-<li><strong>الموافقة:</strong> يجب عليك الموافقة صراحةً. يمكنك سحب موافقتك في أي وقت من الإعدادات.</li>
-</ul>
-<p><em>الأساس القانوني: موافقة صريحة على معالجة البيانات البيومترية (المادة 9(2)(أ) من GDPR). يستوفي هذا القسم أيضًا متطلبات قانون BIPA في إيلينوي.</em></p>
+<h3 class="scb-u-117">٤. بيانات الوجه وبصمة الإصبع</h3>
+<p>لم يعد SoCloudyBro يوفر تسجيل الدخول بالتعرف على الوجه، ولم يعد التطبيق يجمع بيانات الوجه أو يطابقها. أوصاف الوجه المحفوظة أثناء توفر الميزة لم تعد مستخدمة ومن المقرر حذفها. لطلب حذف بياناتك، تواصل مع مشرف SCB. إذا استخدمت مفتاح مرور (passkey) فإن وجهك أو بصمتك يبقيان على جهازك، ولا نتلقى سوى مفتاح عام وتأكيدات موقعة.</p>
 <h3 class="scb-u-117">٥. ملفات تعريف الارتباط والتخزين المحلي</h3>
 <p>لا نستخدم ملفات تعريف ارتباط إعلانية أو تتبعًا من أطراف ثالثة. نستخدم localStorage لحفظ جلستك وتفضيلاتك. قد يضع Cloudflare Turnstile ملفات تعريف ارتباط لأغراض الحماية من الروبوتات.</p>
 <h3 class="scb-u-117">٦. مزودو الخدمة الخارجيون</h3>
@@ -1515,13 +1459,13 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <ul class="scb-u-118">
 <li><strong>بيانات الحساب:</strong> طالما الحساب نشطًا؛ تُحذف خلال 30 يومًا من حذف الحساب.</li>
 <li><strong>الرسائل:</strong> حتى يحذفها أحد الطرفين أو يُحذف الحساب.</li>
-<li><strong>وصف الوجه:</strong> يُحذف خلال 30 يومًا من تعطيل Face MFA أو حذف الحساب.</li>
+<li><strong>وصف الوجه:</strong> لم يعد يُجمع، وما حُفظ سابقًا مقرر حذفه (انظر القسم ٤).</li>
 <li><strong>البيانات التقنية:</strong> حتى 90 يومًا لأغراض تشغيلية.</li>
 </ul>
 <h3 class="scb-u-117">٨. النقل الدولي للبيانات</h3>
 <p>يعمل SoCloudyBro من الولايات المتحدة. إذا كنت في المنطقة الاقتصادية الأوروبية أو المملكة المتحدة أو سويسرا، قد تُنقل بياناتك إلى الولايات المتحدة استنادًا إلى بنود العقود النموذجية (SCCs) من Google وCloudflare.</p>
 <h3 class="scb-u-117">٩. القاصرون وموافقة الوالدين</h3>
-<p>يشترط SoCloudyBro الحد الأدنى من العمر 13 عامًا. يحتاج المستخدمون من 13 إلى 17 عامًا إلى موافقة أولياء أمور موثَّقة. يمكن لأولياء الأمور مراجعة بيانات أطفالهم وطلب حذفها عبر التواصل مع مشرف SCB في التطبيق. البيانات البيومترية مقتصرة على من بلغوا 18 عامًا أو القاصرين بموافقة صريحة من ولي الأمر.</p>
+<p>يشترط SoCloudyBro الحد الأدنى من العمر 13 عامًا. يحتاج المستخدمون من 13 إلى 17 عامًا إلى موافقة أولياء أمور موثَّقة. يمكن لأولياء الأمور مراجعة بيانات أطفالهم وطلب حذفها عبر التواصل مع مشرف SCB في التطبيق.</p>
 <h3 class="scb-u-117">١٠. حقوقك</h3>
 <ul class="scb-u-118">
 <li><strong>الوصول:</strong> اطلب نسخة من بياناتك.</li>
@@ -1529,7 +1473,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>التصحيح:</strong> صحِّح بياناتك من الإعدادات.</li>
 <li><strong>الحذف:</strong> احذف حسابك من الإعدادات ← حذف الحساب.</li>
 <li><strong>التقييد والاعتراض:</strong> تواصل معنا عبر التطبيق.</li>
-<li><strong>سحب الموافقة:</strong> في أي وقت لـ Face MFA أو Google Sign-In.</li>
+<li><strong>سحب الموافقة:</strong> في أي وقت لـ Google Sign-In.</li>
 <li><strong>تقديم شكوى:</strong> لدى هيئة حماية البيانات المحلية (المنطقة الاقتصادية الأوروبية/المملكة المتحدة).</li>
 </ul>
 <h3 class="scb-u-117">١١. الإخطار بالانتهاكات</h3>
@@ -1546,7 +1490,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p>هل لديك أسئلة أو تريد ممارسة حقوقك؟ تواصل معنا مباشرةً داخل التطبيق عبر إرسال رسالة لمشرف SCB أو استخدام نموذج المساعدة والتواصل في الإعدادات.</p>
 </div>
 <div id="pp-lang-zh" class="pp-lang-section" hidden>
-<p class="scb-u-116">最后更新：2026年10月</p>
+<p class="scb-u-116">最后更新：2026年11月</p>
 <p>我们撰写本政策是为了让它易于阅读，而非将您淹没在法律语言中。以下是 SoCloudyBro 收集的内容、原因以及您对此拥有的控制权。简而言之：我们只收集运营应用所需的最少信息，绝不出售您的数据，也不将其用于广告目的。</p>
 <h3 class="scb-u-117">1. 什么是 SoCloudyBro</h3>
 <p>SoCloudyBro（"SCB"，"我们"）是一款社交即时通讯网页应用，支持发送私信、参与群组服务器以及进行语音和视频通话。</p>
@@ -1558,15 +1502,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>技术数据</strong> — 时间戳、在线/离线状态及连接事件。<br><em>法律依据：合法利益（第6(1)(f)条）。</em></p>
 <p><strong>联系表单</strong> — 您的姓名、邮箱和消息通过 Web3Forms 传输。<br><em>法律依据：同意（第6(1)(a)条）。</em></p>
 <p><strong>GIF搜索</strong> — 您的搜索词将发送至 Giphy API，受其自身隐私政策约束。</p>
-<h3 class="scb-u-117">4. 生物特征数据（人脸识别 MFA）</h3>
-<p>您可以选择性地启用人脸 MFA。系统会生成128维人脸特征描述符（而非照片）；图像立即丢弃，仅传输并存储描述符。</p>
-<ul class="scb-u-118">
-<li><strong>用途：</strong>仅用于登录时的身份验证。</li>
-<li><strong>不共享：</strong>描述符绝不出售或与任何第三方共享。</li>
-<li><strong>保留：</strong>描述符将在禁用人脸 MFA 或删除账户后30天内删除。</li>
-<li><strong>同意：</strong>您必须明确同意方可注册。您可随时在"设置"中撤回同意。</li>
-</ul>
-<p><em>法律依据：处理生物特征数据的明确同意（GDPR第9(2)(a)条）。本条款亦满足伊利诺伊州 BIPA 的披露要求。</em></p>
+<h3 class="scb-u-117">4. 人脸与指纹数据</h3>
+<p>SoCloudyBro 不再提供人脸识别登录，应用也不再收集或比对人脸数据。该功能提供期间保存的人脸描述符已不再使用，并将予以删除。如需删除您的数据，请联系 SCB 管理员。使用通行密钥（passkey）时，您的人脸或指纹只保留在您自己的设备上，我们仅接收公钥和签名确认。</p>
 <h3 class="scb-u-117">5. Cookie 与本地存储</h3>
 <p>我们不使用广告 Cookie 或第三方跟踪 Cookie。我们使用 localStorage 记住您的会话状态和偏好设置。Cloudflare Turnstile 可能设置 Cookie 用于机器人防护。</p>
 <h3 class="scb-u-117">6. 第三方处理商</h3>
@@ -1582,13 +1519,13 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <ul class="scb-u-118">
 <li><strong>账户数据：</strong>账户活跃期间保留；删除账户后30天内删除。</li>
 <li><strong>消息：</strong>直至您或对方删除，或账户被删除。</li>
-<li><strong>人脸描述符：</strong>禁用人脸 MFA 或删除账户后30天内删除。</li>
+<li><strong>人脸描述符：</strong>不再收集；此前保存的数据将予删除（见第4节）。</li>
 <li><strong>技术元数据：</strong>出于运营目的保留最多90天。</li>
 </ul>
 <h3 class="scb-u-117">8. 国际数据传输</h3>
 <p>SoCloudyBro 在美国运营。如果您位于欧洲经济区、英国或瑞士，您的数据可能通过 Google 和 Cloudflare 的标准合同条款（SCC）传输至美国。</p>
 <h3 class="scb-u-117">9. 未成年人与家长同意（COPPA）</h3>
-<p>SoCloudyBro 要求用户至少年满13岁。13至17岁用户须经过经过验证的家长同意。家长和监护人可联系应用内 SCB 管理员查看和删除子女数据。生物特征数据仅限18岁以上用户，或经家长明确书面同意的未成年人使用。</p>
+<p>SoCloudyBro 要求用户至少年满13岁。13至17岁用户须经过经过验证的家长同意。家长和监护人可联系应用内 SCB 管理员查看和删除子女数据。</p>
 <h3 class="scb-u-117">10. 您的权利</h3>
 <ul class="scb-u-118">
 <li><strong>访问权：</strong>申请您的个人数据副本。</li>
@@ -1596,7 +1533,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>更正权：</strong>在"设置"中更正不准确的数据。</li>
 <li><strong>删除权：</strong>在"设置"→"删除账户"中删除您的账户。</li>
 <li><strong>限制处理权和反对权：</strong>通过应用与我们联系。</li>
-<li><strong>撤回同意：</strong>随时可就人脸 MFA 或 Google 登录撤回同意。</li>
+<li><strong>撤回同意：</strong>随时可就 Google 登录撤回同意。</li>
 <li><strong>投诉权：</strong>向当地数据保护机构（欧洲经济区/英国）提出投诉。</li>
 </ul>
 <h3 class="scb-u-117">11. 数据泄露通知</h3>
@@ -1613,7 +1550,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p>如有疑问或希望行使您的权利，请直接在应用内联系 SCB 管理员，或使用"设置"中的帮助与联系表单。</p>
 </div>
 <div id="pp-lang-ja" class="pp-lang-section" hidden>
-<p class="scb-u-116">最終更新：2026年10月</p>
+<p class="scb-u-116">最終更新：2026年11月</p>
 <p>このプライバシーポリシーは、法律用語を避け、わかりやすく書かれています。SoCloudyBro が収集するデータ、その理由、そしてあなたのコントロール権について正確にご説明します。要約：私たちはアプリの運営に必要な最小限のデータのみを収集し、データの販売や広告への利用は一切行いません。</p>
 <h3 class="scb-u-117">1. SoCloudyBro とは</h3>
 <p>SoCloudyBro（"SCB"、"私たち"）は、プライベートメッセージ送信、グループサーバーへの参加、音声・ビデオ通話ができるソーシャルメッセージング Web アプリです。</p>
@@ -1625,15 +1562,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>技術データ</strong> — タイムスタンプ、オンライン/オフライン状態、接続イベント。<br><em>法的根拠：正当な利益（第6条(1)(f)）。</em></p>
 <p><strong>お問い合わせフォーム</strong> — 氏名、メールアドレス、メッセージが Web3Forms を通じて送信されます。<br><em>法的根拠：同意（第6条(1)(a)）。</em></p>
 <p><strong>GIF 検索</strong> — 検索クエリは Giphy API に送信され、同社のプライバシーポリシーが適用されます。</p>
-<h3 class="scb-u-117">4. 生体認証データ（顔認証 MFA）</h3>
-<p>任意で顔認証 MFA を有効にできます。128次元の顔特徴記述子（写真ではありません）が生成され、画像は即座に破棄されます。記述子のみが送信・保存されます。</p>
-<ul class="scb-u-118">
-<li><strong>目的：</strong>ログイン時の本人確認のみ。</li>
-<li><strong>非共有：</strong>記述子はいかなる第三者にも販売・共有されません。</li>
-<li><strong>保持期間：</strong>顔認証 MFA の無効化またはアカウント削除後 30 日以内に削除されます。</li>
-<li><strong>同意：</strong>明示的な同意が必要です。設定からいつでも撤回できます。</li>
-</ul>
-<p><em>法的根拠：生体認証データ処理に対する明示的同意（GDPR第9条(2)(a)）。本条はイリノイ州 BIPA の開示要件も満たします。</em></p>
+<h3 class="scb-u-117">4. 顔と指紋のデータ</h3>
+<p>SoCloudyBro は顔認証ログインの提供を終了し、アプリは顔データの収集や照合を行いません。提供期間中に保存された顔記述子は使用されず、削除される予定です。ご自身のデータの削除は SCB 管理者にご依頼ください。パスキーを使う場合、顔や指紋はお使いの端末内に留まり、当社が受け取るのは公開鍵と署名付きの確認のみです。</p>
 <h3 class="scb-u-117">5. Cookie とローカルストレージ</h3>
 <p>広告 Cookie やサードパーティトラッキング Cookie は使用しません。セッション状態や設定の記憶に localStorage を使用します。Cloudflare Turnstile はボット対策目的で Cookie を設定する場合があります。</p>
 <h3 class="scb-u-117">6. 第三者委託先</h3>
@@ -1649,13 +1579,13 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <ul class="scb-u-118">
 <li><strong>アカウントデータ：</strong>アカウントが有効な間保持され、削除後 30 日以内に削除されます。</li>
 <li><strong>メッセージ：</strong>いずれかの当事者が削除するか、アカウントが削除されるまで。</li>
-<li><strong>顔記述子：</strong>顔認証 MFA の無効化またはアカウント削除後 30 日以内に削除。</li>
+<li><strong>顔記述子：</strong>収集を終了しました。保存済みのものは削除予定です（第4節）。</li>
 <li><strong>技術メタデータ：</strong>運用目的で最大 90 日間保持。</li>
 </ul>
 <h3 class="scb-u-117">8. 国際データ移転</h3>
 <p>SoCloudyBro は米国を拠点として運営されています。EEA、英国、スイスにお住まいの場合、Google および Cloudflare の標準契約条項（SCC）に基づき、データが米国に転送される場合があります。</p>
 <h3 class="scb-u-117">9. 未成年者と保護者同意（COPPA）</h3>
-<p>SoCloudyBro は 13 歳以上を対象としています。13〜17 歳のユーザーには検証済みの保護者同意が必要です。保護者はアプリ内の SCB 管理者に連絡して子供のデータを確認・削除できます。生体認証データは 18 歳以上、または保護者の明示的な書面による同意を得た未成年者のみ利用可能です。</p>
+<p>SoCloudyBro は 13 歳以上を対象としています。13〜17 歳のユーザーには検証済みの保護者同意が必要です。保護者はアプリ内の SCB 管理者に連絡して子供のデータを確認・削除できます。</p>
 <h3 class="scb-u-117">10. あなたの権利</h3>
 <ul class="scb-u-118">
 <li><strong>アクセス権：</strong>保有データのコピーを請求できます。</li>
@@ -1663,7 +1593,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>訂正権：</strong>設定から不正確なデータを修正できます。</li>
 <li><strong>削除権：</strong>設定→アカウント削除からアカウントを削除できます。</li>
 <li><strong>制限・異議申し立て：</strong>アプリ内でお問い合わせください。</li>
-<li><strong>同意の撤回：</strong>顔認証 MFA や Google ログインへの同意をいつでも撤回できます。</li>
+<li><strong>同意の撤回：</strong>Google ログインへの同意をいつでも撤回できます。</li>
 <li><strong>苦情申立て：</strong>EEA・英国の場合、地元のデータ保護機関に苦情を申し立てられます。</li>
 </ul>
 <h3 class="scb-u-117">11. データ侵害の通知</h3>
@@ -1680,7 +1610,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p>ご質問や権利の行使をご希望の場合は、アプリ内で SCB 管理者にメッセージを送るか、設定のヘルプ＆お問い合わせフォームをご利用ください。</p>
 </div>
 <div id="pp-lang-hi" class="pp-lang-section" hidden>
-<p class="scb-u-116">अंतिम अपडेट: अक्टूबर 2026</p>
+<p class="scb-u-116">अंतिम अपडेट: नवंबर 2026</p>
 <p>हमने यह नीति पढ़ने योग्य भाषा में लिखी है, कानूनी शब्दजाल में नहीं। यहाँ बिल्कुल स्पष्ट बताया गया है कि SoCloudyBro क्या जानकारी इकट्ठा करता है, क्यों, और आपका उस पर कितना नियंत्रण है। संक्षेप में: हम केवल वही डेटा इकट्ठा करते हैं जो ऐप चलाने के लिए ज़रूरी है, आपका डेटा कभी नहीं बेचते, और विज्ञापनों के लिए कभी नहीं इस्तेमाल करते।</p>
 <h3 class="scb-u-117">1. SoCloudyBro क्या है</h3>
 <p>SoCloudyBro ("SCB", "हम") एक सोशल मैसेजिंग वेब ऐप है। यह आपको निजी संदेश भेजने, ग्रुप सर्वर में भाग लेने और वॉइस व वीडियो कॉल करने की सुविधा देता है।</p>
@@ -1692,15 +1622,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>तकनीकी डेटा</strong> — टाइमस्टैम्प, ऑनलाइन/ऑफलाइन स्थिति और कनेक्शन इवेंट।<br><em>कानूनी आधार: वैध हित (अनुच्छेद 6(1)(f))।</em></p>
 <p><strong>संपर्क फ़ॉर्म</strong> — नाम, ईमेल और संदेश Web3Forms के ज़रिए भेजे जाते हैं।<br><em>कानूनी आधार: सहमति (अनुच्छेद 6(1)(a))।</em></p>
 <p><strong>GIF खोज</strong> — आपकी खोज Giphy API को भेजी जाती है, जो उनकी अपनी गोपनीयता नीति के अधीन है।</p>
-<h3 class="scb-u-117">4. बायोमेट्रिक डेटा (फेस MFA)</h3>
-<p>आप वैकल्पिक रूप से फेस MFA सक्षम कर सकते हैं। 128-आयामी चेहरे का विवरणक (फ़ोटो नहीं) बनाया जाता है; छवि तुरंत हटा दी जाती है, केवल विवरणक संचारित और संग्रहीत होता है।</p>
-<ul class="scb-u-118">
-<li><strong>उद्देश्य:</strong> केवल लॉगिन पर पहचान सत्यापन।</li>
-<li><strong>साझाकरण नहीं:</strong> विवरणक किसी भी तीसरे पक्ष को कभी नहीं बेचे या साझा किए जाते।</li>
-<li><strong>अवधारण:</strong> फेस MFA अक्षम करने या खाता हटाने के 30 दिनों के भीतर विवरणक हटा दिया जाता है।</li>
-<li><strong>सहमति:</strong> आपको स्पष्ट रूप से सहमत होना होगा। आप सेटिंग में कभी भी सहमति वापस ले सकते हैं।</li>
-</ul>
-<p><em>कानूनी आधार: बायोमेट्रिक डेटा प्रसंस्करण के लिए स्पष्ट सहमति (GDPR अनुच्छेद 9(2)(a))। यह अनुभाग Illinois BIPA की आवश्यकताओं को भी पूरा करता है।</em></p>
+<h3 class="scb-u-117">4. चेहरे और फ़िंगरप्रिंट का डेटा</h3>
+<p>SoCloudyBro अब चेहरा पहचान से साइन-इन की सुविधा नहीं देता, और ऐप अब चेहरे का डेटा न एकत्र करता है न मिलाता है। सुविधा के दौरान सहेजे गए चेहरा विवरणक अब उपयोग में नहीं हैं और हटाए जाने हैं। अपना डेटा हटवाने के लिए SCB एडमिन से संपर्क करें। पासकी उपयोग करने पर आपका चेहरा या फ़िंगरप्रिंट आपके डिवाइस पर ही रहता है: हमें केवल सार्वजनिक कुंजी और हस्ताक्षरित पुष्टि मिलती है।</p>
 <h3 class="scb-u-117">5. कुकीज़ और लोकल स्टोरेज</h3>
 <p>हम विज्ञापन कुकीज़ या तृतीय-पक्ष ट्रैकिंग कुकीज़ का उपयोग नहीं करते। हम सत्र और प्राथमिकताएं याद रखने के लिए localStorage का उपयोग करते हैं। Cloudflare Turnstile बॉट सुरक्षा के लिए कुकीज़ सेट कर सकता है।</p>
 <h3 class="scb-u-117">6. तृतीय-पक्ष प्रोसेसर</h3>
@@ -1716,13 +1639,13 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <ul class="scb-u-118">
 <li><strong>खाता डेटा:</strong> खाता सक्रिय रहने तक; हटाने के 30 दिनों के भीतर मिटाया जाता है।</li>
 <li><strong>संदेश:</strong> जब तक आप या दूसरा पक्ष न मिटाए, या खाता हटाया न जाए।</li>
-<li><strong>चेहरा विवरणक:</strong> फेस MFA अक्षम करने या खाता हटाने के 30 दिनों के भीतर।</li>
+<li><strong>चेहरा विवरणक:</strong> अब एकत्र नहीं किया जाता; पहले सहेजे गए हटाए जाने हैं (अनुभाग 4 देखें)।</li>
 <li><strong>तकनीकी मेटाडेटा:</strong> परिचालन उद्देश्यों के लिए अधिकतम 90 दिन।</li>
 </ul>
 <h3 class="scb-u-117">8. अंतर्राष्ट्रीय डेटा स्थानांतरण</h3>
 <p>SoCloudyBro अमेरिका से संचालित होता है। यदि आप EEA, UK, या स्विट्ज़रलैंड में हैं, तो Google और Cloudflare के मानक संविदात्मक खंडों (SCC) के आधार पर आपका डेटा अमेरिका में स्थानांतरित हो सकता है।</p>
 <h3 class="scb-u-117">9. बच्चे और माता-पिता की सहमति (COPPA)</h3>
-<p>SoCloudyBro के लिए न्यूनतम आयु 13 वर्ष है। 13 से 17 वर्ष के उपयोगकर्ताओं को सत्यापित माता-पिता की सहमति की आवश्यकता है। माता-पिता और अभिभावक ऐप में SCB एडमिन से संपर्क करके अपने बच्चे का डेटा देख और हटवा सकते हैं। बायोमेट्रिक डेटा केवल 18 वर्ष या उससे अधिक आयु के लोगों के लिए, या माता-पिता की स्पष्ट लिखित सहमति वाले नाबालिगों के लिए उपलब्ध है।</p>
+<p>SoCloudyBro के लिए न्यूनतम आयु 13 वर्ष है। 13 से 17 वर्ष के उपयोगकर्ताओं को सत्यापित माता-पिता की सहमति की आवश्यकता है। माता-पिता और अभिभावक ऐप में SCB एडमिन से संपर्क करके अपने बच्चे का डेटा देख और हटवा सकते हैं।</p>
 <h3 class="scb-u-117">10. आपके अधिकार</h3>
 <ul class="scb-u-118">
 <li><strong>पहुँच:</strong> अपने डेटा की प्रति माँगें।</li>
@@ -1730,7 +1653,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>सुधार:</strong> सेटिंग में गलत डेटा सुधारें।</li>
 <li><strong>मिटाने का अधिकार:</strong> सेटिंग → खाता हटाएँ से खाता हटाएं।</li>
 <li><strong>प्रतिबंध और आपत्ति:</strong> ऐप के ज़रिए हमसे संपर्क करें।</li>
-<li><strong>सहमति वापस लें:</strong> फेस MFA या Google Sign-In के लिए कभी भी।</li>
+<li><strong>सहमति वापस लें:</strong> Google Sign-In के लिए कभी भी।</li>
 <li><strong>शिकायत:</strong> अपने स्थानीय डेटा सुरक्षा प्राधिकरण (EEA/UK) से।</li>
 </ul>
 <h3 class="scb-u-117">11. डेटा उल्लंघन की सूचना</h3>
@@ -1747,7 +1670,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p>प्रश्न हैं या अधिकारों का उपयोग करना चाहते हैं? ऐप में SCB एडमिन को संदेश भेजें या सेटिंग में सहायता और संपर्क फ़ॉर्म का उपयोग करें।</p>
 </div>
 <div id="pp-lang-ru" class="pp-lang-section" hidden>
-<p class="scb-u-116">Последнее обновление: октябрь 2026 г.</p>
+<p class="scb-u-116">Последнее обновление: ноябрь 2026 г.</p>
 <p>Мы написали эту политику простым языком — без юридических дебрей. Здесь подробно описано, какие данные собирает SoCloudyBro, зачем и какой контроль вы над ними имеете. Коротко: мы собираем лишь то, что необходимо для работы приложения, никогда не продаём ваши данные и не используем их в рекламных целях.</p>
 <h3 class="scb-u-117">1. Что такое SoCloudyBro</h3>
 <p>SoCloudyBro («SCB», «мы») — социальный мессенджер в виде веб-приложения. Он позволяет отправлять личные сообщения, участвовать в групповых серверах и совершать голосовые и видеозвонки.</p>
@@ -1759,15 +1682,8 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <p><strong>Технические данные</strong> — отметки времени, статус онлайн/офлайн и события подключения.<br><em>Правовое основание: законный интерес (ст. 6(1)(f)).</em></p>
 <p><strong>Форма обратной связи</strong> — имя, адрес электронной почты и сообщение передаются через Web3Forms.<br><em>Правовое основание: согласие (ст. 6(1)(a)).</em></p>
 <p><strong>Поиск GIF</strong> — ваши запросы отправляются в API Giphy и регулируются их собственной политикой конфиденциальности.</p>
-<h3 class="scb-u-117">4. Биометрические данные (Face MFA)</h3>
-<p>Вы можете по желанию включить Face MFA. Генерируется 128-мерный дескриптор лица (не фотография); изображение немедленно удаляется, передаётся и хранится только дескриптор.</p>
-<ul class="scb-u-118">
-<li><strong>Цель:</strong> исключительно проверка личности при входе в систему.</li>
-<li><strong>Без передачи:</strong> дескрипторы никогда не продаются и не передаются третьим лицам.</li>
-<li><strong>Хранение:</strong> дескриптор удаляется в течение 30 дней после отключения Face MFA или удаления аккаунта.</li>
-<li><strong>Согласие:</strong> требуется явное согласие. Его можно отозвать в любой момент в настройках.</li>
-</ul>
-<p><em>Правовое основание: явное согласие на обработку биометрических данных (ст. 9(2)(a) GDPR). Этот раздел также соответствует требованиям Illinois BIPA.</em></p>
+<h3 class="scb-u-117">4. Данные лица и отпечатков</h3>
+<p>SoCloudyBro больше не предлагает вход по распознаванию лица, а приложение больше не собирает и не сравнивает данные лица. Дескрипторы, сохранённые, пока функция действовала, больше не используются и подлежат удалению. Чтобы удалить свои данные, обратитесь к администратору SCB. При использовании ключа доступа (passkey) лицо или отпечаток остаются на вашем устройстве: мы получаем только открытый ключ и подписанные подтверждения.</p>
 <h3 class="scb-u-117">5. Файлы cookie и локальное хранилище</h3>
 <p>Мы не используем рекламные cookie или сторонние трекеры. Мы применяем localStorage для запоминания сессии и настроек. Cloudflare Turnstile может устанавливать cookie для защиты от ботов.</p>
 <h3 class="scb-u-117">6. Сторонние обработчики данных</h3>
@@ -1783,13 +1699,13 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <ul class="scb-u-118">
 <li><strong>Данные аккаунта:</strong> хранятся, пока аккаунт активен; удаляются в течение 30 дней после его удаления.</li>
 <li><strong>Сообщения:</strong> до их удаления одной из сторон или удаления аккаунта.</li>
-<li><strong>Дескриптор лица:</strong> удаляется в течение 30 дней после отключения Face MFA или удаления аккаунта.</li>
+<li><strong>Дескриптор лица:</strong> больше не собирается; сохранённые ранее подлежат удалению (см. раздел 4).</li>
 <li><strong>Технические метаданные:</strong> до 90 дней в операционных целях.</li>
 </ul>
 <h3 class="scb-u-117">8. Международная передача данных</h3>
 <p>SoCloudyBro работает из США. Если вы находитесь в ЕЭЗ, Великобритании или Швейцарии, ваши данные могут передаваться в США на основании стандартных договорных положений (SCC) Google и Cloudflare.</p>
 <h3 class="scb-u-117">9. Несовершеннолетние и родительское согласие (COPPA)</h3>
-<p>Минимальный возраст для использования SoCloudyBro — 13 лет. Пользователи от 13 до 17 лет должны иметь подтверждённое родительское согласие. Родители и опекуны могут просматривать и удалять данные своего ребёнка, обратившись к администратору SCB в приложении. Биометрические данные доступны только лицам от 18 лет или несовершеннолетним при наличии явного письменного согласия родителей.</p>
+<p>Минимальный возраст для использования SoCloudyBro — 13 лет. Пользователи от 13 до 17 лет должны иметь подтверждённое родительское согласие. Родители и опекуны могут просматривать и удалять данные своего ребёнка, обратившись к администратору SCB в приложении.</p>
 <h3 class="scb-u-117">10. Ваши права</h3>
 <ul class="scb-u-118">
 <li><strong>Доступ:</strong> запросите копию своих данных.</li>
@@ -1797,7 +1713,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <li><strong>Исправление:</strong> откорректируйте данные в настройках.</li>
 <li><strong>Удаление:</strong> удалите аккаунт через Настройки → Удалить аккаунт.</li>
 <li><strong>Ограничение и возражение:</strong> свяжитесь с нами через приложение.</li>
-<li><strong>Отзыв согласия:</strong> в любой момент для Face MFA или Google Sign-In.</li>
+<li><strong>Отзыв согласия:</strong> в любой момент для Google Sign-In.</li>
 <li><strong>Жалоба:</strong> в местный орган по защите данных (ЕЭЗ/Великобритания).</li>
 </ul>
 <h3 class="scb-u-117">11. Уведомление об утечках данных</h3>
@@ -2152,65 +2068,6 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <div class="error-text" id="login-2fa-error"></div>
       <button class="btn btn-full" id="login-2fa-btn" onclick="submit2faCode()">Verify ↗</button>
     </div>
-    <div class="modal-body scb-u-172" id="login-face-view">
-      <p class="scb-u-175">Look at your camera — you'll be verified automatically.</p>
-      <div class="face-scan-wrap">
-        <video id="login-face-video" autoplay muted playsinline></video>
-        <canvas id="login-face-canvas"></canvas>
-        <div class="face-scan-label"><span><span class="dot"></span>LIVE SCAN</span><span>FACE ID</span></div>
-        <div class="face-scan-line"></div>
-        <div class="face-scan-success">✅</div>
-      </div>
-      <div class="face-scan-status" id="login-face-status">Center your face in frame…</div>
-      <div class="error-text scb-u-6" id="login-face-error"></div>
-      <button class="btn btn-full" id="login-face-btn" onclick="submitFaceLogin()">Verify with Face ↗</button>
-      <div class="scb-u-168"><a class="scb-u-169" href="#" onclick="useFaceViewPasskeyFallback();return false;">🔑 No camera? Use a passkey instead</a></div>
-      <div class="scb-u-170"><a class="scb-u-169" href="#" onclick="showLoginBackupPinView();return false;">🔢 Use your backup PIN instead</a></div>
-      <div class="scb-u-170"><a class="scb-u-169" href="#" onclick="recoverFromFaceView();return false;">Can't verify any other way? Recover your account</a></div>
-      <button class="btn btn-ghost btn-full scb-u-7" onclick="cancelFaceLoginView()">Cancel</button>
-    </div>
-    <div class="modal-body scb-u-172" id="login-backup-pin-view">
-      <p class="scb-u-154">Enter your 4-digit backup PIN.</p>
-      <div class="pin-row" id="login-backup-pin-row">
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'backuplogin')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'backuplogin')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'backuplogin')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'backuplogin')"/>
-      </div>
-      <div class="error-text scb-u-6" id="login-backup-pin-error"></div>
-      <button class="btn btn-ghost btn-full scb-u-7" onclick="cancelFaceLoginView()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="face-mfa-setup-modal">
-  <div class="modal">
-    <div class="modal-header"><h2>📷 Set Up Face Recognition</h2><p>This captures a face descriptor (a set of measurements) — not a photo — stored on your account for login verification.</p></div>
-    <div class="modal-body scb-u-29" id="face-enroll-consent-view">
-      <h3 style="margin:0 0 8px">Biometric Data Consent</h3>
-      <p style="margin:0 0 12px">Before your camera is activated, please read and agree to the following:</p>
-      <ul style="margin:0 0 16px;padding-left:20px;line-height:1.6">
-        <li><strong>What is collected:</strong> 128-dimensional facial geometry measurements derived from your camera image. This is a mathematical descriptor — not a photograph.</li>
-        <li><strong>Why it is collected:</strong> Login verification only. Your face descriptor is used solely to confirm your identity when you sign in with Face MFA.</li>
-        <li><strong>How long it is stored:</strong> Until you disable Face MFA or delete your account. It is permanently deleted within 30 days of account deletion.</li>
-        <li><strong>Sharing:</strong> Your face descriptor is never sold, shared with third parties, or used for any purpose other than login verification.</li>
-      </ul>
-      <p style="margin:0 0 16px">You can disable Face MFA and remove your face data at any time from Settings → Security.</p>
-      <button class="btn btn-full" onclick="acceptFaceEnrollmentConsent()">I Agree — Start Camera ↗</button>
-    </div>
-    <div class="modal-body scb-u-29" id="face-enroll-scan-view" style="display:none">
-      <div class="face-scan-wrap">
-        <video id="face-enroll-video" autoplay muted playsinline></video>
-        <canvas id="face-enroll-canvas"></canvas>
-        <div class="face-scan-label"><span><span class="dot"></span>LIVE SCAN</span><span>ENROLLING</span></div>
-        <div class="face-scan-line"></div>
-        <div class="face-scan-success">✅</div>
-      </div>
-      <div class="error-text scb-u-6" id="face-enroll-error"></div>
-      <div class="face-scan-status" id="face-enroll-status">Loading…</div>
-      <button class="btn btn-full" id="face-enroll-btn" onclick="captureFaceEnrollment()">Capture My Face ↗</button>
-    </div>
-    <div class="modal-footer"><button class="btn btn-ghost btn-full" onclick="cancelFaceEnrollment()">Cancel</button></div>
   </div>
 </div>
 
@@ -2345,25 +2202,6 @@ window.addEventListener('error',function _splashErrorGuard(e){
       <button class="btn" id="pin-confirm-btn" onclick="confirmPin()">Confirm PIN</button>
       <button class="btn btn-ghost" onclick="closeModal('pin-modal')">Cancel</button>
       <button class="btn btn-danger" id="pin-remove-btn" onclick="removePin()" style="display:none">Remove PIN</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="backup-pin-modal">
-  <div class="modal">
-    <div class="modal-header"><h2 id="backup-pin-modal-title">Set Backup PIN</h2><p id="backup-pin-modal-desc">Choose a 4-digit PIN you can use to sign in if your camera or passkey aren't available.</p></div>
-    <div class="modal-body scb-u-29">
-      <div class="pin-row" id="backup-pin-input-row">
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'backupset')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,1,'backupset')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'backupset')"/>
-        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'backupset')"/>
-      </div>
-      <div class="error-text scb-u-6" id="backup-pin-error"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('backup-pin-modal')">Cancel</button>
-      <button class="btn btn-danger" id="backup-pin-remove-btn" onclick="removeBackupPin()" style="display:none">Remove Backup PIN</button>
     </div>
   </div>
 </div>
@@ -2540,10 +2378,6 @@ window.addEventListener('error',function _splashErrorGuard(e){
   <div class="modal scb-u-211">
     <div class="modal-header"><h2>🔒 Chat Locked</h2><p id="chat-lock-desc">Enter your PIN to unlock this chat.</p></div>
     <div class="modal-body scb-u-29">
-      <div class="scb-u-212" id="chat-lock-method-tabs">
-        <button class="btn btn-ghost btn-sm chat-lock-tab" id="chat-lock-tab-pin" onclick="switchChatLockMethod('pin')">🔢 PIN</button>
-        <button class="btn btn-ghost btn-sm chat-lock-tab" id="chat-lock-tab-face" onclick="switchChatLockMethod('face')">📷 Face</button>
-      </div>
       <div id="chat-lock-pin-pane">
         <div class="pin-row">
           <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,0,'chat')"/>
@@ -2551,16 +2385,6 @@ window.addEventListener('error',function _splashErrorGuard(e){
           <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,2,'chat')"/>
           <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" oninput="pinNav(this,3,'chat')"/>
         </div>
-      </div>
-      <div id="chat-lock-face-pane" style="display:none">
-        <div class="face-scan-wrap compact">
-          <video id="chat-lock-face-video" autoplay muted playsinline></video>
-          <canvas id="chat-lock-face-canvas"></canvas>
-          <div class="face-scan-label"><span><span class="dot"></span>LIVE SCAN</span><span>UNLOCK</span></div>
-          <div class="face-scan-line"></div>
-          <div class="face-scan-success">✅</div>
-        </div>
-        <div class="face-scan-status" id="chat-lock-face-status"></div>
       </div>
       <div class="error-text scb-u-6" id="chat-lock-error"></div>
     </div>
@@ -2853,27 +2677,27 @@ window.addEventListener('error',function _splashErrorGuard(e){
      (was a floating @2 tag) + SRI, same rationale as above. -->
 <script defer src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js" integrity="sha384-MveBYLjjZe2VXnKzvBbPfyh5MEbiqNDeta9nzIGbtqnXmC+CwX/mLE5+M9PDIcPy" crossorigin="anonymous"></script>
 <script src="/js/core/config.js?v=c3276d73e2"></script>
-<script src="/js/core/errors.js?v=a55c6e4d23"></script>
+<script src="/js/core/errors.js?v=2196ba750d"></script>
 <script src="/js/core/diagnostics.js?v=7f7b8fb405"></script>
-<script src="/js/core/encryption.js?v=b39e039319"></script>
-<script src="/js/core/data.js?v=1d5ef08e0e"></script>
-<script src="/js/auth/login.js?v=11e04b42f2"></script>
-<script src="/js/auth/account.js?v=f643a47fae"></script>
+<script src="/js/core/encryption.js?v=9ea45a0e4d"></script>
+<script src="/js/core/data.js?v=a1fd429f24"></script>
+<script src="/js/auth/login.js?v=295fe24586"></script>
+<script src="/js/auth/account.js?v=7b1747a9b3"></script>
 <script src="/js/chat/conversations.js?v=c4867e7e95"></script>
 <script src="/js/calls/voice.js?v=88ba6ba81d"></script>
 <script src="/js/chat/message-actions.js?v=4174827b2e"></script>
-<script src="/js/dashboard/dashboard.js?v=322cef918d"></script>
+<script src="/js/dashboard/dashboard.js?v=a3e87acf72"></script>
 <script src="/js/notifications.js?v=cd42316a8f"></script>
 <script src="/js/social/profiles-groups.js?v=7808a7a48a"></script>
 <script src="/js/chat/extras.js?v=e79b33443e"></script>
 <script src="/js/games.js?v=7a14590c15"></script>
-<script src="/js/admin/panel.js?v=7b97ef2897"></script>
-<script src="/js/admin/tools.js?v=d201078a6c"></script>
+<script src="/js/admin/panel.js?v=31634df043"></script>
+<script src="/js/admin/tools.js?v=99412277ac"></script>
 <script src="/js/assistant.js?v=33bdb29c22"></script>
 <script src="/js/safety/moderation.js?v=8dfa3a3574"></script>
-<script src="/js/safety/family-meetings.js?v=4da8718d89"></script>
+<script src="/js/safety/family-meetings.js?v=2092f0dc4f"></script>
 <script src="/js/ui/enhancements.js?v=a1c667b0c8"></script>
-<script src="/js/auth/sign-in.js?v=77af45edbd"></script>
+<script src="/js/auth/sign-in.js?v=a7f0cc4515"></script>
 <script src="/js/ui/widgets.js?v=41f34260e5"></script>
 
 
@@ -3023,7 +2847,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
       </label>
       <label class="scb-u-254">
         <input class="scb-u-255" type="checkbox" id="admin-reset-mfa"/>
-        <span><b>Also clear two-factor/face sign-in.</b> Only do this if they're actually locked out — no camera, no passkey, and no backup PIN or security questions set up. Turns off authenticator-app codes and face verification so they can sign in with just their password; their backup PIN and security questions (if any) are left as they are so they still work once they're back in.</span>
+        <span><b>Also clear two-factor sign-in.</b> Only do this if they're actually locked out — no passkey and no security questions set up. Turns off authenticator-app codes so they can sign in with just their password; their security questions (if any) are left as they are so they still work once they're back in.</span>
       </label>
       <div class="error-text" id="admin-reset-error"></div>
     </div>
@@ -3060,7 +2884,7 @@ window.addEventListener('error',function _splashErrorGuard(e){
 <div class="scb-u-259" id="reaction-picker">
 </div>
 
-<script src="/js/privacy.js?v=7ded922217"></script>
+<script src="/js/privacy.js?v=81974048b0"></script>
 
 <!-- Avatar zoom overlay -->
 <div class="scb-u-260" id="avatar-zoom-overlay" onclick="closeAvatarZoom()">
